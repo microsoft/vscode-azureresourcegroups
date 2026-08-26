@@ -60,6 +60,7 @@ import { ConfigValidationError } from './src/configValidation.ts';
 import { countAsserted, loadContainerInventory } from './src/containerInventory.ts';
 import { loadGateTable } from './src/gateTable.ts';
 import type { GateTable } from './src/gateTable.ts';
+import { selfTestDeclaredGaps } from './src/declaredGaps.ts';
 import { checkKnownGapsAgainstTable, deriveWiring, explainWiring, teachesNothing } from './src/gateWiring.ts';
 import { loadStack } from './src/stack.ts';
 import type { Stack, StackLoadOptions } from './src/stack.ts';
@@ -347,6 +348,15 @@ function main(): void {
 
     checkWiringSnapshots(stacks, table);
     checkDerivationBranches(stacks, table);
+
+    // The join that lets gate-health separate "declared, tracked" from
+    // "undeclared — go look". Checked here rather than in its own command so
+    // there is one place to look for "is the stack machinery sound?".
+    console.error('\nDeclared-gap join');
+    const joinFailures = selfTestDeclaredGaps(line => console.error(line));
+    if (joinFailures > 0) {
+        fail(`${joinFailures} declared-gap join case(s) failed`);
+    }
 
     // ---- Half two: the broken fixtures must be rejected, by name -----------
     const provenStack = checkFixtureDirectory(

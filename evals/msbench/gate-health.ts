@@ -66,6 +66,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
+import type { DeclaredGap } from '../src/declaredGaps.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -821,6 +822,47 @@ function analyzeInstance(
     }
 }
 
+/**
+ * What the stacks declare will be red, or an empty map if they cannot be read.
+ *
+ * Loaded lazily and **never fatally**. This tool's job is auditing past runs;
+ * refusing to print that audit because a config file is malformed would trade a
+ * useful report for a validation error that `npm run stacks:check` already
+ * reports better. A failure here degrades the annotations, not the tool — and it
+ * says so, rather than silently showing every red as undeclared, which would
+ * look identical to nobody having declared anything.
+ */
+async function loadDeclaredGaps(): Promise<{ declared: Map<string, DeclaredGap>; reasonCodes: Set<string>; problem?: string }> {
+    try {
+        const [{ collectDeclaredGaps }, { loadContainerInventory }, { loadStack }] = await Promise.all([
+            import('../src/declaredGaps.ts'),
+            import('../src/containerInventory.ts'),
+            import('../src/stack.ts'),
+        ]);
+        const config = join(HERE, 'config');
+        const stacksDir = join(config, 'stacks');
+        const { knownReasonCodes } = await import('../src/stack.ts');
+        if (!existsSync(stacksDir)) {
+            return { declared: new Map(), reasonCodes: knownReasonCodes() };
+        }
+        const inventory = loadContainerInventory(join(config, 'container.yaml'));
+        const stacks = readdirSync(stacksDir)
+            .filter(name => name.endsWith('.yaml'))
+            .sort()
+            .map(name => loadStack(join(stacksDir, name), { inventory, phasesDirectory: join(config, 'phases') }));
+        const { findStaleDeclarations, annotationFor } = await import('../src/declaredGaps.ts');
+        staleDeclarationsSync = findStaleDeclarations;
+        annotationForSync = annotationFor;
+        return { declared: collectDeclaredGaps(stacks), reasonCodes: knownReasonCodes() };
+    } catch (error) {
+        return {
+            declared: new Map(),
+            reasonCodes: new Set(),
+            problem: `stack declarations could not be read, so nothing below is annotated as declared: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+
 function classify(tally: GateTally): Verdict {
     const rendered = tally.passed + tally.failed;
     if (rendered === 0 && tally.notApplicable > 0 && tally.notAttempted === 0) {
@@ -924,7 +966,48 @@ function printTable(rows: GateRow[]): void {
     console.log('it never means 100%.');
 }
 
-function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string, string[]>): number {
+/**
+ * Say whether anybody had already accounted for this red.
+ *
+ * Wording matters more than usual here. MSBench artifacts carry no record of
+ * which stack produced a run, so this cannot say "the stack this run used
+ * declared it" — only that **some** stack declares this gate red for this
+ * reason. Every line below is written to mean exactly that, because the stronger
+ * claim would quietly excuse a red on a stack that never accounted for it.
+ */
+function printDeclaration(
+    gaps: { declared: Map<string, DeclaredGap>; reasonCodes: Set<string>; problem?: string },
+    gate: string,
+    reason: string,
+    indent: string,
+): void {
+    if (gaps.problem || gaps.declared.size === 0) {
+        return;
+    }
+    const gap = gaps.declared.get(`${gate}\t${reason}`);
+    // `notAttempted` merges NOT_APPLICABLE reason codes with instance faults like
+    // `X_MODEL_NOT_FOUND_ERROR`. Only the former can appear in a `knownGaps`
+    // entry, so the decision of whether to say anything at all lives in
+    // `annotationFor`, where a case holds it. See the note there.
+    const annotation = annotationForSync(gap, reason, gaps.reasonCodes);
+    if (annotation === 'skip') {
+        return;
+    }
+    if (annotation === 'undeclared' || !gap) {
+        console.log(`${indent}UNDECLARED — no stack declares ${gate} red for reason=${reason}. Nobody has`);
+        console.log(`${indent}accounted for this one; go and look.`);
+        return;
+    }
+    console.log(`${indent}declared by stack(s) ${gap.stacks.join(', ')} — expected red, tracked:`);
+    console.log(`${indent}  ${gap.tracking[0].replace(/\s+/gu, ' ').slice(0, 150)}`);
+}
+
+function printFindings(
+    rows: GateRow[],
+    minRuns: number,
+    unexercised: Map<string, string[]>,
+    gaps: { declared: Map<string, DeclaredGap>; reasonCodes: Set<string>; problem?: string },
+): number {
     const of = (verdict: Verdict): GateRow[] => rows.filter(row => row.verdict === verdict);
     const suspect = of('never-passed');
     const starved = of('never-attempted');
@@ -977,6 +1060,7 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             console.log(`  * ${cause} — ${gates.length} gate(s) ${ran ? 'errored' : 'blocked'}, 0 real verdicts between them`);
             for (const { gate, tally } of gates) {
                 console.log(`      ${gate} (${tally.notAttempted} ${ran ? 'untrustworthy' : 'blocked'} over ${tally.runs.size} run(s))`);
+                printDeclaration(gaps, gate, cause, '        ');
             }
             if (ran) {
                 console.log('      These ran and reported their own results untrustworthy. Fix the grader,');
@@ -1009,6 +1093,18 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             console.log(`      ${gates.join(', ')}`);
             console.log(`      Wired to ${gates.length > 1 ? 'stacks these gates' : 'a stack this gate'} cannot answer for, or never wired to one`);
             console.log('      that exercises it.');
+            // Under stack-derived wiring a gate is attached only when the stack
+            // declared the thing it inspects, so this verdict should be
+            // unreachable for any run built with `run.sh --stack`. Seeing one is
+            // therefore a claim about the schema, not about the product — and the
+            // schema said so in writing, which is what makes it falsifiable.
+            console.log('      If this run was built with `run.sh --stack`, an outOfScope verdict is a BUG IN');
+            console.log('      THE STACK SCHEMA: the derivation wired a gate whose fact the stack did not');
+            console.log('      declare, or the stack declared a fact its project does not have. Check');
+            console.log('      config/gates.yaml and the stack before blaming the gate.');
+            for (const gate of gates) {
+                printDeclaration(gaps, gate, reason, '      ');
+            }
         }
     }
 
@@ -1139,6 +1235,56 @@ function printPreamble(runs: string[], instances: number, voidInstances: number,
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Declarations the corpus contradicts.
+ *
+ * The pressure that keeps `knownGaps` honest. `stacks:check` can only verify a
+ * declaration structurally — that the gate exists and the stack could wire it —
+ * because it has no runs to look at. This does: a gate that was observed, and
+ * never once for the reason a stack swears it is red for, has a declaration that
+ * has stopped describing reality.
+ *
+ * Guarded on the gate having been observed at all, because a declaration for a
+ * phase nobody has run yet is a fact about the corpus rather than about the
+ * declaration — and a report that is mostly noise gets ignored, which is how the
+ * thing it was meant to catch survives.
+ */
+function printStaleDeclarations(rows: GateRow[], gaps: { declared: Map<string, DeclaredGap>; reasonCodes: Set<string>; problem?: string }): void {
+    if (gaps.problem || gaps.declared.size === 0) {
+        return;
+    }
+    const observed = new Map<string, Set<string>>();
+    for (const { gate, tally } of rows) {
+        const reasons = new Set<string>([...tally.notApplicableReasons.keys(), ...tally.notAttemptedReasons.keys()]);
+        observed.set(gate, reasons);
+    }
+
+    // Imported lazily for the same reason as the declarations themselves: a
+    // config problem must degrade this section, never the whole audit.
+    let stale: DeclaredGap[] = [];
+    try {
+        stale = staleDeclarationsSync(gaps.declared, observed);
+    } catch {
+        return;
+    }
+    if (stale.length === 0) {
+        return;
+    }
+
+    console.log('');
+    console.log('DECLARED BUT NEVER OBSERVED — a stack swears these gates are red for a reason the');
+    console.log('runs never once reported, on gates the runs *did* exercise. Either the gap closed');
+    console.log('and the declaration outlived it, or it is red for a different reason nobody has');
+    console.log('accounted for. Both are worth a minute; a stale declaration silently excuses a');
+    console.log('genuine failure for as long as nobody rereads it.');
+    for (const gap of stale) {
+        console.log(`  * ${gap.gate} — declared reason=${gap.reason} by ${gap.stacks.join(', ')}, never observed`);
+    }
+}
+
+let staleDeclarationsSync: (declared: Map<string, DeclaredGap>, observed: Map<string, Set<string>>) => DeclaredGap[] = () => [];
+let annotationForSync: (gap: DeclaredGap | undefined, reason: string, reasonCodes: Set<string>) => 'skip' | 'undeclared' | 'declared' = () => 'skip';
+
 async function main(): Promise<void> {
     const options = parseArgs(process.argv.slice(2));
     jsonMode = options.json;
@@ -1259,7 +1405,12 @@ async function main(): Promise<void> {
 
     printPreamble(auditedRuns, instanceCount, voidInstances, options.minRuns, readerFaults, skipped);
     printTable(rows);
-    const confidentSuspects = printFindings(rows, options.minRuns, unexercised);
+    const gaps = await loadDeclaredGaps();
+    if (gaps.problem) {
+        log(`WARNING: ${gaps.problem}`);
+    }
+    const confidentSuspects = printFindings(rows, options.minRuns, unexercised, gaps);
+    printStaleDeclarations(rows, gaps);
 
     console.log('');
     console.log('None of these verdicts proves a defect. Each is a reason to look before quoting a score.');
