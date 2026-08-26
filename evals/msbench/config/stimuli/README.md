@@ -169,8 +169,9 @@ says so, because the artifact validators have nothing frontend-shaped to inspect
 
 ## What the checked-in seed gives up
 
-`stage-workspace.ts` derives its seeds from a checked-in fixture. That is the
-option `harvest-seed.mjs` was written to avoid, and the objection is real:
+`stage-workspace.ts` falls back to a checked-in fixture when nothing has been
+harvested. That is the option `harvest-seed.mjs` was written to avoid, and the
+objection is real:
 
 > Checking one in makes that document a second source of truth: edit the
 > planner's template and the stored copy still describes the old shape, so the
@@ -186,8 +187,35 @@ So the drift is **fail-safe, not fail-open**: a stale plan makes real runs go re
 for a bad reason — expensive and confusing — but cannot make a broken scaffolder
 look green. The risk is accepted knowingly, not argued away.
 
-The concrete thing lost is the drift control: `harvest-seed.mjs` had a `--check`
-mode that reported seed freshness and exited 1 when the seed was stale, hashed
-against `resources/agents/**`. The checked-in fixture has no equivalent, so
-nothing detects that drift automatically. `npm run drift` in `evals/` covers the
-agent contracts themselves, not the fixture's agreement with them.
+### The drift control is back
+
+For a while the concrete thing lost was the drift *control*: `harvest-seed.mjs`
+had a `--check` mode that reported seed freshness and exited 1 when stale, and
+nothing replaced it. [`harvest-seed.ts`](../../harvest-seed.ts) does now:
+
+```
+npm run seed:harvest -- <plan-run-id>   # promote a real plan-phase run's document
+npm run seed:check                      # 0 fresh / 1 stale / 2 never harvested
+```
+
+Harvesting writes `msbench/seeds/project-plan.md` plus a `provenance.json`
+recording the run it came from and `agent-assets.lock.json`'s `agentAssetsHash`
+at the time. `--check` compares that hash against the lock today, so it needs no
+run, no model and no network. When a harvested plan is present it wins; the
+fixture is the floor that keeps the suite runnable on a machine that has never
+authenticated to MSBench.
+
+Note the division of labour, because the two look similar and are not:
+`npm run drift` checks the agent contracts against themselves, while
+`npm run seed:check` checks whether the *stored plan* still agrees with them.
+
+Exit 2 is deliberately neither pass nor fail. A seed nobody has harvested is not
+a seed that was checked and found current, and collapsing the two is how "we
+could not tell" starts reading as "it passed" — the ruling #1747 already made for
+gates that never ran.
+
+Both seeds are still derived from one document by rewriting the single
+`**Status**:` line, including the approved one. That matters more for a harvested
+plan than it did for the fixture: the agent leaves whatever status it likes
+behind, and normalising both directions is what keeps the pair's sole difference
+the approval status.

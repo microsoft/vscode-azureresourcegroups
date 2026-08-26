@@ -669,31 +669,57 @@ property wanted here: a seed that silently failed to copy leaves the agent stari
 empty workspace, where it correctly refuses to scaffold and every assertion goes red as
 though the product were broken — after the run has been paid for.
 
-#### The seed is a checked-in fixture, and that was once rejected
+#### The seed is harvested when possible, and a checked-in fixture otherwise
 
-Both plan seeds derive from `evals/local-dev/fixtures/functions-postgres/`, the same
-fixture `evals/local-dev/eval.yaml` uses. This is the option a previous design
-deliberately avoided: `harvest-seed.mjs` (commit `cc75a4e1`, not on `feat/CoR`) promoted
-a finished MSBench run into the scaffold workspace precisely because *"checking one in
-makes that document a second source of truth: edit the planner's template and the stored
-copy still describes the old shape, so the scaffold graders keep passing against a plan
-no agent would emit."*
+[`harvest-seed.ts`](harvest-seed.ts) promotes a real plan-phase run's
+`.azure/project-plan.md` into `seeds/project-plan.md`, and `stage-workspace.ts` prefers
+it. When nothing has been harvested it falls back to
+`evals/local-dev/fixtures/functions-postgres/`, the same fixture
+`evals/local-dev/eval.yaml` uses — so the suite still runs on a machine that has never
+authenticated to MSBench.
 
-That objection is not answered here; it is **bounded**, by the second of the two
-properties that script relied on: *"It is an input, not an expected answer. No scaffold
-grader reads the plan — they assert against `resources/agents/**`. A wrong plan
+```
+npm run seed:harvest -- <plan-run-id>   # from evals/
+npm run seed:check                      # 0 fresh / 1 stale / 2 never harvested
+```
+
+The fallback is the option a previous design deliberately avoided: `harvest-seed.mjs`
+(commit `cc75a4e1`, not on `feat/CoR`) promoted a finished MSBench run into the scaffold
+workspace precisely because *"checking one in makes that document a second source of
+truth: edit the planner's template and the stored copy still describes the old shape, so
+the scaffold graders keep passing against a plan no agent would emit."*
+
+That objection is not answered by the fallback; it is **bounded**, by the second of the
+two properties that script relied on: *"It is an input, not an expected answer. No
+scaffold grader reads the plan — they assert against `resources/agents/**`. A wrong plan
 therefore makes scaffold trials fail loudly; it cannot make them pass wrongly."*
 
 The drift is therefore **fail-safe, not fail-open**. A stale plan makes real runs go red
 for a bad reason — expensive and confusing — but cannot make a broken scaffolder look
-green, which is the failure that would actually matter. What is given up is the drift
-control: `harvest-seed.mjs` had a `--check` mode that reported seed freshness and exited
-1 when stale. Nothing here replaces it. See
-[`config/stimuli/README.md`](config/stimuli/README.md).
+green, which is the failure that would actually matter.
+
+What used to be missing was the drift *control*: `harvest-seed.mjs` had a `--check` mode
+that reported seed freshness and exited 1 when stale, and for a while nothing replaced
+it. `npm run seed:check` does. Harvesting records `agent-assets.lock.json`'s
+`agentAssetsHash` in `seeds/provenance.json`, and the check compares it against the lock
+today — no run, no model, no network, because the question "is this plan still
+representative?" is really "have the planner's instructions changed since it was
+captured?". Its exit 2 (never harvested) is deliberately neither pass nor fail, for the
+reason [#1747](https://github.com/microsoft/vscode-azureresourcegroups/pull/1747) settled
+for gates that never ran. See [`config/stimuli/README.md`](config/stimuli/README.md).
+
+Harvesting is free: `msbench-cli extract` downloads a stored blob and never touches a
+model, and the run's `files` table holds the **full text** of everything the agent wrote.
+[`extraction.ts`](extraction.ts) is shared with [`regrade.ts`](regrade.ts), which rebuilds
+a whole workspace the same way.
+
+Both recipes rewrite the single `**Status**:` line, including the approved one. That
+matters more for a harvested plan than for the fixture, whose status was already
+`Approved`: an agent leaves whatever status it likes behind, so normalising both
+directions is what keeps the pair's sole difference the approval status.
 
 The seed names (`approved-fullstack`, `unapproved-plan`) are that script's own target
-names, reused so that switching to harvested seeds later is a no-op at the stimulus
-level.
+names, reused so that switching to harvested seeds is a no-op at the stimulus level.
 
 #### The `files` table is not a filesystem listing
 
