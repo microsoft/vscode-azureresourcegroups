@@ -28,6 +28,44 @@ modelSelector:
   id: claude-sonnet-4.5
   vendor: copilot
 
+# Set explicitly because the defaults (6300 / 2700 / 300) are sized for a
+# single-turn run, and the end-to-end chain is not one.
+#
+# NOTE: these are the *in-config* timeouts, enforced by the agent and the
+# platform runner. They are unrelated to `msbench-cli run --timeout`, which is a
+# purely local wait — see README.md, "Timeouts". Do not add that flag.
+timeouts:
+  # describe -> requirements -> plan -> scaffold -> build -> run -> debug, all in
+  # ONE chat session. 1h45m is a per-turn budget, not a budget for the chain.
+  #
+  # Budget, NOT an independent knob. The agent clock starts *after* the job clock
+  # (container pull, VS Code + VSIX install, workspace setup, the `script:`
+  # preamble all precede the first turn), so agentSeconds must leave room for
+  # both that head start and the grace period below — otherwise the job is killed
+  # first, the agent timeout never fires, runnerGraceSeconds never runs, and
+  # nothing is flushed on exactly the runs that need diagnosing:
+  #
+  #   6h job cap - ~15m setup - 15m grace => 5h agent, with margin
+  #
+  # Re-derive this if the cap is ever confirmed. GitHub documents a 6h cap for
+  # hosted runners and 5 days for self-hosted; runs report `dispatched to GitHub
+  # Actions` with run_platform='linux_container', but we could NOT verify which
+  # pool MSBench uses — that is decided by a server-side workflow we cannot read.
+  # 6h is assumed because it is the safer of the two. Raising it needs
+  # confirmation from CodeExService@microsoft.com.
+  agentSeconds: 18000 # 5h
+  # The trap. This is not agent inactivity — it fires only when the agent trace,
+  # the CAPI proxy log, the Copilot Chat log AND workspace file activity are all
+  # quiet. `npm install`, `azd provision`, a build or a test suite produce none
+  # of those four for minutes at a time, so a perfectly healthy run gets killed
+  # for looking idle. Quiet is not the same as stuck.
+  stallSeconds: 5400 # 90m
+  # Time the outer runner allows for cleanup after the agent timeout. A long
+  # session has far more to flush than a 5-step one (screen recording,
+  # trajectory, session.sqlite), and a truncated artifact is an unreadable
+  # result — the run cost is paid either way, so buy the flush.
+  runnerGraceSeconds: 900 # 15m
+
 installExtensions:
   - id: ms-azuretools.vscode-azureresourcegroups
     mode: vsix
