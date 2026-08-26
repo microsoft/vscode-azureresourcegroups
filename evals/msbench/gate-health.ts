@@ -580,8 +580,14 @@ function parseNotApplicable(stdErr: string): NotApplicable | undefined {
     }
     return {
         reason: tokens.get('reason') ?? 'unspecified',
-        // Anything other than an explicit outOfScope is treated as a gap — see
-        // NOT_APPLICABLE_MARKER. Never guess a gate into the dead-weight bucket.
+        // Deliberate default-by-exclusion: anything that is not explicitly `outOfScope` is treated
+        // as a gap. That is the safe direction — never guess a gate into the dead-weight bucket —
+        // and it makes a rename of the gap class (environmentGap -> coverageGap) a no-op here.
+        //
+        // The consequence, recorded so it is a decision rather than an accident: if a THIRD class is
+        // ever introduced it lands silently in the gap bucket. A third class therefore needs an
+        // explicit ruling on which bucket it joins, and this line updated to match. Raise it before
+        // emitting one.
         outOfScope: tokens.get('class') === 'outOfScope',
     };
 }
