@@ -60,3 +60,29 @@ script: |
     cp -r /agent/assets/workspace/. /workspace/
   fi
   ls -la /workspace/ /workspace/.azure 2>&1 || true
+  # Azure Functions Core Tools.
+  #
+  # Every stimulus in this phase is an Azure Functions project, and all five
+  # runtime-* gates need `func` to answer at all. Without it they emit
+  # functionsHostUnavailable, which is the one-line cause of their having been red
+  # on every run since they were written. config/container.yaml has recorded the
+  # install command all along and nothing ever ran it; this is that line.
+  #
+  # Deliberately fail-soft, and that is the whole point of the block rather than an
+  # afterthought. `set -e` is on, so an unguarded install that 404s, times out or
+  # hits a registry outage would abort the preamble and take down a run that would
+  # otherwise have produced four turns of gradeable output. The rule this has to
+  # obey is that a failed install leaves the run exactly as it is today — five gates
+  # red for a stated reason — and can never make things worse than not trying.
+  #
+  # Costs a one-off download in the preamble, before the agent clock starts.
+  if command -v func >/dev/null 2>&1; then
+    echo "func already present: $(func --version 2>&1 | tail -1)"
+  else
+    npm install -g azure-functions-core-tools@4 --unsafe-perm true \
+      || echo "func install FAILED; the runtime gates will report functionsHostUnavailable exactly as before"
+  fi
+  # Recorded either way, and the stimuli's environment fingerprint probes `func`
+  # independently, so the `exec` table carries the answer even though preamble
+  # output does not reach the results.
+  command -v func >/dev/null 2>&1 && func --version 2>&1 | tail -1 || echo "func: still unavailable"

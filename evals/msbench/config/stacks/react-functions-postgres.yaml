@@ -60,8 +60,12 @@ knownGaps:
     reason: functionsHostUnavailable
     binary: func
     tracking: >-
-      Install azure-functions-core-tools in the run preamble (see the install
-      command in config/container.yaml). Until then every Functions stack pays
-      three reds per run for a missing binary.
+      config/phases/local.yaml now installs azure-functions-core-tools in the
+      preamble, fail-soft, so this gap should close on the next local-dev run.
+      It is deliberately still declared: the install has never been observed to
+      succeed in-container, and removing the entry on the strength of an
+      unverified command would turn a stated gap into a silent one. The stimuli
+      fingerprint records `func=` either way — clear this entry once a run shows
+      a path rather than MISSING, and not before.
 
 phases: [plan]
