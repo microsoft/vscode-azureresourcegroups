@@ -59,6 +59,22 @@
 # fabricated justification is worse than a blank, because it converts an open
 # question into a settled one.
 #
+# ## Spelling: prefer `{ not: [...] }` over an allow-list
+#
+# When a row means "this fact must be *something*", write the deny-list. An
+# allow-list over an enum is a maintenance liability every time: it is correct on
+# the day it is written and silently unwires its gate the day a value is added to
+# the enum — and a gate wired nowhere reads as a clean run.
+#
+# This is not a style preference. Two sessions independently produced the same
+# failure — a gate quietly not running — from opposite causes: one required a
+# fact whose absence did not mean absence of a question, the other required the
+# right fact spelled in a way that decays. **A construct that is correct only
+# when someone remembers to choose it will eventually not be chosen**, so the
+# safe form is the default and the allow-list is for when you genuinely mean an
+# enumerated subset (`frontend: [spa]` does; `datastore: [postgres, cosmos, blob,
+# queue]` did not).
+#
 # ## `args:`
 #
 # Flags derived from the same facts, using the same predicate language. This is
@@ -159,8 +175,16 @@ gates:
     summary: the datastore the scaffold wires is the one the plan chose
     phases: [scaffold]
     # A project with no datastore has nothing to compare. Absence, not inability.
+    #
+    # Spelled as a deny-list, not as the four kinds that are not `none`. The
+    # reasoning was always "not none"; the allow-list spelling silently unwires
+    # this gate the day someone adds a datastore kind, which fails in the
+    # invisible direction. Same defect as the `runtime-crud` row below had, from
+    # the opposite cause: that one required a fact whose absence did not mean
+    # absence of a question, this one required the right fact spelled in a way
+    # that decays.
     requires:
-      project.datastore: [postgres, cosmos, blob, queue]
+      project.datastore: { not: [none] }
 
   - id: integration-plan
     grader: evals/graders/validate-integration-plan.ts
@@ -276,9 +300,17 @@ gates:
     # exit 3 rather than a silent stand-down. Requiring the declaration threw
     # that away on every stack that did not opt in.
     #
-    # Deliberately not requiring a datastore, though `datastore: none` arguably
-    # has nothing to persist to: spelling it as a list of the kinds that are not
-    # `none` silently unwires this gate the day someone adds a datastore kind,
-    # and it fails in the invisible direction.
+    # A datastore is deliberately NOT required, and this was very nearly changed to
+    # `{ not: [none] }` on the reasoning that `datastore: none` has nothing to
+    # persist to. Checking the grader first showed the opposite: it stands down
+    # only when a *container-requiring* datastore package is present (`pg`,
+    # `mongodb`, `redis`, …), because there is no Docker to run a server. A
+    # project storing in memory is the one shape where this gate can currently go
+    # green at all.
+    #
+    # So requiring a datastore would unwire the gate on precisely the stack where
+    # it works — the same failure this row was already corrected for once, and the
+    # reason the audit question is "why does this row demand what it demands?"
+    # rather than "does this row look reasonable?".
     requires:
       project.api: [http]
