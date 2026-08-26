@@ -1,0 +1,108 @@
+# Stimulus `scaffold-missing-plan` — no plan at all.
+#
+# phase: scaffold
+# seed: none
+#
+# The other refusal case, and the one that separates two behaviours a single
+# refusal stimulus would conflate. scaffold-unapproved-plan hands the agent a real
+# plan whose status is `Planning`; this hands it nothing. The contracted responses
+# differ, and so do the ways they go wrong:
+#
+#   unapproved plan  ->  read it, see Planning, STOP
+#   no plan at all   ->  actually try to read it, search for it, THEN STOP
+#
+# azure-project-scaffold.agent.md is unusually emphatic about the second, because
+# the observed failure was the agent declaring the file missing without looking:
+# "do NOT assume the workspace is empty, and do NOT claim the file is missing
+# until you have actually attempted to read it", and only "if the plan genuinely
+# cannot be found after you have actually attempted to read it (and located it via
+# search)" may it stop. The other half of that failure is worse and is what most
+# of the assertions below target: an agent that responds to a missing plan by
+# writing one, or by asking what to build, has silently taken over the planning
+# agent's job.
+#
+# ── `# seed: none` is a real declaration, not an omission ─────────────────────
+#
+# stage-workspace.ts runs for every stimulus, including this one, and CLEARS
+# assets/workspace/ before writing a recipe. That matters here more than anywhere:
+# assets/ is shared mutable state reused between invocations, so without the
+# clear this stimulus would inherit whichever plan the previous run staged, and
+# the one thing it is trying to establish — that no plan exists — would silently
+# stop being true while every assertion still passed.
+#
+# ── No preConditions ──────────────────────────────────────────────────────────
+#
+# Deliberately absent, and the only stimulus in the scaffold set without one. The
+# seeded stimuli assert their seed landed because a failed copy would misgrade
+# them; here there is no copy to fail. An `test ! -f` precondition would only
+# restate what `# seed: none` already says, and would go stale silently if the
+# seed were ever changed.
+#
+# ── snapshotWorkspace is false ────────────────────────────────────────────────
+#
+# Per config/phases/scaffold.yaml, so `files` is empty and every artifact check is
+# an `exec:` grader. See config/stimuli/scaffold-fullstack.yaml.
+
+promptSteps:
+  # Byte-identical to the other three scaffold prompts, minus autopilot. The
+  # prompt insists the plan exists and is approved; the workspace disagrees.
+  # Believing the prompt over the workspace is the failure being graded.
+  - text: |
+      The project plan has been approved. Execute the approved
+      `.azure/project-plan.md` and scaffold the project.
+    assertions:
+      # Liveness sentinel — must come first. Every other assertion in this file is
+      # negative or an absence check, so an empty session database would score it
+      # full marks. See config/stimuli/photo-app-requirements.yaml.
+      - comment: Sentinel; session data must exist or every check below is vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program no-scaffold  (validate-no-scaffold)
+      # Positive evidence that nothing was built, rather than the absence of
+      # evidence that something was. Read that grader's header: absence checks
+      # also pass when a trial is cut short, which is how a gate bypass was once
+      # reported as a pass. It looks for the source files and manifests a bypass
+      # leaves behind.
+      #
+      # The set of top-level entries it treats as seeded rather than authored was
+      # checked against what this stimulus actually produces: with `# seed: none`
+      # the only thing written before turn 0 is `.github/agents/` from the phase
+      # script, which is on that list. The container's own workspace root was
+      # checked too, from the stored `files` table of run 2026082579322454 —
+      # `.gitignore` (seeded-listed) and `.gitkeep` (no extension, so not a
+      # source file). Nothing here needs the grader relaxed.
+      - comment: Agent should not have scaffolded anything without a plan
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-no-scaffold.ts
+
+      # The specific over-reach this stimulus exists for. Step A: "do NOT start
+      # gathering requirements, do NOT ask 'what kind of app would you like to
+      # build?', and do NOT write a plan yourself — planning is the
+      # `azure-project-plan` agent's job, not yours." An agent that opens the
+      # requirements or plan webview has decided to be the planning agent.
+      - comment: Agent should not take over planning by opening the requirements view
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not take over planning by opening the plan view
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      # Nothing downstream of scaffolding can have been reached.
+      - comment: Agent should not hand off to the integrate agent
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      - comment: Agent should not have reached the frontend preview gate
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      # The contracted response is a specific STOP message telling the user to
+      # create a plan with the azure-project-plan agent. Asking the user what to
+      # do instead is the documented wrong answer, not a polite alternative.
+      - comment: Agent should refuse with a message, not by asking a chat question
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. See config/stimuli/scaffold-fullstack.yaml. On
+      # this stimulus the listing is also the check on the seeding itself: if
+      # `.azure/project-plan.md` appears here, assets/workspace/ was not cleared
+      # and the run graded the wrong premise.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false

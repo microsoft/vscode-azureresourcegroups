@@ -1,0 +1,154 @@
+# Stimulus `scaffold-fullstack` — the scaffold phase's happy path.
+#
+# phase: scaffold
+# seed: approved-fullstack
+#
+# The first stimulus in this folder to grade `azure-project-scaffold` rather than
+# `azure-project-plan`, and the first to need a non-empty starting workspace: the
+# scaffold agent's contracted first action is to READ an approved
+# `.azure/project-plan.md`, not to write one.
+#
+# The `# seed:` directive says *what state the workspace must be in*, and nothing
+# about how it gets there. stage-workspace.ts resolves `approved-fullstack` to the
+# checked-in fullstack plan (React + Azure Functions + PostgreSQL) and writes it to
+# assets/workspace/; the phase script copies that into /workspace before turn 0.
+# No file path and no shell command appears in this file on purpose — if starting
+# workspaces later come from baked container images, that replaces one module and
+# leaves every stimulus untouched.
+#
+# ── This file is one half of TWO falsifiable pairs ─────────────────────────────
+#
+# It is the shared control for both, and that is the most valuable property in the
+# scaffold suite:
+#
+#   scaffold-fullstack  vs  scaffold-autopilot        differ ONLY in the prompt
+#   scaffold-fullstack  vs  scaffold-unapproved-plan  differ ONLY in the plan's
+#                                                     status line
+#
+# Both members of each pair share this phase, this seed recipe's source document,
+# this agent and this assertion style. So an agent that ALWAYS opens the approval
+# gate fails exactly one member of each pair, and an agent that NEVER opens it
+# fails exactly the other. Neither degenerate strategy can score well, which is
+# what makes a green result here evidence rather than a coincidence.
+#
+# `harvest-seed.mjs` (commit cc75a4e1) put the sharp version of this best, about
+# the status pair: the pair is only falsifiable if the sole difference is the
+# approval status, "so the scaffold agent cannot pass both by keying off anything
+# else in the document". That is a stronger claim than "the files look similar",
+# and it is destroyed by any second difference — a reworded prompt here, a
+# different seed there, an extra assertion on one side only. If you are about to
+# change one file of a pair, change both or change neither.
+#
+# ── snapshotWorkspace is false, so there are no `files` assertions ─────────────
+#
+# config/phases/scaffold.yaml sets `snapshotWorkspace: false` because scaffolding
+# runs a real `npm install`. That empties the `files` table, and the schema fails
+# a run fast rather than degrading quietly when an assertion queries it. Every
+# artifact check below is therefore an `exec:` grader running the real validator,
+# which is the better form anyway — see README.md, "Which assertions are `exec:`
+# and which stay SQL". build-config.ts enforces the rule locally so the mistake
+# cannot reach a paid run.
+
+# Fail before any tokens are spent if the seed did not land.
+#
+# Worth the extra assertion because of how this failure would otherwise present. A
+# seed that silently failed to copy leaves the scaffold agent staring at an empty
+# workspace; it correctly refuses to scaffold, and every assertion below goes red
+# as though the product were broken. The run is paid for, and the diagnosis is
+# "the agent did not scaffold" — true, and completely misleading.
+#
+# `preConditions` is the schema's own answer to that: "Assertions to validate
+# before running any prompts. If these fail, the benchmark will not proceed." It
+# accepts the same `exec:` variant as a step assertion, so this is a plain test.
+preConditions:
+  - comment: The approved plan seed must be present before the agent starts
+    exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
+
+promptSteps:
+  # The hand-off prompt the plan webview's Approve button actually sends, so the
+  # agent is entered the way the product enters it. This exact wording is quoted
+  # in azure-project-scaffold.agent.md's Step A as the invoking query.
+  #
+  # PAIRED FILE: scaffold-autopilot.yaml is this prompt with an `[AUTOPILOT MODE]`
+  # prefix and nothing else changed. Keep them in sync word for word.
+  - text: |
+      The project plan has been approved. Execute the approved
+      `.azure/project-plan.md` and scaffold the project.
+    assertions:
+      # Liveness sentinel — must come first, and every stimulus needs one. See
+      # config/stimuli/photo-app-requirements.yaml for the full reasoning: a
+      # negative assertion over an empty table is trivially true, so without this
+      # a run that died before the first turn collects full marks on every
+      # negative check below instead of failing.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program frontend-scaffold-valid  (validate-frontend-scaffold)
+      # Preview embeddability and API-seam integrity. This is the grader that
+      # decides whether the frontend the agent produced can actually render in
+      # the preview webview the scaffold agent is contracted to open — vite
+      # `host`/`allowedHosts`/`strictPort`, a dev script that really serves, no
+      # frame-busting CSP. A structural check could not establish that.
+      - comment: Scaffolded frontend is preview-embeddable and keeps the API seam
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-frontend-scaffold.ts
+
+      # vally: program integration-plan-valid --has-frontend
+      # `.azure/integration-plan.md` is the brief the integrate agent consumes in
+      # a fresh session with no chat history, so an incomplete one is a real
+      # product break rather than an untidy document. `--has-frontend` is correct
+      # here because the seeded plan specifies a React frontend — it is part of
+      # what makes this stimulus the fullstack shape.
+      - comment: integration-plan.md satisfies the hand-off contract, including the frontend seam
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-integration-plan.ts --has-frontend
+
+      # vally: program project-builds --require-frontend
+      # The one property no document check can stand in for: the generated
+      # project installs and builds. A frontend with a plausible vite.config.ts
+      # and a broken import graph passes every artifact validator above.
+      #
+      # `timeoutMs` is generous because this grader runs a real package install
+      # and a real build for every workspace package — minutes, not seconds, and
+      # a cold npm cache in-container. The failure mode being designed against is
+      # a timeout reported as a product regression: MSBench collapses every
+      # non-zero exit into "failed", so a grader killed at 60s is indistinguishable
+      # from a project that genuinely does not build. 20 minutes is well past the
+      # observed cost of an install-and-build and still far inside the phase's
+      # own stallSeconds budget.
+      - comment: The scaffolded project installs and builds, frontend included
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-builds.ts --require-frontend
+        timeoutMs: 1200000
+
+      # vally: tool-calls required [workflow-tools-open_frontend_preview_view]
+      # Step C.3 of azure-project-scaffold.agent.md: when the plan has a frontend
+      # and autopilot is NOT active, open the preview gate. This is the assertion
+      # that flips in the autopilot pair — there it must be ABSENT.
+      - comment: Agent should have opened the frontend preview approval gate
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # vally: tool-calls disallowed [workflow-tools-start_project_integrate]
+      # The other half of the same gate, and the reason a single positive check
+      # would not be enough. Step C.3 ends "After opening the gate, STOP — do NOT
+      # also call start_project_integrate": the webview owns the hand-off, and its
+      # Approve UI button is what invokes integrate. An agent that opens the gate
+      # and then hands off anyway has bypassed the user's approval while still
+      # satisfying the assertion above.
+      - comment: Agent should not hand off to integrate before the UI is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      # Step C.5 — opening the gate IS the next step, so there is nothing to ask.
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. `assertZeroExitCode: false` stores the command in
+      # the `exec` table without generating a check, so it can never fail the run
+      # or change the assertion count. Read it first when a grader above goes red:
+      # no Node, Node too old to strip types, and a mis-staged tree are
+      # indistinguishable from the outside. See README.md.
+      #
+      # The seed listing is included here as well as in preConditions: the
+      # precondition proves the plan was there at the start, this shows what the
+      # workspace looked like at the end.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false

@@ -1,0 +1,110 @@
+# Stimulus `scaffold-autopilot` — the same scaffold, unattended.
+#
+# phase: scaffold
+# seed: approved-fullstack
+#
+# ── The pair ──────────────────────────────────────────────────────────────────
+#
+# This file and config/stimuli/scaffold-fullstack.yaml differ in EXACTLY ONE
+# thing: the `[AUTOPILOT MODE] ` prefix on the prompt. Same phase, same seed, same
+# plan document byte for byte, same graders, same flags. That is deliberate and it
+# is the property the pair exists for.
+#
+# azure-project-scaffold.agent.md defines autopilot as active "when the invoking
+# chat query begins with the marker `[AUTOPILOT MODE]`", and says what changes:
+# skip the frontend preview approval gate, and hand off to integrate directly. So
+# the two stimuli demand *opposite* behaviour from the same agent on the same
+# input, distinguished only by that marker.
+#
+# The consequence is what makes this worth two runs rather than one. An agent that
+# always opens the gate passes scaffold-fullstack and fails this one. An agent
+# that never opens it passes this one and fails scaffold-fullstack. There is no
+# degenerate strategy that passes both, which is precisely what a single stimulus
+# cannot establish.
+#
+# ANY second difference destroys that. If this prompt is reworded, if this seed
+# changes, if a grader flag is added here and not there — the pair stops being
+# falsifiable and quietly becomes two unrelated tests that happen to be adjacent.
+# Change both files or change neither.
+#
+# ── Everything else ───────────────────────────────────────────────────────────
+#
+# Seeding, `snapshotWorkspace: false`, why every artifact assertion is `exec:`,
+# and the sentinel: all identical to scaffold-fullstack.yaml, which carries the
+# full reasoning. Not repeated here — a second copy of an explanation is a second
+# thing to drift.
+
+# Identical to scaffold-fullstack.yaml. A seed that silently failed to copy would
+# make the agent refuse to scaffold, and every assertion below would go red as
+# though the product were broken — after the run had been paid for. The schema:
+# "Assertions to validate before running any prompts. If these fail, the benchmark
+# will not proceed."
+preConditions:
+  - comment: The approved plan seed must be present before the agent starts
+    exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
+
+promptSteps:
+  # scaffold-fullstack.yaml's prompt, verbatim, with the marker prefixed. The
+  # marker form is copied from azure-project-scaffold.agent.md's own autopilot
+  # section, including the trailing space before the sentence.
+  - text: |
+      [AUTOPILOT MODE] The project plan has been approved. Execute the approved
+      `.azure/project-plan.md` and scaffold the project.
+    assertions:
+      # Liveness sentinel — must come first. See
+      # config/stimuli/photo-app-requirements.yaml. It matters more than usual in
+      # this file: two of the assertions below are negative, and one of them is
+      # the gate-skip check that is the entire point of the stimulus.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program frontend-scaffold-valid  (validate-frontend-scaffold)
+      # Autopilot suppresses gates and questions, "never scaffold quality" — so
+      # the frontend contract is asserted here exactly as in the attended case.
+      # An agent that produced a worse frontend because nobody was going to look
+      # at it in a preview would fail here, which is the point of not relaxing it.
+      - comment: Scaffolded frontend is preview-embeddable and keeps the API seam
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-frontend-scaffold.ts
+
+      # vally: program integration-plan-valid --has-frontend
+      # Step C.3 of the autopilot path still writes the hand-off artifact, and the
+      # integrate agent still reads it in a fresh session — more critically here,
+      # since in autopilot there is no user in the loop to notice it is thin.
+      - comment: integration-plan.md satisfies the hand-off contract, including the frontend seam
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-integration-plan.ts --has-frontend
+
+      # vally: program project-builds --require-frontend
+      # Generous timeoutMs for the same reason as the paired file: a real install
+      # and build, where a killed grader is indistinguishable from a project that
+      # does not build. See scaffold-fullstack.yaml.
+      - comment: The scaffolded project installs and builds, frontend included
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-builds.ts --require-frontend
+        timeoutMs: 1200000
+
+      # THE PAIR ASSERTION, inverted. In scaffold-fullstack.yaml this same tool
+      # must have been called; here it must not.
+      #
+      # Autopilot section, step 3: "Skip the frontend preview approval gate (the
+      # `open_frontend_preview_view` tool) — the UI is auto-approved in autopilot;
+      # hand off directly instead." An agent that opens a webview nobody is
+      # watching has stalled an unattended run on an approval that will never come.
+      - comment: Agent should skip the frontend preview gate under autopilot
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # The other half, also inverted from the paired file. Autopilot step 3 makes
+      # the direct hand-off mandatory, because with the gate skipped nothing else
+      # will start the integrate agent — the run simply stops.
+      - comment: Agent should hand off directly to integrate under autopilot
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      # Strictly stronger here than in the attended case: autopilot means "no chat
+      # questions, no manual approval", and an unattended run blocked on a question
+      # is a hang, not a slow answer.
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. See config/stimuli/scaffold-fullstack.yaml.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false
