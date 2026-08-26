@@ -65,7 +65,7 @@ This applies to **all frameworks** — any framework where the config file lives
 
 > ⚠️ A browser debug config can fail on the **first** launch (**F5**) — the browser window doesn't open, or the debugger never attaches. This is almost always **browser process / first-run state, NOT a defect in the generated `launch.json`**. The two common causes are (1) a browser instance is already running, and (2) a one-time development HTTPS certificate prompt interrupts startup (e.g. after a TLS/dev-cert setup by the app or a local emulator).
 
-**Don't assume a first-launch failure is a bad config.** The generated config may be correct — jumping straight to rewriting it (swapping `launch`→`attach`, hand-authoring a dedicated Edge process task) treats the wrong cause. Guide the user through the runtime fixes below **first**, and relay them in your closing message when the plan includes a browser-debugged frontend:
+**Don't assume a first-launch failure is a bad config.** The generated config may be correct — jumping straight to rewriting it (e.g. swapping `launch`→`attach` or hand-authoring a dedicated Edge process task) may treat the wrong cause. Guide the user through the following fixes below **first**:
 
 - **Close every window of the debug browser** (all Edge windows, or all Chrome windows), then press **F5** again. An already-running browser is the most common cause of a failed debug launch.
 - If a **development certificate / HTTPS prompt** appeared during the first run, accept it, then close all browser windows and retry so the trusted certificate takes effect.
