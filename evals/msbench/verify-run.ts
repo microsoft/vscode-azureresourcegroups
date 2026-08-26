@@ -178,21 +178,93 @@ function firstExisting(...paths: string[]): string | undefined {
 }
 
 /**
- * Tolerate a dated or otherwise more specific id on either side —
- * `gpt-4o-mini` vs `gpt-4o-mini-2024-07-18` is the same model, and the log may
- * carry the long form. A changed family (`claude-sonnet-4.5` for `gpt-5.6-sol`)
- * is still rejected.
+ * A dated release suffix, e.g. the `-2024-07-18` in `gpt-4o-mini-2024-07-18`.
+ *
+ * This is the *only* difference tolerated between the requested and the active
+ * id. An earlier version of this accepted any suffix (`a.startsWith(b + '-')`),
+ * which is badly wrong: it makes `gpt-5` match `gpt-5-mini`, a cheaper and less
+ * capable model. That is precisely the mismatch this check exists to catch, and
+ * exactly what a model sweep would hit.
+ *
+ * A bare numeric revision (`claude-opus-4` vs `claude-opus-4-1`) is deliberately
+ * NOT tolerated either. Opus 4.1 is a different model from Opus 4, with
+ * different behaviour and cost, so treating them as equal would silently
+ * mislabel a sweep datapoint. If the harness ever starts reporting a revision we
+ * did not request, that should be a loud failure and a conscious decision, not
+ * something absorbed by a lenient matcher.
+ */
+const DATED_RELEASE_SUFFIX = /^-\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The pairs that define the boundary, asserted by `--self-test`.
+ *
+ * Kept as data rather than prose so the next person can see — and re-run — the
+ * exact cases the matcher must accept and must reject.
+ */
+const MODEL_MATCH_CASES: readonly (readonly [string, string, boolean])[] = [
+    // Same model, written two ways: the log may carry the dated release id.
+    ['gpt-4o-mini', 'gpt-4o-mini-2024-07-18', true],
+    ['gpt-4o-mini-2024-07-18', 'gpt-4o-mini', true],
+    ['gpt-4.1', 'gpt-4.1-2025-04-14', true],
+    ['claude-sonnet-4.5', 'claude-sonnet-4.5', true],
+    ['Claude-Sonnet-4.5', 'claude-sonnet-4.5 ', true],
+
+    // Different models. Every one of these was accepted by the old prefix
+    // matcher, and each would have mislabelled a model sweep datapoint.
+    ['gpt-5', 'gpt-5-mini', false],
+    ['gpt-4o', 'gpt-4o-mini', false],
+    ['claude-opus-4', 'claude-opus-4-1', false],
+    ['gpt-5.6', 'gpt-5.6-sol', false],
+    ['claude-sonnet-4.5', 'claude-haiku-4.5', false],
+    ['gpt-5-mini', 'gpt-5', false],
+
+    // A dated suffix on a *different* family is still a different model: the
+    // date pattern must never be checked without confirming the prefix first.
+    ['gpt-4o', 'claude-2024-07-18', false],
+];
+
+/**
+ * True when `requested` and `observed` name the same model.
+ *
+ * Equality, or one being the other plus a dated release suffix. Nothing else —
+ * see DATED_RELEASE_SUFFIX and MODEL_MATCH_CASES for the boundary.
  */
 function modelMatches(requested: string, observed: string): boolean {
     const a = requested.trim().toLowerCase();
     const b = observed.trim().toLowerCase();
-    return a === b || a.startsWith(`${b}-`) || b.startsWith(`${a}-`);
+    if (a === b) {
+        return true;
+    }
+    const [longer, shorter] = a.length > b.length ? [a, b] : [b, a];
+    // The prefix test must come first: without it, `gpt-4o` vs
+    // `claude-2024-07-18` would slice to `-2024-07-18` and match.
+    if (!longer.startsWith(shorter)) {
+        return false;
+    }
+    return DATED_RELEASE_SUFFIX.test(longer.slice(shorter.length));
+}
+
+/** Assert the matcher's boundary. Run with `node verify-run.ts --self-test`. */
+function selfTest(): void {
+    const failures = MODEL_MATCH_CASES.filter(([a, b, expected]) => modelMatches(a, b) !== expected);
+    for (const [a, b, expected] of MODEL_MATCH_CASES) {
+        const actual = modelMatches(a, b);
+        const status = actual === expected ? 'ok  ' : 'FAIL';
+        console.log(`  ${status} ${expected ? 'match   ' : 'reject  '} ${a}  vs  ${b}`);
+    }
+    if (failures.length) {
+        console.error(`\n${failures.length} model-matcher case(s) failed.`);
+        process.exit(1);
+    }
+    console.log(`\n${MODEL_MATCH_CASES.length} model-matcher cases passed.`);
 }
 
 interface ModelVerdict {
     readonly requested?: string;
     readonly active?: string;
     readonly mismatch: boolean;
+    /** True when the check could not run at all — distinct from "verified OK". */
+    readonly unverified?: boolean;
     readonly note?: string;
 }
 
@@ -231,12 +303,22 @@ function verifyModel(outputDir: string, expectedOverride?: string): ModelVerdict
         : undefined;
 
     if (!requested) {
-        return { requested, active, mismatch: false, note: 'no modelSelector.id to compare against' };
+        return { requested, active, mismatch: false, unverified: true, note: 'no modelSelector.id to compare against' };
     }
     if (!active) {
+        // Fail open, loudly.
+        //
         // A run that died before model selection legitimately has no such line,
-        // and absent evidence is not evidence of the wrong model. Say so.
-        return { requested, active, mismatch: false, note: 'no "Set active model to:" line — identity not verified' };
+        // and absent evidence is not evidence of the wrong model. Failing closed
+        // would turn every missing artifact into a fake "model mismatch" and, if
+        // a future harness version stopped emitting the line, would block every
+        // run on a false accusation — the same disease as a detector that hides
+        // true reds, just pointed the other way.
+        //
+        // The cost of that choice is that the check could silently disappear, so
+        // it is reported as its own prominent state rather than folded into a
+        // pass. `unverified` is not `verified OK`.
+        return { requested, active, mismatch: false, unverified: true, note: 'no "Set active model to:" line in agent-output.log or entry.log' };
     }
     return { requested, active, mismatch: !modelMatches(requested, active) };
 }
@@ -260,8 +342,13 @@ function main(): void {
     };
 
     const runDir = valueOf('--run-dir');
+    if (args.includes('--self-test')) {
+        selfTest();
+        return;
+    }
     if (!runDir) {
         console.error('usage: verify-run.ts --run-dir <extracted results dir> [--run-id <id>] [--expected-model <id>]');
+        console.error('       verify-run.ts --self-test');
         process.exit(2);
     }
     const runId = valueOf('--run-id') ?? 'unknown';
@@ -288,7 +375,14 @@ function main(): void {
     console.log('    model:');
     console.log(`      requested (user-overrides.yaml)  ${model.requested ?? '-'}`);
     console.log(`      active    (agent-output.log)     ${model.active ?? '-'}`);
-    if (model.note) {
+    if (model.unverified) {
+        // Deliberately not a quiet aside. This is a third state next to
+        // "matches" and "mismatch", and the one that would otherwise let the
+        // check rot away unnoticed.
+        console.log('      !! IDENTITY NOT VERIFIED — this is NOT a pass.');
+        console.log(`      !! ${model.note}`);
+        console.log('      !! The run stands, but nothing confirmed which model answered.');
+    } else if (model.note) {
         console.log(`      note: ${model.note}`);
     }
 
@@ -356,7 +450,9 @@ function main(): void {
         process.exit(EX_DATAERR);
     }
 
-    console.log('    verified: this run is a result.');
+    console.log(model.unverified
+        ? '    this run is a result (model identity unverified — see above).'
+        : '    verified: this run is a result.');
 }
 
 main();

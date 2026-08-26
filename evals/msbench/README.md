@@ -425,6 +425,39 @@ exists to catch a future regression in model selection during model sweeps, wher
 run is supposed to be a different model and a mislabelled one would collapse N models
 into N runs of the same one.
 
+**Only a dated release suffix is tolerated** between the two ids — `gpt-4o-mini` matches
+`gpt-4o-mini-2024-07-18`, and nothing else matches. In particular these must *not* match,
+because they are different models with different cost and capability:
+
+| Requested | Active | |
+| --- | --- | --- |
+| `gpt-5` | `gpt-5-mini` | reject |
+| `gpt-4o` | `gpt-4o-mini` | reject |
+| `claude-opus-4` | `claude-opus-4-1` | reject |
+| `gpt-5.6` | `gpt-5.6-sol` | reject |
+
+A bare numeric revision (`claude-opus-4` → `claude-opus-4-1`) is deliberately rejected
+too: Opus 4.1 is a different model from Opus 4, so absorbing that into a lenient match
+would silently mislabel a sweep datapoint. The full boundary is executable —
+`npm run msbench:self-test` in `evals/` asserts every accepted and rejected pair.
+
+There is a third outcome besides match and mismatch. If the `Set active model to:` line is
+missing entirely, the check **fails open and says so loudly**:
+
+```
+      !! IDENTITY NOT VERIFIED — this is NOT a pass.
+      !! no "Set active model to:" line in agent-output.log or entry.log
+      !! The run stands, but nothing confirmed which model answered.
+```
+
+`identity not verified` is a distinct state from `identity verified OK`, and the summary
+line reflects it. Fail-open is the deliberate choice: a run that died before model
+selection legitimately has no such line, and failing closed would turn every missing
+artifact into a fake mismatch — and if a future harness version stopped emitting the line,
+it would block every run on a false accusation. That is the same disease as a detector
+that hides true reds, just pointed the other way. The cost is that the check could quietly
+rot, which is exactly why the state is shouted rather than tucked into a note.
+
 Three other values look like they would answer this and do not — they are all echoes of
 the request rather than observations of the answer:
 

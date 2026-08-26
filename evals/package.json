@@ -12,7 +12,8 @@
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
         "gate-tools": "node check-gate-tools.ts",
-        "ci:local": "node ci-local.ts"
+        "ci:local": "node ci-local.ts",
+        "msbench:self-test": "node msbench/verify-run.ts --self-test"
     },
     "license": "MIT",
     "dependencies": {
