@@ -63,12 +63,14 @@
  * `npm run seed:check` pass it.
  */
 
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, type Instance } from './extraction.ts';
 import {
     checkFreshness, currentAgentAssetsHash, EXIT_FRESH, EXIT_NOT_HARVESTED, EXIT_STALE, EXIT_TOOL_ERROR,
-    HARVESTED_PLAN, PROVENANCE_PATH, writeSeed, type Freshness, type Provenance,
+    freshnessOf, HARVESTED_PLAN, PROVENANCE_PATH, writeSeed, type Freshness, type Provenance,
 } from './seed-store.ts';
 
 /** Anchored to the `.azure/` directory so a stray `docs/project-plan.md` cannot match. */
@@ -88,6 +90,8 @@ Options:
                     provenance that cannot name its run is not auditable.
   --check           Report whether the harvested seed is still current, and exit
                     0 (fresh) / 1 (stale) / 2 (never harvested).
+  --self-test       Assert this tool's behaviour against synthetic extractions.
+                    Needs no credentials and touches no real seed.
   -h, --help        Show this help.
 
 Harvesting requires \`msbench-cli\` on PATH; --check is purely local:
@@ -261,6 +265,170 @@ function harvest(runId: string, wanted: string | undefined, extractedDir: string
 }
 
 // ---------------------------------------------------------------------------
+// Self-test
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert this tool's behaviour against synthetic extractions. Run with
+ * `node harvest-seed.ts --self-test`.
+ *
+ * The real link — harvesting a genuine plan out of a genuine MSBench run — needs
+ * `msbench-cli` and an Azure identity, so it cannot run in PR CI. What *can* run is
+ * everything between the `files` table and the seed on disk, which is where all the
+ * decisions live. A synthetic `session.sqlite` is a faithful stand-in for that half:
+ * `regrade.ts` documents the schema this reads, and the rows here are the same shape.
+ *
+ * It matters that the failure cases are covered rather than just the happy path. Four of
+ * the five assertions below are about *distinguishing* failures that would otherwise
+ * arrive as the same confusing red run — an empty table and an agent that wrote no plan
+ * are one keystroke apart in the query and a day apart in the diagnosis.
+ *
+ * Nothing here touches the real `seeds/` directory: the harvest pieces are called
+ * individually rather than through `harvest()`, and the freshness states go through the
+ * pure `freshnessOf`.
+ */
+function selfTest(): number {
+    const failures: string[] = [];
+    const root = mkdtempSync(join(tmpdir(), 'harvest-seed-selftest-'));
+
+    const check = (name: string, run: () => void): void => {
+        try {
+            run();
+            console.log(`  ok    ${name}`);
+        } catch (error) {
+            failures.push(name);
+            console.log(`  FAIL  ${name}`);
+            console.log(`          ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
+        }
+    };
+
+    /** Build one synthetic extraction and return the instance inside it. */
+    const build = (name: string, rows: [string, string, number][]): Instance => {
+        const dir = join(root, name);
+        const vsc = join(dir, `vscbench.eval.x86_64.${name}-output`, 'output', 'vsc-output');
+        mkdirSync(vsc, { recursive: true });
+        const db = new DatabaseSync(join(vsc, 'session.sqlite'));
+        db.exec('CREATE TABLE files (id INTEGER PRIMARY KEY, path TEXT, content TEXT, stepIndex INTEGER)');
+        const insert = db.prepare('INSERT INTO files (path, content, stepIndex) VALUES (?, ?, ?)');
+        for (const [path, content, stepIndex] of rows) {
+            insert.run(path, content, stepIndex);
+        }
+        db.close();
+        return selectInstance(dir, undefined);
+    };
+
+    const expectThrows = (fragment: string, run: () => void): void => {
+        let message: string | undefined;
+        try {
+            run();
+        } catch (error) {
+            message = error instanceof Error ? error.message : String(error);
+        }
+        if (message === undefined) {
+            throw new Error(`expected a failure mentioning ${JSON.stringify(fragment)}, but it succeeded`);
+        }
+        if (!message.includes(fragment)) {
+            throw new Error(`expected ${JSON.stringify(fragment)}, got: ${message.split('\n')[0]}`);
+        }
+    };
+
+    try {
+        console.log('Harvest');
+
+        check('the last write of the plan wins, not the first', () => {
+            const instance = build('supersede', [
+                ['.azure/project-plan.md', '**Status**: Planning\n\nearly draft\n', 0],
+                ['.azure/project-plan.md', '**Status**: Planning\n\nfinal\n', 1],
+            ]);
+            const { content } = readPlanFromRun(instance);
+            if (!content.includes('final') || content.includes('early draft')) {
+                throw new Error(`took the wrong revision: ${JSON.stringify(content)}`);
+            }
+        });
+
+        // `snapshotWorkspace: false` and "the agent declined to write a plan" are the two
+        // findings this pair keeps apart. Both would otherwise read as "no plan found".
+        check('an empty files table is reported as a captured-nothing run', () => {
+            const instance = build('empty', []);
+            expectThrows('the files table is empty', () => readPlanFromRun(instance));
+        });
+
+        check('a run that wrote files but no plan says so differently', () => {
+            const instance = build('noplan', [['.azure/requirements.json', '{}', 0]]);
+            expectThrows('no .azure/project-plan.md among the', () => readPlanFromRun(instance));
+        });
+
+        check('two candidate plans are refused rather than guessed between', () => {
+            const instance = build('ambiguous', [
+                ['.azure/project-plan.md', '**Status**: Planning\n', 0],
+                ['nested/.azure/project-plan.md', '**Status**: Planning\n', 0],
+            ]);
+            expectThrows('candidate plans', () => readPlanFromRun(instance));
+        });
+
+        // Without this the seed pair silently stops discriminating: both members would
+        // carry the same status and `scaffold-unapproved-plan` becomes a copy of
+        // `scaffold-fullstack` that still reports green.
+        check('a plan with no status line is rejected at harvest, not at staging', () => {
+            expectThrows("'**Status**: ...' lines", () => assertPlanIsUsable('# Plan\n\nno status\n', 'synthetic'));
+        });
+
+        check('a plan with two status lines is rejected too', () => {
+            expectThrows("'**Status**: ...' lines", () =>
+                assertPlanIsUsable('**Status**: Approved\n**Status**: Planning\n', 'synthetic'));
+        });
+
+        console.log('\nFreshness');
+
+        const provenance: Provenance = {
+            runId: '2026082614813342',
+            instance: 'vscbench.eval.x86_64.plan',
+            harvestedAt: '2026-08-26T00:00:00.000Z',
+            agentAssetsHash: 'a'.repeat(64),
+            sourcePath: '.azure/project-plan.md',
+        };
+
+        check('a matching hash is fresh', () => {
+            const state = freshnessOf(provenance, 'a'.repeat(64)).state;
+            if (state !== 'fresh') {
+                throw new Error(`expected fresh, got ${state}`);
+            }
+        });
+
+        check('a changed hash is stale, and not merely unknown', () => {
+            const state = freshnessOf(provenance, 'b'.repeat(64)).state;
+            if (state !== 'stale') {
+                throw new Error(`expected stale, got ${state}`);
+            }
+        });
+
+        // The distinction #1747 settled: never-run is not the same as passed.
+        check('no provenance is not-harvested, which is neither fresh nor stale', () => {
+            const state = freshnessOf(null, 'a'.repeat(64)).state;
+            if (state !== 'not-harvested') {
+                throw new Error(`expected not-harvested, got ${state}`);
+            }
+        });
+
+        check('the three states map to three different exit codes', () => {
+            const codes = new Set([EXIT_FRESH, EXIT_STALE, EXIT_NOT_HARVESTED]);
+            if (codes.size !== 3) {
+                throw new Error('freshness states share an exit code, so a caller cannot tell them apart');
+            }
+        });
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+
+    if (failures.length) {
+        console.error(`\n${failures.length} harvest-seed case(s) failed.`);
+        return EXIT_TOOL_ERROR;
+    }
+    console.log('\nPASS: harvest-seed self-test.');
+    return EXIT_FRESH;
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -270,6 +438,7 @@ function main(): number {
     let instance: string | undefined;
     let extractedDir: string | undefined;
     let check = false;
+    let selfTestOnly = false;
 
     for (let index = 0; index < argv.length; index++) {
         const arg = argv[index];
@@ -277,6 +446,9 @@ function main(): number {
             case '-h': case '--help':
                 console.log(USAGE);
                 return EXIT_FRESH;
+            case '--self-test':
+                selfTestOnly = true;
+                break;
             case '--check':
                 check = true;
                 break;
@@ -305,6 +477,13 @@ function main(): number {
                 }
                 runId = arg;
         }
+    }
+
+    if (selfTestOnly) {
+        if (runId || check) {
+            throw new MsBenchToolError('--self-test runs alone.');
+        }
+        return selfTest();
     }
 
     if (check) {

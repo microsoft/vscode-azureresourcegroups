@@ -116,6 +116,22 @@ export function writeSeed(content: string, provenance: Provenance): void {
     writeFileSync(PROVENANCE_PATH, `${JSON.stringify(provenance, null, 4)}\n`);
 }
 
+/**
+ * The freshness decision, separated from the filesystem so it can be asserted directly.
+ *
+ * `checkFreshness` is the same rule wired to real paths; keeping the decision pure is
+ * what lets `--self-test` cover all three states without writing over a real harvested
+ * seed to do it.
+ */
+export function freshnessOf(provenance: Provenance | null, current: string): Freshness {
+    if (!provenance) {
+        return { state: 'not-harvested' };
+    }
+    return provenance.agentAssetsHash === current
+        ? { state: 'fresh', provenance }
+        : { state: 'stale', provenance, current };
+}
+
 export function checkFreshness(): Freshness {
     const provenance = readProvenance();
     if (!provenance) {
@@ -130,8 +146,5 @@ export function checkFreshness(): Freshness {
             'Re-harvest to restore the pair; they are only meaningful together.'
         );
     }
-    const current = currentAgentAssetsHash();
-    return provenance.agentAssetsHash === current
-        ? { state: 'fresh', provenance }
-        : { state: 'stale', provenance, current };
+    return freshnessOf(provenance, currentAgentAssetsHash());
 }

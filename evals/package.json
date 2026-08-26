@@ -18,6 +18,7 @@
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
         "seed:harvest": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts",
         "seed:check": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --check",
+        "seed:self-test": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --self-test",
         "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
         "ci:local": "node ci-local.ts",
         "msbench:self-test": "node msbench/verify-run.ts --self-test"

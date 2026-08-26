@@ -713,6 +713,40 @@ model, and the run's `files` table holds the **full text** of everything the age
 [`extraction.ts`](extraction.ts) is shared with [`regrade.ts`](regrade.ts), which rebuilds
 a whole workspace the same way.
 
+##### Verifying it
+
+Two halves, because only one of them can run without credentials.
+
+**Credential-free, and the half CI runs.** `npm run seed:self-test` asserts everything
+between the `files` table and the seed on disk against synthetic extractions: that the
+last write of a plan wins rather than the first, that a plan with no `**Status**:` line is
+rejected at harvest rather than at staging, that the three freshness states stay distinct,
+and — the four that matter most — that an empty `files` table, a run that wrote no plan,
+two candidate plans, and a malformed plan each fail with their *own* message. Those would
+otherwise all arrive as the same confusing red run.
+
+It runs in PR CI as a `check-clean-machine.ts` entrypoint, which also proves the harvester
+imports no packages, so it works on the bare host `run.sh` promises.
+
+**The real link, which needs `msbench-cli` on PATH and `az login`.** Point it at a plan
+run that actually produced a plan — `plan-generation-task-app` did, and its id is in
+[Verified result](#verified-result):
+
+```bash
+cd evals
+npm run seed:harvest -- 2026082614813342   # free: downloads a stored blob
+npm run seed:check                          # 0 fresh
+node msbench/stage-workspace.ts scaffold-fullstack
+```
+
+The last command prints which source it used, and staging a harvested plan is the actual
+proof: `.azure/project-plan.md` in `assets/workspace/` should be the planner's own
+document with `**Status**: Approved`. **Until someone runs that, the link is unproven** —
+`seed:check` reports exit 2 and the suite is still seeding from the fixture.
+
+No `npm ci` is needed for any of it. `harvest-seed.ts` imports only Node builtins, which
+is what the clean-machine entrypoint above exists to keep true.
+
 Both recipes rewrite the single `**Status**:` line, including the approved one. That
 matters more for a harvested plan than for the fixture, whose status was already
 `Approved`: an agent leaves whatever status it likes behind, so normalising both
