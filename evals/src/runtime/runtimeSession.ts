@@ -156,7 +156,7 @@ const CONNECTION_RETRY_WINDOW_MS = 5_000;
 
 export async function probe(url: string, init: RequestInit = {}): Promise<HttpProbeResult> {
     const deadline = Date.now() + CONNECTION_RETRY_WINDOW_MS;
-    let lastError = 'unknown error';
+    let lastError: string;
     for (;;) {
         try {
             const response = await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });

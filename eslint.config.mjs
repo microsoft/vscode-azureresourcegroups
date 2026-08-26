@@ -14,6 +14,7 @@ export default defineConfig([
             'api/dist/**',
             'api/out/**',
             'evals/grader-certification/reference-node-fullstack/**',
+            'evals/grader-certification/reference-node-multiservice/**',
             'evals/grader-certification/sample-agent-output/**',
             'evals/msbench/.staged/**',
             'evals/vscode-parity/**',
@@ -69,6 +70,14 @@ export default defineConfig([
         files: ['src/webviews/copilotOnRails/views/**/*.{ts,tsx}'],
         rules: {
             '@typescript-eslint/naming-convention': 'off',
+        },
+    },
+    {
+        files: ['evals/**/*.{ts,tsx}'],
+        rules: {
+            '@typescript-eslint/naming-convention': 'off',
+            '@typescript-eslint/no-non-null-assertion': 'off',
+            'no-template-curly-in-string': 'off',
         },
     },
 ]);

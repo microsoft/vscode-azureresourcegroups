@@ -1268,7 +1268,7 @@ function printStaleDeclarations(rows: GateRow[], gaps: { declared: Map<string, D
 
     // Imported lazily for the same reason as the declarations themselves: a
     // config problem must degrade this section, never the whole audit.
-    let stale: DeclaredGap[] = [];
+    let stale: DeclaredGap[];
     try {
         stale = staleDeclarationsSync(gaps.declared, observed);
     } catch {
