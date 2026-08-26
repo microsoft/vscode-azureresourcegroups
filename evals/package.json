@@ -10,6 +10,7 @@
         "lint:plan": "vally lint --eval-spec project-plan/eval.yaml",
         "lint:local-dev": "vally lint --eval-spec local-dev/eval.yaml",
         "typecheck": "tsc --noEmit -p tsconfig.json",
+        "imports:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/importScanner.ts --self-test",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
         "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
