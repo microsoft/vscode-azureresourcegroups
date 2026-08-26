@@ -145,8 +145,8 @@ async function ensureBaselineCaptured(context: IActionContext, fields: DeployRes
         if (!subscription) {
             return;
         }
-        const resourceIds = await snapshotResourceIds(context, subscription);
-        await context$.workspaceState.update(key, resourceIds);
+        const baseline = await snapshotResourceIds(context, subscription);
+        await context$.workspaceState.update(key, baseline);
     } finally {
         baseliningSessions.delete(fields.sessionId);
     }
@@ -184,11 +184,43 @@ async function ensureInventoryCaptured(context: IActionContext, uri: vscode.Uri,
             baseline,
         });
 
-        await writeInventoryIntoFile(uri, fields.raw, result.createdResources, result.orphanedResourceGroups, expectedResourceGroup);
+        context.telemetry.properties.targetsUnavailable = String(result.targetsUnavailable === true);
+        if (result.targetsUnavailable) {
+            context.telemetry.properties.targetsUnavailableReason = result.targetsUnavailableReason ?? 'error';
+            // The enclosing handler suppresses successful telemetry (it runs on every file event);
+            // this is exactly the case worth measuring, so let this one through.
+            context.telemetry.suppressIfSuccessful = false;
+            // Attribution failed, so there is no cleanup list to write — only the fact that the
+            // inventory could not be verified. Writing an unattributed "orphaned" list here would
+            // put delete commands next to resources that may be the working deployment.
+            await writeUnverifiedInventoryIntoFile(uri, fields.raw, result.createdResources, result.targetsUnavailableReason ?? 'error');
+        } else {
+            await writeInventoryIntoFile(uri, fields.raw, result.createdResources, result.orphanedResourceGroups, expectedResourceGroup);
+        }
         await context$.workspaceState.update(capturedKey(fields.sessionId), true);
     } finally {
         capturingSessions.delete(fields.sessionId);
     }
+}
+
+/**
+ * Records that the inventory could not be verified, so the view can say so instead of rendering a
+ * cleanup list. The created resources are still written (they're useful context) but every one is
+ * classified `unverified`, which the parser deliberately excludes from cleanup candidates.
+ */
+async function writeUnverifiedInventoryIntoFile(
+    uri: vscode.Uri,
+    raw: Record<string, unknown>,
+    createdResources: readonly CreatedResource[],
+    reason: string,
+): Promise<void> {
+    const merged: Record<string, unknown> = {
+        ...raw,
+        createdResources,
+        inventoryUnverified: true,
+        inventoryUnverifiedReason: reason,
+    };
+    await AzExtFsExtra.writeFile(uri, JSON.stringify(merged, null, 2) + '\n');
 }
 
 /**

@@ -19,7 +19,20 @@ Deterministic resource-inventory capture provided by the Azure Resources extensi
 | `deploymentNames` | — | All ARM deployment names (initial + healing) used to classify created resources. |
 | `resourceGroups` | — | RGs touched (incl. abandoned healing RGs) so RG-scoped deployment operations are read. |
 
-Holds the baseline snapshot in memory (no files written). On `phase: "capture"` returns the created resources classified `expected`/`failed`/`orphaned` plus orphaned resource groups; write those into `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]` and build cleanup commands from the `orphaned`/`failed` entries. See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](../instructions.md) Steps 5b/6/8/9.
+Holds the baseline snapshot in memory (no files written). On `phase: "capture"` returns the created resources classified `expected`/`failed`/`orphaned`/`unverified` plus orphaned resource groups; write those into `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]`.
+
+⛔ **Classification confidence differs, and your wording to the user MUST reflect it:**
+
+| Classification | Meaning | How to present it |
+|---|---|---|
+| `expected` | Tracked deployment reported it as `Succeeded` in the target RG. | Part of the working deployment. Never suggest deleting it. |
+| `failed` | Tracked deployment reported it with a non-succeeded state. | Confirmed to belong to this deployment. Safe to offer a delete command. |
+| `orphaned` | Appeared during the deploy window but **no tracked deployment reported it**. | It *may* be a healing/imperative stray — or another person's resource on a shared subscription. Present as "review before deleting", never as "safe to delete" or "created by this deployment". |
+| `unverified` | Deployment operations could not be read at all, so nothing could be attributed. | Say the inventory could not be verified and point the user at the portal. Do **not** produce any cleanup list or delete command. |
+
+When the tool returns `inventoryUnverified: true`, record it in `deploy-result.json` as `inventoryUnverified` + `inventoryUnverifiedReason` and skip the cleanup section entirely.
+
+See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](../instructions.md) Steps 5b/6/8/9.
 
 ---
 
@@ -73,7 +86,7 @@ Holds the baseline snapshot in memory (no files written). On `phase: "capture"` 
 | Tool | Sub-command | AppOnboard Step | Purpose |
 |------|-----------|----------|---------|
 | `capture_deployment_inventory` | *(baseline)* | Step 5b | Snapshot pre-existing resources before the first deployment |
-| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list() to record created/orphaned/failed resources + cleanup commands |
+| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list() to record created/orphaned/failed resources; build cleanup commands from `failed` entries only |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_availability-status_get` | Step 7 | Post-deploy health. Call with `resourceId` from `deploy-result.json.resourceIds[]` |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_health-events_list` | Step 3 | Pre-deploy outage check. `event-type: "ServiceIssue"`, `status: "Active"` |
 | `mcp_azure_mcp_monitor` | `monitor_activitylog_list` | Step 7+ | Failed deployment analysis. `resource-name` from deploy output, `event-level: "Error"`, `hours: 1` |
