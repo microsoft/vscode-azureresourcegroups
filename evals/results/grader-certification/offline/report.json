@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:32:42.367Z",
+  "generatedAt": "2026-08-26T08:52:34.771Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -8,7 +8,8 @@
     "reference-node-multiservice",
     "reference-python-api",
     "reference-dotnet-api",
-    "reference-go-unsupported"
+    "reference-go-unsupported",
+    "api-only-no-datastore"
   ],
   "outcome": "passed",
   "cases": [
@@ -313,6 +314,18 @@
       "expected": "missingBackendPort",
       "actual": [
         "missingBackendPort"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-database-section-dropped",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingDatabase",
+      "actual": [
+        "missingDatabase"
       ],
       "passed": true,
       "durationMs": 0
@@ -974,6 +987,16 @@
       "actual": [
         "ecosystemNotSupported"
       ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-integration-plan",
+      "tier": "offline",
+      "fixture": "api-only-no-datastore",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
       "passed": true,
       "durationMs": 0
     }

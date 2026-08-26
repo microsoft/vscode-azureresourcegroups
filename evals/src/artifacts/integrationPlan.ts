@@ -45,7 +45,7 @@ interface Section {
 
 export function validateIntegrationPlanArtifact(
     content: string,
-    options: { hasFrontend?: boolean } = {},
+    options: { hasFrontend?: boolean; hasDatastore?: boolean } = {},
 ): ArtifactValidationResult {
     const issues: ArtifactValidationIssue[] = [];
 
@@ -59,7 +59,19 @@ export function validateIntegrationPlanArtifact(
 
     validateBackend(findSection(sections, backendHeading)?.body, issues);
     validateRoutes(findSections(sections, /\b(routes?|endpoints?)\b/i, frontendHeading), issues);
-    validateDatabase(findSection(sections, /\b(database|data ?store|persistence|storage)\b/i), issues);
+    // Demanding a Database section is only right when the project has a datastore.
+    // A project declared `datastore: none` correctly omits it, and grading that as
+    // `missingDatabase` blames the agent for a document that is right — the same
+    // fabricated-red shape as running the Node build grader against a Python project.
+    //
+    // Note the polarity: this defaults to **demanding**, and only an explicit
+    // "there is no datastore" relaxes it. The opposite default would mean a caller
+    // that passes no options silently stops checking — a flag nothing passes,
+    // quietly weakening the gate, which is exactly how `--require-health` came to
+    // exist only in its own documentation.
+    if (options.hasDatastore !== false) {
+        validateDatabase(findSection(sections, /\b(database|data ?store|persistence|storage)\b/i), issues);
+    }
     validateServices(findSection(sections, /^(azure )?services\b/i)?.body, issues);
 
     if (options.hasFrontend) {

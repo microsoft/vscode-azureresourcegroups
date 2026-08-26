@@ -68,6 +68,14 @@
                 "service-fidelity": "ecosystemNotSupported",
                 "datastore-fidelity": "ecosystemNotSupported"
             }
+        },
+        {
+            "id": "api-only-no-datastore",
+            "path": "evals/grader-certification/api-only-no-datastore",
+            "description": "An API-only project with no datastore and no frontend, whose hand-off plan correctly omits the Database and Frontend sections. Certifies that the gate does not demand what this project has no reason to have.",
+            "offlineValidators": [
+                "integration-plan"
+            ]
         }
     ],
     "mutations": [
@@ -740,6 +748,17 @@
             "search": "    <script src=\"/app.js\"></script>\n",
             "replacement": "",
             "expectedCode": "frontendMakesNoApiCalls"
+        },
+        {
+            "id": "integration-plan-database-section-dropped",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection \u2192 table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
+            "replacement": "",
+            "expectedCode": "missingDatabase"
         }
     ]
 }

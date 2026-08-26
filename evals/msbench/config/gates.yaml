@@ -166,13 +166,22 @@ gates:
     grader: evals/graders/validate-integration-plan.ts
     summary: .azure/integration-plan.md hands off correctly
     phases: [scaffold]
-    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
-    # is wrong — a claim that nobody has written down why it is right, which is
-    # indistinguishable from nobody having considered it.
+    # Every project the flow scaffolds is contracted to produce this artifact — it
+    # is the hand-off between the scaffold and local-dev phases, written whatever
+    # the ecosystem, hosting or datastore. There is no project shape that
+    # legitimately omits it, so no fact's absence leaves this gate nothing to read.
+    # Verified against the grader: every issue code it emits is structural, and the
+    # `func start` / `npm start` mentions are format examples, not ecosystem checks.
     requires: {}
     args:
       - value: --has-frontend
         when: { project.frontend: [spa] }
+      # `[none]` rather than `{ not: [...] }`, and that is deliberate: this flag
+      # names the one value that relaxes the gate, so a new datastore kind must not
+      # be added to it. The deny-list is right for "must be something"; an
+      # allow-list is right for "is exactly this".
+      - value: --no-datastore
+        when: { project.datastore: [none] }
 
   # --- local-dev phase ----------------------------------------------------
   - id: debug-plan
