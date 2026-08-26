@@ -103,7 +103,12 @@ export async function validateAppStarts(workspaceRoot: string): Promise<RuntimeV
     const { app, target } = session as Extract<RuntimeSession, { kind: 'started' }>;
     return pass([
         `started with "${[target.command, ...target.args].join(' ')}" in ${target.cwd} (${target.startSource})`,
-        `listening on ${app.baseUrl} (port ${app.portProvenance})`,
+        app.baseUrl === undefined
+            // The stack declares no API, so "it listened" was never the right assertion.
+            // What was checked is that the process was still running after a settling
+            // window — falsifiable, and failed by a worker that exits on startup.
+            ? 'no HTTP surface declared (project.api: none); still running after the liveness window'
+            : `listening on ${app.baseUrl} (port ${app.portProvenance})`,
         ...app.findings.map(finding => `finding [${finding.code}]: ${finding.message}`),
     ]);
 }
@@ -146,14 +151,20 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
         return blocked;
     }
     const { app, target } = session as Extract<RuntimeSession, { kind: 'started' }>;
+    const httpSurface = requireHttpSurface(session);
+    if (typeof httpSurface !== 'string') {
+        return httpSurface;
+    }
+    const baseUrl = httpSurface;
+
 
     if (target.healthPath) {
-        const result = await probe(`${app.baseUrl}${target.healthPath}`);
+        const result = await probe(`${baseUrl}${target.healthPath}`);
         if (!result.ok) {
             return failure(
                 'healthEndpointUnreachable',
                 target.healthPath,
-                `the app is listening on ${app.baseUrl} but the health endpoint ${target.healthPath} `
+                `the app is listening on ${baseUrl} but the health endpoint ${target.healthPath} `
                 + `(declared in ${describeHealthSource(target.healthPathSource)}) could not be reached: ${result.error}.`,
                 app.output(),
             );
@@ -172,7 +183,7 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
 
     const attempts: string[] = [];
     for (const candidate of CONVENTIONAL_HEALTH_PATHS) {
-        const result = await probe(`${app.baseUrl}${candidate}`);
+        const result = await probe(`${baseUrl}${candidate}`);
         if (result.ok && isSuccess(result.response.status)) {
             return pass([`${candidate} → ${result.response.status} (guessed; the project declared no health path)`]);
         }
@@ -183,7 +194,7 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
         return failure(
             'healthEndpointMissing',
             '$.health',
-            `the app is listening on ${app.baseUrl} but no health endpoint answered. Tried: ${attempts.join(', ')}.`,
+            `the app is listening on ${baseUrl} but no health endpoint answered. Tried: ${attempts.join(', ')}.`,
             app.output(),
         );
     }
@@ -195,7 +206,7 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
         return failure(
             'healthEndpointMissing',
             '$.health',
-            `the app is listening on ${app.baseUrl} but has no health endpoint: nothing is declared in its API test collections, `
+            `the app is listening on ${baseUrl} but has no health endpoint: nothing is declared in its API test collections, `
             + '.azure/integration-plan.md or .azure/vscode-debug-plan.md, and no conventional path answered. '
             + `The project has an integration plan, whose Backend section is required to name a health endpoint path. Tried: ${attempts.join(', ')}.`,
             app.output(),
@@ -203,7 +214,7 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
     }
     return notApplicable(
         'noHealthPathDeclared',
-        `the app is listening on ${app.baseUrl} but no health endpoint answered (tried ${attempts.join(', ')}), and the workspace `
+        `the app is listening on ${baseUrl} but no health endpoint answered (tried ${attempts.join(', ')}), and the workspace `
         + 'has no .azure/integration-plan.md, so there is no record of it having promised one. The gate has a real question here '
         + 'and no contract to check it against; pass --require-health to fail instead.',
     );
@@ -233,6 +244,12 @@ export async function validateFrontendServes(workspaceRoot: string, options: Fro
         return blocked;
     }
     const { app, target } = session as Extract<RuntimeSession, { kind: 'started' }>;
+    const httpSurface = requireHttpSurface(session);
+    if (typeof httpSurface !== 'string') {
+        return httpSurface;
+    }
+    const baseUrl = httpSurface;
+
 
     const separate = await discoverFrontendDirectory(workspaceRoot);
     if (separate && path.resolve(separate) !== path.resolve(target.packageDirectory)) {
@@ -247,9 +264,9 @@ export async function validateFrontendServes(workspaceRoot: string, options: Fro
         return notApplicable('noFrontendDeclared', 'the project serves no index.html, so it has no browser frontend to probe.');
     }
 
-    const result = await probe(`${app.baseUrl}/`);
+    const result = await probe(`${baseUrl}/`);
     if (!result.ok) {
-        return failure('frontendUnreachable', '/', `the frontend at ${app.baseUrl}/ could not be reached: ${result.error}.`, app.output());
+        return failure('frontendUnreachable', '/', `the frontend at ${baseUrl}/ could not be reached: ${result.error}.`, app.output());
     }
     if (!isSuccess(result.response.status)) {
         return failure('frontendNotServed', '/', `the app returned ${result.response.status} for / instead of the frontend: ${excerpt(result.response.body)}`, app.output());
@@ -286,6 +303,12 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
         return blocked;
     }
     const { app, target } = session as Extract<RuntimeSession, { kind: 'started' }>;
+    const httpSurface = requireHttpSurface(session);
+    if (typeof httpSurface !== 'string') {
+        return httpSurface;
+    }
+    const baseUrl = httpSurface;
+
 
     const separate = await discoverFrontendDirectory(workspaceRoot);
     if (separate && path.resolve(separate) !== path.resolve(target.packageDirectory)) {
@@ -295,12 +318,12 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
         );
     }
 
-    const document = await probe(`${app.baseUrl}/`);
+    const document = await probe(`${baseUrl}/`);
     if (!document.ok || !isSuccess(document.response.status) || !looksLikeHtml(document.response)) {
         return notApplicable('noFrontendDeclared', 'the app serves no browser document at /, so there is no frontend wiring to check.');
     }
 
-    const { calls, usesHttpClient } = await collectApiCalls(app.baseUrl, document.response.body);
+    const { calls, usesHttpClient } = await collectApiCalls(baseUrl, document.response.body);
     if (calls.length === 0) {
         switch (attributeAbsence({
             couldNotRead: usesHttpClient,
@@ -321,7 +344,7 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
                 return failure(
                     'frontendMakesNoApiCalls',
                     '/',
-                    `the served frontend at ${app.baseUrl}/ issues no HTTP requests whatsoever, while `
+                    `the served frontend at ${baseUrl}/ issues no HTTP requests whatsoever, while `
                     + '.azure/integration-plan.md declares the API routes it was supposed to call. '
                     + 'The two halves were built and never connected.',
                     app.output(),
@@ -338,7 +361,7 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
     const issues: ArtifactValidationIssue[] = [];
     const checked: string[] = [];
     for (const call of calls) {
-        const result = await probe(`${app.baseUrl}${call}`);
+        const result = await probe(`${baseUrl}${call}`);
         if (!result.ok) {
             issues.push(issue('frontendApiRouteUnreachable', call, `the frontend calls ${call}, which could not be reached on the running backend: ${result.error}.`));
             continue;
@@ -377,6 +400,12 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
         return blocked;
     }
     const { app, target } = session as Extract<RuntimeSession, { kind: 'started' }>;
+    const httpSurface = requireHttpSurface(session);
+    if (typeof httpSurface !== 'string') {
+        return httpSurface;
+    }
+    const baseUrl = httpSurface;
+
 
     const datastore = await findContainerDatastore(target.packageDirectory);
     if (datastore) {
@@ -387,17 +416,34 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
         );
     }
 
-    const document = await probe(`${app.baseUrl}/`);
+    const document = await probe(`${baseUrl}/`);
     const servesFrontend = document.ok && looksLikeHtml(document.response);
-    const collection = servesFrontend
-        ? await findCollectionEndpoint(app.baseUrl, document.response.body)
+    const extracted = servesFrontend
+        ? await findCollectionEndpoint(baseUrl, document.response.body)
         : undefined;
+
+    // Rung 0 for the route. The *fields* still come from the frontend, because the stack
+    // schema declares a route but not a payload shape — and posting `{}` to a correctly
+    // validating API earns a 400, which would be a fabricated product failure. So a
+    // declared route with no readable payload is reported as our gap, not the product's.
+    if (target.collectionRoute && !extracted) {
+        return harnessFault(
+            `the stack declares project.collectionRoute: ${target.collectionRoute}, but no request body shape could be `
+            + 'extracted from the served frontend, so this gate cannot build a payload the API would accept. '
+            + 'Declaring a payload shape alongside the route would close this.',
+            app.output(),
+            'collectionPayloadUnknown',
+        );
+    }
+    const collection = target.collectionRoute && extracted
+        ? { path: target.collectionRoute, fields: extracted.fields }
+        : extracted;
     if (!collection) {
         // Same attribution rule as the wiring gate. A frontend that plainly posts, whose
         // URL or body shape we could not extract, is our limitation — and reporting it as
         // "this project has no CRUD" is how the gate quietly stopped testing anything.
         const { usesHttpClient } = servesFrontend
-            ? await collectApiCalls(app.baseUrl, document.response.body)
+            ? await collectApiCalls(baseUrl, document.response.body)
             : { usesHttpClient: false };
         if (usesHttpClient) {
             return harnessFault(
@@ -421,7 +467,7 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
         payload[field] = marker;
     }
 
-    const created = await probe(`${app.baseUrl}${collection.path}`, {
+    const created = await probe(`${baseUrl}${collection.path}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
@@ -438,7 +484,7 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
         );
     }
 
-    const readBack = await probe(`${app.baseUrl}${collection.path}`);
+    const readBack = await probe(`${baseUrl}${collection.path}`);
     if (!readBack.ok) {
         return failure('crudReadUnreachable', collection.path, `GET ${collection.path} could not be reached after a successful create: ${readBack.error}.`, app.output());
     }
@@ -468,6 +514,22 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
  * the startup failure with the same code, so a broken app produces one obvious root cause
  * across the suite rather than five different-looking symptoms.
  */
+/**
+ * Gates 2-5 all probe over HTTP, so they all need the same guard: a background worker has
+ * no surface to probe. This is the one genuinely out-of-scope case in the vocabulary —
+ * nothing to look at, and no remedy would change that, because the stack declared the
+ * project has no API. Gate 1 deliberately does not use this: for a worker it asserts
+ * liveness instead, so the suite still has one gate that can fail.
+ */
+function requireHttpSurface(session: RuntimeSession): string | RuntimeValidationResult {
+    const baseUrl = session.kind === 'started' ? session.app.baseUrl : undefined;
+    return baseUrl ?? notApplicable(
+        'noHttpSurface',
+        'the stack declares project.api: none, so this project is a background worker with no HTTP surface to probe. '
+        + 'runtime-app-starts still asserts it stays running.',
+    );
+}
+
 function describeUnusableSession(session: RuntimeSession): RuntimeValidationResult | undefined {
     switch (session.kind) {
         case 'started':
