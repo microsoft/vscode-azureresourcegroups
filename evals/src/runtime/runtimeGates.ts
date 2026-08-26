@@ -179,7 +179,7 @@ export async function validateFrontendServes(workspaceRoot: string, options: Fro
     const separate = await discoverFrontendDirectory(workspaceRoot);
     if (separate && path.resolve(separate) !== path.resolve(target.packageDirectory)) {
         return notApplicable(
-            'frontendServerNotStarted',
+            'frontendDevServerUnsupported',
             `the frontend in ${path.relative(workspaceRoot, separate) || '.'} runs as its own dev server, which these gates do not start yet. `
             + 'Only frontends served by the application under test are probed.',
         );
@@ -232,7 +232,7 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
     const separate = await discoverFrontendDirectory(workspaceRoot);
     if (separate && path.resolve(separate) !== path.resolve(target.packageDirectory)) {
         return notApplicable(
-            'frontendServerNotStarted',
+            'frontendDevServerUnsupported',
             `the frontend in ${path.relative(workspaceRoot, separate) || '.'} runs as its own dev server, which these gates do not start yet.`,
         );
     }
@@ -494,6 +494,11 @@ async function findCollectionEndpoint(baseUrl: string, document: string): Promis
  * A regex cannot do this: the argument list of a `fetch` call contains nested objects and
  * strings that may hold brackets, and matching the wrong closing bracket would silently
  * read the wrong body shape.
+ *
+ * Regex *literals* are skipped too. A pattern like `/['"]/` would otherwise open a quote
+ * that never closes, desynchronising the bracket depth for the rest of the scan — which
+ * doesn't crash, it just makes gate 5 quietly report "no collection route" and stop testing
+ * anything, the exact silent degradation this file is written to avoid.
  */
 function readBalanced(source: string, from: number, open: string, close: string): string | undefined {
     const start = source.indexOf(open, from);
@@ -502,6 +507,7 @@ function readBalanced(source: string, from: number, open: string, close: string)
     }
     let depth = 0;
     let quote: string | undefined;
+    let previous = '';
     for (let index = start; index < source.length; index++) {
         const character = source[index];
         if (quote) {
@@ -514,6 +520,12 @@ function readBalanced(source: string, from: number, open: string, close: string)
         }
         if (character === '"' || character === "'" || character === '`') {
             quote = character;
+        } else if (character === '/' && startsRegexLiteral(previous)) {
+            const end = findRegexLiteralEnd(source, index);
+            if (end === undefined) {
+                return undefined;
+            }
+            index = end;
         } else if (character === open) {
             depth++;
         } else if (character === close) {
@@ -521,6 +533,40 @@ function readBalanced(source: string, from: number, open: string, close: string)
             if (depth === 0) {
                 return source.slice(start + 1, index);
             }
+        }
+        if (character.trim()) {
+            previous = character;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Whether a `/` at this point starts a regex literal rather than a division.
+ *
+ * The distinction is genuinely ambiguous in JavaScript, so this uses the standard
+ * approximation: after a value, `/` divides; after an operator or an opening bracket, it
+ * begins a pattern. Inside a `fetch` argument list the second case is the only one that
+ * occurs in practice.
+ */
+function startsRegexLiteral(previous: string): boolean {
+    return previous === '' || '(,=:[!&|?{};+-*%<>~^'.includes(previous);
+}
+
+function findRegexLiteralEnd(source: string, start: number): number | undefined {
+    let inClass = false;
+    for (let index = start + 1; index < source.length; index++) {
+        const character = source[index];
+        if (character === '\\') {
+            index++;
+        } else if (character === '[') {
+            inClass = true;
+        } else if (character === ']') {
+            inClass = false;
+        } else if (character === '/' && !inClass) {
+            return index;
+        } else if (character === '\n') {
+            return undefined;
         }
     }
     return undefined;
@@ -536,6 +582,11 @@ function readTopLevelKeys(objectLiteral: string): string[] {
     let depth = 0;
     let quote: string | undefined;
     let pending = '';
+    // After a key is taken, everything up to the next comma is its *value*. Without this
+    // the top-level `:` in a ternary read as a second key, and the CRUD probe then posted a
+    // field the API never declared — which a correctly-implemented API rejects with 400,
+    // manufacturing exactly the fabricated product failure this extraction exists to avoid.
+    let inValue = false;
     for (let index = 0; index < inner.length; index++) {
         const character = inner[index];
         if (quote) {
@@ -552,12 +603,16 @@ function readTopLevelKeys(objectLiteral: string): string[] {
             depth++;
         } else if ('})]'.includes(character)) {
             depth--;
-        } else if (character === ':' && depth === 0) {
+        } else if (character === ':' && depth === 0 && !inValue) {
             const key = /([A-Za-z_$][\w$]*)\s*$/.exec(pending.replace(/['"]/g, ''));
             if (key) {
                 keys.push(key[1]);
             }
+            inValue = true;
+            pending = '';
+            continue;
         } else if (character === ',' && depth === 0) {
+            inValue = false;
             pending = '';
             continue;
         }

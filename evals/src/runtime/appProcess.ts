@@ -43,6 +43,12 @@ const DEFAULT_STARTUP_TIMEOUT_MS = 60_000;
 /** Readiness polling cadence — often enough to be quick, rare enough to be cheap. */
 const READINESS_POLL_INTERVAL_MS = 250;
 
+/**
+ * How long the port we chose gets before the app's own declared port is polled as a
+ * fallback. Long enough that a healthy app has answered on the right port first.
+ */
+const DECLARED_PORT_FALLBACK_DELAY_MS = 3_000;
+
 /** Grace period between SIGTERM and SIGKILL. */
 const GRACEFUL_STOP_TIMEOUT_MS = 5_000;
 const FORCED_STOP_TIMEOUT_MS = 2_000;
@@ -248,6 +254,17 @@ export async function startApp(target: RuntimeTarget, options: StartOptions = {}
                 output: captured,
             };
         }
+        // A declared port that was already taken makes "it never listened" ambiguous: the
+        // app may have tried to bind it, failed, and swallowed the error. Ambiguity goes to
+        // the harness, never to the agent.
+        if (plan.occupiedDeclaredPort !== undefined) {
+            return {
+                kind: 'harnessFault',
+                message: `the app never answered, and its declared port ${plan.occupiedDeclaredPort} was already held by an unrelated `
+                    + 'process on this machine, so it cannot be told apart from an app that failed to bind. Free the port and re-run.',
+                output: captured,
+            };
+        }
         return {
             kind: 'productFailure',
             code: 'appNeverListened',
@@ -298,8 +315,10 @@ interface PortPlanned {
     env: Record<string, string>;
     /** The port we asked the app to use, when we were able to choose one. */
     remappedPort?: number;
-    /** The port the project declared for itself. */
+    /** The port the project declared for itself, when it is free enough to be polled. */
     declaredPort?: number;
+    /** A declared port that was already taken, so it was excluded rather than probed. */
+    occupiedDeclaredPort?: number;
     /** True when nothing declared a port and PORT was injected speculatively. */
     injectedPort: boolean;
 }
@@ -340,7 +359,24 @@ async function planPort(target: RuntimeTarget): Promise<PortPlan> {
             const index = target.port.remap.index;
             args[index] = args[index].replace(String(declaredPort), String(ephemeral));
         }
-        return { kind: 'planned', args, env, remappedPort: ephemeral, declaredPort, injectedPort: false };
+        // The declared port is only worth polling if it is free *now*. Something already
+        // holding it cannot be our app, and polling it anyway is how a stranger's process
+        // gets mistaken for the product: the first readiness tick fires before the child
+        // could possibly have bound anything, so a squatter answers first and every gate
+        // downstream probes it. That is not hypothetical — the fixture declares 7071, the
+        // Azure Functions default, which is exactly the port something else is likely to
+        // be holding. Dropping it costs only the ability to notice an app that ignores
+        // PORT, and only in the case where the number is unusable anyway.
+        const declaredIsFree = await isPortFree(declaredPort);
+        return {
+            kind: 'planned',
+            args,
+            env,
+            remappedPort: ephemeral,
+            declaredPort: declaredIsFree ? declaredPort : undefined,
+            occupiedDeclaredPort: declaredIsFree ? undefined : declaredPort,
+            injectedPort: false,
+        };
     }
 
     if (declaredPort !== undefined) {
@@ -381,13 +417,21 @@ type ReadinessOutcome =
  */
 async function waitForReadiness(args: ReadinessArguments): Promise<ReadinessOutcome> {
     const { plan } = args;
-    const deadline = Date.now() + args.startupTimeoutMs;
+    const started = Date.now();
+    const deadline = started + args.startupTimeoutMs;
 
     while (Date.now() < deadline) {
         if (plan.remappedPort !== undefined && await canConnect(plan.remappedPort)) {
             return { kind: 'listening', port: plan.remappedPort, provenance: 'remapped' };
         }
-        if (plan.declaredPort !== undefined && await canConnect(plan.declaredPort)) {
+        // The declared port is a *fallback*, for an app that ignored the port we gave it, so
+        // it is not consulted until the port we chose has had a fair chance. Polling it from
+        // the first tick — before the child could possibly have bound anything — is how a
+        // process that arrived on that port between planning and starting gets mistaken for
+        // the app.
+        const declaredIsDue = plan.remappedPort === undefined
+            || Date.now() - started >= DECLARED_PORT_FALLBACK_DELAY_MS;
+        if (declaredIsDue && plan.declaredPort !== undefined && await canConnect(plan.declaredPort)) {
             return {
                 kind: 'listening',
                 port: plan.declaredPort,
@@ -501,12 +545,28 @@ export function canConnect(port: number, timeoutMs = 500): Promise<boolean> {
     });
 }
 
-export function isPortFree(port: number): Promise<boolean> {
+/**
+ * Whether a port is genuinely available.
+ *
+ * Both halves are needed, and the first one is the one that matters. Binding alone is not a
+ * sufficient test: a process listening on `0.0.0.0:7071` does not always prevent a bind of
+ * `127.0.0.1:7071`, so a bind-only check reported a squatted port as free — and readiness,
+ * which tests by *connecting*, then latched onto the squatter and reported its replies as
+ * the application's. Asking the same question readiness asks is what keeps the two honest.
+ */
+export async function isPortFree(port: number): Promise<boolean> {
+    if (await canConnect(port)) {
+        return false;
+    }
+    return await canBind(port);
+}
+
+function canBind(port: number): Promise<boolean> {
     return new Promise(resolve => {
         const server = createServer();
         server.once('error', () => resolve(false));
         server.once('listening', () => server.close(() => resolve(true)));
-        server.listen(port, '127.0.0.1');
+        server.listen(port, '0.0.0.0');
     });
 }
 
@@ -522,18 +582,33 @@ function findFreePort(): Promise<number | undefined> {
     });
 }
 
-/** `Server listening on http://localhost:4280`, `listening on :3000`, and friends. */
+/**
+ * Ports belonging to services an app *connects to*. Never a candidate for "the app is
+ * listening here", however the number reached us.
+ */
+const DATASTORE_PORTS = new Set([1433, 1521, 3306, 5432, 6379, 9200, 11211, 27017]);
+
+/**
+ * The port an app announces for itself — `Server listening on http://localhost:4280`.
+ *
+ * Deliberately narrow. An earlier version also matched a bare `port: 5432` anywhere in the
+ * output, which happily picked up the connection logging an app emits *before* it listens:
+ * on a machine with a local Postgres running, the harness would connect to the database and
+ * report it as the application. Every pattern here now requires listen intent on the same
+ * line, and well-known datastore ports are refused outright.
+ */
 function parseAnnouncedPort(output: string): number | undefined {
     const patterns = [
         /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{2,5})/i,
-        /listening[^\n]*?\b(?:on|at|port)\b[^\n]*?:?\s*(\d{2,5})/i,
-        /\bport\s*[:=]\s*(\d{2,5})/i,
+        /\b(?:listening|listening on|running at|running on|started on|ready on|available at|serving)\b[^\n]{0,40}?:(\d{2,5})\b/i,
+        /\b(?:listening|running|started|ready|serving)\b[^\n]{0,40}?\bport\b\D{0,4}(\d{2,5})\b/i,
     ];
     for (const pattern of patterns) {
-        const match = pattern.exec(output);
-        const port = match ? Number(match[1]) : 0;
-        if (port > 0 && port < 65_536) {
-            return port;
+        for (const match of output.matchAll(new RegExp(pattern.source, `${pattern.flags}g`))) {
+            const port = Number(match[1]);
+            if (port > 0 && port < 65_536 && !DATASTORE_PORTS.has(port)) {
+                return port;
+            }
         }
     }
     return undefined;

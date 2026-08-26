@@ -16,6 +16,7 @@
  */
 
 import type { RuntimeValidationResult } from '../src/runtime/runtimeGates.ts';
+import { RUNTIME_NOT_APPLICABLE_CLASS } from '../src/runtime/runtimeTarget.ts';
 import { releaseRuntimeSessions } from '../src/runtime/runtimeSession.ts';
 import { failAsHarnessFault, failWithIssues, runGraderAsync, skipAsNotApplicable, workspacePath } from './graderHarness.ts';
 
@@ -42,7 +43,12 @@ export function runRuntimeGate(
         // as issues *as well as* flags, so that grader certification sees them and the
         // golden fixture goes red. Here the flags win, because they carry the attribution.
         if (result.notApplicable) {
-            skipAsNotApplicable(gate, result.notApplicable.reason, result.notApplicable.detail);
+            skipAsNotApplicable(
+                gate,
+                RUNTIME_NOT_APPLICABLE_CLASS[result.notApplicable.reason],
+                result.notApplicable.reason,
+                result.notApplicable.detail,
+            );
         }
         if (result.harnessFault) {
             failAsHarnessFault(result.harnessFault);

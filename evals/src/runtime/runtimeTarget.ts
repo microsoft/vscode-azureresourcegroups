@@ -65,10 +65,42 @@ export type NotApplicableReason =
     | 'noProjectManifestFound'
     | 'noHealthPathDeclared'
     | 'noFrontendDeclared'
-    | 'frontendServerNotStarted'
+    | 'frontendDevServerUnsupported'
     | 'noFrontendApiCalls'
     | 'noCollectionRouteDeclared'
     | 'datastoreRequiresContainer';
+
+/**
+ * Why a gate had no opinion, at a granularity a report can act on.
+ *
+ * These two mean genuinely different things and want different follow-up, which is why the
+ * marker carries the classification rather than leaving `gateHealth` to hardcode our
+ * vocabulary and drift from it:
+ *
+ *   `outOfScope`     — the scenario has nothing to test. Feeds "is this gate dead weight?"
+ *   `environmentGap` — the gate would apply, but the machine is missing a prerequisite.
+ *                      Nobody's fault, nothing to delete, and fixable by installing
+ *                      something. Belongs with cascades, not with dead weight.
+ */
+export type NotApplicableClassification = 'outOfScope' | 'environmentGap';
+
+/**
+ * Owned here rather than centrally: each gate family classifies its own reasons, so adding
+ * one is never a shared line that two sessions edit at once.
+ */
+export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, NotApplicableClassification> = {
+    // Nothing to test.
+    ecosystemNotSupported: 'outOfScope',
+    noProjectManifestFound: 'outOfScope',
+    noHealthPathDeclared: 'outOfScope',
+    noFrontendDeclared: 'outOfScope',
+    noFrontendApiCalls: 'outOfScope',
+    noCollectionRouteDeclared: 'outOfScope',
+    // The gate applies; this machine cannot run it.
+    functionsHostUnavailable: 'environmentGap',
+    datastoreRequiresContainer: 'environmentGap',
+    frontendDevServerUnsupported: 'environmentGap',
+};
 
 /** How the port may be substituted, when the project lets us choose one. */
 export type PortRemap = { kind: 'env'; key: string } | { kind: 'arg'; index: number };
@@ -276,7 +308,14 @@ function resolveFromStartScript(
         cwd: manifest.directory,
         env,
         startSource: 'packageJsonStartScript',
-        port: port.declared === undefined ? port : { ...port, source: 'packageJsonStartScript' },
+        // No remap. The assignment lives *inside* the script, so it overrides anything we
+        // put in the child's environment — the app would bind the declared port no matter
+        // what we passed. Claiming a remap here made the app look like it had ignored PORT
+        // and produced a finding accusing it of being undeployable, about a variable it was
+        // never actually given.
+        port: port.declared === undefined
+            ? port
+            : { declared: port.declared, source: 'packageJsonStartScript' },
     });
 }
 
@@ -400,11 +439,20 @@ async function discoverPackages(workspaceRoot: string): Promise<PackageManifest[
         const text = await readFileSafe(manifestPath);
         if (text) {
             try {
-                const parsed = JSON.parse(text) as { scripts?: Record<string, string>; dependencies?: Record<string, string> };
+                const parsed = JSON.parse(text) as {
+                    scripts?: Record<string, string>;
+                    dependencies?: Record<string, string>;
+                    devDependencies?: Record<string, string>;
+                };
                 found.push({
                     directory,
                     scripts: parsed.scripts ?? {},
-                    dependencies: parsed.dependencies ?? {},
+                    // devDependencies count. `vite`, `nodemon`, `tsx` and `next` are the
+                    // things a start script actually invokes, and treating a project that
+                    // needs them as dependency-free meant an uninstalled workspace ran
+                    // `npm start`, hit "command not found", and was reported as a *product*
+                    // failure — the exact misattribution the install guard exists to stop.
+                    dependencies: { ...parsed.dependencies, ...parsed.devDependencies },
                 });
             } catch {
                 // An unparseable manifest is `validate-project-builds`'s finding, not ours.
