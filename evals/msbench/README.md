@@ -297,7 +297,7 @@ second checked-in copy is exactly the drift this eval exists to catch:
 | --- | --- | --- |
 | `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
 | `assets/graders/**` | `stage-graders.ts` | `evals/graders`, `evals/src`, `src/webviews` |
-| `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/stimuli/<name>.yaml` |
+| `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/phases/<phase>.yaml` + `config/stimuli/<name>.yaml` |
 
 Edit `config/`, never `assets/`.
 
@@ -319,11 +319,35 @@ Not a preference — two independent constraints force it:
    `no-premature-plan` would fail spuriously.
 
 So the only real choice was whether the shared preamble (VSIX path, `chatMode`, the
-agent-seeding `script:`) is copied into four files or written once. It is written once,
-in `config/base.yaml`, and concatenated with a stimulus file. The merge is textual
-rather than a YAML round-trip so that the explanatory comments survive into the
-generated file — the two sources define disjoint top-level keys, and `build-config.ts`
-fails if that ever stops being true.
+agent-seeding `script:`) is copied into four files or written once. It is written once
+and concatenated with a stimulus file. The merge is textual rather than a YAML
+round-trip so that the explanatory comments survive into the generated file — the
+sources define disjoint top-level keys, and `build-config.ts` fails if that ever stops
+being true. That failure is deliberately hard rather than a last-one-wins override: a
+silent override turns a typo in a stimulus into a run that starts, costs money and
+grades the wrong thing.
+
+### The three layers
+
+The shared preamble is split in two, because not all of it is shared by everything:
+
+| Layer | Holds | Changes with |
+| --- | --- | --- |
+| `config/base.yaml` | model, timeouts, VSIX install, auto-approval | nothing — true of every run |
+| `config/phases/<phase>.yaml` | `chatMode`, `snapshotWorkspace`, the workspace-seeding `script:` | which **product phase** is under test |
+| `config/stimuli/<name>.yaml` | the prompt and its assertions | the individual case |
+
+The middle layer exists because the phases are not interchangeable. The `plan` phase
+starts from an empty workspace. The `scaffold` phase needs an approved
+`.azure/project-plan.md` already on disk, and must set `snapshotWorkspace: false`
+because it runs a real `npm install` — a per-step snapshot would copy `node_modules`
+into `session.sqlite` after every step, which is the multi-gigabyte case the schema
+warns about. The `local-dev` phase needs a whole scaffolded project. Those differences
+are shared by every stimulus in a phase and differ between phases, which is exactly the
+shape that gets copy-pasted and then drifts.
+
+A stimulus picks its phase with a `# phase: <name>` directive in its header. Omitting it
+means `plan`, so a stimulus that predates the layer needs no change.
 
 ## Running the real validators (`exec:`)
 

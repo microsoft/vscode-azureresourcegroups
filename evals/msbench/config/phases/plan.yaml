@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `plan` — the requirements and project-plan phase.
+#
+# A phase file says how a chat session for one product phase is driven: which
+# agent, and what has to exist in the workspace before the first turn. It is the
+# middle of the three layers `build-config.ts` concatenates:
+#
+#   config/base.yaml  ->  config/phases/<phase>.yaml  ->  config/stimuli/<name>.yaml
+#
+# base.yaml holds what is true of every run regardless of phase (model, timeouts,
+# the VSIX install, auto-approval). A stimulus holds the prompt and its
+# assertions. Everything that differs because of *which phase is under test*
+# lives here.
+#
+# The split exists because the phases genuinely differ: the plan phase starts
+# from an empty workspace, the scaffold phase needs an approved plan already on
+# disk, and the local-dev phase needs a whole scaffolded project. Encoding that
+# in the stimulus would mean copying the same seeding script into every stimulus
+# that shares a phase, which is how four copies drift apart.
+#
+# This is the default phase: a stimulus with no `# phase:` directive gets it.
+
+# The agent under test. It ships inside the VSIX via contributes.chatAgents, but
+# custom modes are resolved from the workspace's .github/agents, so the script
+# below seeds it there too.
+chatMode: azure-project-plan
+
+# Seed the agent definition into the workspace, unpacked from the VSIX we just
+# installed rather than cloned from GitHub. That keeps the instructions exactly
+# in step with the build under test — cloning a branch would let the two drift,
+# and silently grade the wrong version of the prompt.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/
