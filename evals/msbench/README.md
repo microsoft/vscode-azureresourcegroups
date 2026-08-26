@@ -1154,6 +1154,63 @@ credits passes it never earned. **Seven of twenty-six instances in the corpus ar
 > trend-plotting historical runs should assume the older half of the corpus is
 > contaminated in both directions.
 
+### Why this has to be mechanical
+
+The argument for automating any of this is not that people are careless. It is narrower and
+less comfortable than that.
+
+Over one afternoon of building these gates, **four separate participants across three
+sessions reached a confident conclusion while the disconfirming evidence was in their own
+output.** Not evidence they lacked — evidence they had printed, and read past:
+
+- A run was declared to have a member-order bug; the timestamp disproving it was in the
+  same `ls` output as the claim.
+- A check was proposed for detecting stranded commits; the line disproving it (`all nine
+  commits listed, because a squash rewrites them`) had been printed one step earlier.
+- A refined version of that check was proposed after testing only the case where it works.
+- The `unzip -l` listing used to explain a 25-minute-old read described the archive as it
+  existed *after* the read.
+
+The pattern is not fatigue. **A plausible mechanism is more satisfying than an unexplained
+observation**, so the mechanism gets adopted and the observation gets quietly re-read to
+fit. Every one of those five hypotheses was mechanically sound and predicted the symptom.
+
+That is the same failure this tool exists to catch, one level up. A gate that has failed 16
+times looks routine; nothing about a routine-looking thing invites inspection, which is
+precisely why nobody inspected it. *"It looked routine"* was also the reason a branch got
+squash-merged while it was still receiving commits, losing a commit for thirty minutes.
+
+So the verdicts here are deliberately computed rather than judged, the report states how
+many runs each one rests on, and it refuses to editorialise below a threshold. Not because
+judgement is bad, but because judgement is exactly what stops being applied to things that
+look fine.
+
+#### A related check, and what it does not know
+
+After a squash merge, this finds content on a branch that did not make it in. `git log
+feat/CoR..<branch>` does **not** work — a squash rewrites every commit, so it lists the
+whole branch every time, which is an alarm that always fires:
+
+```bash
+base=$(git merge-base origin/feat/CoR "$BR")
+touched=$(git diff --name-only "$base" "$BR")
+git diff --numstat origin/feat/CoR "$BR" -- $touched |
+  awk '$1>0 {s+=$1; print "  +"$1"\t"$3} END {print (s ? "STRANDED "s : "no additive content stranded")}'
+```
+
+Restricting to files the branch touched matters: without it, lines that *other* merged PRs
+deleted show up as insertions on any stale branch — 80 reported against 62 real, in the
+case this was built for.
+
+Two limits, both stated rather than fixed, because a second noisy column would be worse:
+
+- **It counts insertions only, so a lost *deletion* reports success.** That is why the
+  success string says `no additive content stranded` and not `clean` — the check examined
+  half the branch and must not render a verdict on all of it.
+- **Non-zero is a reason to look, not a finding.** Content a later PR legitimately
+  superseded is indistinguishable from content a squash dropped. Of three real non-zero
+  results, two were benign.
+
 ### Not-applicable, and the convention that got reversed
 
 The fidelity and runtime gates emit a machine-readable marker on stderr:
