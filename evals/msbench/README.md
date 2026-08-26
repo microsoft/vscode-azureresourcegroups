@@ -911,6 +911,34 @@ assertion is worth confirming against `stdErr` before believing it.
 re-runs the grader locally and reports exit 1 and exit 3 separately, so confirming a red
 `exec:` no longer means reading `stdErr` by hand.
 
+### What the `files` table can and cannot see
+
+**A `files`-table assertion can only ever see what the *agent* wrote through the tracked
+channel during a step. Anything written by an extension, by the `script:` preamble, or by
+the container itself is invisible to it.**
+
+It is not a filesystem listing. The schema is `(path, content, stepIndex)` — tracked file
+*contents*, per step — and the harness appends `AND stepIndex = :stepIndex` on top of
+whatever you write.
+
+This is easy to get wrong because the table is *non-empty* on a healthy run and therefore
+looks alive. Run [`2026082620311350`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620311350)
+asserted `SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.eval/probe.log'` against a file
+an extension had demonstrably written — the run's own fingerprint printed its contents —
+and the assertion could never have passed. The whole table was:
+
+```
+0|.gitkeep
+0|.gitignore
+```
+
+The trap is not that the check was careless; it is that **the abstraction lies at the point
+of use.** `files` reads like `find`, and it is not.
+
+Use `exec:` for anything not authored by the agent — `test -f .eval/probe.log` — with a
+relative path, since `exec:` runs with cwd set to the workspace and the runner uses a
+worktree path rather than `/workspace` on some routes.
+
 ### Which assertions are `exec:` and which stay SQL
 
 Only the `program` graders. The `files`, `toolCalls` and `llm_responses` tables cover
@@ -1141,6 +1169,27 @@ whole reason the values are written down here.
 
 We were opted out by omission until [#1707](https://github.com/microsoft/vscode-azureresourcegroups/pull/1707):
 `run.sh` set no endpoint tag at all.
+
+### One observation, not a property
+
+The only direct measurement we have of the queue actually holding a run:
+
+| | |
+| --- | --- |
+| `scaffold-fullstack` completed | 22:50:28 |
+| `debug-probe-smoke` submitted | 22:38:28 (accepted by CES immediately) |
+| `debug-probe-smoke` dispatched | **22:51:03** — 35s after the run ahead of it finished |
+
+Both carried the correct key on both halves, confirmed from the run's own recorded
+`tags` (`endpoint: copilot-on-rails`) and `model_source: agent_assets`
+(`claude-sonnet-4.5`) rather than from the command line.
+
+Twelve and a half minutes accepted-but-undispatched, ending 35 seconds after an
+unrelated run completed, is a striking fit for serialisation. **It is not proof of it.**
+An ordinary dispatch latency that happens to end just after an unrelated completion is
+not excluded by a single observation, and n=1 cannot distinguish the two. Recorded here
+with timestamps so it is not re-derived from memory; if the property is ever load
+bearing it deserves a deliberate two-run test rather than inference from this.
 
 ### Why the model half needs no flag
 

@@ -48,13 +48,21 @@ promptSteps:
       - comment: Sentinel; session data must exist or the checks below are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      # THE question. The probe writes `.eval/probe.log` as the first thing it
-      # does on activation, before it reads its spec or does anything that could
-      # fail, precisely so that "installed and activated" is observable on its
-      # own. With no `debug-probe.json` in the workspace the probe then idles, so
-      # this run exercises installation and activation and nothing else.
+      # THE question — ANSWERED YES by run 2026082620311350 (2026-08-25). Retained
+      # as a regression check, not as an open question.
+      #
+      # Asserted through `exec:` rather than the `files` table. The first version
+      # of this used `SELECT ... FROM files WHERE path LIKE '%.eval/probe.log'`
+      # and could never have passed: `files` holds tracked file *contents* scoped
+      # per step, not a filesystem listing, and the probe writes its breadcrumb
+      # from the extension host before the first turn. See the README section
+      # "What the `files` table can and cannot see".
+      #
+      # `exec:` runs with cwd set to the workspace, so this is relative rather
+      # than hardcoding /workspace — the runner uses a worktree path on some
+      # routes.
       - comment: The second extension installed and activated alongside our VSIX
-        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.eval/probe.log'
+        exec: test -f .eval/probe.log
 
       # Non-asserting, exactly like the environment fingerprint the other
       # stimuli carry: `assertZeroExitCode: false` records output into the `exec`

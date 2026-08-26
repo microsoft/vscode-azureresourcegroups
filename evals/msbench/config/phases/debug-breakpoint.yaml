@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `debug-breakpoint` — infrastructure only, like `probe-smoke`.
+#
+# Seeds a project that is KNOWN to be debuggable and points the probe at it.
+# The agent does nothing; the product is not under test here.
+#
+# That separation is the whole design. "Can a debugger reach a breakpoint inside
+# this container?" and "did the agent write a debuggable project this time?" are
+# different questions, and a run that mixes them cannot answer either: a red
+# would not say whether the container cannot host a debugger or the generated
+# code was bad. This phase answers the first. Only once it is green does putting
+# the probe behind real generated output mean anything.
+#
+# The fixture is `evals/grader-certification/reference-node-fullstack`, staged by
+# run.sh — the same one `evals/debug-probe/certify.ts` runs against locally, so a
+# green run here and a green certification are the same claim in two places.
+#
+# NOTE: `exitWhenDone` is deliberately absent from the spec below. It defaults to
+# false, and it must stay false: the probe quitting VS Code mid-run would take
+# the eval down with it. It is set only by the local certification runner.
+
+script: |
+  set -eux
+  cp -R /agent/assets/fixtures/reference-node-fullstack/. /workspace/
+  # Written AFTER the project is in place. The probe watches for this file rather
+  # than reading it once at activation, so it does not matter whether the
+  # extension host finished starting before this script ran — an ordering we
+  # cannot observe from outside the container, and one that already bit us:
+  # in run 2026082620311350 the probe activated to an empty workspace.
+  cat > /workspace/debug-probe.json <<'JSON'
+  {
+    "launchConfig": "Golden App (debug)",
+    "breakpoint": { "glob": "src/**/*.js", "pattern": "status:\\s*'ok'" },
+    "trigger": { "url": "http://127.0.0.1:7071/api/health" },
+    "timeoutMs": 180000
+  }
+  JSON
+  ls -la /workspace
+  cat /workspace/debug-probe.json

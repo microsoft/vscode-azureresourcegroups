@@ -48,6 +48,10 @@ VSIX_DEST="${ASSETS}/extensions/vscode-azureresourcegroups.vsix"
 # The test-only debug probe extension, built from source alongside the product.
 PROBE_SRC="${REPO_ROOT}/evals/debug-probe/extension"
 PROBE_DEST="${ASSETS}/extensions/cor-debug-probe.vsix"
+# The known-debuggable project the breakpoint stimulus runs against. Same fixture
+# evals/debug-probe certifies with, so green here and green locally mean the same.
+FIXTURE_SRC="${REPO_ROOT}/evals/grader-certification/reference-node-fullstack"
+FIXTURE_DEST="${ASSETS}/fixtures/reference-node-fullstack"
 
 # Borrowed purely for its container image; user-overrides.yaml replaces its
 # prompt and assertions wholesale. Swapping this for a heavier instance is how
@@ -182,6 +186,25 @@ case "$PROBE_LISTING" in
 esac
 
 log "Staged $(basename "$PROBE_DEST") ($(du -h "$PROBE_DEST" | cut -f1))"
+
+# --- stage the debug fixture -------------------------------------------------
+#
+# The breakpoint stimulus needs a project that is known to be debuggable, so the
+# run answers "can a debugger work in this container" rather than "did the agent
+# write a good project this time". Those are different questions and only one of
+# them is about the harness.
+#
+# Copied rather than generated: this is the same fixture `evals/debug-probe`
+# certifies against locally, so a green run here and a green certification mean
+# the same thing.
+log "Staging debug fixture"
+rm -rf "$FIXTURE_DEST"
+mkdir -p "$(dirname "$FIXTURE_DEST")"
+cp -R "$FIXTURE_SRC" "$FIXTURE_DEST"
+# A stale .eval from a local certification run would seed the container with a
+# verdict nobody produced there, which is the most misleading artifact possible.
+rm -rf "${FIXTURE_DEST}/.eval" "${FIXTURE_DEST}/node_modules" "${FIXTURE_DEST}/debug-probe.json"
+[ -f "${FIXTURE_DEST}/.vscode/launch.json" ] || die "Debug fixture has no .vscode/launch.json at ${FIXTURE_DEST}"
 
 # --- stage the graders and build the config ----------------------------------
 #
