@@ -1557,6 +1557,40 @@ buffering, and fail soft on one bad artifact — sits with the MSBench KustoInge
 
 ## Is this run a result?
 
+**Two different questions, deliberately answered by two different scripts.** *Is this a
+result* and *did it pass* are not the same, and conflating them cost a run.
+
+| Question | Script | Exit codes |
+| --- | --- | --- |
+| Is this a result at all? | [`verify-run.ts`](verify-run.ts) | `0` yes · `75` throttled · `65` wrong model |
+| Did the assertions pass? | [`check-assertions.ts`](check-assertions.ts) | `0` all passed · `1` genuine red · `70` unverifiable |
+
+`verify-run.ts` deliberately does **not** answer the second, and its header says why: *"a
+genuinely red run must keep reporting as a red run, because a detector for false reds is
+worthless if it also hides true ones."* That is right, and it left a hole — nothing was
+asking whether the assertions held.
+
+Run `2026082668713928` is what the hole cost. Four assertions passed, two failed, and:
+
+```
+msbench-cli exit   0
+run.sh exit        0
+GitHub eval job    success
+```
+
+`verify-run.ts` was correct: the run *was* a result. It was simply a failing one, and
+nothing downstream contradicted the green. **A red run reporting green is the worst
+direction for this to point**, because nobody investigates green — the same asymmetry
+that decided the `NOT_APPLICABLE` exit-code ruling.
+
+`run.sh` now runs both, in order, and an **unverifiable** run is reported as a failure
+rather than a pass. That applies to three cases which are indistinguishable from the
+outside: results that cannot be located, a CLI that exits 0 without printing a `run_id`,
+and an `eval.json` that cannot be read. All exit **70**, distinct from the `1` that means
+a genuine product failure, because a harness problem and a regression need different
+people. "We could not tell" and "it passed" are the same thing to whatever reads an exit
+code, so they must not share one.
+
 A finished run is not automatically a *result*. Two things can make the results table
 mean something other than what it looks like, and neither is visible in the table:
 
@@ -2404,6 +2438,26 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
+- **Name the field that answers your question before you read one.** Every status
+  surface here has a neighbouring field that looks like the answer and isn't, and
+  reading the neighbour has now cost four separate investigations in two days:
+
+  | Question | Field that answers it | Adjacent field that does not |
+  | --- | --- | --- |
+  | Did the assertions pass? | `eval.json` → `<instance>.resolved`, `<instance>.details[].passed` | the GitHub job status, `msbench-cli` exit code |
+  | Did the CI job fail, or was it cancelled? | the API's `conclusion` | `gh pr checks`, which renders both as `fail` |
+  | Did that command succeed? | `$?` of the command | `$?` after a pipe (that's the *last* stage — use `${PIPESTATUS[0]}`) |
+
+  The trap in `eval.json` is worth spelling out because it caught the person
+  diagnosing it: `resolved` is nested **per instance**, so reading it at the top
+  level returns `undefined`. A check written one way round then reports "not
+  resolved" for the right answer by the wrong route; written the other way round
+  it finds no `passed: false` at the top level and reports a **pass**. Shape:
+
+  ```json
+  { "say_hello": { "resolved": false, "details": [ { "comment": "...", "passed": false } ] } }
+  ```
+
 - **A trailing `echo` after `&&` reports success unconditionally.** `cmd && check; echo
   "done"` prints `done` whether or not `cmd` ran, because `;` is not `&&` — and if
   anything earlier in the chain fails, everything after the `&&` is skipped while the
