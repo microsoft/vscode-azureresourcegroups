@@ -307,3 +307,34 @@ fixture is for. It says nothing about whether any particular generated project
 is debuggable; that is the gate's job once it runs behind real output, and it is
 only meaningful *because* this baseline exists. A red there can now be read as a
 product finding rather than an unexplained one.
+
+## Which stacks this gate can honestly answer for
+
+**It requires a stack whose debug adapter ships with VS Code** — in practice the
+Node family, via the built-in js-debug. That is a real constraint, not a
+preference, and wiring it unconditionally produces exactly the failure this gate
+was built to prevent.
+
+Two directions, both verified rather than reasoned about:
+
+**A launch configuration naming an adapter we do not install used to produce a
+fabricated red.** `debugpy`, `go` and `coreclr` are not in this container. With
+one of those, `startDebugging` never resolves, the probe hits its deadline and
+the verdict was `appFailedToStart` — **exit 1, blaming the product for a project
+it built correctly**, since that configuration would work on a developer machine
+with the extension installed. Reproduced by setting `type: "debugpy"` on the
+known-good fixture; the verdict even misattributed the cause to "an unfinishable
+preLaunchTask". The probe now checks `contributes.debuggers[].type` across
+installed extensions before launching and returns `probeError` (exit 3) naming
+the missing adapter and listing the ones available. Certified by
+`mutation-debug-adapter-missing`.
+
+**With no `debug-probe.json`, the gate reports exit 3 forever.** The probe idles,
+no verdict is written, and the grader correctly calls that a harness fault. But
+MSBench collapses exit 1 and exit 3 into "non-zero", so on any stimulus that does
+not opt in, a `requires: {}` wiring shows a permanently failing assertion. That
+is the "gate that cannot pass" shape displaced into the exit-3 column.
+
+So the gate should be wired where the stimulus writes a probe spec **and** the
+stack is one the harness can drive. Everywhere else it is an environment gap: it
+has a real question and no way to ask it, which is a `knownGap`, not a red.

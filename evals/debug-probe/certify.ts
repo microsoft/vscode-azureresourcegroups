@@ -319,6 +319,25 @@ const LIVE_CASES: LiveCase[] = [
         expectedOutcome: 'probeError',
         expectedExit: EXIT_GRADER_ERROR,
     },
+    {
+        id: 'mutation-debug-adapter-missing',
+        // The project-builds shape, in this gate. A launch config naming an
+        // adapter this environment does not install is CORRECT — it would work
+        // on a developer machine with that extension. Only the harness cannot
+        // execute it. Before the preflight, startDebugging simply never resolved
+        // and the verdict was appFailedToStart: exit 1, blaming the product for a
+        // project it built properly.
+        description: 'a debug adapter this environment lacks is an environment gap, not a product failure',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
+        expectedOutcome: 'probeError',
+        expectedExit: EXIT_GRADER_ERROR,
+        mutate: workspace => {
+            const launchPath = join(workspace, '.vscode', 'launch.json');
+            const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as { configurations: { type?: string }[] };
+            launch.configurations[0].type = 'debugpy';
+            writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
+        },
+    },
 ];
 
 function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {

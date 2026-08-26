@@ -280,6 +280,45 @@ async function findOccupiedPort(
     return undefined;
 }
 
+/**
+ * Is the debug adapter this configuration needs actually installed?
+ *
+ * Extensions declare the debug types they implement in
+ * `contributes.debuggers[].type`. js-debug ships with VS Code, so `pwa-node` and
+ * friends are always present; `debugpy`, `go`, `coreclr` and the rest are not
+ * unless something installed them.
+ *
+ * This is the difference between a product failure and an environment gap. A
+ * launch configuration naming an adapter we did not install is *correct* — it
+ * would work on a developer machine that has the extension. Only this harness
+ * cannot execute it. Without this check `startDebugging` simply never resolves,
+ * the probe hits its deadline, and the verdict is `appFailedToStart` — exit 1,
+ * blaming the product for a project it built correctly.
+ */
+function debugTypeIsInstalled(type: string): boolean {
+    for (const extension of vscode.extensions.all) {
+        const contributed = (extension.packageJSON as { contributes?: { debuggers?: { type?: string }[] } })?.contributes?.debuggers;
+        if (Array.isArray(contributed) && contributed.some(entry => entry.type === type)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Every debug type this environment can actually run, for the diagnostic. */
+function installedDebugTypes(): string[] {
+    const types = new Set<string>();
+    for (const extension of vscode.extensions.all) {
+        const contributed = (extension.packageJSON as { contributes?: { debuggers?: { type?: string }[] } })?.contributes?.debuggers;
+        for (const entry of contributed ?? []) {
+            if (typeof entry.type === 'string') {
+                types.add(entry.type);
+            }
+        }
+    }
+    return [...types].sort();
+}
+
 export async function runProbe(context: ProbeContext, recorder: Recorder): Promise<DebugProbeVerdict> {
     const { folder, spec } = context;
     const startedAt = Date.now();
@@ -371,9 +410,23 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
         },
     }));
 
-    // ---- 4. Refuse to run if a port we depend on is already taken ----------------------
-    // Must happen BEFORE launch: afterwards a squatter is indistinguishable from
-    // a broken project, and gets blamed on the product.
+    // ---- 4. Refuse to run if this environment cannot execute the configuration --------
+    // Both checks below must happen BEFORE launch. Afterwards each failure is
+    // indistinguishable from a broken project and gets blamed on the product.
+    const debugType = typeof selected?.type === 'string' ? selected.type : undefined;
+    if (!debugType) {
+        return finish('launchConfigInvalid', `launch configuration "${spec.launchConfig}" declares no "type"`, { resolution });
+    }
+    if (!debugTypeIsInstalled(debugType)) {
+        // Environment gap, not a product defect: the configuration is probably
+        // correct and would work on a machine with that extension installed.
+        return finish('probeError',
+            `launch configuration "${spec.launchConfig}" needs debug adapter "${debugType}", which is not installed in this environment. `
+            + `The project may be perfectly debuggable elsewhere, so this says nothing about it. Installed types: ${installedDebugTypes().join(', ')}`,
+            { resolution });
+    }
+    recorder.log(`debug adapter "${debugType}" is installed`);
+
     const occupied = await findOccupiedPort(spec, selected, recorder);
     if (occupied) {
         return finish('probeError', occupied, { resolution, adapter });
