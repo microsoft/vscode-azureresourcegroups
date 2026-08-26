@@ -82,3 +82,18 @@ jobs:
       - name: Lint eval specs
         run: npm run lint
         working-directory: evals
+
+      # `run.sh` promises a clean machine can execute it, and the MSBench eval job
+      # depends on that: it installs nothing before running `run.sh --skip-build`.
+      # A script it invokes that statically imports a package therefore fails on
+      # the one path where failure costs money. That rule was written down, in
+      # prose, and then broken by the next change to the same file family — so it
+      # is a mechanism now rather than a hope.
+      #
+      # Deliberately last: this step moves `evals/node_modules` aside and restores
+      # it in a `finally`. Running it after everything else means that even a
+      # catastrophic failure to restore cannot make an unrelated step fail with a
+      # confusing error.
+      - name: Check run.sh works on a clean machine
+        run: npm run clean-machine:check
+        working-directory: evals

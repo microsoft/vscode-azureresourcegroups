@@ -11,6 +11,7 @@
         "lint:local-dev": "vally lint --eval-spec local-dev/eval.yaml",
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "imports:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/importScanner.ts --self-test",
+        "clean-machine:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/check-clean-machine.ts",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
         "stacks:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON check-stacks.ts",
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
