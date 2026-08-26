@@ -50,6 +50,10 @@ Wall-clock varies a lot with CES queueing: the original runs took ~4 min of MSBe
 time, but a run on 2026-08-25 took 50 min for the same single instance. Budget
 accordingly rather than assuming a stall.
 
+**Changing a grader does not need a run at all.** Re-grade a past one instead — same
+graders, stored data, zero tokens, well under a second:
+[Re-grading a past run for free](#re-grading-a-past-run-for-free).
+
 `run.sh` is self-contained: it provisions a Python 3.10+ virtualenv, installs
 `msbench-cli` plus the `vscode` special agent from the internal feed, stages the VSIX
 and the graders, builds the config, and submits. The only prerequisites are Azure CLI
@@ -229,6 +233,10 @@ fails if that ever stops being true.
 Megan's `program` graders run as `exec:` assertions, so the contract is checked by the
 *same* validator code the Vally suite and grader certification use, rather than a SQL
 lookalike that would drift from it.
+
+When iterating on one of these, use [`regrade.ts`](#re-grading-a-past-run-for-free)
+rather than submitting a run: it re-runs the edited grader against a stored run's
+rehydrated workspace for zero tokens, and tells you whether the verdict moved.
 
 `exec:` runs after the agent finishes, via `shell: true`, with **cwd set to the
 workspace** — so `graderHarness`'s `process.cwd()` fallback already resolves
