@@ -45,6 +45,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${HERE}/../.." && pwd)"
 ASSETS="${HERE}/assets"
 VSIX_DEST="${ASSETS}/extensions/vscode-azureresourcegroups.vsix"
+# The test-only debug probe extension, built from source alongside the product.
+PROBE_SRC="${REPO_ROOT}/evals/debug-probe/extension"
+PROBE_DEST="${ASSETS}/extensions/cor-debug-probe.vsix"
 
 # Borrowed purely for its container image; user-overrides.yaml replaces its
 # prompt and assertions wholesale. Swapping this for a heavier instance is how
@@ -144,6 +147,41 @@ case "$VSIX_LISTING" in
 esac
 
 log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du -h "$VSIX_DEST" | cut -f1))"
+
+# --- build + stage the debug probe -------------------------------------------
+#
+# A second, test-only extension (evals/debug-probe) that rides alongside the
+# product VSIX. It is inert unless a stimulus writes `debug-probe.json` into the
+# workspace, so it is built and installed on every run rather than conditionally.
+#
+# This is the one thing under evals/ that needs compiling: the graders run
+# straight off .ts via Node's type stripping, but the VS Code extension host
+# cannot strip types, so the probe must ship as emitted JavaScript.
+
+if [ "$SKIP_BUILD" -eq 0 ]; then
+    log "Building debug probe VSIX"
+    ( cd "$PROBE_SRC" && [ -d node_modules ] || npm install )
+    ( cd "$PROBE_SRC" && npm run package >/dev/null )
+fi
+
+BUILT_PROBE="${PROBE_SRC}/cor-debug-probe.vsix"
+if [ -f "$BUILT_PROBE" ]; then
+    mkdir -p "$(dirname "$PROBE_DEST")"
+    cp "$BUILT_PROBE" "$PROBE_DEST"
+fi
+[ -f "$PROBE_DEST" ] || die "No debug probe VSIX at ${PROBE_DEST}. Run without --skip-build."
+
+# The probe's package.json points main at out/extension.js. If `npm run package`
+# ran without compiling, the VSIX packages cleanly and then fails to activate in
+# the container — which looks exactly like the extension not being installed at
+# all, the very thing this gate exists to distinguish.
+PROBE_LISTING="$(unzip -l "$PROBE_DEST")"
+case "$PROBE_LISTING" in
+    *extension/out/extension.js*) ;;
+    *) die "Debug probe VSIX has no out/extension.js — run 'npm run compile' in evals/debug-probe/extension" ;;
+esac
+
+log "Staged $(basename "$PROBE_DEST") ($(du -h "$PROBE_DEST" | cut -f1))"
 
 # --- stage the graders and build the config ----------------------------------
 #

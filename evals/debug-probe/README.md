@@ -154,6 +154,37 @@ The fixture is [`evals/grader-certification/reference-node-fullstack`](../grader
 reused as-is — it already ships `launch.json`, `tasks.json`, a health route and
 zero dependencies. This directory only reads it.
 
+## Wiring
+
+The probe rides into a run as a second `installExtensions` entry in
+[`msbench/config/base.yaml`](../msbench/config/base.yaml). That key
+**concatenates across config layers rather than replacing**, which is how our
+product VSIX already installs alongside `github.copilot-chat` — the probe is the
+second user of that behaviour.
+
+`run.sh` builds and stages `cor-debug-probe.vsix` next to the product VSIX, and
+checks the package actually contains `out/extension.js`: a VSIX packaged without
+compiling looks valid and then fails to activate, which from outside the
+container is indistinguishable from not being installed at all.
+
+The probe is **inert unless the workspace contains `debug-probe.json`**, so it is
+installed on every run and opted into per stimulus. It watches for that file
+rather than only reading it at activation, because whether the config's
+`script:` preamble seeds the workspace before or after the extension host
+finishes starting is not something we can verify from outside.
+
+### The one claim that needs a real run
+
+`evals/msbench/config/stimuli/debug-probe-smoke.yaml` is the smallest run that
+answers the only part of this design that could not be settled locally: **does a
+second extension install and activate alongside ours?** It uses a `probe-smoke`
+phase with no `chatMode` and no agent seeding, so the agent does essentially
+nothing — the evidence is written by the extension host before the first turn.
+It asserts the liveness sentinel, that `.eval/probe.log` exists, and nothing
+else. There is deliberately **no breakpoint assertion**: that is the next run,
+gated on this one, because asserting it here would conflate "the probe installed"
+with "the debugger works in a container" and a red result would not say which.
+
 ### Container notes
 
 `pwa-node` needs no display (it drives CDP over a socket), but VS Code itself
@@ -162,17 +193,5 @@ does — use `xvfb`, and `--no-sandbox` since the container runs as root. Keep t
 and `sun_path` caps at ~104 bytes. Exceeding it makes VS Code start, open no
 window, write no logs, and hang until killed — indistinguishable from a broken
 extension. `certify.ts` asserts against this explicitly rather than
-rediscovering it.
-
-## Not wired up yet
-
-This PR deliberately stops at "the probe works and the gate is certified".
-Wiring it into a run — adding the grader to `stage-graders.ts`'s entrypoints,
-adding the probe VSIX to `installExtensions` in `msbench/config/base.yaml`, and
-building it in `run.sh` — is a **follow-up PR**, because several sessions are
-editing `msbench/config/` concurrently.
-
-`installExtensions` concatenates across config layers rather than replacing,
-which is how our VSIX already rides alongside `github.copilot-chat`, so a second
-`mode: vsix` entry should install cleanly. **That has not been confirmed
-in-container yet** — it needs an MSBench run.
+rediscovering it. MSBench chooses that path, not us, so this is a hazard to
+recognise rather than one we can configure away.

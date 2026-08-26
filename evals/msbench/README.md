@@ -34,6 +34,8 @@ they are wired directly against the graders merged in #1707.
 | `scaffold-unapproved-plan` | scaffold | 1 | 6 | `unapproved-plan` | — |
 | `debug-plan-approval-gate` | local-dev | 2 | 8 | `approved-fullstack` | — |
 | `debug-generate-artifacts` | local-dev | 4 | 12 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `debug-probe-smoke` | probe-smoke | 1 | 2 | — | — (infrastructure only, see below) |
+| `debug-breakpoint-node` | debug-breakpoint | 1 | 3 | — | — (infrastructure only, see below) |
 
 The six scaffold and local-dev stimuli also each carry a `preConditions` `exec:`
 (except `scaffold-missing-plan`, which seeds nothing), which is not counted above
@@ -477,7 +479,7 @@ second checked-in copy is exactly the drift this eval exists to catch:
 
 | Path | Built by | From |
 | --- | --- | --- |
-| `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
+| `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package`, plus `evals/debug-probe/extension` |
 | `assets/graders/**` | `stage-graders.ts` | `evals/graders`, `evals/src`, `src/webviews` |
 | `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/phases/<phase>.yaml` + `config/stimuli/<name>.yaml` |
 | `assets/workspace/**` | `stage-workspace.ts` | the stimulus's `# seed:` directive |
@@ -945,6 +947,39 @@ sqlite3 session.sqlite "SELECT output FROM exec WHERE command LIKE '%uname%'"
 sqlite3 session.sqlite "SELECT exitCode, stdErr FROM exec WHERE command LIKE '%validate-%'"
 ```
 
+
+## The second extension: the debug probe
+
+`installExtensions` **concatenates across config layers rather than replacing**, which
+is what lets our VSIX ride alongside `github.copilot-chat`. [`evals/debug-probe`](../debug-probe)
+is the second user of that behaviour: a test-only extension, built and staged by
+`run.sh` next to the product VSIX, that drives a generated project to a breakpoint so a
+gate can assert **F5 actually works** rather than that `launch.json` merely parses.
+
+It is **inert unless the workspace contains `debug-probe.json`**, so it installs on
+every run and stimuli opt in. `run.sh` checks the packaged VSIX contains
+`out/extension.js`, because a probe packaged without compiling looks valid and then
+fails to activate — which from outside the container is indistinguishable from never
+having been installed.
+
+That extension is the one thing in this tree with a **build step**. Graders run
+straight off `.ts` via Node's type stripping; the VS Code extension host cannot strip
+types, so the probe compiles to JavaScript.
+
+`debug-probe-smoke` is the smallest run that answers the only question this design
+could not settle locally — does a second extension install and activate at all. It uses
+the `probe-smoke` phase, which sets no `chatMode` and seeds no agent, so the agent does
+essentially nothing: the evidence is written by the extension host during workspace
+setup, before the first turn. Two assertions, one of which is the liveness sentinel.
+
+### A hazard worth recognising: `--user-data-dir` length
+
+VS Code binds a Unix domain socket inside its `--user-data-dir`, and `sun_path` caps at
+~104 bytes. Exceed it and VS Code starts, opens **no window**, writes **zero** log
+lines, and hangs until something kills it — a failure mode indistinguishable from a
+broken extension, and one that cost a day to diagnose locally. MSBench chooses that
+path rather than this config, so there is nothing to set here; this is written down so
+the next person recognises the symptom instead of suspecting their extension.
 
 ## Why the VSIX route
 

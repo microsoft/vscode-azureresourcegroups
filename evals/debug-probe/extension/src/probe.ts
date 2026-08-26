@@ -111,15 +111,22 @@ export async function resolveBreakpoint(
 }
 
 /**
- * Fire the trigger until something accepts a connection.
+ * Keep firing the trigger until execution actually stops.
  *
  * WHY "connected" rather than "responded": on a healthy run the breakpoint stops
  * the process mid-request, so the HTTP response never arrives. Awaiting the
  * response would time out against a perfectly working app and be reported as
- * `appFailedToStart`. Connection established is the only honest signal, and we
- * stop early the moment the debuggee actually stops.
+ * `appFailedToStart`. Connection established is the only honest signal.
+ *
+ * WHY it keeps going after the first connection: the app can be listening before
+ * js-debug has bound the breakpoint, in which case the first request sails
+ * straight through and nothing would ever hit the breakpoint again. Stopping at
+ * first connect makes the gate intermittently red against a working project —
+ * a false product failure, and the worst kind because it looks like a real one.
+ * So we keep driving requests until something stops, and only the deadline ends
+ * the loop.
  */
-async function triggerUntilConnected(
+async function driveTrigger(
     url: string,
     deadline: number,
     stopped: () => boolean,
@@ -127,6 +134,7 @@ async function triggerUntilConnected(
 ): Promise<boolean> {
     const request = url.startsWith('https:') ? https.get : http.get;
     let attempts = 0;
+    let everConnected = false;
     while (Date.now() < deadline && !stopped()) {
         attempts++;
         const connected = await new Promise<boolean>(resolve => {
@@ -135,16 +143,21 @@ async function triggerUntilConnected(
             const clientRequest = request(url, () => finish(true));
             clientRequest.on('socket', socket => socket.on('connect', () => finish(true)));
             clientRequest.on('error', () => finish(false));
-            setTimeout(() => { clientRequest.destroy(); finish(false); }, TRIGGER_ATTEMPT_TIMEOUT_MS);
+            // Do not destroy the request on timeout: once we are past the first
+            // connection it may be parked on the breakpoint, and tearing it down
+            // would resume the debuggee before the stack can be read.
+            setTimeout(() => finish(false), TRIGGER_ATTEMPT_TIMEOUT_MS);
         });
-        if (connected) {
+        if (connected && !everConnected) {
+            everConnected = true;
             recorder.log(`trigger connected after ${attempts} attempt(s)`);
-            return true;
         }
         await delay(TRIGGER_RETRY_DELAY_MS);
     }
-    recorder.log(`trigger never connected after ${attempts} attempt(s)`);
-    return false;
+    if (!everConnected) {
+        recorder.log(`trigger never connected after ${attempts} attempt(s)`);
+    }
+    return everConnected;
 }
 
 /** Read the top frame and its locals. Evidence that the stop was real, not just an event. */
@@ -294,8 +307,13 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
     }
 
     // ---- 5. Drive execution to the breakpoint -------------------------------------------
+    // Runs until something stops, the debuggee dies, or the budget expires.
     if (spec.trigger) {
-        adapter.triggerConnected = await triggerUntilConnected(spec.trigger.url, deadline, stoppedSignal.settled, recorder);
+        adapter.triggerConnected = await driveTrigger(
+            spec.trigger.url,
+            deadline,
+            () => stoppedSignal.settled() || terminatedSignal.settled(),
+            recorder);
     }
 
     // ---- 6. Wait for a stop, a termination, or the deadline ------------------------------

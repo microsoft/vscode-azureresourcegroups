@@ -58,6 +58,11 @@ const ENTRYPOINTS = [
     'evals/graders/validate-debug-config.ts',
     'evals/graders/validate-debug-gate.ts',
     'evals/graders/validate-debug-artifacts.ts',
+    // Reads the verdict written by the debug probe extension. Its only non-grader
+    // import is `debug-probe/extension/src/verdict.ts`, the contract the probe and
+    // the grader share; the import-graph walk stages that automatically, which is
+    // what keeps the two from drifting.
+    'evals/graders/validate-debug-breakpoint.ts',
 ];
 
 // Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a
