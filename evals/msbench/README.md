@@ -1256,8 +1256,26 @@ Two consequences worth knowing:
 
 - It is deliberately **coarser**: every `validate-requirements.ts` invocation is one gate
   regardless of its flags. Use `--identity comment` for the raw per-assertion view.
-- It only helps `exec:` gates. The SQL assertions over `files` / `toolCalls` /
-  `llm_responses` have no stderr and no grader file, so they stay comment-keyed.
+- **It is a partial fix, and the larger half is untouched.** Filename identity stops
+  `program`/`exec:` gates from getting worse. SQL assertions over `files` / `toolCalls` /
+  `llm_responses` have no stderr and no grader file, so they keep comment identity — and
+  they are the majority of gates.
+
+That second point is measured, not feared. Three pairs in the current corpus are one gate
+wearing two names, because sibling stimuli word the same assertion differently:
+
+| | |
+| --- | --- |
+| `Sentinel; …or the negative checks below are vacuous` | `Sentinel; …or every check below is vacuous` |
+| `Agent should not open the plan view to approve the plan itself` | `Agent should not take over planning by opening the plan view` |
+| `Agent should not fall back to the chat question tool` | `Agent should refuse with a message, not by asking a chat question` |
+
+All three are SQL assertions, so no identity scheme available here can merge them, and the
+count grows as stimuli are added. **The actual fix is upstream**: one canonical string per
+shared gate plus a drift check that fails when a stimulus deviates. Until that lands, treat
+run counts for SQL-assertion gates as a lower bound, and read a `never-attempted` verdict on
+one of them as possibly meaning "this wording has never run" rather than "this gate has
+never run".
 
 ### Where the data lives — and why this is not a laptop-only tool
 

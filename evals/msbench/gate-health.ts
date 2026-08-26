@@ -938,6 +938,11 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
         console.log('DECLARED BUT NEVER SEEN — in today\'s stimuli, absent from every run audited.');
         console.log('Usually means the stimulus has not been run since the gate was added. If you');
         console.log('audited a subset of runs, expect this list to be long and mostly uninteresting.');
+        console.log('');
+        console.log('Check the wording before concluding a gate never ran. SQL assertions are keyed by');
+        console.log('their comment, so a gate reworded in one stimulus appears here under its old text');
+        console.log('while running perfectly under the new one — three such pairs exist in the corpus');
+        console.log('today. "This wording has never run" and "this gate has never run" look identical.');
         const listed = [...unexercised.entries()].slice(0, 8);
         for (const [gate, stimuli] of listed) {
             console.log(`  * ${gate}  [${stimuli.join(', ')}]`);
