@@ -88,7 +88,7 @@ promptSteps:
       # `open_frontend_preview_view` tool) — the UI is auto-approved in autopilot;
       # hand off directly instead." An agent that opens a webview nobody is
       # watching has stalled an unattended run on an approval that will never come.
-      - comment: Agent should skip the frontend preview gate under autopilot
+      - comment: Agent should not have opened the frontend preview gate
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
 
       # The other half, also inverted from the paired file. Autopilot step 3 makes

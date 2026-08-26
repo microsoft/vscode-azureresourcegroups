@@ -609,7 +609,60 @@ The seed names (`approved-fullstack`, `unapproved-plan`) are that script's own t
 names, reused so that switching to harvested seeds later is a no-op at the stimulus
 level.
 
-#### Falsifiable pairs
+#### The `files` table is not a filesystem listing
+
+> A `files`-table assertion can only see what the **agent** wrote through the tracked
+> channel during a step. Anything written by an extension, a `script:` preamble, or the
+> container itself is invisible to it, regardless of whether the file exists on disk. Use
+> `exec:` for those.
+
+This is a *different* failure from the `snapshotWorkspace` guard above, and the
+difference is why it needs its own checks. That one catches **"the table is empty, so
+every query over it is vacuous"**. This one catches **"the table is populated, but this
+query structurally cannot match"** — and the population is precisely what hides it,
+because a `COUNT(*) > 0` sanity check passes happily while the assertion underneath
+means nothing. The abstraction lies at the point of use.
+
+Only two of the four ways a file can be invisible are decidable from `build-config.ts`'s
+inputs, which are the stimulus YAML and the phase YAML and nothing else:
+
+| File written by | Decidable at build time? |
+| --- | --- |
+| the phase's `script:` preamble | **yes** |
+| the `# seed:` recipe | **yes** |
+| a VS Code extension | no |
+| the container | no |
+
+So there are two mechanisms, matching that split:
+
+1. **A hard error on the decidable half.** A `files` assertion whose path matches
+   anything the resolved phase's `script:` writes, or anything in the stimulus's seed
+   recipe, is rejected. It covers a real and recurring class — and, importantly, it
+   would **not** have caught the `debug-probe-smoke` run that prompted it, whose path
+   was written by an extension during workspace setup and therefore appears in neither
+   input. A guard that reads as covering more than it does is worse than no guard,
+   because it stops people looking.
+2. **A hard error requiring a paired triage `exec:`** — `test -f <path>` with
+   `assertZeroExitCode: false`, recording without generating a check, so it costs
+   nothing and cannot change an assertion count. This is the undecidable half, not
+   solved but made cheap: every `files` assertion arrives with its own discriminator, so
+   **present on disk but absent from `files` is readable immediately as the wrong-channel
+   signature** rather than as a product failure. That turns a forensic pass over a spent
+   run into reading one row of the `exec` table.
+
+The pairing is enforced rather than documented because it is decidable from the stimulus
+YAML alone, and this directory's recurring lesson is that remembered rules decay while
+mechanical ones do not.
+
+Worth stating plainly: **none of the six scaffold or local-dev stimuli has a `files`
+assertion at all**, since both phases set `snapshotWorkspace: false`. These guards
+protect the `plan` phase's existing five and any stimulus added later; they fix nothing
+that is broken today. And the class is not hypothetical — a session that had spent two
+PRs building guards against exactly this then shipped an instance of it. That is
+evidence about the abstraction rather than about the author, and it is the strongest
+argument for why the rule has to be mechanical.
+
+
 
 Two pairs of scaffold stimuli differ in exactly one thing each **about the input the
 agent sees** — `scaffold-fullstack`/`scaffold-autopilot` in the prompt's
@@ -1864,6 +1917,13 @@ with a clear message:
   two live CLI processes are *not* evidence of parallel execution — the CLI stays
   resident whether or not CES has started its run — so this says the lock is
   worktree-scoped, and says nothing either way about whether CES serialised them.
+- **`output.zip` sits at an unpredictable index inside `results.zip`.** Across 24 local
+  archives it has appeared at indices 1, 2, 3, 4, 5, 6 and 10; `2026082620153444` has it
+  last. Any consumer that assumes a fixed member position will eventually read the wrong
+  member or none. Recorded because it is a real property of the artifact — **not**
+  because it explained anything: the artifact scare that prompted the enumeration turned
+  out to be a read that predated the run's completion by about five minutes, and member
+  order was not the cause. Noted here so nobody re-derives it as one.
 - **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
   submitting ~90s after a previous run finished; no run id is allocated. The same
   config submitted cleanly after a cooldown, so treat it as transient submission

@@ -46,7 +46,7 @@
 # silently failed to copy would take out the scaffold turn, then the plan turn,
 # then the generate turns, and report four turns of red for a failed `cp`.
 preConditions:
-  - comment: The approved plan seed must be present, or the chained scaffold turn cannot run
+  - comment: The approved plan seed must be present before the agent starts
     exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
 
 promptSteps:

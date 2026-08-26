@@ -68,7 +68,7 @@
 # "Assertions to validate before running any prompts. If these fail, the benchmark
 # will not proceed."
 preConditions:
-  - comment: The approved plan seed must be present, or the chained scaffold turn cannot run
+  - comment: The approved plan seed must be present before the agent starts
     exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
 
 promptSteps:

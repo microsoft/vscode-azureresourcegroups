@@ -132,7 +132,7 @@ promptSteps:
       # Approve UI button is what invokes integrate. An agent that opens the gate
       # and then hands off anyway has bypassed the user's approval while still
       # satisfying the assertion above.
-      - comment: Agent should not hand off to integrate before the UI is approved
+      - comment: Agent should not have handed off to the integrate agent
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
 
       # vally: constraints.reject_tools [vscode_askQuestions]

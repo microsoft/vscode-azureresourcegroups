@@ -93,7 +93,7 @@ promptSteps:
       # checked too, from the stored `files` table of run 2026082579322454 —
       # `.gitignore` (seeded-listed) and `.gitkeep` (no extension, so not a
       # source file). Nothing here needs the grader relaxed.
-      - comment: Agent should not have scaffolded anything without a plan
+      - comment: Agent should not have scaffolded anything
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-no-scaffold.ts
 
       # The specific over-reach this stimulus exists for. Step A: "do NOT start
@@ -104,14 +104,14 @@ promptSteps:
       - comment: Agent should not take over planning by opening the requirements view
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
 
-      - comment: Agent should not take over planning by opening the plan view
+      - comment: Agent should not have opened the plan view
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
 
       # Nothing downstream of scaffolding can have been reached.
-      - comment: Agent should not hand off to the integrate agent
+      - comment: Agent should not have handed off to the integrate agent
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
 
-      - comment: Agent should not have reached the frontend preview gate
+      - comment: Agent should not have opened the frontend preview gate
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
 
       # vally: constraints.reject_tools [vscode_askQuestions]

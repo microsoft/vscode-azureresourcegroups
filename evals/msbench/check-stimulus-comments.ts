@@ -5,41 +5,40 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * Fail if a stimulus paraphrases the comment of a shared assertion.
+ * Fail if two assertions that do the same thing describe themselves differently.
  *
  * ── Why comment text is load-bearing, which is genuinely surprising ───────────
  *
- * A `program` grader has a filename, so trend analysis across runs can key on
- * `validate-no-scaffold.ts` and survive any amount of rewording. A **SQL
+ * A `program` grader has a filename, so trend analysis across runs keys on
+ * `validate-no-scaffold.ts` and survives any amount of rewording. A **SQL
  * assertion has no such handle**: `comment` is the only stable identifier it
  * carries into stored results. So for SQL assertions — and only for them — the
  * comment string is an identifier, not documentation.
  *
- * That is the opposite of the normal rule. A comment is the one place where
- * rephrasing is expected to be harmless, so anyone adding a stimulus will
- * naturally reword one to fit their case, and nothing about the YAML suggests
- * they shouldn't. The result is silent: the assertion still runs, still passes,
- * still reports — it has simply become a *different gate* with no history, while
- * the original gate appears to have stopped being evaluated. Neither shows up as
- * an error anywhere.
+ * That is the opposite of the normal rule, which is why it broke. A comment is
+ * the one place where rephrasing is expected to be harmless, so anyone adding a
+ * stimulus will reword one to fit their case and nothing objects. The result is
+ * silent: the assertion still runs, still passes, still reports — it has simply
+ * become a *different gate* with no history, while the original appears to have
+ * stopped being evaluated. Neither shows up as an error anywhere, and it cannot
+ * be repaired afterwards, because runs are stored with the strings they had.
  *
- * It happened. The liveness sentinel from PR #1706 was carried into eleven
- * stimuli in **ten different wordings**, and the divergence was only noticed
- * when gate-health analysis reported the sentinel as declared-everywhere and
- * observed-nowhere. No identity scheme can repair that retroactively: the runs
- * are stored with the strings they had.
+ * ── Why this groups by query instead of checking a list of known gates ───────
  *
- * ── Why this keys on the assertion, not on the comment ───────────────────────
+ * The first version of this file carried a hand-written rule per known gate. It
+ * passed clean, and it was still wrong: it did not know about the
+ * `open_plan_view` gate, which had already forked into two wordings. A checker
+ * that only knows the gates someone remembered to teach it is exactly as
+ * reliable as remembering — and not relying on memory is the entire point.
  *
- * The obvious implementation — collect comments and complain when two look
- * similar — cannot work, because it has no way to tell a paraphrase of a shared
- * gate from a legitimately new assertion that happens to read alike.
+ * So the rule is mechanical and needs no list. **Two assertions with the same
+ * normalised query are the same gate** — not a heuristic, but what "gate" means
+ * here — and must therefore carry the same comment. A newly duplicated gate is
+ * covered the moment it is duplicated, without anyone updating this file.
  *
- * So each rule identifies its assertions by **what they do** (the query or exec
- * they run) and then requires the canonical comment for that class. A new
- * stimulus that copies the sentinel query and reworders its comment is caught,
- * because the query is what makes it the sentinel. An unrelated assertion is
- * never in scope, because its query does not match.
+ * The one pinned string is the liveness sentinel, because it is the gate whose
+ * uniformity matters most, and grouping alone would let all sixteen copies drift
+ * together.
  *
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
@@ -53,118 +52,113 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const STIMULI = join(HERE, 'config', 'stimuli');
 
 /**
- * The liveness sentinel. One canonical string, no per-turn variants.
+ * The liveness sentinel, pinned.
  *
- * Turn attribution is deliberately NOT encoded here, even though the multi-turn
- * stimuli carry one of these per turn and the earlier wordings named the turn.
- * The `assertions` table stores a `stepIndex` column alongside the comment, so
- * which turn a sentinel belongs to is already recorded and recoverable. Encoding
- * it in the comment as well would buy nothing and would fork the gate into one
- * history per turn index — the exact failure this file exists to prevent.
+ * Turn attribution is deliberately NOT encoded, even though the multi-turn
+ * stimuli carry one per turn and the earlier wordings named the turn. The
+ * `assertions` table stores a `stepIndex` column alongside the comment, so which
+ * turn a sentinel belongs to is already recorded and recoverable. Encoding it
+ * here as well would fork the gate into one history per turn index — precisely
+ * the failure this file exists to prevent.
  *
- * The wording is turn-scoped ("this turn") rather than session-scoped ("session
- * data must exist") because the implied `stepIndex` filter means every sentinel
- * only ever sees its own turn. The session-scoped phrasing was the more common
- * of the two, and was wrong for six of the thirteen places it appeared.
+ * "this turn" rather than "session data must exist" because the implied
+ * `stepIndex` filter means a sentinel only ever sees its own turn. The
+ * session-scoped phrasing was the more common of the two variants and was wrong
+ * in six of the thirteen places it appeared.
  */
+const SENTINEL_QUERY = /^SELECT\s+COUNT\(\*\)\s*>\s*0\s+FROM\s+llm_responses$/i;
 const SENTINEL_COMMENT = 'Sentinel; this turn must have produced a response or its checks are vacuous';
 
-/** Recorded, never asserted — see any stimulus. */
-const FINGERPRINT_COMMENT = 'Environment fingerprint for triage';
-
 /**
- * The `constraints.reject_tools` port.
- *
- * This one keeps an optional ` (turn N)` suffix, unlike the sentinel, and the
- * difference is not arbitrary. A whole-conversation constraint is duplicated per
- * turn precisely so the failing assertion names the turn that misbehaved, which
- * is its stated reason for existing. The suffix is therefore load-bearing where
- * the sentinel's would have been redundant. A gate-identity scheme can strip a
- * fixed trailing pattern; it cannot un-paraphrase free text.
+ * A whole-conversation constraint is duplicated once per turn precisely so the
+ * failing assertion names the turn that misbehaved, so `(turn N)` is meaningful
+ * rather than noise. It is stripped before comparison: an identity scheme can
+ * strip a fixed trailing pattern, where it cannot un-paraphrase free text.
  */
-const REJECT_TOOLS_COMMENT = 'Agent should not fall back to the chat question tool';
-const REJECT_TOOLS_PATTERN = new RegExp(`^${REJECT_TOOLS_COMMENT}( \\(turn \\d+\\))?$`);
+const TURN_SUFFIX = / \(turn \d+\)$/;
 
 interface Assertion {
     comment?: string;
     query?: string;
     exec?: string;
-    assertZeroExitCode?: boolean;
 }
 
-interface Rule {
-    readonly name: string;
-    /** Identify the assertion by what it does, never by what it says. */
-    readonly matches: (assertion: Assertion) => boolean;
-    readonly accepts: (comment: string) => boolean;
-    readonly expected: string;
+interface Occurrence {
+    readonly file: string;
+    readonly comment: string;
 }
-
-const RULES: Rule[] = [
-    {
-        name: 'liveness sentinel',
-        matches: a => /^\s*SELECT\s+COUNT\(\*\)\s*>\s*0\s+FROM\s+llm_responses\s*$/i.test(a.query ?? ''),
-        accepts: comment => comment === SENTINEL_COMMENT,
-        expected: SENTINEL_COMMENT,
-    },
-    {
-        name: 'environment fingerprint',
-        matches: a => (a.exec ?? '').includes('uname -sm'),
-        accepts: comment => comment === FINGERPRINT_COMMENT,
-        expected: FINGERPRINT_COMMENT,
-    },
-    {
-        name: 'reject_tools (chat questions)',
-        matches: a => /FROM\s+toolCalls\b/i.test(a.query ?? '') && /askQuestion/i.test(a.query ?? ''),
-        accepts: comment => REJECT_TOOLS_PATTERN.test(comment),
-        expected: `${REJECT_TOOLS_COMMENT}[ (turn N)]`,
-    },
-];
 
 function assertionsOf(document: unknown): Assertion[] {
     const doc = document as { promptSteps?: { assertions?: Assertion[] }[]; preConditions?: Assertion[] };
-    const steps = doc.promptSteps ?? [];
-    return [...(doc.preConditions ?? []), ...steps.flatMap(step => step.assertions ?? [])];
+    return [
+        ...(doc.preConditions ?? []),
+        ...(doc.promptSteps ?? []).flatMap(step => step.assertions ?? []),
+    ];
+}
+
+/** Whitespace and case are formatting; they must not be able to create a second gate. */
+function normalise(text: string): string {
+    return text.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 function main(): void {
-    const failures: string[] = [];
-    let checked = 0;
+    const files = readdirSync(STIMULI).filter(name => name.endsWith('.yaml')).sort();
 
-    for (const file of readdirSync(STIMULI).filter(name => name.endsWith('.yaml')).sort()) {
-        const document = parse(readFileSync(join(STIMULI, file), 'utf8'));
-        for (const assertion of assertionsOf(document)) {
-            for (const rule of RULES) {
-                if (!rule.matches(assertion)) {
-                    continue;
-                }
-                checked++;
-                const comment = assertion.comment ?? '';
-                if (!rule.accepts(comment)) {
-                    failures.push(
-                        `${file}\n` +
-                        `  gate     ${rule.name}\n` +
-                        `  expected ${rule.expected}\n` +
-                        `  found    ${comment}`
-                    );
-                }
+    /** normalised query/exec -> every comment seen for it. */
+    const gates = new Map<string, Occurrence[]>();
+    const failures: string[] = [];
+
+    for (const file of files) {
+        for (const assertion of assertionsOf(parse(readFileSync(join(STIMULI, file), 'utf8')))) {
+            const body = assertion.query ?? assertion.exec;
+            if (!body) {
+                continue;
             }
+            const comment = assertion.comment ?? '';
+
+            if (assertion.query && SENTINEL_QUERY.test(assertion.query.trim()) && comment !== SENTINEL_COMMENT) {
+                failures.push(
+                    `${file}\n` +
+                    `  gate     liveness sentinel (pinned)\n` +
+                    `  expected ${SENTINEL_COMMENT}\n` +
+                    `  found    ${comment}`
+                );
+            }
+
+            const key = normalise(body);
+            gates.set(key, [...(gates.get(key) ?? []), { file, comment }]);
+        }
+    }
+
+    for (const [key, occurrences] of gates) {
+        const distinct = new Set(occurrences.map(o => o.comment.replace(TURN_SUFFIX, '')));
+        if (distinct.size > 1) {
+            failures.push(
+                `${occurrences.length} assertions share one query but describe it ${distinct.size} different ways:\n` +
+                `  query    ${key.slice(0, 100)}\n` +
+                occurrences.map(o => `  ${o.file.padEnd(32)} ${o.comment}`).join('\n')
+            );
         }
     }
 
     if (failures.length) {
         console.error(
-            `${failures.length} shared assertion(s) use a non-canonical comment.\n\n` +
+            `${failures.length} gate identity problem(s).\n\n` +
             failures.join('\n\n') + '\n\n' +
-            `A SQL assertion has no grader filename, so its \`comment\` is the only stable\n` +
-            `identifier it carries into stored run results. Rewording one does not annotate a\n` +
-            `gate — it forks that gate into a second identity with no history, silently, while\n` +
-            `the original appears to stop being evaluated. Copy the canonical string verbatim.`
+            `Two assertions with the same query are the same gate. A SQL assertion has no\n` +
+            `grader filename, so its \`comment\` is the only stable identifier it carries into\n` +
+            `stored run results — rewording one does not annotate a gate, it forks that gate\n` +
+            `into a second identity with no history, silently, while the original appears to\n` +
+            `stop being evaluated. Pick one wording and use it verbatim in every place.`
         );
         process.exit(1);
     }
 
-    console.log(`✔ ${checked} shared assertion comments are canonical across ${readdirSync(STIMULI).filter(n => n.endsWith('.yaml')).length} stimuli.`);
+    const shared = [...gates.values()].filter(occurrences => occurrences.length > 1).length;
+    console.log(
+        `✔ gate identity consistent: ${gates.size} distinct assertions across ${files.length} stimuli, ` +
+        `${shared} of them shared by more than one stimulus.`
+    );
 }
 
 main();

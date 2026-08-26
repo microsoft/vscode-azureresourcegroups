@@ -81,7 +81,7 @@ promptSteps:
       # Scoping matters here: the agent may legitimately re-open the webview
       # later, and an unscoped check would be satisfied by that instead of by
       # the behaviour under test — asking BEFORE it has an answer.
-      - comment: Agent should have opened the requirements webview on the first turn
+      - comment: Agent should have opened the requirements webview
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
 
       # vally: constraints.reject_tools [vscode_askQuestions]
@@ -144,6 +144,23 @@ promptSteps:
       # vally: constraints.reject_tools [vscode_askQuestions] — turn 1 copy.
       - comment: Agent should not fall back to the chat question tool (turn 1)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Triage for the `files`-table assertions above, recorded not asserted.
+      # `assertZeroExitCode: false`, so it adds no check and cannot change the
+      # assertion count — the same shape as the fingerprint below.
+      #
+      # It exists because the `files` table is NOT a filesystem listing: it holds
+      # what the agent wrote through the tracked channel during a step. A file put
+      # there by an extension, the phase `script:`, the seed recipe or the container
+      # is absent from it however plainly it exists on disk. So a red `files`
+      # assertion has two very different causes, and they are indistinguishable
+      # from the verdict alone. Present on disk but absent from `files` is the
+      # wrong-channel signature; absent from both is a real product failure.
+      # build-config.ts requires this pairing rather than trusting anyone to
+      # remember it.
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/project-plan.md: $(test -f .azure/project-plan.md && echo present || echo absent)"'
+        assertZeroExitCode: false
 
       # Recorded, not asserted. See config/stimuli/photo-app-requirements.yaml.
       # On the last step, where the `exec:` graders above run.

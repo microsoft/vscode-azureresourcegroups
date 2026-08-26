@@ -74,7 +74,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -166,6 +166,22 @@ function withStatus(plan: string, status: string): string {
     return plan.replace(statusLine, `**Status**: ${status}`);
 }
 
+/**
+ * The paths a seed puts in the workspace, without writing anything.
+ *
+ * `build-config.ts` needs this to reject `files`-table assertions against seeded
+ * paths: a seeded file never passes through the agent's tracked channel, so such
+ * an assertion asks a question the table cannot answer. Exported separately from
+ * `stageWorkspace` so that check stays a pure read.
+ */
+export function seedPaths(seed: string): string[] {
+    const recipe = RECIPES[seed];
+    if (!recipe) {
+        throw new Error(`Unknown seed '${seed}'.`);
+    }
+    return recipe().map(file => file.path);
+}
+
 export function seedFor(stimulusText: string): string {
     return SEED_DIRECTIVE.exec(stimulusText)?.[1] ?? DEFAULT_SEED;
 }
@@ -232,4 +248,9 @@ function main(): void {
     }
 }
 
-main();
+// Only when run directly. build-config.ts imports `seedPaths`/`seedFor` from here,
+// and a module that stages a workspace as a side effect of being imported would make
+// that import silently destructive.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    main();
+}

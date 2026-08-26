@@ -92,23 +92,23 @@ promptSteps:
       # vally: program no-scaffold  (validate-no-scaffold)
       # The positive evidence check described above — the only assertion here that
       # can tell "refused correctly" apart from "was cut short".
-      - comment: Agent should not have scaffolded anything from an unapproved plan
+      - comment: Agent should not have scaffolded anything
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-no-scaffold.ts
 
       # The hand-off is downstream of scaffolding, so calling it from an
       # unapproved plan hands the integrate agent a project that was never built.
-      - comment: Agent should not hand off to the integrate agent
+      - comment: Agent should not have handed off to the integrate agent
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
 
       # The frontend preview gate is opened at Step C, after scaffolding. Opening
       # it means the agent got far enough to have a frontend to preview.
-      - comment: Agent should not have reached the frontend preview gate
+      - comment: Agent should not have opened the frontend preview gate
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
 
       # Self-approval: the scaffold agent must not write or re-open the plan to
       # get past its own gate. Planning belongs to azure-project-plan — Step A,
       # "do NOT write a plan yourself".
-      - comment: Agent should not open the plan view to approve the plan itself
+      - comment: Agent should not have opened the plan view
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
 
       # vally: constraints.reject_tools [vscode_askQuestions]

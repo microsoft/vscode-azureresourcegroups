@@ -49,6 +49,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PhaseWiring } from '../src/gateWiring.ts';
 import type { Stack } from '../src/stack.ts';
+import { seedFor, seedPaths } from './stage-workspace.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
@@ -347,6 +348,8 @@ function buildFromStimulus(stimulus: string): void {
     writeFileSync(DEST, merged);
     assertParses(merged, stimulus, phase);
     assertNoFilesQueriesWithoutSnapshot(merged, stimulus, phase);
+    assertNoFilesQueriesOnUntrackedPaths(merged, stimulus, phase, seedPaths(seedFor(stimulusText)));
+    assertFilesAssertionsArePaired(merged, stimulus);
     console.log(`Built assets/user-overrides.yaml for stimulus '${stimulus}' (phase '${phase}')`);
 }
 
@@ -440,6 +443,166 @@ function assertNoFilesQueriesWithoutSnapshot(merged: string, stimulus: string, p
         );
         process.exit(1);
     }
+}
+
+/**
+ * Reject `files`-table assertions that cannot mean what they appear to mean.
+ *
+ * This is a *different* failure from the `snapshotWorkspace` guard above, and the
+ * difference is the whole reason it needs its own check. That one catches "the
+ * table is empty, so every query over it is vacuous". This catches "the table is
+ * populated, but this particular query structurally cannot match" — and the
+ * population is exactly what hides it, because a `COUNT(*) > 0` sanity check
+ * passes happily while the assertion underneath means nothing.
+ *
+ * The root cause is an abstraction that lies at the point of use: **the `files`
+ * table looks like a filesystem listing and is not one.** It contains what the
+ * *agent* wrote through the tracked channel during a step. A file put there by an
+ * extension, by the phase's `script:` preamble, by the seed recipe, or by the
+ * container itself is absent from it however plainly it exists on disk.
+ *
+ * Only two of those four are decidable from `build-config.ts`'s inputs, which are
+ * the stimulus YAML and the phase YAML and nothing else:
+ *
+ *   written by the phase `script:`   yes
+ *   written by the `# seed:` recipe  yes
+ *   written by an extension          NO
+ *   created by the container         NO
+ *
+ * So this guard covers a real and recurring class, and it is important not to
+ * read it as covering more. It would NOT have caught the `debug-probe-smoke`
+ * run that prompted it: that assertion's path was written by a VS Code extension
+ * during workspace setup, which appears in neither of this script's two inputs.
+ * A guard that reads as covering more than it does is worse than no guard,
+ * because it stops people looking.
+ *
+ * The undecidable half is handled by `assertFilesAssertionsArePaired` instead —
+ * not by deciding it, which is impossible here, but by making it diagnosable in
+ * seconds rather than by a forensic pass over a spent run.
+ */
+function assertNoFilesQueriesOnUntrackedPaths(
+    merged: string,
+    stimulus: string,
+    phase: string,
+    seededPaths: string[]
+): void {
+    const scripted = scriptWrittenPaths(merged);
+    const untracked = [...seededPaths.map(p => ({ path: p, source: `the '# seed:' recipe` })),
+                       ...scripted.map(p => ({ path: p, source: `the phase '${phase}' script:` }))];
+    if (!untracked.length) {
+        return;
+    }
+
+    const offenders: string[] = [];
+    for (const { pattern, line } of filesAssertionPatterns(merged)) {
+        for (const { path, source } of untracked) {
+            if (pattern && (path.startsWith(pattern) || pattern.startsWith(path) || path.includes(pattern))) {
+                offenders.push(`  ${line}\n      -> '${path}' is written by ${source}`);
+            }
+        }
+    }
+
+    if (offenders.length) {
+        console.error(
+            `stimuli/${stimulus}.yaml queries the 'files' table for a path that never passes\n` +
+            `through the agent's tracked channel:\n\n` +
+            offenders.join('\n') + '\n\n' +
+            `The 'files' table is not a filesystem listing. It holds what the AGENT wrote during\n` +
+            `a step, so a seeded or script-written file is absent from it however plainly it\n` +
+            `exists on disk — the assertion asks a question the table cannot answer, and passes\n` +
+            `or fails for reasons unrelated to the product. Use an 'exec:' grader instead.`
+        );
+        process.exit(1);
+    }
+}
+
+/**
+ * Every `files`-table assertion must ship with a non-asserting `test -f` for the
+ * same path.
+ *
+ * This is the half that cannot be decided statically, made cheap instead. An
+ * extension-written or container-created path is invisible to `build-config.ts`,
+ * so no static check can tell that such an assertion is unanswerable. What a
+ * static check *can* do is insist the discriminator travels with it.
+ *
+ * With the pair in place, a red `files` assertion arrives with its own cause
+ * attached: **present on disk but absent from `files` is the wrong-channel
+ * signature**, and it is distinguishable from a genuine product failure by
+ * reading one row of the `exec` table rather than by spending a second run. The
+ * `debug-probe-smoke` run that motivated this would have been a red assertion
+ * with its explanation attached instead of a red run needing forensics.
+ *
+ * `assertZeroExitCode: false` means it records without generating a check, so it
+ * costs nothing at runtime and cannot change an assertion count — the same shape
+ * as the environment fingerprint every stimulus already carries.
+ *
+ * It is a hard error rather than a documented convention on purpose. This
+ * directory's recurring lesson is that remembered rules decay and mechanical ones
+ * do not, and the rule is decidable from the stimulus YAML alone, so there is no
+ * excuse for leaving it to memory.
+ */
+function assertFilesAssertionsArePaired(merged: string, stimulus: string): void {
+    const execCommands = merged
+        .split('\n')
+        .filter(line => /^\s*(-\s*)?exec:/.test(line));
+
+    const unpaired: string[] = [];
+    for (const { pattern, line } of filesAssertionPatterns(merged)) {
+        if (!pattern) {
+            continue;
+        }
+        if (!execCommands.some(command => command.includes(pattern))) {
+            unpaired.push(`  ${line}\n      -> no triage exec mentioning '${pattern}'`);
+        }
+    }
+
+    if (unpaired.length) {
+        console.error(
+            `stimuli/${stimulus}.yaml has ${unpaired.length} 'files'-table assertion(s) with no paired\n` +
+            `triage exec:\n\n` +
+            unpaired.join('\n') + '\n\n' +
+            `The 'files' table holds what the AGENT wrote through the tracked channel, not what\n` +
+            `is on disk, and whether a given path can ever appear there is not decidable from\n` +
+            `this config. So each such assertion must carry its own discriminator:\n\n` +
+            `      - comment: Triage; is the file on disk at all?\n` +
+            `        exec: 'test -f <path>; echo "exit=$?"'\n` +
+            `        assertZeroExitCode: false\n\n` +
+            `Present on disk but absent from 'files' is the wrong-channel signature. With the\n` +
+            `pair, that is one row of the exec table; without it, it is another run.`
+        );
+        process.exit(1);
+    }
+}
+
+/** Workspace-relative paths the phase `script:` creates or copies into /workspace. */
+function scriptWrittenPaths(merged: string): string[] {
+    const paths: string[] = [];
+    for (const raw of merged.split('\n')) {
+        const line = raw.trim();
+        const mkdir = /^mkdir\s+(?:-p\s+)?(\/workspace\/\S+)/.exec(line);
+        if (mkdir) {
+            paths.push(mkdir[1]);
+        }
+        // `cp -r <src> <dest>`; only the destination matters, and a bare
+        // `/workspace/` destination is the seed copy, already covered by seedPaths.
+        const cp = /^cp\s+.*\s(\/workspace\/\S+)\s*$/.exec(line);
+        if (cp && cp[1] !== '/workspace/') {
+            paths.push(cp[1]);
+        }
+    }
+    return [...new Set(paths)].map(p => p.replace(/^\/workspace\//, '').replace(/\/$/, '')).filter(Boolean);
+}
+
+/** The `LIKE '…'` literal of every assertion querying the `files` table. */
+function filesAssertionPatterns(merged: string): { pattern: string; line: string }[] {
+    return merged
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => /^-?\s*query:/.test(line) && /\bfrom\s+files\b/i.test(line))
+        .map(line => ({
+            pattern: (/like\s+'([^']+)'/i.exec(line)?.[1] ?? '').replace(/%/g, ''),
+            line,
+        }));
 }
 
 void main();
