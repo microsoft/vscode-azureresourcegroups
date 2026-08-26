@@ -1,13 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T03:11:58.458Z",
+  "generatedAt": "2026-08-26T03:12:21.319Z",
   "mode": "offline",
-  "fixture": "sample-agent-output",
+  "fixtures": [
+    "sample-agent-output",
+    "reference-node-fullstack"
+  ],
   "outcome": "passed",
   "cases": [
     {
       "id": "golden-requirements",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "requirements",
       "expected": "passed",
       "actual": [],
@@ -17,6 +21,7 @@
     {
       "id": "golden-project-plan",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "project-plan",
       "expected": "passed",
       "actual": [],
@@ -26,6 +31,7 @@
     {
       "id": "golden-plan-gate",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "plan-gate",
       "expected": "passed",
       "actual": [],
@@ -35,6 +41,7 @@
     {
       "id": "golden-preview",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "preview",
       "expected": "passed",
       "actual": [],
@@ -44,6 +51,7 @@
     {
       "id": "golden-integration-plan",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
@@ -53,6 +61,7 @@
     {
       "id": "golden-frontend-scaffold",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "passed",
       "actual": [],
@@ -62,6 +71,7 @@
     {
       "id": "requirements-schema-version",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "requirements",
       "expected": "schemaVersion",
       "actual": [
@@ -73,6 +83,7 @@
     {
       "id": "project-plan-numbering",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "project-plan",
       "expected": "nonSequentialHeading",
       "actual": [
@@ -85,6 +96,7 @@
     {
       "id": "plan-gate-frontend-dropped",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "plan-gate",
       "expected": "frontendIntentMismatch",
       "actual": [
@@ -96,6 +108,7 @@
     {
       "id": "plan-gate-preview-manifest-missing",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "plan-gate",
       "expected": "previewManifestMissingAtGate",
       "actual": [
@@ -107,6 +120,7 @@
     {
       "id": "preview-not-ready",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "preview",
       "expected": "previewNotReady",
       "actual": [
@@ -118,6 +132,7 @@
     {
       "id": "frontend-preview-not-embeddable",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "devServerRejectsWebviewOrigin",
       "actual": [
@@ -129,6 +144,7 @@
     {
       "id": "frontend-dev-script-does-not-serve",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "devScriptDoesNotServe",
       "actual": [
@@ -140,6 +156,7 @@
     {
       "id": "frontend-frame-busting-csp",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "previewFrameBusting",
       "actual": [
@@ -151,6 +168,7 @@
     {
       "id": "frontend-api-seam-bypassed",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "apiSeamBypassed",
       "actual": [
@@ -162,6 +180,7 @@
     {
       "id": "integration-plan-missing-no-seed-rule",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingNoSeedRule",
       "actual": [
@@ -173,6 +192,7 @@
     {
       "id": "integration-plan-missing-backend-run-command",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingBackendCommand",
       "actual": [
@@ -184,6 +204,7 @@
     {
       "id": "integration-plan-missing-route-inventory",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingRouteInventory",
       "actual": [
@@ -195,6 +216,7 @@
     {
       "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
@@ -204,6 +226,7 @@
     {
       "id": "integration-plan-missing-api-seam",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingApiSeam",
       "actual": [
@@ -215,6 +238,7 @@
     {
       "id": "integration-plan-missing-service-classification",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingServiceClassification",
       "actual": [
@@ -226,6 +250,7 @@
     {
       "id": "frontend-api-client-interface-dropped",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "missingApiClientInterface",
       "actual": [
@@ -237,6 +262,7 @@
     {
       "id": "frontend-mock-client-dropped",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
       "expected": "missingMockClient",
       "actual": [
@@ -248,6 +274,7 @@
     {
       "id": "integration-plan-no-seed-rule-in-heading",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
@@ -257,6 +284,7 @@
     {
       "id": "integration-plan-no-seed-rule-as-table-row",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
@@ -266,6 +294,7 @@
     {
       "id": "integration-plan-port-inside-run-command",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
@@ -275,10 +304,212 @@
     {
       "id": "integration-plan-missing-backend-port",
       "tier": "offline",
+      "fixture": "sample-agent-output",
       "validator": "integration-plan",
       "expected": "missingBackendPort",
       "actual": [
         "missingBackendPort"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-plan",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-config",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-artifacts",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-table-concatenated",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "tableRowConcatenated",
+      "actual": [
+        "tableRowConcatenated",
+        "invalidGenerateMarker"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-checklist-stub",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "checklistStub",
+      "actual": [
+        "checklistStub"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-diagram-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "missingSection",
+      "actual": [
+        "missingSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-status-regressed",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "unexpectedStatus",
+      "actual": [
+        "unexpectedStatus"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-prelaunch-dangling",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "preLaunchTaskUnresolved",
+      "actual": [
+        "preLaunchTaskUnresolved"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-dependson-dangling",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "dependsOnUnresolved",
+      "actual": [
+        "dependsOnUnresolved"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-dependson-cycle",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "dependsOnCycle",
+      "actual": [
+        "dependsOnCycle"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-unchecked-config-generated",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "uncheckedConfigGenerated",
+      "actual": [
+        "uncheckedConfigGenerated"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-script-not-registered",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "scriptNotRegistered",
+      "actual": [
+        "scriptNotRegistered"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-api-collection-empty",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "apiCollectionEmpty",
+      "actual": [
+        "apiCollectionEmpty"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-task-run-options",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "invalidTaskRunOptions",
+      "actual": [
+        "invalidTaskRunOptions"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-duplicate-task-label",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "duplicateTaskLabels",
+      "actual": [
+        "duplicateTaskLabels",
+        "dependsOnUnresolved",
+        "dependsOnCycle"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-extension-recommendations",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "invalidExtensionRecommendations",
+      "actual": [
+        "invalidExtensionRecommendations"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-redacted-secret",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "redactedSecretPlaceholder",
+      "actual": [
+        "redactedSecretPlaceholder"
       ],
       "passed": true,
       "durationMs": 0
