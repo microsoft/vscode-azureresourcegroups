@@ -261,6 +261,10 @@ reported as a product regression here. That is the conservative direction — a 
 grader shows up as red rather than silently passing — but it means a red `exec:`
 assertion is worth confirming against `stdErr` before believing it.
 
+[`regrade.ts`](#re-grading-a-past-run-for-free) recovers the distinction offline: it
+re-runs the grader locally and reports exit 1 and exit 3 separately, so confirming a red
+`exec:` no longer means reading `stdErr` by hand.
+
 ### Which assertions are `exec:` and which stay SQL
 
 Only the `program` graders. The `files`, `toolCalls` and `llm_responses` tables cover
@@ -342,6 +346,120 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 `patch.diff`, `session.sqlite` (queryable with the same SQL as the assertions),
 `extension-host.log`, and `customScript/output.log`. See
 [AGENT_OUTPUTS.md](https://github.com/microsoft/vscode-copilot-evaluation/blob/main/doc/references/AGENT_OUTPUTS.md).
+
+## Re-grading a past run for free
+
+Changing a grader used to mean paying for a run to find out whether it still works.
+[`regrade.ts`](regrade.ts) removes the model from that loop: it re-runs **today's**
+graders against a run that already happened, for **zero tokens**.
+
+```bash
+export PATH="$HOME/.msbench-venv/bin:$PATH"
+cd evals && npm run regrade -- 2026082582510393
+```
+
+```
+  stored  regraded  assertion
+  ----------------------------------------------------------------------
+  = pass    pass      Agent should have written the requirements artifact
+  = FAIL    FAIL      requirements.json satisfies the requirements contract
+         exit 1 — PRODUCT FAILURE (bad artifact)
+           FAIL: requirements.json satisfies the requirements contract — Expected …
+  = pass    pass      Agent should not have written the dotfile variant
+  …
+No verdict changed. Today's graders agree with the stored eval.json.
+```
+
+This works because `session.sqlite`'s `files` table stores the **full text** of every
+file the agent wrote, so the final workspace can be rebuilt on disk and re-judged. The
+SQL assertions never needed the workspace at all — they only ever read that sqlite file.
+`exec:` graders are re-run with cwd set to the rebuilt workspace, exactly as in-container,
+and the `/agent/assets/graders/` prefix is rewritten to the working tree — which is what
+makes them *today's* graders rather than the ones staged when the run happened.
+
+The first invocation extracts to `.regrade/<run-id>` (gitignored) and reuses it after
+that, so the iteration after the first is local and takes well under a second.
+
+| Flag | |
+| --- | --- |
+| `--instance <id>` | Narrow to one instance. |
+| `--extracted <dir>` | Re-grade an existing extraction; skips `msbench-cli` entirely. |
+| `--config <path>` | Grade with a different config, to try an **edited assertion** against stored data. |
+| `--keep-workspace` | Leave the rebuilt workspace on disk and print its path. |
+| `--refresh` | Re-extract even when the cache has the run. |
+| `--json` | Machine-readable report. |
+
+Exit codes mirror [`graderHarness.ts`](../graders/graderHarness.ts): `0` every verdict
+matches the stored `eval.json`, `1` at least one verdict changed, `3` a **harness fault** —
+regrade could not run, a grader exited 3 or died abnormally, or an assertion query failed
+to compile.
+
+That last one is the point. MSBench collapses exit 1 and exit 3 into "non-zero", so a
+grader that crashed looks identical to a product that misbehaved — see
+[One fidelity gap worth knowing](#one-fidelity-gap-worth-knowing). `regrade.ts` keeps the
+verdict column collapsed so the diff stays honest, but prints the attribution and exits 3
+*regardless of whether the verdict moved*. A grader that breaks while still reporting
+`FAIL` is otherwise invisible: the diff just says "unchanged".
+
+The same rule catches [trap 2](#partial-re-runs-when-a-re-grade-isnt-enough)'s cousin — an
+assertion query that no longer compiles reports as a fault rather than being laundered
+into a product failure:
+
+```
+1 result(s) cannot be trusted — the harness broke, not the product:
+  Agent should have written the requirements artifact: no such column: stepIndex
+```
+
+A run that was **rate limited** is refused outright: its `error.json` says `RATE_LIMIT`,
+the agent produced nothing, and the run is void rather than red, so re-judging it would
+only reproduce a wall of meaningless failures.
+
+### Verified against known runs
+
+Both re-grade to exactly their stored verdicts, which is the regression test for the tool
+itself:
+
+| Run | Stored | Re-graded |
+| --- | --- | --- |
+| [`2026082579322454`](https://msbenchapp.azurewebsites.net/run-analysis/2026082579322454) | 7/7, `resolved: true` | identical, exit 0 |
+| [`2026082582510393`](https://msbenchapp.azurewebsites.net/run-analysis/2026082582510393) | 6/7, only `exec:` red | identical, exit 1 attributed as **PRODUCT FAILURE** |
+
+### `vsc-eval`, and why there is a fallback
+
+SQL assertions are re-run with `vsc-eval assertions assert --config-path … --database-file
+… --output-file … --instance-id …`, byte-identical to what `run-agent.sh` does
+in-container. But `@vscode/vscode-copilot-evaluation-agent` is **not on the public npm
+registry** — it is built from the internal `microsoft/vscode-copilot-evaluation` repo. So:
+
+- point `VSC_EVAL_BIN` at a local checkout's `dist/index.js` if you have one, and
+- otherwise `regrade.ts` evaluates the compiled SQL itself with `node:sqlite`, using a
+  direct port of `formatWithStepIndexFilter`.
+
+The report says which engine ran. Both are verified against the stored `eval.json` above.
+
+### Partial re-runs, when a re-grade isn't enough
+
+Re-grading is the free half of the loop; re-running only what genuinely broke is the paid
+half. Instances do come back `missing` (no output blob — infrastructure, not a model
+verdict), so this is routine plumbing rather than exception handling.
+
+Two traps, both of which cost real time:
+
+- **`--benchmark <report>.json:error` takes no `@` prefix.** With `@` the CLI treats the
+  whole token as a filename and dies with `Selection file not found: …results.json:error`.
+  Selectors are `resolved`, `unresolved`, `error`, `missing`, plus `no_eval_or_error_json`
+  and `no_error_json_unresolved` — the last two meaning *the harness broke, not the
+  product*.
+- **The status-selector form does not work for dataset-driven runs.** The report keys
+  instances by a reformatted name (benchmark `vscbench`, instance `say_hello.<instance_id>`)
+  while a custom `--dataset` declares its own benchmark name and bare instance ids, so the
+  selector matches nothing and errors with
+  `Instance 'say_hello.gpt_5_6_sol' not found in benchmark 'vscbench'`. Re-select
+  explicitly instead:
+
+  ```bash
+  msbench-cli run … --benchmark <benchmark>.<instance_id> <benchmark>.<instance_id>
+  ```
 
 ## Running in CI
 
