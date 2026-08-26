@@ -10,7 +10,8 @@ defaults:
   # Scaffolding a real project before the debug phase runs is slow; this is a
   # chained multi-agent suite, not a single-turn one.
   timeout: 45m
-  executor: azure-agent-executor
+  # No `executor:` key — see the note in project-plan/eval.yaml. The agent runs on
+  # MSBench; this spec defines the stimuli and graders.
 
 # Chain the *real* scaffold agent so the debug agents analyse genuine generated
 # output rather than a hand-written fixture that can drift from what scaffold emits.

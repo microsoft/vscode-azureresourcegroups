@@ -7,12 +7,12 @@ type: capability
 defaults:
   runs: 3
   timeout: 10m
-  executor: azure-agent-executor
   model: claude-sonnet-4.6
-  # The executor owns skill + instruction setup (evals/executor/agent-assets.ts):
-  # it generates SKILL.md from the shipped resources/agents/azure-project-plan.agent.md
-  # and copies the whole instruction folder (including references/) into the workspace,
-  # so a rule removed from the product is also removed from the eval.
+  # No `executor:` key. This spec is the source of truth for the stimuli and the
+  # graders, but running the agent happens on MSBench (evals/msbench/) rather than
+  # headlessly through the Copilot SDK, so there is no executor to name. `vally lint`
+  # still validates the structure below, and evals/msbench/config/stimuli/ is a port
+  # of it.
 
 stimuli:
   # ─── 1.1 SPA + Functions + PostgreSQL (photo app) ─────────────────────────
