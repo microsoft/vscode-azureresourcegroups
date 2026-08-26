@@ -82,3 +82,8 @@ evals/msbench/assets/user-overrides.yaml
 
 # Mutual-exclusion lock taken by run.sh while it owns assets/.
 evals/msbench/assets/.run.lock/
+
+# Extraction cache for evals/msbench/regrade.ts, keyed by run id. Downloaded
+# from stored MSBench results and reused across iterations so re-grading stays a
+# local operation; safe to delete at any time.
+evals/msbench/.regrade/

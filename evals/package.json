@@ -11,6 +11,7 @@
         "lint": "vally lint --eval-spec project-plan/eval.yaml",
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
+        "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
         "gate-tools": "node check-gate-tools.ts",
         "ci:local": "node ci-local.ts",
         "msbench:self-test": "node msbench/verify-run.ts --self-test"
