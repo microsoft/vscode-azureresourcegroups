@@ -269,12 +269,19 @@ function resolveExtraction(options: Options): string {
         return dir;
     }
 
-    const dir = resolve(options.extractDir ?? join(CACHE_ROOT, options.runId!));
+    // parseArgs guarantees one of runId / extractedDir, and the branch above took
+    // the extractedDir case — narrow it here rather than asserting non-null.
+    const { runId, instance: wanted } = options;
+    if (!runId) {
+        throw new RegradeError('No run id to extract');
+    }
+
+    const dir = resolve(options.extractDir ?? join(CACHE_ROOT, runId));
     // Only reuse a cache that actually holds what was asked for: a cache built by
     // an earlier `--instance A` must not silently satisfy a later `--instance B`.
     const cached = findInstances(dir).instances;
     const satisfiesRequest = cached.length > 0 &&
-        (!options.instance || cached.some(candidate => matchesInstance(candidate.name, options.instance!)));
+        (!wanted || cached.some(candidate => matchesInstance(candidate.name, wanted)));
 
     if (!options.refresh && satisfiesRequest) {
         log(`Reusing extraction at ${dir} (--refresh to re-download)`);
@@ -282,9 +289,9 @@ function resolveExtraction(options: Options): string {
     }
 
     mkdirSync(dirname(dir), { recursive: true });
-    const args = ['extract', '--run_id', options.runId!, '--output', dir];
-    if (options.instance) {
-        args.push('--instance', options.instance);
+    const args = ['extract', '--run_id', runId, '--output', dir];
+    if (wanted) {
+        args.push('--instance', wanted);
     }
 
     log(`$ msbench-cli ${args.join(' ')}`);
@@ -560,6 +567,13 @@ function compile(config: AgentConfig): Compiled[] {
 // SQL assertions
 // ---------------------------------------------------------------------------
 
+interface VscEval {
+    command: string;
+    leadingArgs: string[];
+    /** True when the user named it via VSC_EVAL_BIN, rather than it being found on PATH. */
+    explicit: boolean;
+}
+
 /**
  * `vsc-eval` (bin of `@vscode/vscode-copilot-evaluation-agent`) is what runs
  * in-container, so prefer it when it exists — the invocation below is what
@@ -571,16 +585,26 @@ function compile(config: AgentConfig): Compiled[] {
  * back to evaluating the compiled SQL itself with `node:sqlite`, using the port
  * of `formatWithStepIndexFilter` above. Both paths are verified against the
  * stored `eval.json` of a known run, which is what `--json` diffing is for.
+ *
+ * A `vsc-eval` on PATH is only accepted if the probe actually *succeeds*. It is
+ * not enough that the spawn found something: upstream's CLI is
+ * `.demandCommand(1).strict()`, so a version or argument mismatch can exit
+ * non-zero, and taking the vsc-eval path then would fail the whole re-grade when
+ * the fallback would have produced the same verdicts. An explicit `VSC_EVAL_BIN`
+ * is honoured regardless, so a deliberate choice is never silently ignored.
  */
-function findVscEval(): { command: string; leadingArgs: string[] } | undefined {
+function findVscEval(): VscEval | undefined {
     const override = process.env.VSC_EVAL_BIN;
     if (override) {
         return override.endsWith('.js')
-            ? { command: process.execPath, leadingArgs: [override] }
-            : { command: override, leadingArgs: [] };
+            ? { command: process.execPath, leadingArgs: [override], explicit: true }
+            : { command: override, leadingArgs: [], explicit: true };
     }
     const probe = spawnSync('vsc-eval', ['--version'], { stdio: 'ignore' });
-    return probe.error ? undefined : { command: 'vsc-eval', leadingArgs: [] };
+    if (probe.error || probe.status !== 0) {
+        return undefined;
+    }
+    return { command: 'vsc-eval', leadingArgs: [], explicit: false };
 }
 
 /**
@@ -588,7 +612,7 @@ function findVscEval(): { command: string; leadingArgs: string[] } | undefined {
  * each get their own verdict rather than all collapsing onto the last one.
  */
 function runVscEval(
-    binary: { command: string; leadingArgs: string[] },
+    binary: VscEval,
     configPath: string,
     sqlitePath: string,
     instanceId: string
@@ -886,10 +910,26 @@ async function regradeInstance(instance: Instance, options: Options): Promise<In
         const vscEval = findVscEval();
         let sqlVerdicts: Map<string, { passed: boolean; error: string | null }[]> | undefined;
         let sqlEngine: string;
+        const softWarnings: string[] = [];
 
         if (vscEval) {
-            sqlVerdicts = runVscEval(vscEval, configPath, instance.sqlitePath, stored.instanceId);
-            sqlEngine = `vsc-eval (${vscEval.leadingArgs[0] ?? vscEval.command})`;
+            try {
+                sqlVerdicts = runVscEval(vscEval, configPath, instance.sqlitePath, stored.instanceId);
+                sqlEngine = `vsc-eval (${vscEval.leadingArgs[0] ?? vscEval.command})`;
+            } catch (error) {
+                // An explicit VSC_EVAL_BIN that does not work is a misconfiguration
+                // worth surfacing. A `vsc-eval` merely found on PATH is a convenience,
+                // so degrade to the fallback — which produces the same verdicts —
+                // rather than failing a re-grade that could have succeeded.
+                if (vscEval.explicit) {
+                    throw error;
+                }
+                softWarnings.push(
+                    `vsc-eval was on PATH but failed, so SQL assertions fell back to node:sqlite: ` +
+                    `${error instanceof Error ? error.message.split('\n')[0] : String(error)}`
+                );
+                sqlEngine = 'node:sqlite (vsc-eval failed; see warning)';
+            }
         } else {
             sqlEngine = 'node:sqlite (vsc-eval not found; set VSC_EVAL_BIN to use it)';
         }
@@ -916,7 +956,8 @@ async function regradeInstance(instance: Instance, options: Options): Promise<In
             db.close();
         }
 
-        const { comparisons, warnings } = compare(stored, regraded);
+        const { comparisons, warnings: matchWarnings } = compare(stored, regraded);
+        const warnings = [...softWarnings, ...matchWarnings];
         const faults = regraded.map(faultOf).filter((fault): fault is string => fault !== undefined);
         const changed = comparisons.filter(comparison => comparison.direction !== 'unchanged').length;
 
@@ -954,16 +995,17 @@ async function main(): Promise<void> {
     }
 
     let instances = discovered;
-    if (options.instance) {
-        const filtered = discovered.filter(candidate => matchesInstance(candidate.name, options.instance!));
+    const wanted = options.instance;
+    if (wanted) {
+        const filtered = discovered.filter(candidate => matchesInstance(candidate.name, wanted));
         if (filtered.length === 0) {
             throw new RegradeError(
-                `No instance matching '${options.instance}'. Available: ${discovered.map(i => i.name).join(', ')}`
+                `No instance matching '${wanted}'. Available: ${discovered.map(i => i.name).join(', ')}`
             );
         }
         if (filtered.length > 1) {
             throw new RegradeError(
-                `'${options.instance}' matches ${filtered.length} instances: ${filtered.map(i => i.name).join(', ')}. Be more specific.`
+                `'${wanted}' matches ${filtered.length} instances: ${filtered.map(i => i.name).join(', ')}. Be more specific.`
             );
         }
         instances = filtered;
