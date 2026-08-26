@@ -134,6 +134,61 @@ The agent definition is unpacked from the VSIX itself rather than cloned from Gi
 so the instructions always match the build under test. Cloning a branch would let the
 two drift and silently grade the wrong version of the prompt.
 
+## Timeouts
+
+Two unrelated things are both called a timeout here, and conflating them is expensive.
+
+**`timeouts:` in [`config/base.yaml`](config/base.yaml) — the real ones.** Enforced by
+the agent and the platform runner. The schema's defaults are sized for a single-turn
+run, so they are set explicitly:
+
+| Key | Default | Ours | Why |
+| --- | --- | --- | --- |
+| `agentSeconds` | 6300 (1h45m) | 18000 (5h) | The E2E chain is describe → requirements → plan → scaffold → build → run → debug in **one** session. The default is a per-turn budget, not a chain budget. Sized to fit inside the job cap — see below. |
+| `stallSeconds` | 2700 (45m) | 5400 (90m) | See below. |
+| `runnerGraceSeconds` | 300 (5m) | 900 (15m) | A long session has far more to flush at the end (screen recording, trajectory, `session.sqlite`) than a 5-step run, and a truncated artifact is an unreadable result. |
+
+`stallSeconds` is the one that bites. It is **not** an agent-inactivity timeout — the
+schema defines it as time with *"no agent trace, CAPI proxy log, Copilot Chat log, or
+workspace file activity"*, so it fires only when all four signals are quiet at once. A
+long `npm install`, `azd provision`, build or test suite produces none of the four for
+minutes at a time. A healthy run doing exactly what we asked can therefore be killed for
+looking idle, and it reports as a product failure. Quiet is not the same as stuck.
+
+**These three are one budget, not three independent knobs, and the budget has to fit
+inside the platform job limit.** The job clock starts before the agent clock — container
+pull, VS Code and VSIX install, workspace setup and the `script:` preamble all happen
+before the agent's first turn. So if `agentSeconds` is set to the full job cap, the job
+is killed *first*, the agent timeout never fires, and because `runnerGraceSeconds` is
+time the runner takes **after** the agent timeout, the grace period never runs either.
+Nothing gets flushed — no screen recording, no trajectory, no `session.sqlite` — on
+precisely the runs you most need to diagnose. `agentSeconds` must therefore be the job
+cap minus setup minus grace, with margin:
+
+```
+6h job cap − ~15m setup − 15m grace ⇒ 5h agent
+```
+
+The schema gives all three a `maximum` of `9007199254740991`, so nothing above is
+schema-constrained. The real ceiling is the platform job limit. GitHub documents a 6-hour
+cap for hosted runners and 5 days for self-hosted; our runs report `dispatched to GitHub
+Actions` with `run_platform='linux_container'`, but **we could not verify which pool
+MSBench dispatches to** — that is decided by a server-side workflow not visible from the
+CLI or from `vscode-copilot-evaluation`. The 6h figure above is therefore an assumption,
+chosen because it is the safer of the two documented limits. If the cap is ever
+confirmed, re-derive `agentSeconds` from the arithmetic above rather than just raising
+it; raising it past 6h needs confirmation from the MSBench team
+(<CodeExService@microsoft.com>).
+
+**`msbench-cli run --timeout` — not the same thing, and don't add it.** It is a *local*
+wait. From `cli/arguments.py`: *"Max seconds to wait locally for completion. When
+reached, the CLI attempts to cancel the CES run, downloads partial results, and exits
+with a timeout error."* `_handle_timeout` in `execution/ces_client.py` confirms it —
+partial download, then `cancel_run`. So setting it does not give a run more time; it
+**ends a still-healthy run early** and leaves you with partial artifacts. It defaults to
+`None` (wait indefinitely), and `run.sh` deliberately does not pass it. Leave it that
+way.
+
 ## Layout
 
 Three things under `assets/` are **generated on every run and gitignored**, because a
