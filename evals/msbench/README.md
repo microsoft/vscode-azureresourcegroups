@@ -361,13 +361,16 @@ reports the genuinely-red negative control (`2026082582510393`) as a real failur
 ### Which surface got throttled
 
 `output/vsc-output/capi-proxy.log` records every upstream model call with its path and
-status. From throttled run `2026082583236973`:
+status. Verbatim from throttled run `2026082583236973` (interleaved header/body lines
+removed, but the call lines are exactly as they appear — this is the format
+`verify-run.ts` parses):
 
 ```
-23:11:12.786  [8]  POST /v1/messages      -> 200
-23:11:14.772  [9]  POST /v1/messages      -> 429     <-- throttled
-23:11:14.773  [9]  Response body: too many requests
-23:11:15.438  [10] POST /chat/completions -> 200     <-- 666ms later, SUCCEEDS
+[2026-08-25T23:11:12.786Z] [CAPI PROXY] [8] POST /v1/messages -> 200
+[2026-08-25T23:11:14.772Z] [CAPI PROXY] [9] POST /v1/messages -> 429     <-- throttled
+[2026-08-25T23:11:14.773Z] [CAPI PROXY] [9] Response body:
+too many requests
+[2026-08-25T23:11:15.438Z] [CAPI PROXY] [10] POST /chat/completions -> 200  <-- 666ms later, SUCCEEDS
 ```
 
 That 666 ms is the whole point: **the 429 is scoped to the API surface, not to the

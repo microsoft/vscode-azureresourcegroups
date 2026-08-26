@@ -52,7 +52,16 @@ interface ProxyCall {
 }
 
 /**
- * `[2026-08-25T23:11:14.772Z] [CAPI PROXY] [9] POST /v1/messages -> 429`
+ * Matches a call line, verbatim from run 2026082583236973:
+ *
+ *   [2026-08-25T23:11:14.772Z] [CAPI PROXY] [9] POST /v1/messages -> 429
+ *
+ * That bracketed-ISO form is the only shape the proxy emits — checked against
+ * all seven stored runs, in which the abbreviated `23:11:14.772 [9] POST ...`
+ * style used in some hand-written notes appears zero times. Deliberately not
+ * accepting that second form: it would be a branch no artifact can exercise, so
+ * it could not be tested and would rot silently. If the proxy's format ever
+ * does change, the census printing nothing is the loud signal to update this.
  *
  * The proxy also logs response headers and bodies on their own lines under the
  * same request index; only the request/status line is of interest here.
