@@ -202,7 +202,12 @@ export async function runGraderAsync(name: string, body: () => Promise<void>): P
 function exitForError(name: string, error: unknown): never {
     const gate = gateId();
     if (error instanceof NotApplicable) {
-        console.error(`NOT_APPLICABLE gate=${error.gate} class=${error.classification} reason=${error.reason} detail="${error.detail.replace(/"/g, "'")}"`);
+        // `detail` is JSON-encoded rather than quote-substituted so the field survives a
+        // parser: JSON.stringify supplies the surrounding quotes and escapes embedded quotes
+        // and newlines, where rewriting `"` to `'` silently corrupts any detail that contains
+        // one — and details legitimately carry shell commands. "This field is never parsed"
+        // is true right up until someone writes the reader, which is happening now.
+        console.error(`NOT_APPLICABLE gate=${error.gate} class=${error.classification} reason=${error.reason} detail=${JSON.stringify(error.detail)}`);
         console.error(`SKIP: gate=${error.gate} — ${name} did not apply here.`);
         console.error(error.classification === 'coverageGap'
             ? '  This gate applies here but could not run, so we are not testing something we claim to test. This is a gap to close, not a gate to unwire.'
