@@ -80,7 +80,7 @@ script: |
     bin=$1
     shift
     if command -v "$bin" >/dev/null 2>&1; then
-      out=$($TO "$bin" "$@" 2>&1 | head -1 | tr -d '\r')
+      out=$($TO "$bin" "$@" 2>&1 | head -1 | tr -d '\r' | tr -s ' ')
       echo "$bin=${out:-present}"
     else
       echo "$bin=MISSING"
@@ -98,7 +98,7 @@ script: |
     fi
   }
 
-  echo "=== env-fingerprint begin ==="
+  echo "fingerprint=begin"
   echo "uname=$(uname -sm)"
   os=$(. /etc/os-release 2>/dev/null; echo "$PRETTY_NAME")
   echo "os=${os:-unknown}"
@@ -122,9 +122,25 @@ script: |
     echo "vsix=MISSING at $VSIX"
   fi
 
-  # Language runtimes
-  for b in node npm npx python3 pip pip3 dotnet go; do probe "$b" --version; done
+  # Language runtimes. `go` and `java` take a subcommand or a single dash
+  # rather than `--version`, so they are probed with their own spelling — a
+  # 2026-08-26 run confirmed the `--version` form reports an error string,
+  # which would read as "broken" rather than "present".
+  for b in node npm npx python3 pip pip3 dotnet; do probe "$b" --version; done
+  probe go version
   probe java -version
+  # `pip` and `pip3` were both MISSING in that run while python3 was present,
+  # so the binary's absence does not settle whether Python packages can be
+  # installed. The module form is the one `python3 -m pip install` would use.
+  if command -v python3 >/dev/null 2>&1; then
+    pipmod=$($TO python3 -m pip --version 2>&1 | head -1)
+    case "$pipmod" in
+      pip*) echo "pip_module=$pipmod" ;;
+      *) echo "pip_module=MISSING" ;;
+    esac
+    venvmod=$($TO python3 -c 'import ensurepip, venv' 2>&1 | tail -1)
+    echo "python_venv=${venvmod:-ok}"
+  fi
 
   # Database clients
   for b in psql mongosh redis-cli; do probe "$b" --version; done
@@ -152,6 +168,6 @@ script: |
   echo "net_npm=$(net https://registry.npmjs.org/)"
   echo "net_pypi=$(net https://pypi.org/simple/)"
   echo "net_nuget=$(net https://api.nuget.org/v3/index.json)"
-  echo "=== env-fingerprint end ==="
+  echo "fingerprint=end"
   FINGERPRINT
   sh /tmp/env-fingerprint.sh || true

@@ -245,7 +245,7 @@ so the probe reports one `name=value` per line:
 | Group | Probed |
 | --- | --- |
 | Staged assets | the graders tree at `/agent/assets/graders/evals/graders`, and the VSIX's byte size |
-| Language runtimes | `node`, `npm`, `npx`, `python3`, `pip`, `pip3`, `dotnet`, `java`, `go` |
+| Language runtimes | `node`, `npm`, `npx`, `python3`, `pip`, `pip3`, `pip_module`, `python_venv`, `dotnet`, `java`, `go` |
 | Database clients | `psql`, `sqlcmd`, `mongosh`, `redis-cli` |
 | Cloud and containers | `az`, `azd`, `func`, `docker` |
 | Build essentials | `git`, `make`, `gcc`, `unzip`, `curl` |
@@ -270,6 +270,44 @@ Read `net_*` narrowly: it proves the endpoint answered, not that `npm install` w
 intercepting proxy returns 200 too, and so does a registry that then refuses the actual
 package fetch. It is conclusive in the negative direction — a `000` means outcome (b) is
 off the table — and only suggestive in the positive one.
+
+Two probes are spelled awkwardly on purpose. `go` and `java` are asked with `go version`
+and `java -version`, because neither accepts `--version` and the `--version` form would
+report an error string that reads as "installed but broken". And `pip_module` runs
+`python3 -m pip`, because a run on 2026-08-26 found `pip` and `pip3` both absent while
+`python3` was present — the binary's absence does not settle whether Python packages can
+be installed. `python_venv` imports `ensurepip` rather than `venv`, since on Debian and
+Ubuntu `import venv` succeeds even when `python3 -m venv` cannot bootstrap pip.
+
+### What the first run found
+
+Recorded by run
+[`2026082611060474`](https://msbenchapp.azurewebsites.net/run-analysis/2026082611060474),
+a throwaway one-line-prompt config submitted purely to read the fingerprint
+($0.03, one model request):
+
+```
+uname=Linux x86_64
+os=Ubuntu 22.04.5 LTS
+node=v22.22.2   npm=10.9.7   python3=Python 3.10.12   az=azure-cli 2.89.1
+git=2.34.1   make=4.3   gcc=11.4.0   curl=7.81.0   unzip=6.00
+pip=MISSING  pip3=MISSING  dotnet=MISSING  go=MISSING  java=MISSING
+psql=MISSING mongosh=MISSING redis-cli=MISSING sqlcmd=MISSING
+func=MISSING azd=MISSING docker=MISSING
+disk=82G free of 145G   mem=15.6GB   cpus=4
+net_npm=200  net_pypi=200  net_nuget=200
+```
+
+So the container is **Node-only** — outcome (b) for every non-Node stack. Node and npm
+are first-class, egress reaches npm, PyPI and NuGet, and there is 82 GB of disk and a
+C toolchain to install into. Everything else (Python packaging, .NET, Java, Go, every
+database client, `func`, `azd`, Docker) has to be installed in the `script:` preamble,
+which costs setup minutes per run. Docker being absent also rules out
+database-in-a-container gates; those need a real service or an emulator.
+
+That run is also the cleanest possible proof that the fingerprint cannot fail anything:
+its `eval.json` is `"resolved": true` with `"details": []` — one row recorded in `exec`,
+zero assertions generated.
 
 Every probe is individually failure-tolerant — a missing binary prints `MISSING` and the
 script continues, so one absent tool cannot truncate the answer.
