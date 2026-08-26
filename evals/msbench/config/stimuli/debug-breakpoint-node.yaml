@@ -40,7 +40,7 @@ promptSteps:
       Do not create, modify or read any files. Do not call any tools.
     assertions:
       # Liveness sentinel — must come first, and every stimulus needs one.
-      - comment: Sentinel; session data must exist or the checks below are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # Folded in from `debug-probe-smoke` rather than spending a run of its own:

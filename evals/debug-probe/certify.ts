@@ -380,12 +380,24 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
 
             // Squat from a separate process; spawnSync below blocks our event loop,
             // so an in-process server would never accept the probe's connection.
+            //
+            // `detached: false` keeps it in our process group, but that alone does
+            // not save us: if the suite is interrupted (Ctrl-C, a killed shell) the
+            // `finally` never runs and the squatter outlives us, holding 7071. Every
+            // later run then fails its port preflight — the suite poisons itself,
+            // and the symptom looks like a broken gate rather than a stale process.
+            // So it is also killed on the way out under any signal.
             let squatter: ReturnType<typeof spawn> | undefined;
+            let killSquatter = (): void => { };
             if (testCase.squatPort !== undefined) {
                 squatter = spawn(process.execPath, [
                     '-e',
                     `require('node:net').createServer(s => s.end()).listen(${testCase.squatPort}, '0.0.0.0', () => setTimeout(() => {}, 1e9))`,
                 ], { stdio: 'ignore', detached: false });
+                killSquatter = () => { try { squatter?.kill('SIGKILL'); } catch { /* already gone */ } };
+                for (const signal of ['exit', 'SIGINT', 'SIGTERM'] as const) {
+                    process.once(signal, killSquatter);
+                }
                 spawnSync(process.execPath, ['-e', 'setTimeout(()=>{},1500)']);
             }
 
@@ -455,7 +467,10 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
                     : `expected outcome=${testCase.expectedOutcome} exit=${testCase.expectedExit}, got outcome=${outcome} exit=${code}. Grader said: ${stderr.split('\n')[0] ?? '(nothing)'}`,
             });
             } finally {
-                squatter?.kill();
+                killSquatter();
+                for (const signal of ['exit', 'SIGINT', 'SIGTERM'] as const) {
+                    process.removeListener(signal, killSquatter);
+                }
             }
         }
         return results;

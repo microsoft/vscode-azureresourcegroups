@@ -45,7 +45,7 @@ promptSteps:
       # be indistinguishable from one that passed, because the check below is
       # about a file the *extension host* wrote rather than anything the agent
       # did — it would happily pass on a run where the agent never spoke.
-      - comment: Sentinel; session data must exist or the checks below are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # THE question — ANSWERED YES by run 2026082620311350 (2026-08-25). Retained
@@ -61,7 +61,7 @@ promptSteps:
       # `exec:` runs with cwd set to the workspace, so this is relative rather
       # than hardcoding /workspace — the runner uses a worktree path on some
       # routes.
-      - comment: The second extension installed and activated alongside our VSIX
+      - comment: The probe extension installed and activated
         exec: test -f .eval/probe.log
 
       # Non-asserting, exactly like the environment fingerprint the other
