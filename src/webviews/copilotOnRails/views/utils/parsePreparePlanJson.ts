@@ -156,7 +156,6 @@ function readServices(value: unknown): DeploymentPlanService[] {
         sku: readString(entry.sku) ?? '',
         component: readString(entry.component) ?? '',
         purpose: readString(entry.purpose) ?? '',
-        component: readString(entry.component) ?? '',
         region: readString(entry.region) ?? '',
         resourceName: readString(entry.resourceName) ?? '',
         version: readString(entry.version),

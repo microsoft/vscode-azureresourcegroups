@@ -34,8 +34,6 @@ export interface DeploymentPlanService {
     sku: string;
     component: string;
     purpose: string;
-    /** The app/workload component this resource serves (e.g. `scrapbook-api`). */
-    component: string;
     region: string;
     resourceName: string;
     /** Exact engine version for managed database services (e.g. PostgreSQL `16`). */
