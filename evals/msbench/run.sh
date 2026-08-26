@@ -176,11 +176,74 @@ fi
 
 # --- submit ------------------------------------------------------------------
 
-log "Submitting to MSBench (benchmark: ${BENCHMARK})"
+# assets/ is shared mutable state: every invocation rewrites user-overrides.yaml
+# before uploading it. Two overlapping runs therefore race, and the loser
+# silently submits the winner's stimulus -- a run that looks entirely normal but
+# grades the wrong prompt. Serialise instead.
+LOCK="${ASSETS}/.run.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+    die "Another run.sh is using ${ASSETS} (lock: ${LOCK}).
+    Concurrent runs would submit each other's stimulus. Wait for it to finish,
+    or remove the lock if no run.sh is alive."
+fi
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
+
+log "Submitting to MSBench (benchmark: ${BENCHMARK}, stimulus: ${STIMULUS})"
+# Echo the prompt actually being submitted, so a stimulus/config mismatch is
+# visible in the log rather than only discoverable by unzipping the results.
+sed -n '/^promptSteps:/,/assertions:/p' "${ASSETS}/user-overrides.yaml" \
+    | sed -n '2,4p' | sed 's/^/    | /'
 echo
-exec "${VENV}/bin/msbench-cli" run \
+
+RUN_LOG="$(mktemp -t msbench-run)"
+trap 'rm -f "$RUN_LOG"; rmdir "$LOCK" 2>/dev/null || true' EXIT
+
+set +e
+"${VENV}/bin/msbench-cli" run \
     --agent vscode \
     --model . \
     --benchmark "$BENCHMARK" \
     --agent-assets "$ASSETS" \
-    ${PASSTHRU[@]+"${PASSTHRU[@]}"}
+    ${PASSTHRU[@]+"${PASSTHRU[@]}"} 2>&1 | tee "$RUN_LOG"
+CLI_STATUS=${PIPESTATUS[0]}
+set -e
+
+# A throttled run still prints a normal-looking red results table: the agent
+# produced nothing, so artifact assertions fail while negative assertions pass
+# trivially. That is indistinguishable from a real regression by eye, and was
+# twice mistaken for one while building this. Check before the reader can draw a
+# conclusion from the table.
+RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
+if [ -n "$RUN_ID" ]; then
+    RESULTS_ZIP="$(ls "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip" \
+                      "${HOME}/.local/share/msbench/runs/${RUN_ID}/results.zip" 2>/dev/null | head -1 || true)"
+    if [ -n "$RESULTS_ZIP" ]; then
+        SCRATCH="$(mktemp -d)"
+        unzip -oq "$RESULTS_ZIP" -d "$SCRATCH" 2>/dev/null || true
+        find "$SCRATCH" -name '*-output.zip' -exec unzip -oq {} -d "${SCRATCH}/out" \; 2>/dev/null || true
+        RATE_LIMITED=0
+        if [ -f "${SCRATCH}/out/output/error.json" ] \
+                && grep -q '"type": *"RATE_LIMIT"' "${SCRATCH}/out/output/error.json"; then
+            RATE_LIMITED=1
+        fi
+        rm -rf "$SCRATCH"
+        if [ "$RATE_LIMITED" -eq 1 ]; then
+            echo
+            echo "  ============================================================"
+            echo "  RATE_LIMIT — this run is NOT a result. Do not read the table."
+            echo "  ============================================================"
+            echo "  The Copilot API throttled the agent mid-run, so it produced"
+            echo "  nothing. Positive assertions fail and negative ones pass"
+            echo "  trivially, which looks exactly like an agent regression."
+            echo
+            echo "  Runs cost ~250k tokens each; roughly 3 in 15 minutes is the"
+            echo "  observed ceiling. Wait ~15 minutes and re-run."
+            echo
+            echo "  Run id: ${RUN_ID}"
+            echo
+            exit 75  # EX_TEMPFAIL: retry later, distinct from a genuine red run
+        fi
+    fi
+fi
+
+exit "$CLI_STATUS"

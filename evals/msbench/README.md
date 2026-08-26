@@ -32,6 +32,9 @@ than being levelled up — only `photo-app-requirements` specifies
 `no-dotfile-requirements` and `transcript-not-contains`, and only it and
 `api-only-inventory` specify `no-premature-plan`.
 
+All four are verified by a real green run; ids are under
+[Verified result](#verified-result).
+
 ## Quick start
 
 ```bash
@@ -85,10 +88,35 @@ rather than being skipped — fingerprint `Linux x86_64 / cwd=/workspace / node=
 and the validator's own `PASS: requirements.json satisfies the requirements contract` on
 stderr.
 
-> **Flaky failure mode:** back-to-back runs can fail with `"type": "RATE_LIMIT"` in
-> `output/error.json` — the Copilot API rate-limits the agent mid-run, so the artifact
-> assertions fail simply because nothing was produced. This is not a product failure.
-> Leave a few minutes between runs, and check `error.json` before believing a red result.
+The other three stimuli are each verified by their own green run, with the validator
+genuinely executing under the flags that distinguish them:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `api-only-inventory` | [`2026082582848923`](https://msbenchapp.azurewebsites.net/run-analysis/2026082582848923) | 5/5 |
+| `no-datastore-converter` | [`2026082585315961`](https://msbenchapp.azurewebsites.net/run-analysis/2026082585315961) | 4/4 |
+| `multi-service-order-processing` | [`2026082586199078`](https://msbenchapp.azurewebsites.net/run-analysis/2026082586199078) | 4/4 |
+
+### The negative control, in MSBench
+
+The validator's failure path was already verified locally, but that only proves the
+*grader* exits non-zero — not that MSBench notices. An assertion that cannot go red is
+worse than no assertion, so
+[`2026082582510393`](https://msbenchapp.azurewebsites.net/run-analysis/2026082582510393)
+ran the photo-app prompt (which asks for PostgreSQL) against the validator invoked with
+`--assert-no-datastore`, a contract it must fail.
+
+Result: **6/7, with only the `exec:` assertion red** and `resolved: false`. The failure
+was attributable rather than merely present — exit code **1**, a product failure rather
+than the exit 3 that means the grader itself broke:
+
+```
+FAIL: requirements.json satisfies the requirements contract
+  — Expected "No datastore required" in recommendedChoice, got: Blob Storage, PostgreSQL
+```
+
+So the assertion fails for the intended reason, and the failure stays isolated to the
+one assertion under test instead of collapsing the whole run.
 
 ## How it works
 
@@ -290,12 +318,34 @@ with a clear message:
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail
   while negative assertions pass trivially — indistinguishable from a genuine agent
-  regression at a glance. **Always check `output/error.json` for `"type": "RATE_LIMIT"`
-  before believing a red result.** Corroborate with
+  regression at a glance. `run.sh` now detects this and **exits 75 (`EX_TEMPFAIL`) with
+  a loud banner instead of letting you read the results table**, so a throttled run
+  cannot be mistaken for a regression.
+
+  The check keys on `output/error.json` → `"type": "RATE_LIMIT"` and is deliberately
+  narrow: verified against three stored runs, it catches the throttled one, passes the
+  green one, and — the case that actually matters — still reports the genuinely-red
+  negative control as a real failure. A detector for false reds is worthless if it
+  also hides true ones. Corroborate manually with
   `select name, count(*) from spans group by name` against
   `output/vsc-output/agent-traces.db` (note: `spans`/`span_attributes`, not `toolCalls`,
-  which is the assertion-time view). ~13 chat spans is healthy; dying around 6 is
-  throttling. Leave several minutes between runs.
+  which is the assertion-time view) — ~13 chat spans is healthy, dying around 6 is
+  throttling. A **completely empty `exec` table** is another tell: the graders never ran
+  at all, rather than running and failing.
+
+  Observed budget: **three runs inside 14 minutes succeeded and the fourth was
+  throttled**, at ~250k tokens each. So this is a rolling token allowance rather than a
+  minimum gap between runs; spacing runs ~15 minutes apart is the practical rule.
+
+- **Two `run.sh` invocations at once submit each other's stimulus.** `assets/` is shared
+  mutable state — every invocation rewrites `user-overrides.yaml` before uploading it —
+  so overlapping runs race and the loser submits the winner's prompt. That yields a run
+  which looks entirely normal while grading the wrong stimulus, the worst failure mode
+  here: it is confidently wrong rather than obviously broken. (This is exactly how run
+  `2026082584891952`, invoked with `--stimulus no-datastore-converter`, graded the
+  photo-app prompt.) `run.sh` now takes a lock (`assets/.run.lock`) and refuses to start
+  rather than racing, and echoes the prompt it is actually submitting so a mismatch
+  shows up in the log instead of only after unzipping the results.
 - **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
   submitting ~90s after a previous run finished; no run id is allocated. The same
   config submitted cleanly after a cooldown, so treat it as transient submission

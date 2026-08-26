@@ -79,3 +79,6 @@ evals/msbench/assets/graders/
 # Built from evals/msbench/config/{base,stimuli/*}.yaml by run.sh. run-agent.sh
 # only ever reads this one filename, so selecting a stimulus means writing it.
 evals/msbench/assets/user-overrides.yaml
+
+# Mutual-exclusion lock taken by run.sh while it owns assets/.
+evals/msbench/assets/.run.lock/
