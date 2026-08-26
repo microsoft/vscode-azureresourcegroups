@@ -47,6 +47,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DISK_TRIAGE_COMMENT, FINGERPRINT_COMMENT, SENTINEL_COMMENT } from './assertionIdentity.ts';
 import type { PhaseWiring } from '../src/gateWiring.ts';
 import type { Stack } from '../src/stack.ts';
 import { seedFor, seedPaths } from './stage-workspace.ts';
@@ -250,7 +251,7 @@ function renderStimulus(stack: Stack, wiring: PhaseWiring): string {
         '    assertions:',
         '      # Liveness sentinel — must come first. Without it the negative assertions',
         '      # below pass trivially against an empty table.',
-        '      - comment: Sentinel; session data must exist or the negative checks below are vacuous',
+        `      - comment: ${SENTINEL_COMMENT}`,
         "        query: SELECT COUNT(*) > 0 FROM llm_responses",
         '',
     ];
@@ -271,7 +272,7 @@ function renderStimulus(stack: Stack, wiring: PhaseWiring): string {
     // turns the next run anybody submits — for any reason — into a measurement
     // of it, at no extra cost.
     lines.push('      # Recorded, not asserted: the container inventory config/container.yaml claims.');
-    lines.push('      - comment: Environment fingerprint for triage');
+    lines.push(`      - comment: ${FINGERPRINT_COMMENT}`);
     lines.push("        exec: 'uname -sm; echo \"cwd=$(pwd)\"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf \"%s=%s\\n\" \"$b\" \"$(command -v $b || echo MISSING)\"; done; python3 -m ensurepip --version 2>&1 | head -1'");
     lines.push('        assertZeroExitCode: false');
 
@@ -564,7 +565,7 @@ function assertFilesAssertionsArePaired(merged: string, stimulus: string): void 
             `The 'files' table holds what the AGENT wrote through the tracked channel, not what\n` +
             `is on disk, and whether a given path can ever appear there is not decidable from\n` +
             `this config. So each such assertion must carry its own discriminator:\n\n` +
-            `      - comment: Triage; is the file on disk at all?\n` +
+            `      - comment: ${DISK_TRIAGE_COMMENT}\n` +
             `        exec: 'test -f <path>; echo "exit=$?"'\n` +
             `        assertZeroExitCode: false\n\n` +
             `Present on disk but absent from 'files' is the wrong-channel signature. With the\n` +

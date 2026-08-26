@@ -47,35 +47,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { SENTINEL_COMMENT, SENTINEL_QUERY, TURN_SUFFIX } from './assertionIdentity.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STIMULI = join(HERE, 'config', 'stimuli');
-
-/**
- * The liveness sentinel, pinned.
- *
- * Turn attribution is deliberately NOT encoded, even though the multi-turn
- * stimuli carry one per turn and the earlier wordings named the turn. The
- * `assertions` table stores a `stepIndex` column alongside the comment, so which
- * turn a sentinel belongs to is already recorded and recoverable. Encoding it
- * here as well would fork the gate into one history per turn index — precisely
- * the failure this file exists to prevent.
- *
- * "this turn" rather than "session data must exist" because the implied
- * `stepIndex` filter means a sentinel only ever sees its own turn. The
- * session-scoped phrasing was the more common of the two variants and was wrong
- * in six of the thirteen places it appeared.
- */
-const SENTINEL_QUERY = /^SELECT\s+COUNT\(\*\)\s*>\s*0\s+FROM\s+llm_responses$/i;
-const SENTINEL_COMMENT = 'Sentinel; this turn must have produced a response or its checks are vacuous';
-
-/**
- * A whole-conversation constraint is duplicated once per turn precisely so the
- * failing assertion names the turn that misbehaved, so `(turn N)` is meaningful
- * rather than noise. It is stripped before comparison: an identity scheme can
- * strip a fixed trailing pattern, where it cannot un-paraphrase free text.
- */
-const TURN_SUFFIX = / \(turn \d+\)$/;
+const STACKS = join(HERE, 'config', 'stacks');
 
 interface Assertion {
     comment?: string;
@@ -101,8 +77,41 @@ function normalise(text: string): string {
     return text.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+/**
+ * The generated stimuli cannot be parsed the way the hand-written ones are.
+ *
+ * `build-config.ts` writes its output to `assets/user-overrides.yaml`, which is
+ * shared mutable state that `run.sh` holds a lock on for the duration of a run.
+ * A checker that invoked the generator to inspect its output would clobber the
+ * config of an in-flight submission — trading a drift bug for a
+ * grades-the-wrong-prompt bug, which is strictly worse.
+ *
+ * So the generator is checked at the source level instead: no assertion comment
+ * may be a bare string literal there. Every one must come from
+ * `assertionIdentity.ts` or from `config/gates.yaml`, both of which are shared
+ * with the hand-written path. That is weaker than parsing real output — it
+ * cannot tell whether a `gates.yaml` summary collides with a hand-written
+ * comment — but it closes the hole that actually occurred: a second copy of a
+ * canonical string, drifting silently, in the one path that creates stimuli.
+ */
+function checkGeneratorSource(failures: string[]): number {
+    const source = readFileSync(join(HERE, 'build-config.ts'), 'utf8');
+    const literals = [...source.matchAll(/- comment: (?!\$\{)([^`'"\n]+)/g)];
+
+    for (const [, text] of literals) {
+        failures.push(
+            `build-config.ts\n` +
+            `  gate     generated stimulus assertion\n` +
+            `  found    hardcoded comment literal: ${text.trim()}\n` +
+            `  fix      import the canonical string from assertionIdentity.ts instead`
+        );
+    }
+    return literals.length;
+}
+
 function main(): void {
     const files = readdirSync(STIMULI).filter(name => name.endsWith('.yaml')).sort();
+    const stacks = readdirSync(STACKS).filter(name => name.endsWith('.yaml'));
 
     /** normalised query/exec -> every comment seen for it. */
     const gates = new Map<string, Occurrence[]>();
@@ -141,6 +150,8 @@ function main(): void {
         }
     }
 
+    checkGeneratorSource(failures);
+
     if (failures.length) {
         console.error(
             `${failures.length} gate identity problem(s).\n\n` +
@@ -157,7 +168,9 @@ function main(): void {
     const shared = [...gates.values()].filter(occurrences => occurrences.length > 1).length;
     console.log(
         `✔ gate identity consistent: ${gates.size} distinct assertions across ${files.length} stimuli, ` +
-        `${shared} of them shared by more than one stimulus.`
+        `${shared} of them shared by more than one stimulus.\n` +
+        `✔ build-config.ts hardcodes no assertion comment, so the ${stacks.length} generated ` +
+        `stack stimuli cannot fork a gate the hand-written ones share.`
     );
 }
 
