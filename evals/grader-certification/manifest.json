@@ -1,22 +1,35 @@
 {
-    "schemaVersion": 1,
-    "fixture": {
-        "id": "sample-agent-output",
-        "path": "evals/grader-certification/sample-agent-output",
-        "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts the offline validators grade. Kept separate from reference-node-fullstack, which is a plain deployable app carrying no agent artifacts.",
-        "offlineValidators": [
-            "requirements",
-            "project-plan",
-            "plan-gate",
-            "preview",
-            "integration-plan",
-            "frontend-scaffold"
-        ]
-    },
+    "schemaVersion": 2,
+    "fixtures": [
+        {
+            "id": "sample-agent-output",
+            "path": "evals/grader-certification/sample-agent-output",
+            "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts those phases are contracted to produce.",
+            "offlineValidators": [
+                "requirements",
+                "project-plan",
+                "plan-gate",
+                "preview",
+                "integration-plan",
+                "frontend-scaffold"
+            ]
+        },
+        {
+            "id": "reference-node-fullstack",
+            "path": "evals/grader-certification/reference-node-fullstack",
+            "description": "A real, runnable Node full-stack app plus the local-debug artifacts generated for it. The debug validators grade artifacts against the project they describe, so they certify here rather than against the scaffold fixture.",
+            "offlineValidators": [
+                "debug-plan",
+                "debug-config",
+                "debug-artifacts"
+            ]
+        }
+    ],
     "mutations": [
         {
             "id": "requirements-schema-version",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "requirements",
             "file": ".azure/requirements.json",
             "operation": "replace",
@@ -27,6 +40,7 @@
         {
             "id": "project-plan-numbering",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "project-plan",
             "file": ".azure/project-plan.md",
             "operation": "replace",
@@ -37,6 +51,7 @@
         {
             "id": "plan-gate-frontend-dropped",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "plan-gate",
             "file": ".azure/project-plan.md",
             "operation": "replace",
@@ -47,6 +62,7 @@
         {
             "id": "plan-gate-preview-manifest-missing",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "plan-gate",
             "file": ".azure/.preview-temp/manifest.json",
             "operation": "delete",
@@ -55,6 +71,7 @@
         {
             "id": "preview-not-ready",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "preview",
             "file": ".azure/.preview-temp/manifest.json",
             "operation": "replace",
@@ -65,6 +82,7 @@
         {
             "id": "frontend-preview-not-embeddable",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/vite.config.ts",
             "operation": "replace",
@@ -75,6 +93,7 @@
         {
             "id": "frontend-dev-script-does-not-serve",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/package.json",
             "operation": "replace",
@@ -85,6 +104,7 @@
         {
             "id": "frontend-frame-busting-csp",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/index.html",
             "operation": "replace",
@@ -95,6 +115,7 @@
         {
             "id": "frontend-api-seam-bypassed",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/src/pages/TicketsPage.tsx",
             "operation": "replace",
@@ -105,6 +126,7 @@
         {
             "id": "integration-plan-missing-no-seed-rule",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -115,6 +137,7 @@
         {
             "id": "integration-plan-missing-backend-run-command",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -125,6 +148,7 @@
         {
             "id": "integration-plan-missing-route-inventory",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -135,16 +159,18 @@
         {
             "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
             "search": "## API Routes",
-            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key — send `X-API-Key: <API_KEY>`. Missing key → `401 UNAUTHORIZED`.\n\n## API Routes",
+            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key \u2014 send `X-API-Key: <API_KEY>`. Missing key \u2192 `401 UNAUTHORIZED`.\n\n## API Routes",
             "expectedCode": "passed"
         },
         {
             "id": "integration-plan-missing-api-seam",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -155,6 +181,7 @@
         {
             "id": "integration-plan-missing-service-classification",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -165,6 +192,7 @@
         {
             "id": "frontend-api-client-interface-dropped",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/src/api/client.ts",
             "operation": "replace",
@@ -175,6 +203,7 @@
         {
             "id": "frontend-mock-client-dropped",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "frontend-scaffold",
             "file": "services/web/src/api/mockClient.ts",
             "operation": "replace",
@@ -185,6 +214,7 @@
         {
             "id": "integration-plan-no-seed-rule-in-heading",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -195,6 +225,7 @@
         {
             "id": "integration-plan-no-seed-rule-as-table-row",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -205,6 +236,7 @@
         {
             "id": "integration-plan-port-inside-run-command",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
@@ -215,12 +247,165 @@
         {
             "id": "integration-plan-missing-backend-port",
             "tier": "offline",
+            "fixture": "sample-agent-output",
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
             "search": "| Port | 7071 (override with `PORT`) |\n| Health endpoint | `GET /api/health` |",
             "replacement": "| Health endpoint | `GET /api/health` |",
             "expectedCode": "missingBackendPort"
+        },
+        {
+            "id": "debug-plan-table-concatenated",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "|---|---|---|---|---|---|---|---|\n",
+            "replacement": "|---|---|---|---|---|---|---|---|| [x] | Ghost App (debug) | Ghost App | `./ghost` | Backend | Node.js | 22.x | None |\n",
+            "expectedCode": "tableRowConcatenated"
+        },
+        {
+            "id": "debug-plan-checklist-stub",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "\u2705 Persistence \u2014 Created project remained visible after restarting the service, confirming the local JSON store is written through.",
+            "replacement": "\u2705 Persistence \u2014 TBD",
+            "expectedCode": "checklistStub"
+        },
+        {
+            "id": "debug-plan-diagram-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "## Architecture Diagram",
+            "replacement": "## Architecture Notes",
+            "expectedCode": "missingSection"
+        },
+        {
+            "id": "debug-plan-status-regressed",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "> **Status:** Implemented",
+            "replacement": "> **Status:** Planning",
+            "expectedCode": "unexpectedStatus"
+        },
+        {
+            "id": "debug-config-prelaunch-dangling",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"preLaunchTask\": \"prepare\"",
+            "replacement": "\"preLaunchTask\": \"prepare-everything\"",
+            "expectedCode": "preLaunchTaskUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-dangling",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"dependsOn\": \"install\"",
+            "replacement": "\"dependsOn\": \"restore\"",
+            "expectedCode": "dependsOnUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-cycle",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"command\": \"npm ci --ignore-scripts\",",
+            "replacement": "\"command\": \"npm ci --ignore-scripts\",\n            \"dependsOn\": \"prepare\",",
+            "expectedCode": "dependsOnCycle"
+        },
+        {
+            "id": "debug-artifacts-unchecked-config-generated",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | Golden App (debug) |",
+            "replacement": "| [ ] | Golden App (debug) |",
+            "expectedCode": "uncheckedConfigGenerated"
+        },
+        {
+            "id": "debug-artifacts-script-not-registered",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | start | ./package.json |",
+            "replacement": "| [x] | serve | ./package.json |",
+            "expectedCode": "scriptNotRegistered"
+        },
+        {
+            "id": "debug-artifacts-api-collection-empty",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": "api-test-collections/golden-app/health/invoke.sh",
+            "operation": "delete",
+            "expectedCode": "apiCollectionEmpty"
+        },
+        {
+            "id": "debug-config-task-run-options",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"instancePolicy\": \"silent\"",
+            "replacement": "\"instancePolicy\": \"prompt\"",
+            "expectedCode": "invalidTaskRunOptions"
+        },
+        {
+            "id": "debug-config-duplicate-task-label",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"label\": \"build\",",
+            "replacement": "\"label\": \"install\",",
+            "expectedCode": "duplicateTaskLabels"
+        },
+        {
+            "id": "debug-artifacts-extension-recommendations",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".vscode/extensions.json",
+            "operation": "replace",
+            "search": "\"ms-vscode.js-debug\"",
+            "replacement": "\"js-debug\"",
+            "expectedCode": "invalidExtensionRecommendations"
+        },
+        {
+            "id": "debug-artifacts-redacted-secret",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".env.example",
+            "operation": "replace",
+            "replacement": "DATABASE_URL=postgres://golden:******@localhost:5432/golden",
+            "expectedCode": "redactedSecretPlaceholder",
+            "search": "PORT=7071"
         }
     ]
 }
