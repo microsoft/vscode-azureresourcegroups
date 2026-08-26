@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T07:55:45.905Z",
+  "generatedAt": "2026-08-26T08:05:29.111Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -646,6 +646,30 @@
       "expected": "crudRoundTripLost",
       "actual": [
         "crudRoundTripLost"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-api-unresolvable-url",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendApiCallsUnresolvable",
+      "actual": [
+        "frontendApiCallsUnresolvable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-api-nothing-called",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendMakesNoApiCalls",
+      "actual": [
+        "frontendMakesNoApiCalls"
       ],
       "passed": true,
       "durationMs": 0

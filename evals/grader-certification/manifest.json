@@ -718,6 +718,28 @@
             "search": "await writeItems(dataFile, [...items, item]);",
             "replacement": "void items;",
             "expectedCode": "crudRoundTripLost"
+        },
+        {
+            "id": "runtime-frontend-api-unresolvable-url",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/app.js",
+            "operation": "replace",
+            "search": "    const response = await fetch('/api/items');\n    render(await response.json());\n}\n\nform.addEventListener('submit', async event => {\n    event.preventDefault();\n    const response = await fetch('/api/items', {",
+            "replacement": "    const apiBase = '/api';\n    const response = await fetch(`${apiBase}/items`);\n    render(await response.json());\n}\n\nform.addEventListener('submit', async event => {\n    event.preventDefault();\n    const response = await fetch(`${apiBase}/items`, {",
+            "expectedCode": "frontendApiCallsUnresolvable"
+        },
+        {
+            "id": "runtime-frontend-api-nothing-called",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/index.html",
+            "operation": "replace",
+            "search": "    <script src=\"/app.js\"></script>\n",
+            "replacement": "",
+            "expectedCode": "frontendMakesNoApiCalls"
         }
     ]
 }
