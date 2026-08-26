@@ -29,6 +29,11 @@
         "src/**/*.ts",
         "graders/**/*.ts",
         "msbench/*.ts",
+        // The probe extension itself is NOT here: it targets the extension host,
+        // needs @types/vscode, and genuinely emits JavaScript, so it carries its
+        // own tsconfig. Only its certification runner and the verdict contract it
+        // shares with the grader are type-checked from this project.
+        "debug-probe/*.ts",
         "types/*.d.ts"
     ]
 }
