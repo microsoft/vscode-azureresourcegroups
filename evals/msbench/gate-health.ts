@@ -301,6 +301,16 @@ function parseArgs(argv: string[]): Options {
 // Locating runs
 // ---------------------------------------------------------------------------
 
+/** Candidate locations of MSBench's per-machine run cache. */
+function msbenchRunRoots(): string[] {
+    return [
+        process.env.MSBENCH_DATA_DIR ? join(process.env.MSBENCH_DATA_DIR, 'runs') : undefined,
+        join(homedir(), 'Library', 'Application Support', 'msbench', 'runs'),
+        join(homedir(), '.local', 'share', 'msbench', 'runs'),
+        process.env.APPDATA ? join(process.env.APPDATA, 'msbench', 'runs') : undefined,
+    ].filter((path): path is string => path !== undefined);
+}
+
 /**
  * MSBench's own run cache. This is where run *discovery* is local-only: the CLI can list runs from
  * Kusto (`list runs --kusto`), but that needs a Kusto read grant the `MSBench User` role does not
@@ -308,14 +318,7 @@ function parseArgs(argv: string[]): Options {
  * *data* is not local — see `extractRun`.
  */
 function localRunIds(): string[] {
-    const candidates = [
-        process.env.MSBENCH_DATA_DIR ? join(process.env.MSBENCH_DATA_DIR, 'runs') : undefined,
-        join(homedir(), 'Library', 'Application Support', 'msbench', 'runs'),
-        join(homedir(), '.local', 'share', 'msbench', 'runs'),
-        process.env.APPDATA ? join(process.env.APPDATA, 'msbench', 'runs') : undefined,
-    ].filter((path): path is string => path !== undefined);
-
-    for (const root of candidates) {
+    for (const root of msbenchRunRoots()) {
         if (!existsSync(root)) {
             continue;
         }
@@ -369,6 +372,10 @@ function findInstances(root: string): Instance[] {
     if (!existsSync(root)) {
         return [];
     }
+    // A total scan, deliberately: no first-match, no break, no index assumption. Directory order
+    // from readdirSync is not guaranteed, so anything order-sensitive here would drop instances
+    // non-deterministically — and it would fail towards "never executed", this tool's loudest
+    // verdict. `diagnoseEmptyExtraction` is the paired check for the same hazard.
     return readdirSync(root, { withFileTypes: true })
         .filter(entry => entry.isDirectory() && entry.name.endsWith('-output'))
         .map(entry => ({
@@ -377,6 +384,95 @@ function findInstances(root: string): Instance[] {
             vscOutput: join(root, entry.name, 'output', 'vsc-output'),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * An extraction with no instances has two very different causes, and collapsing them is the same
+ * "passes for the wrong reason" shape this tool exists to find — pointed at the tool itself.
+ *
+ *   - The run's archive contains instance output we failed to load. That is a **reader fault**, and
+ *     it must be loud: a corpus consumer that silently drops runs under-reports gate coverage
+ *     invisibly, and it fails towards "never executed".
+ *   - The archive genuinely has no instance output yet. That is a corpus fact — a pending or
+ *     missing blob — and it is not this tool's bug.
+ *
+ * Distinguishing them requires looking at the archive rather than trusting the extraction, so this
+ * reads the cached `results.zip` member list directly. `results.zip` member order is an artifact of
+ * packing order and is not guaranteed, which is precisely why the presence of an output member is
+ * checked rather than its position.
+ */
+function diagnoseEmptyExtraction(runId: string): string {
+    const archive = runArchivePath(runId);
+    if (!archive) {
+        return 'no instances found (no cached archive to cross-check — run may be pending or missing)';
+    }
+    const members = zipMemberNames(archive);
+    if (members === undefined) {
+        return `no instances found (could not read ${archive} to cross-check)`;
+    }
+    const outputMembers = members.filter(name => name.endsWith('-output.zip'));
+    if (outputMembers.length === 0) {
+        return `no instances found; the archive carries no *-output.zip member either ` +
+            `(${members.length} member(s)). The run produced no instance output — pending or missing, ` +
+            'not a reader fault.';
+    }
+    return `READER FAULT: ${archive} contains ${outputMembers.length} *-output.zip member(s) ` +
+        `(${outputMembers.join(', ')}) but the extraction yielded no instances. The data exists and ` +
+        'was not loaded — treat this as a bug in this tool or in extraction, NOT as a corpus fact.';
+}
+
+/** The cached archive MSBench keeps per run, if this machine has it. */
+function runArchivePath(runId: string): string | undefined {
+    if (!/^\d+$/u.test(runId)) {
+        return undefined;
+    }
+    for (const root of msbenchRunRoots()) {
+        const candidate = join(root, runId, 'results.zip');
+        if (existsSync(candidate)) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Member names from a zip's end-of-central-directory record. Implemented here rather than pulled in
+ * as a dependency because it is only ever used to answer "does this archive contain instance
+ * output", and being wrong in the conservative direction (returning undefined) is harmless.
+ */
+function zipMemberNames(archive: string): string[] | undefined {
+    let buffer: Buffer;
+    try {
+        buffer = readFileSync(archive);
+    } catch {
+        return undefined;
+    }
+    // Locate the end-of-central-directory signature, scanning back over the max comment length.
+    const EOCD = 0x06054b50;
+    let eocd = -1;
+    for (let offset = buffer.length - 22; offset >= Math.max(0, buffer.length - 22 - 0xffff); offset--) {
+        if (buffer.readUInt32LE(offset) === EOCD) {
+            eocd = offset;
+            break;
+        }
+    }
+    if (eocd === -1) {
+        return undefined;
+    }
+    const count = buffer.readUInt16LE(eocd + 10);
+    let pointer = buffer.readUInt32LE(eocd + 16);
+    const names: string[] = [];
+    for (let index = 0; index < count; index++) {
+        if (pointer + 46 > buffer.length || buffer.readUInt32LE(pointer) !== 0x02014b50) {
+            return names.length > 0 ? names : undefined;
+        }
+        const nameLength = buffer.readUInt16LE(pointer + 28);
+        const extraLength = buffer.readUInt16LE(pointer + 30);
+        const commentLength = buffer.readUInt16LE(pointer + 32);
+        names.push(buffer.subarray(pointer + 46, pointer + 46 + nameLength).toString('utf8'));
+        pointer += 46 + nameLength + extraLength + commentLength;
+    }
+    return names;
 }
 
 // ---------------------------------------------------------------------------
@@ -473,13 +569,18 @@ function parseNotApplicable(stdErr: string): NotApplicable | undefined {
     if (!line) {
         return undefined;
     }
+    // `detail=` is opaque and free-form, and the two emitters escape it differently (JSON.stringify
+    // vs. quote-substitution). Stop scanning before it: otherwise a detail containing the literal
+    // text `reason=` would be read as a field. The three fields that matter are closed vocabularies
+    // and all precede `detail=`, so cutting here cannot lose them.
+    const beforeDetail = line[1].split(/\s+detail=/u)[0];
     const tokens = new Map<string, string>();
-    for (const [, key, value] of line[1].matchAll(MARKER_TOKEN)) {
+    for (const [, key, value] of beforeDetail.matchAll(MARKER_TOKEN)) {
         tokens.set(key, value.replace(/^"|"$/gu, ''));
     }
     return {
         reason: tokens.get('reason') ?? 'unspecified',
-        // Anything other than an explicit outOfScope is treated as an environment gap — see
+        // Anything other than an explicit outOfScope is treated as a gap — see
         // NOT_APPLICABLE_MARKER. Never guess a gate into the dead-weight bucket.
         outOfScope: tokens.get('class') === 'outOfScope',
     };
@@ -863,10 +964,23 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
     return suspect.filter(row => row.confident).length;
 }
 
-function printPreamble(runs: string[], instances: number, voidInstances: number, minRuns: number): void {
+function printPreamble(runs: string[], instances: number, voidInstances: number, minRuns: number,
+    readerFaults: string[], skipped: string[]): void {
     console.log('');
     console.log('Gate health — auditing the instrument, not the product');
     console.log(`${runs.length} run(s), ${instances} instance(s). Verdicts below ${minRuns} runs are marked low confidence.`);
+    if (readerFaults.length > 0) {
+        // Loud, and deliberately separate from a pending run: this says the numbers below are
+        // incomplete for a reason that is our fault, so nothing here should be quoted.
+        console.log('');
+        console.log(`READER FAULT on ${readerFaults.length} run(s): ${readerFaults.join(', ')}`);
+        console.log('Their archives contain instance output that failed to load, so every tally below');
+        console.log('is missing data. Fix the reader before believing any verdict — a dropped run');
+        console.log('makes gates look never-executed, which is exactly what this report shouts about.');
+    }
+    if (skipped.length > 0) {
+        console.log(`Skipped ${skipped.length} run(s) with no instance output (pending or missing): ${skipped.join(', ')}`);
+    }
     if (voidInstances > 0) {
         console.log(
             `${voidInstances} of ${instances} instance(s) were void (the agent never really ran); every verdict in them,\n` +
@@ -914,13 +1028,19 @@ async function main(): Promise<void> {
 
     const tallies = new Map<string, GateTally>();
     const auditedRuns: string[] = [];
+    const readerFaults: string[] = [];
+    const skipped: string[] = [];
     let instanceCount = 0;
     let voidInstances = 0;
 
     for (const { runId, dir } of roots) {
         const instances = findInstances(dir);
         if (instances.length === 0) {
-            log(`  ! ${runId}: no instances found in ${dir}`);
+            // Never just shrug and continue: a dropped run under-reports coverage invisibly, and it
+            // does so in the direction of "never executed" — the loudest verdict here.
+            const diagnosis = diagnoseEmptyExtraction(runId);
+            log(`  ! ${runId}: ${diagnosis}`);
+            (diagnosis.startsWith('READER FAULT') ? readerFaults : skipped).push(runId);
             continue;
         }
         auditedRuns.push(runId);
@@ -981,7 +1101,7 @@ async function main(): Promise<void> {
         return;
     }
 
-    printPreamble(auditedRuns, instanceCount, voidInstances, options.minRuns);
+    printPreamble(auditedRuns, instanceCount, voidInstances, options.minRuns, readerFaults, skipped);
     printTable(rows);
     const confidentSuspects = printFindings(rows, options.minRuns, unexercised);
 
