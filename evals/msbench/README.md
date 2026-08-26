@@ -1090,6 +1090,23 @@ of exactly that one thing.*
 
 **None of these prove a defect.** Each is a reason to look before quoting a score.
 
+### How to read a verdict: the sentinel, right now
+
+The liveness sentinel is a worked example, and it is in the report today. It is declared in
+**all five stimuli** and appears in **zero of the 21 runs audited**, so it reports as
+*declared but never seen*. That is correct and entirely benign — every run in the corpus
+predates #1706, which added it.
+
+It is also the useful half of the lesson. **The verdict is expected to resolve on its own:**
+the scaffold runs being submitted now are the first that will carry the sentinel. If it is
+*still* never-attempted once those have landed, that is a real bug rather than a historical
+artifact, and the same verdict means something completely different.
+
+That is how every verdict here should be read — as a question with a date on it, not a
+finding. "Has never passed" is only interesting relative to *when the gate was last changed
+and which runs have happened since*, which is why `--min-runs` and explicit run scoping both
+exist.
+
 ### How many runs before a verdict means anything
 
 Verdicts resting on fewer than `--min-runs` runs (default **3**) are printed but marked
@@ -1181,7 +1198,12 @@ reworded.**
 The default `--identity gate` mitigates this by keying `exec:` gates on the grader's
 filename — the same id `gate=` is derived from, and the same id the certification manifest
 uses — which also recovers a stable identity for runs recorded *before* the convention
-existed. Two consequences worth knowing:
+existed. The difference is measurable on the current corpus: under comment identity the
+four `validate-requirements.ts` variants appear as four separate rows, three of them
+`never-failed` on one or two runs each; under grader identity they are one `requirements`
+gate reading **5 pass / 1 fail / 7 runs / healthy**. Same data, and only the second is true.
+
+Two consequences worth knowing:
 
 - It is deliberately **coarser**: every `validate-requirements.ts` invocation is one gate
   regardless of its flags. Use `--identity comment` for the raw per-assertion view.
