@@ -19,6 +19,14 @@ import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
 import { validateRequirementsArtifact } from './artifacts/requirements.ts';
 import { validateServiceFidelity } from './artifacts/serviceFidelity.ts';
+import {
+    validateAppStarts,
+    validateCrudRoundTrip,
+    validateFrontendApiWiring,
+    validateFrontendServes,
+    validateHealthEndpoint,
+} from './runtime/runtimeGates.ts';
+import { releaseRuntimeSessions } from './runtime/runtimeSession.ts';
 import type { ArtifactValidationResult } from './artifacts/validationTypes.ts';
 import type { CorEvaluationScenario } from './scenario.ts';
 import { validateScenario } from './scenario.ts';
@@ -169,7 +177,11 @@ async function certifyFixture(
     const scenario = validateScenario(JSON.parse(await fs.readFile(scenarioPath, 'utf8')), scenarioPath);
 
     const cases: CertificationCase[] = [];
-    const golden = await runOfflineValidators(root, scenario, fixture.offlineValidators);
+    // The golden run is done against a *copy* rather than the checked-in fixture. The
+    // runtime gates exercise the app for real — the CRUD gate writes a record — and a
+    // certification run must not leave changes in the repository it is certifying.
+    const golden = await withFixtureCopy(root, workspace =>
+        runOfflineValidators(workspace, scenario, fixture.offlineValidators));
     for (const validator of validators) {
         const result = golden.get(validator) ?? ['validatorNotExecuted'];
         const expected = fixture.offlineExpectations?.[validator] ?? 'passed';
@@ -239,6 +251,15 @@ const OFFLINE_VALIDATORS: Record<
         await readArtifact(workspace, '.vscode/tasks.json'),
     ),
     'debug-artifacts': async workspace => validateDebugArtifacts(workspace),
+
+    // The runtime gates. Unlike everything above, these start the application and probe it
+    // over HTTP, so certifying them costs a real process launch per fixture copy — which is
+    // the only way to certify a gate whose whole claim is that it ran the product.
+    'runtime-app-starts': workspace => validateAppStarts(workspace),
+    'runtime-health': workspace => validateHealthEndpoint(workspace),
+    'runtime-frontend': workspace => validateFrontendServes(workspace),
+    'runtime-frontend-api': workspace => validateFrontendApiWiring(workspace),
+    'runtime-crud': workspace => validateCrudRoundTrip(workspace),
 };
 
 function readArtifact(workspace: string, relativePath: string): Promise<string> {
@@ -254,9 +275,17 @@ async function runOfflineValidators(
     if (unknown.length > 0) {
         throw new Error(`Manifest names validators with no implementation: ${unknown.join(', ')}.`);
     }
-    const validations = await Promise.all(validators.map(async id =>
-        [id, await OFFLINE_VALIDATORS[id](workspace, scenario)] as const));
-    return new Map(validations.map(([id, result]) => [id, issueCodes(result)]));
+    try {
+        const validations = await Promise.all(validators.map(async id =>
+            [id, await OFFLINE_VALIDATORS[id](workspace, scenario)] as const));
+        return new Map(validations.map(([id, result]) => [id, issueCodes(result)]));
+    } finally {
+        // The runtime validators leave a server running so they can share one start between
+        // them. It has to be stopped here: the caller deletes this workspace immediately
+        // afterwards, and deleting a directory out from under a live process is how a
+        // machine acquires an orphan that holds a port and breaks every later run.
+        await releaseRuntimeSessions();
+    }
 }
 
 /**
@@ -294,6 +323,24 @@ async function exists(target: string): Promise<boolean> {
         return true;
     } catch {
         return false;
+    }
+}
+
+/**
+ * Run `action` against a throwaway copy of a fixture.
+ *
+ * Needed because certification is no longer read-only: the runtime gates start the app and
+ * a CRUD round-trip writes a record, so grading the checked-in tree directly would leave
+ * the fixture dirty and make the next run's result depend on the last one's.
+ */
+async function withFixtureCopy<T>(fixture: string, action: (workspace: string) => Promise<T>): Promise<T> {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'cor-grader-certification-'));
+    const workspace = path.join(root, path.basename(fixture));
+    try {
+        await fs.cp(fixture, workspace, { recursive: true });
+        return await action(workspace);
+    } finally {
+        await fs.rm(root, { recursive: true, force: true });
     }
 }
 

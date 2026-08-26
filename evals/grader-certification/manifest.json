@@ -21,7 +21,12 @@
             "offlineValidators": [
                 "debug-plan",
                 "debug-config",
-                "debug-artifacts"
+                "debug-artifacts",
+                "runtime-app-starts",
+                "runtime-health",
+                "runtime-frontend",
+                "runtime-frontend-api",
+                "runtime-crud"
             ]
         },
         {
@@ -638,6 +643,72 @@
             "search": "using Npgsql;",
             "replacement": "using Npgsql.EntityFrameworkCore.PostgreSQL;",
             "expectedCode": "passed"
+        },
+        {
+            "id": "runtime-app-crashes-on-boot",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-app-starts",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "'use strict';",
+            "replacement": "'use strict';\nthrow new Error('boom: the generated app crashes on boot');",
+            "expectedCode": "appExitedBeforeListening"
+        },
+        {
+            "id": "runtime-health-returns-500",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "send(response, 200, 'application/json', JSON.stringify({ status: 'ok' }));",
+            "replacement": "send(response, 500, 'application/json', JSON.stringify({ status: 'degraded' }));",
+            "expectedCode": "healthEndpointUnhealthy"
+        },
+        {
+            "id": "runtime-health-route-missing",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "requestUrl.pathname === '/api/health'",
+            "replacement": "requestUrl.pathname === '/api/health-removed'",
+            "expectedCode": "healthEndpointUnhealthy"
+        },
+        {
+            "id": "runtime-frontend-not-served",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "const asset = requestUrl.pathname === '/' ? 'index.html' : requestUrl.pathname.slice(1);",
+            "replacement": "const asset = requestUrl.pathname.slice(1);",
+            "expectedCode": "frontendNotServed"
+        },
+        {
+            "id": "runtime-frontend-calls-missing-route",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/app.js",
+            "operation": "replace",
+            "search": "await fetch('/api/items');",
+            "replacement": "await fetch('/api/projects');",
+            "expectedCode": "frontendApiRouteMissing"
+        },
+        {
+            "id": "runtime-crud-write-not-persisted",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-crud",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "await writeItems(dataFile, [...items, item]);",
+            "replacement": "void items;",
+            "expectedCode": "crudRoundTripLost"
         }
     ]
 }
