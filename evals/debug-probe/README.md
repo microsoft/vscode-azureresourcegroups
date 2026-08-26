@@ -76,8 +76,24 @@ js-debug answers `verified: false, message: "Unbound breakpoint"` at set time
 because the script has not loaded yet, then rebinds later via a `breakpoint`
 event rather than a fresh `setBreakpoints` response. On the known-good fixture
 the breakpoint reports unverified and is hit a moment later. Gating on
-`verified === true` — the obvious check — produces a gate that can never pass.
-It is recorded as a diagnostic and nothing more.
+`verified === true` — the obvious check, and what the DAP field appears to be
+*for* — produces a gate that can never pass. It is recorded as a diagnostic and
+nothing more.
+
+**Do not gate on `verified`. Gate on the `stopped` event.** This is not a local
+quirk: it reproduced in all five MSBench container runs. From
+[`2026082623215161`](https://msbenchapp.azurewebsites.net/run-analysis/2026082623215161):
+
+```
+06:30:00.999  setBreakpoints response: [{"verified":false,"message":"Unbound breakpoint"}]
+06:30:01.074  startDebugging returned true
+06:30:01.581  trigger connected after 2 attempt(s)
+06:30:01.589  stopped: reason=breakpoint     ← hit, 0.6s after being called unverified
+```
+
+The failure this avoids is the expensive kind: an intermittent **red against a
+working project**, which reads as a product regression and gets explained away
+as flaky agent output rather than investigated.
 
 **3. The trigger request never completes on a healthy run.**
 We break *mid-request*, so the HTTP response never arrives. The signal is
@@ -247,3 +263,47 @@ an ephemeral port a squatter already holds on `0.0.0.0`, and the caller then
 latches onto the squatter believing it chose a free port. There is no such path
 here by construction, and there should not be one added without the same
 connect-based check.
+
+## Measured in-container reliability
+
+`debug-breakpoint-node` was run five times against the known-good fixture, from
+an identical tree, to turn "it worked once" into a number.
+
+| Run | Outcome | Trigger attempts | launch→connect | connect→stop | Total |
+| --- | --- | --- | --- | --- | --- |
+| [`2026082623215161`](https://msbenchapp.azurewebsites.net/run-analysis/2026082623215161) | `hit` | 2 | 0.507s | 8ms | 7.28s |
+| [`2026082624051475`](https://msbenchapp.azurewebsites.net/run-analysis/2026082624051475) | `hit` | 2 | 0.512s | 6ms | 7.43s |
+| [`2026082624376225`](https://msbenchapp.azurewebsites.net/run-analysis/2026082624376225) | `hit` | 2 | 0.507s | 6ms | 6.76s |
+| [`2026082624660033`](https://msbenchapp.azurewebsites.net/run-analysis/2026082624660033) | `hit` | 2 | 0.516s | 6ms | 7.54s |
+| [`2026082626667577`](https://msbenchapp.azurewebsites.net/run-analysis/2026082626667577) | `hit` | 2 | 0.509s | 5ms | 7.34s |
+
+**5/5 `hit`.** js-debug launches a process, binds a breakpoint and stops on it
+under xvfb-as-root on Ubuntu 22.04 with Node v22.22.2, reproducibly.
+
+### The attempt count is a floor, not a ceiling
+
+It is tempting to read "2 attempts every time" as a thin margin — one slow
+container from needing 3, then 4, then failing. **That reading is wrong, and the
+distribution shows why.** `launch→connect` is 0.507–0.516s across all five runs,
+a 9ms spread, and `TRIGGER_RETRY_DELAY_MS` is 500ms. The app becomes ready
+somewhere under 500ms after `startDebugging` returns, so attempt 1 always fires
+too early and attempt 2 always succeeds. The 2 is a **property of the retry
+interval**, not evidence of a near-miss.
+
+Nothing caps the attempt count. The loop retries until the probe's deadline, so
+a slower container spends more attempts rather than failing. The margin that
+actually matters is **time-to-listen (~0.5s) against the probe budget (180s)** —
+roughly 350×. A container would have to be two orders of magnitude slower before
+this turned red, and if it were, the verdict would say `appFailedToStart` with
+the debuggee's own output attached.
+
+The number worth watching in future runs is therefore `launch→connect`, not the
+attempt count.
+
+### What this does and does not establish
+
+It establishes that **the container can host a debugger** — which is what the
+fixture is for. It says nothing about whether any particular generated project
+is debuggable; that is the gate's job once it runs behind real output, and it is
+only meaningful *because* this baseline exists. A red there can now be read as a
+product finding rather than an unexplained one.
