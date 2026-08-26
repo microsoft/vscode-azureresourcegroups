@@ -54,7 +54,12 @@ promptSteps:
       # the `exec` table without generating a check, so it can never fail the run
       # and does not change the assertion count. Read it first when the exec grader
       # above goes red: no Node, Node too old to strip types, and a mis-staged tree
-      # are indistinguishable from the outside. See README.md.
+      # are indistinguishable from the outside.
+      #
+      # The probe itself is written by the `script:` preamble in config/base.yaml,
+      # so it has one definition rather than one copy per stimulus. It reports the
+      # runtimes, database clients, cloud tooling and network egress that decide
+      # which project stacks this container can actually build. See README.md.
       - comment: Environment fingerprint for triage
-        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        exec: 'sh /tmp/env-fingerprint.sh 2>&1 || { uname -sm; echo "env-fingerprint=MISSING, see customScript/output.log"; }'
         assertZeroExitCode: false

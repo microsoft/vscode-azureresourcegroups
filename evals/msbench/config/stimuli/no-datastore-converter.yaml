@@ -31,5 +31,5 @@ promptSteps:
 
       # Recorded, not asserted. See config/stimuli/photo-app-requirements.yaml.
       - comment: Environment fingerprint for triage
-        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        exec: 'sh /tmp/env-fingerprint.sh 2>&1 || { uname -sm; echo "env-fingerprint=MISSING, see customScript/output.log"; }'
         assertZeroExitCode: false

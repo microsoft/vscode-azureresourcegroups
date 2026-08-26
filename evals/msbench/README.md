@@ -233,6 +233,42 @@ sqlite3 session.sqlite "SELECT output FROM exec WHERE command LIKE '%uname%'"
 sqlite3 session.sqlite "SELECT exitCode, stdErr FROM exec WHERE command LIKE '%validate-%'"
 ```
 
+### What the fingerprint reports, and why
+
+It answers a question the suite is about to depend on. We are expanding to many project
+stacks (React + Functions + Postgres, Python + FastAPI + Cosmos, C# + Functions + SQL,
+static sites, workers) and adding gates that actually **build and run** the generated
+project. All of that executes inside the borrowed `say_hello` image — an image nobody
+here chose the contents of. The stacks we can test are bounded by what it already has,
+so the probe reports one `name=value` per line:
+
+| Group | Probed |
+| --- | --- |
+| Language runtimes | `node`, `npm`, `npx`, `python3`, `pip`, `pip3`, `dotnet`, `java`, `go` |
+| Database clients | `psql`, `sqlcmd`, `mongosh`, `redis-cli` |
+| Cloud and containers | `az`, `azd`, `func`, `docker` |
+| Build essentials | `git`, `make`, `gcc`, `unzip`, `curl` |
+| Capacity | free disk, total memory, CPU count |
+| Egress | HTTP status against the npm, PyPI and NuGet endpoints, plus `HTTPS_PROXY` |
+
+Egress is the critical one, because it decides which of three answers we get:
+present (breadth is free), absent but installable in the `script:` preamble (breadth
+costs setup minutes per run, and only works if the container can reach the internet), or
+neither (breadth needs our own published image, forfeiting the cheapness of borrowing
+one). `net_*=200` means reachable; `net_*=000` means the request never completed.
+
+Every probe is individually failure-tolerant — a missing binary prints `MISSING` and the
+script continues, so one absent tool cannot truncate the answer.
+
+The probe is **defined once**, in `config/base.yaml`'s `script:` preamble, which writes
+it to `/tmp/env-fingerprint.sh`; each stimulus's `exec:` entry just runs that file. It
+cannot live in `base.yaml` as an assertion, because assertions nest under `promptSteps`,
+which `build-config.ts` requires the stimulus file to define and refuses to let
+`base.yaml` duplicate. The preamble also *runs* it, so the same output lands in
+`customScript/output.log` — belt and braces if `/tmp` turns out not to be shared with
+the `exec` phase, which is also why the `exec:` entry falls back to a bare `uname`
+rather than printing nothing.
+
 
 ## Why the VSIX route
 

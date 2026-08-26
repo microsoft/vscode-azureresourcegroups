@@ -56,3 +56,85 @@ script: |
   mkdir -p /workspace/.github/agents
   cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
   ls -la /workspace/.github/agents/
+
+  # Environment fingerprint. We borrow `vscbench.say_hello` purely for its
+  # container image, so nobody here chose its contents — and the set of project
+  # stacks the suite can build and run is bounded by what that image already
+  # has. This probe asks it, at zero cost, on runs we were making anyway.
+  #
+  # It is *defined* once here and merely *invoked* by each stimulus's
+  # non-asserting `exec:` entry, because assertions nest under `promptSteps`,
+  # which build-config.ts requires to come from the stimulus file and refuses
+  # to let base.yaml define. Running it here too means the answer also lands in
+  # customScript/output.log, so a shared-/tmp assumption that turns out to be
+  # wrong still leaves us with the fingerprint. `|| true` keeps a probe from
+  # aborting the agent seeding above, which is the part that actually matters.
+  cat > /tmp/env-fingerprint.sh <<'FINGERPRINT'
+  # Every probe is individually failure-tolerant: a missing binary prints
+  # MISSING and the script carries on, so this can never abort partway and
+  # leave half an answer behind.
+  TO=""
+  command -v timeout >/dev/null 2>&1 && TO="timeout 10"
+
+  probe() {
+    bin=$1
+    shift
+    if command -v "$bin" >/dev/null 2>&1; then
+      out=$($TO "$bin" "$@" 2>&1 | head -1 | tr -d '\r')
+      echo "$bin=${out:-present}"
+    else
+      echo "$bin=MISSING"
+    fi
+  }
+
+  # 000 means the request never completed (no route, DNS failure, blocked);
+  # anything else is an HTTP status, so a 200 means egress works.
+  net() {
+    if command -v curl >/dev/null 2>&1; then
+      code=$(curl -s -o /dev/null --connect-timeout 5 --max-time 8 -w '%{http_code}' "$1" 2>/dev/null)
+      echo "${code:-000}"
+    else
+      echo "no-curl"
+    fi
+  }
+
+  echo "=== env-fingerprint begin ==="
+  echo "uname=$(uname -sm)"
+  os=$(. /etc/os-release 2>/dev/null; echo "$PRETTY_NAME")
+  echo "os=${os:-unknown}"
+  echo "cwd=$(pwd)"
+  echo "user=$(id -un 2>/dev/null || echo unknown)"
+
+  # Language runtimes
+  for b in node npm npx python3 pip pip3 dotnet go; do probe "$b" --version; done
+  probe java -version
+
+  # Database clients
+  for b in psql mongosh redis-cli; do probe "$b" --version; done
+  probe sqlcmd '-?'
+
+  # Cloud and container tooling
+  for b in az func docker; do probe "$b" --version; done
+  probe azd version
+
+  # Build essentials
+  for b in git make gcc curl; do probe "$b" --version; done
+  probe unzip -v
+
+  # Capacity
+  disk=$(df -Ph / 2>/dev/null | awk 'NR==2 {print $4 " free of " $2}')
+  echo "disk=${disk:-unknown}"
+  mem=$(awk '/MemTotal/ {printf "%.1fGB", $2/1048576}' /proc/meminfo 2>/dev/null)
+  echo "mem=${mem:-unknown}"
+  cpus=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null)
+  echo "cpus=${cpus:-unknown}"
+
+  # Network egress — the one that decides whether installing a missing
+  # toolchain in this preamble is even an option.
+  echo "proxy=${HTTPS_PROXY:-${https_proxy:-none}}"
+  echo "net_npm=$(net https://registry.npmjs.org/)"
+  echo "net_pypi=$(net https://pypi.org/simple/)"
+  echo "net_nuget=$(net https://api.nuget.org/v3/index.json)"
+  echo "=== env-fingerprint end ==="
+  FINGERPRINT
+  sh /tmp/env-fingerprint.sh || true
