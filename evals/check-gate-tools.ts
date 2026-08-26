@@ -25,13 +25,12 @@ import { approveAll, CopilotClient, RuntimeConnection } from "@github/copilot-sd
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { MCP_SERVER_NAME, workflowToolDefinitions } from "./mcp/workflow-tools.ts";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const scriptDir = import.meta.dirname;
 
 function bundledCliPath() {
-    const pkgDir = path.resolve(__dirname, "node_modules/@github/copilot");
+    const pkgDir = path.resolve(scriptDir, "node_modules/@github/copilot");
     for (const candidate of ["npm-loader.js", "index.js"]) {
         const full = path.resolve(pkgDir, candidate);
         if (fs.existsSync(full)) {return full;}
@@ -48,7 +47,7 @@ function bundledCliPath() {
  * themselves would not.
  */
 function requiredToolNamesFromSpecs(): Set<string> {
-    const specDir = path.join(__dirname, "project-plan");
+    const specDir = path.join(scriptDir, "project-plan");
     const names = new Set<string>();
     let files: string[];
     try {

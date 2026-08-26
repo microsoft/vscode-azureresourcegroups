@@ -23,13 +23,12 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { listEvalAssetFiles, readSupportedModels } from "./src/agent-definition.ts";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "..");
+const scriptDir = import.meta.dirname;
+const repoRoot = path.resolve(scriptDir, "..");
 const agentsRoot = path.join(repoRoot, "resources", "agents");
-const lockPath = path.join(__dirname, "agent-assets.lock.json");
+const lockPath = path.join(scriptDir, "agent-assets.lock.json");
 const update = process.argv.includes("--update");
 
 const PLAN = "azure-project-plan";
@@ -277,7 +276,7 @@ const currentFiles = agentAssetFiles();
  * The eval spec must run the agent on a model the product actually ships it on.
  * Catching a bad pin here costs a second; catching it at trial time costs a run.
  */
-const evalSpecPath = path.join(__dirname, "project-plan", "eval.yaml");
+const evalSpecPath = path.join(scriptDir, "project-plan", "eval.yaml");
 try {
     const supported = readSupportedModels(repoRoot, PLAN);
     const spec = fs.readFileSync(evalSpecPath, "utf8");
