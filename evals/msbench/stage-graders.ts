@@ -128,10 +128,35 @@ function collect(repoRelative: string, seen: Set<string>, trail: string, package
  * Copy one dependency-free package into the staged tree's `node_modules`, so a grader's
  * bare import resolves there exactly as it does locally.
  */
+/**
+ * Where a staged package may be found, in order.
+ *
+ * Both are searched because `jsonc-parser` is a declared runtime dependency of the
+ * *extension* (`package.json` at the repo root) as well as of `evals/`, so the copy at
+ * the repo root is not a fallback — it is the package's primary home. Requiring the
+ * `evals/` copy specifically was an unnecessary constraint, and it broke
+ * `check-clean-machine.ts`, which hides `evals/node_modules` to prove `run.sh` still
+ * works on a host where nothing has been installed into `evals/`.
+ *
+ * Note what this does NOT claim. Staging is a copy, so it cannot succeed if the package
+ * is absent from every location — you cannot stage what does not exist on disk. That is
+ * a data dependency of the operation, not an eager import by this script, which has no
+ * bare imports at all.
+ */
+const PACKAGE_ROOTS = [
+    join(REPO_ROOT, 'evals', 'node_modules'),
+    join(REPO_ROOT, 'node_modules'),
+];
+
 function stagePackage(name: string): void {
-    const source = join(REPO_ROOT, 'evals', 'node_modules', name);
-    if (!existsSync(source)) {
-        throw new Error(`${name} is staged for the container but is not installed. Run 'npm ci' in evals/.`);
+    const source = PACKAGE_ROOTS.map(root => join(root, name)).find(candidate => existsSync(candidate));
+    if (!source) {
+        throw new Error(
+            `${name} is staged for the container but is not installed anywhere.\n` +
+            `Looked in:\n${PACKAGE_ROOTS.map(root => `  ${relative(REPO_ROOT, root)}/${name}`).join('\n')}\n` +
+            `Staging copies the package into the staged tree, so one of these must exist.\n` +
+            `Run 'npm ci' at the repo root or in evals/.`
+        );
     }
     const manifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')) as {
         dependencies?: Record<string, string>;
