@@ -168,7 +168,8 @@ against.** Confidence is low, for reasons worth stating plainly:
 `output.zip` is the one risk that looks comfortable: 9.5 MB here, and the bulk is logs
 (`agent-traces.db` 9.2 MB, `chat-export-logs.json` 8.7 MB, `extension-host.log` 8.3 MB)
 which scale with steps, not wall-clock — `screen_recording.mp4` was only 1.9 MB. Even a
-10x chain lands around 100 MB, an order of magnitude below the 1 GiB limit where the
+10x chain lands around 100 MB, an order of magnitude below the
+[1 GiB ingest limit](#a-missing-instance-is-probably-an-oversized-artifact) where the
 ingestor rejects the artifact deterministically on every retry and the run reads as a
 missing blob.
 
@@ -642,6 +643,16 @@ that instance. The run itself looks fine. The results are simply gone.
 
 We are a strong candidate to hit this: each run captures a screen recording, trajectory
 data and `session.sqlite`, over a session budgeted at up to five hours.
+
+**The first multi-turn run puts a number on that risk, and it is smaller than feared.**
+`2026082614813342` produced a **~9.5 MB `output.zip`** (50 MB unpacked) — 0.9% of the
+cap. More useful than the number is the composition: the bulk is logs that scale with
+*steps* (`agent-traces.db` 9.2 MB, `chat-export-logs.json` 8.7 MB, `extension-host.log`
+8.3 MB), while `screen_recording.mp4` — the artifact the five-hour budget makes scary —
+was only **1.9 MB** for a 7m46s run. Even a 10x chain lands near 100 MB. So this stays
+worth watching as the chain grows, but on current evidence it is an order of magnitude
+away, and a `missing` instance today is more likely something else. See
+[What a second turn actually costs](#what-a-second-turn-actually-costs).
 
 To confirm rather than assume, query the ingestor's App Insights (the queue depth is not
 in Kusto) for the run's window:
