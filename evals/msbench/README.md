@@ -244,6 +244,7 @@ so the probe reports one `name=value` per line:
 
 | Group | Probed |
 | --- | --- |
+| Staged assets | the graders tree at `/agent/assets/graders/evals/graders`, and the VSIX's byte size |
 | Language runtimes | `node`, `npm`, `npx`, `python3`, `pip`, `pip3`, `dotnet`, `java`, `go` |
 | Database clients | `psql`, `sqlcmd`, `mongosh`, `redis-cli` |
 | Cloud and containers | `az`, `azd`, `func`, `docker` |
@@ -251,11 +252,24 @@ so the probe reports one `name=value` per line:
 | Capacity | free disk, total memory, CPU count |
 | Egress | HTTP status against the npm, PyPI and NuGet endpoints, plus `HTTPS_PROXY` |
 
+The first row is the triage row, and it is why this predates the breadth question:
+`stage-graders.ts` copies the grader sources in at run time preserving repo-relative
+paths, so a tree staged to an unexpected path fails every `exec:` grader in a way that
+looks exactly like a product regression. A missing or truncated VSIX is the same kind of
+invisible failure — `run.sh` guards it locally, but not a staging failure in between, so
+the byte count is recorded (~7 MB is healthy, ~1 MB is a VSIX built without `npm run
+build`).
+
 Egress is the critical one, because it decides which of three answers we get:
 present (breadth is free), absent but installable in the `script:` preamble (breadth
 costs setup minutes per run, and only works if the container can reach the internet), or
 neither (breadth needs our own published image, forfeiting the cheapness of borrowing
 one). `net_*=200` means reachable; `net_*=000` means the request never completed.
+
+Read `net_*` narrowly: it proves the endpoint answered, not that `npm install` works. An
+intercepting proxy returns 200 too, and so does a registry that then refuses the actual
+package fetch. It is conclusive in the negative direction — a `000` means outcome (b) is
+off the table — and only suggestive in the positive one.
 
 Every probe is individually failure-tolerant — a missing binary prints `MISSING` and the
 script continues, so one absent tool cannot truncate the answer.
