@@ -380,6 +380,15 @@ set -e
 # verdict; exit 75 means "not a result, retry later" and 65 means "measured the
 # wrong thing", both distinct from the 1 that means a genuine red run.
 RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
+if [ -z "$RUN_ID" ] && [ "$CLI_STATUS" -eq 0 ]; then
+    # The CLI reported success without printing a run id, so there is nothing to
+    # fetch and nothing to verify. Same ruling as the missing-results branch
+    # below: unknown is reported as failure, because an exit code cannot say
+    # "we could not tell" and the reader will take 0 as "it passed".
+    echo "ERROR: msbench-cli exited 0 but printed no run_id, so no results could be" >&2
+    echo "located and this run is UNVERIFIED. Reported as a failure rather than a pass." >&2
+    exit 70
+fi
 if [ -n "$RUN_ID" ]; then
     # msbench-cli writes to `<data_dir>/<run_id>/results.zip`. The default data_dir
     # is platform-specific (macOS Application Support, Linux XDG), and `--data_dir`
@@ -397,16 +406,23 @@ if [ -n "$RUN_ID" ]; then
     done
 
     if [ -z "$RESULTS_ZIP" ]; then
-        # Loud, because the alternative is worse than a failed run. verify-run.ts is
-        # what distinguishes a genuine result from a throttled one or one answered by
-        # the wrong model. If it silently does not run, the CLI's own exit code is
-        # reported as the verdict and an unverified run reads exactly like a verified
-        # one — the vacuous-check failure this suite exists to catch, applied to the
-        # verifier itself. That is precisely what `--data_dir` used to cause in CI.
-        echo "WARNING: run ${RUN_ID} completed but results.zip was not found, so" >&2
-        echo "verify-run.ts did NOT run. This result is UNVERIFIED: a throttled run" >&2
-        echo "or one answered by a different model would look identical to a good one." >&2
+        # Loud AND fatal. verify-run.ts is what distinguishes a genuine result from
+        # a throttled one or one answered by the wrong model, and check-assertions.ts
+        # is what says whether the assertions held. Neither can run without the
+        # results, so at this point the run's verdict is simply unknown.
+        #
+        # Unknown is reported as failure, not as success. "We could not tell" and
+        # "it passed" are the same thing to anyone reading an exit code, and the
+        # whole reason this block exists is that the second reading is
+        # unrecoverable — nobody investigates green. Exit 70 (EX_SOFTWARE) rather
+        # than 1, so an unverifiable run is distinguishable from a genuinely red
+        # one; a harness problem and a product regression need different people.
+        echo "ERROR: run ${RUN_ID} completed but results.zip was not found, so neither" >&2
+        echo "verify-run.ts nor check-assertions.ts could run. This run is UNVERIFIED:" >&2
+        echo "a throttled run, a wrong-model run, and a run whose assertions failed all" >&2
+        echo "look identical from here. Reported as a failure rather than a pass." >&2
         printf '  looked in: %s\n' "${RESULTS_CANDIDATES[@]}" >&2
+        exit 70
     else
         SCRATCH="$(mktemp -d)"
         unzip -oq "$RESULTS_ZIP" -d "$SCRATCH" 2>/dev/null || true
@@ -417,9 +433,29 @@ if [ -n "$RUN_ID" ]; then
         VERIFY_STATUS=$?
         set -e
 
-        rm -rf "$SCRATCH"
         if [ "$VERIFY_STATUS" -ne 0 ]; then
+            rm -rf "$SCRATCH"
             exit "$VERIFY_STATUS"
+        fi
+
+        # Only reached when the run IS a result. verify-run.ts answers "is this
+        # real" — throttled (75), wrong model (65) — and deliberately not "did it
+        # pass", because a detector for false reds that also hides true reds is
+        # worthless. So nothing was asking whether the assertions held.
+        #
+        # Run 2026082668713928 is what that cost: 4 assertions passed, 2 failed,
+        # and msbench-cli exited 0, run.sh exited 0, and the GitHub job reported
+        # success. A red run reporting green is the worst direction for this to
+        # point, because nothing downstream contradicts it and nobody
+        # investigates green.
+        set +e
+        node "${HERE}/check-assertions.ts" "${SCRATCH}/out"
+        ASSERTIONS_STATUS=$?
+        set -e
+
+        rm -rf "$SCRATCH"
+        if [ "$ASSERTIONS_STATUS" -ne 0 ]; then
+            exit "$ASSERTIONS_STATUS"
         fi
     fi
 fi
