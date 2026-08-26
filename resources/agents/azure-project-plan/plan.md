@@ -90,10 +90,28 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 4. Services Required
 
-| Azure Service | Role in App | Environment Variable | Default Value (Local) | Classification |
-|---------------|------------|---------------------|----------------------|----------------|
-| {Blob Storage} | {Store uploaded images} | {STORAGE_CONNECTION_STRING} | {UseDevelopmentStorage=true} | {Essential} |
-| {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/appdb} | {Essential} |
+> When the plan includes both a frontend and an HTTP backend, record how browser requests reach the API in production. Do not infer production behavior from the local dev-server proxy. Choose one topology and make all three fields agree:
+>
+> - **Same-origin linked backend** — the frontend host routes `/api` to the backend; a relative `/api` base is valid and no browser CORS policy is required.
+> - **Cross-origin backend** — the frontend calls the backend's absolute URL; the frontend build requires its framework-specific public API base variable (for example, `VITE_API_BASE`), and the backend host must allow the frontend origin in CORS.
+>
+> For backend-only plans, use `N/A` for these fields.
+
+| API Connectivity | Decision |
+|------------------|----------|
+| **Production API Topology** | {Same-origin linked backend / Cross-origin backend / N/A} |
+| **Frontend API Base** | {/api / Build-time environment variable such as VITE_API_BASE / N/A} |
+| **CORS Owner** | {Not required / Backend host allows the frontend origin / N/A} |
+| **Identity Transport** | {How the browser proves identity to the API in production — e.g. SWA `x-ms-client-principal` / Entra bearer token / Anonymous} |
+
+> The **Identity Transport** row is the auth contract deploy and integrate wire against. When the backend enforces an identity, name the real source here; integration must populate it from that source and never ship a hardcoded stub identity (e.g. a constant `x-user-id`). Use `Anonymous` only when the backend truly requires no caller identity.
+
+> **Production Source** below is a deploy breadcrumb: it records where each variable's value comes from in Azure so deploy provisions it instead of shipping the local default. Use `Infra output` for anything a provisioned resource emits (connection strings, endpoints, keys), `Managed identity` when access is keyless via RBAC, `Key Vault ref` for secrets, or `Static` for a fixed non-secret value. A datastore connection string such as `DATABASE_URL` is **Infra output** (or Managed identity) — never `Static` carrying the local default.
+
+| Azure Service | Role in App | Environment Variable | Default Value (Local) | Production Source | Classification |
+|---------------|------------|---------------------|----------------------|------------------|----------------|
+| {Blob Storage} | {Store uploaded images} | {STORAGE_CONNECTION_STRING} | {UseDevelopmentStorage=true} | {Managed identity} | {Essential} |
+| {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://localdev:localdevpassword@localhost:5432/appdb} | {Infra output} | {Essential} |
 
 ---
 

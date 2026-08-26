@@ -34,7 +34,14 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
    import type { ApiClient } from './types';
    import type { PublicUser, CreateUserRequest } from '@app/shared';
 
-   const BASE = import.meta.env.VITE_API_BASE ?? '/api';
+   // Read the API base from the framework's PUBLIC (client-exposed) env var — see the table below.
+   // The value is frozen at build time; in a cross-origin topology production MUST supply it.
+   // Shown in Vite syntax — substitute your framework's equivalent (e.g. Next.js `process.env.NEXT_PUBLIC_API_BASE`).
+   const configuredBase = import.meta.env.VITE_API_BASE;
+   if (import.meta.env.PROD && !configuredBase) {
+     throw new Error('VITE_API_BASE is required for the production build');
+   }
+   const BASE = configuredBase ?? '/api';
 
    async function request<T>(path: string, init?: RequestInit): Promise<T> {
      const res = await fetch(`${BASE}${path}`, {
@@ -54,6 +61,36 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
      // ...one method per endpoint, matching the ApiClient interface exactly
    };
    ```
+   The example above is for a **cross-origin backend**. For a **same-origin linked backend**, use `const BASE = '/api';` and require no build-time variable. Follow the topology recorded in the project plan; never choose based only on the fact that the local dev proxy works.
+
+   **Stay framework-agnostic.** The user may pick any frontend framework — read the API base from *that framework's* public (client-exposed) environment variable. Only variables carrying the framework's public prefix are bundled into browser code, and their values are frozen at build time, so a cross-origin deployment must inject the value **before** the production build runs, not after the static files are emitted. Map the Vite tokens above to whatever the plan selected:
+
+   | Framework | Public env var | Client access | Production check | Build-config validation |
+   |-----------|----------------|---------------|------------------|--------------------------|
+   | Vite (React/Vue/Svelte) | `VITE_API_BASE` | `import.meta.env.VITE_API_BASE` | `import.meta.env.PROD` | `vite.config.*` via `loadEnv` |
+   | Next.js | `NEXT_PUBLIC_API_BASE` | `process.env.NEXT_PUBLIC_API_BASE` | `process.env.NODE_ENV === 'production'` | `next.config.*` |
+   | SvelteKit | `PUBLIC_API_BASE` | import from `$env/static/public` | `dev` from `$app/environment` | build errors if referenced-but-unset |
+   | Angular | `environment.apiBase` (or `NG_APP_*` via `@ngx-env`) | `environment.apiBase` | `environment.production` | `environment.prod.ts` / builder |
+   | Astro / Nuxt | `PUBLIC_*` / `NUXT_PUBLIC_*` | `import.meta.env.PUBLIC_*` / `useRuntimeConfig().public` | `import.meta.env.PROD` / `import.meta.dev` | `astro.config.*` / `nuxt.config.*` |
+
+   If the framework isn't listed, consult its docs for the public-env prefix and the production flag — the principle is identical. Name the chosen variable in the plan's `Frontend API Base` field and the deploy hand-off so deploy injects it before the build.
+
+   The runtime guard above fails clearly when the deployed app starts, but most bundlers do not execute application modules while building. For a cross-origin topology, **also** validate the variable in the framework's build config so packaging itself fails before emitting a broken bundle — e.g. in Vite (`vite.config.ts`):
+   ```ts
+   import { defineConfig, loadEnv } from 'vite';
+
+   export default defineConfig(({ mode }) => {
+     const env = loadEnv(mode, process.cwd(), '');
+     if (mode === 'production' && !env.VITE_API_BASE) {
+       throw new Error('VITE_API_BASE is required for the production build');
+     }
+
+     return {
+       // Existing plugins and server configuration.
+     };
+   });
+   ```
+   For other frameworks apply the equivalent check in their build config (`next.config.*`, `astro.config.*`, `nuxt.config.*`, an Angular builder step, etc.).
    Because `liveClient` is typed `: ApiClient`, the compiler guarantees it covers every method the pages already call.
 3. **Swap the seam — the one file that changes.** Edit `src/api/index.ts` so `api` points at the live client:
    ```ts
@@ -72,9 +109,11 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
 
 ---
 
-## Dev proxy (so `/api` reaches the backend)
+## Dev proxy (so `/api` reaches the backend locally)
 
 Point the dev server's `/api` proxy at the backend host from Step 2.
+
+This proxy exists only in the development server. It does not create an Azure production route and does not remove the need for a production API base URL or backend CORS when the frontend and API use different origins.
 
 **Vite** (`vite.config.ts`):
 ```ts

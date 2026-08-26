@@ -33,6 +33,35 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
 8. Once `deploy-result.json` is finalized, call `open_deploy_result_view` to show the user the Deployment Results view, then present the chat handoff.
 
+### Production frontend-to-API topology — deploy owns the final wiring
+
+When the project contains both a browser frontend and an HTTP backend, deployment is not complete until the browser's production request path is explicit. Read `Production API Topology`, `Frontend API Base`, and `CORS Owner` from `.azure/project-plan.md`, plus any deployment hand-off notes in `.azure/integration-plan.md`. The local dev-server proxy is not evidence of production routing.
+
+Implement exactly one topology:
+
+1. **Same-origin linked backend** — provision and link the backend through the frontend host so `/api` resolves in production. Keep the client base relative. Do not add browser CORS merely to compensate for a missing route.
+2. **Cross-origin backend** — expose the backend endpoint as an infrastructure output, provide the absolute API URL through the framework's public build-time variable (for example, `VITE_API_BASE`) **before** the frontend production build runs, and configure CORS on the backend host to allow the deployed frontend origin. CORS belongs to the server receiving the cross-origin request, not the Static Web App. Prefer the exact frontend origin over `*`, especially when credentials are enabled.
+
+For Vite and other statically bundled frontends, public environment variables are compiled into the JavaScript bundle. Setting an App Setting after `vite build` does not update already-built files. Ensure the provisioning/package order makes infrastructure outputs available to the frontend build, and fail packaging when a required cross-origin API base is absent. Never allow a cross-origin production build to silently fall back to `/api`.
+
+The deployment plan and generated artifacts must identify:
+
+- the selected topology and the resource that implements routing;
+- the backend endpoint output and frontend build variable, when cross-origin;
+- the backend CORS allowed origin derived from the deployed frontend hostname;
+- a post-deploy check that loads the deployed frontend and proves a browser request reaches the deployed API.
+
+When this agent executes the deployment, run that post-deploy check and capture the frontend URL, API request path, and status. A direct backend health check alone is insufficient because it does not test frontend routing or browser CORS. When this run only prepares artifacts, include the exact check in `.azure/deployment-plan.md` and state that deployed connectivity remains unverified; do not claim the application was verified in Azure.
+
+### Provision real dependencies — no placeholders, no stubbed identity
+
+Read the `Production Source` column of the plan's Services Required table and the **Deploy must resolve** section of `.azure/integration-plan.md`. These are the breadcrumbs telling you which values integration left dev-only. Every one of them must resolve to a real Azure value before you report success:
+
+- **Datastore connection (`DATABASE_URL` and peers)** — provision the actual resource (e.g. PostgreSQL) and wire the connection string from an **infra output**, Key Vault reference, or keyless Managed Identity, per the plan's `Production Source`. Never ship the local default and never leave a literal placeholder that the user must `azd env set` by hand. A deployment whose documented end state is "the API returns 500 until you connect a database" is **not** done.
+- **Identity transport (auth)** — when the plan's `Identity Transport` is not `Anonymous`, provision the mechanism it names (SWA auth / Entra app registration) and wire it so the deployed frontend sends a real caller identity and the backend validates it. A hardcoded stub identity that reached deploy is a defect to fix here, not to ship.
+
+The post-deploy check must exercise these end to end: an **authenticated** browser request (when identity is required) that returns **live data from the provisioned datastore** — a `500` from a missing table/connection or a `401` from unwired auth is a FAIL, not an "expected" state.
+
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
