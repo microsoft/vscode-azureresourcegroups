@@ -65,15 +65,25 @@ timeouts:
   # completed before initialized, so `initialized` there is a re-download, not a
   # run start).
   #
-  #   min 147.9s   median 181.0s   max 896.6s
+  #   one extension   n=17   min 147.9s   median 171.1s   max 233.2s
+  #   two extensions  n=6    min 182.5s   median 195.5s   max 896.6s
   #
-  # 30m is 2.0x the observed max, and that headroom is bought deliberately rather
-  # than out of caution: the 896.6s outlier is `debug-probe-smoke`, the one run
-  # that installs a SECOND extension. One extra extension took setup from ~181s
-  # to ~897s. So setup is not a constant, it grows with what we install, and a
-  # third extension of similar cost lands near 1600s. A 15m allowance would have
-  # covered the observed max with 1.00x headroom — i.e. none — and would be
-  # exceeded by the next extension anyone adds.
+  # Two extensions is the current configuration: since #1720, base.yaml installs
+  # the debug probe alongside the product VSIX on every run. It costs about
+  # +24s on the median — NOT the +715s a first reading of the maximum suggests.
+  #
+  # 30m is 2.0x the observed max, and the reason is that maximum rather than any
+  # growth trend. `debug-probe-smoke` (2026082620311350) took 896.6s, 4.6x the
+  # two-extension median, and the cause is UNKNOWN. It is not the second
+  # extension: the five later two-extension runs took 182-216s. It is not a cold
+  # image pull: the full runlog shows both it and its successor pulling every
+  # layer. It was the first probe run, which is suggestive of a one-off, but that
+  # is a correlation with n=1 and not an explanation.
+  #
+  # An unexplained 4.6x excursion is a better argument for headroom than a known
+  # cost would be, because a known cost can be budgeted and an unpredictable one
+  # can only be absorbed. Sizing to the median would have been beaten by an
+  # already-observed run.
   #
   # Erring LOW here is the safe direction and that is why the headroom is
   # generous. Too low: the agent timeout fires, grace runs, artifacts flush, the

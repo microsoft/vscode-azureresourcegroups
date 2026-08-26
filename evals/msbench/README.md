@@ -488,20 +488,29 @@ confirmation from the MSBench team (<CodeExService@microsoft.com>).
 > `completed` *before* `initialized`, so `initialized` there is a re-download rather than
 > a run start):
 >
-> | | setup | agent time |
-> | --- | --- | --- |
-> | min | 147.9s | 45.1s |
-> | median | 181.0s | 107.0s |
-> | **max** | **896.6s** (14.9m) | 2826.1s (47.1m) |
+> | | n | min | median | max |
+> | --- | --- | --- | --- | --- |
+> | one extension | 17 | 147.9s | 171.1s | 233.2s |
+> | **two extensions** (current) | 6 | 182.5s | **195.5s** | **896.6s** |
+> | agent time (all) | 23 | 45.1s | 107.0s | 2826.1s |
+>
+> Two extensions is the current configuration: since [#1720](https://github.com/microsoft/vscode-azureresourcegroups/pull/1720),
+> `base.yaml` installs the debug probe alongside the product VSIX on **every** run.
 >
 > The ~15m assumption was, as it happens, almost exactly right — and that is the trap. It
 > matched the observed maximum at **1.00x headroom**, meaning none.
 >
-> **Setup is not a constant; it grows with what we install.** The 896.6s outlier is
-> `debug-probe-smoke` (`2026082620311350`), the one run that installs a *second*
-> extension. One extra extension took setup from ~181s to ~897s, so a third of similar
-> cost lands near 1600s and would blow a 15m allowance outright. 30m is 2.0x the observed
-> max and absorbs that.
+> **The 896.6s maximum is unexplained, and that is why the allowance is 2x rather than
+> tight.** It is tempting to attribute it to the second extension, since it is
+> `debug-probe-smoke` (`2026082620311350`). That is wrong: the second extension costs
+> about **+24s** on the median, and the five later two-extension runs took 182–216s. A
+> cold image pull is also ruled out — the full runlog shows that run *and* its successor
+> pulling every layer. It was the first probe run, which is suggestive of a one-off, but
+> that is a correlation with n=1, not a cause.
+>
+> An unexplained 4.6x excursion is a *better* argument for headroom than a known cost
+> would be: a known cost can be budgeted, an unpredictable one can only be absorbed.
+> Sizing to the median would have been beaten by a run we have already observed.
 >
 > **Erring low is the safe direction, which is why the headroom is generous rather than
 > tight.** Too low: the agent timeout fires, `runnerGraceSeconds` runs, artifacts flush,
