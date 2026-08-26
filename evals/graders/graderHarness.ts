@@ -46,6 +46,14 @@ export const EXIT_GRADER_ERROR = 3;
  *
  * Which makes the marker more load-bearing, not less: red is now the not-applicable path, so
  * the marker is what turns a red from "mysterious failure" into "known gap, here is the fix".
+ *
+ * That sentence is left here deliberately, and is load-bearing for something other than its
+ * meaning. `stage-graders.ts` once found imports with a regex over raw source, which read the
+ * words `from "mysterious failure"` as an import of a package by that name, could not find it
+ * in `node_modules`, and failed the build for everyone on a prose sentence. The scanner is now
+ * a real tokenizer that knows what a comment is, so this line is a **regression fixture**: if
+ * anyone ever swaps that tokenizer back for a regex, the build breaks here immediately rather
+ * than on whatever sentence somebody writes next. Do not "fix" it by rewording.
  */
 export const NOT_APPLICABLE_EXIT_CODE = EXIT_GRADER_ERROR;
 

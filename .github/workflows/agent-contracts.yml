@@ -56,6 +56,14 @@ jobs:
         run: npm run typecheck
         working-directory: evals
 
+      # The grader import scanner decides what gets staged into the container, and a
+      # naive one already failed the build on a prose sentence. These cases are the
+      # ones it must get right — including that a genuine bare import STILL throws,
+      # since the guard's entire value is its ability to fail.
+      - name: Self-test the import scanner
+        run: npm run imports:self-test
+        working-directory: evals
+
       # Prove the graders still detect the regressions they claim to detect.
       - name: Certify graders
         run: npm run certify

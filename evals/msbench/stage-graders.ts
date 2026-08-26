@@ -35,6 +35,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findImportSpecifiers } from './importScanner.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
@@ -51,10 +52,15 @@ const ENTRYPOINTS = [
     'evals/graders/validate-webview-parseable.ts',
 ];
 
-// Matches the specifier in `from '...'`, `import '...'` and `import('...')`. Type-only
-// imports are erased at runtime, but they are followed anyway: over-staging costs a
-// few kilobytes, while reasoning about which imports survive erasure costs correctness.
-const SPECIFIER = /(?:\bfrom|\bimport)\s*\(?\s*['"]([^'"]+)['"]/g;
+// Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a
+// regex over raw source. The regex that used to live here did not know what a comment
+// was, so a doc comment reading `turns a red from "mysterious failure" into ...` was
+// read as an import of a package by that name and failed the build on a sentence.
+// See importScanner.ts for why the TypeScript compiler's own scanner cannot be used.
+//
+// Type-only imports are erased at runtime, but they are followed anyway: over-staging
+// costs a few kilobytes, while reasoning about which imports survive erasure costs
+// correctness.
 
 /**
  * Walk the import graph from `repoRelative`, adding every reachable repo-relative
@@ -72,7 +78,7 @@ function collect(repoRelative: string, seen: Set<string>, trail: string): Set<st
     seen.add(repoRelative);
 
     const source = readFileSync(absolute, 'utf8');
-    for (const [, specifier] of source.matchAll(SPECIFIER)) {
+    for (const specifier of findImportSpecifiers(source)) {
         if (specifier.startsWith('node:')) {
             continue;
         }
