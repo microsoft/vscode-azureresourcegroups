@@ -159,6 +159,20 @@ const MARKER_TOKEN = /\b(gate|class|reason)=("[^"]*"|\S+)/gu;
 const GATE_ID = /^(?:PASS|FAIL|NOT_APPLICABLE)\b[^\n]*?\bgate=(\S+)/mu;
 
 /**
+ * `GRADER ERROR: gate=<id>` at column 0 — a grader announcing that its own answer is untrustworthy.
+ *
+ * This is a third way for a gate to decline, distinct from the other two: not "I have no opinion"
+ * and not "I never ran", but **"I ran, and you should not score this"**. It exits 3, which was
+ * already treated as a non-verdict, so it can never become a pass or a failure. Matching the marker
+ * only sharpens the label and the remedy — a gate whose parser cannot read its own input needs the
+ * parser fixed, which is a different instruction from checking the environment.
+ */
+const GRADER_ERROR_MARKER = /^GRADER ERROR:/mu;
+
+/** Reason key for a grader that disowned its own output. Harness-level, not a producer's vocabulary. */
+const GRADER_ERROR_REASON = 'graderError';
+
+/**
  * Below this many runs a verdict is a coincidence with a label on it. Verdicts are still printed,
  * but marked low-confidence and never used to fail the process.
  */
@@ -789,8 +803,11 @@ function analyzeInstance(
             tally.notAttempted++;
             bump(tally.notAttemptedReasons, 'ASSERTION_ERROR');
         } else if (exec?.exitCode === EXIT_GRADER_ERROR) {
+            // The grader disowned its own answer. Never a verdict about the product — but label it
+            // distinctly from a gate that was simply blocked, because the remedies differ: fix the
+            // grader, versus fix the environment.
             tally.notAttempted++;
-            bump(tally.notAttemptedReasons, 'GRADER_EXIT_3');
+            bump(tally.notAttemptedReasons, GRADER_ERROR_MARKER.test(exec.stdErr) ? GRADER_ERROR_REASON : 'GRADER_EXIT_3');
         } else if (detail.passed) {
             tally.passed++;
         } else {
@@ -939,10 +956,11 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
     if (starved.length > 0) {
         actionable++;
         console.log('');
-        console.log('NEVER ATTEMPTED — these never got the chance to run. This indicts whatever is');
-        console.log('upstream of them, not the gates, and it says nothing at all about the product.');
-        console.log('A gate here is not dead weight: nobody decided it was unnecessary, something is');
-        console.log('simply in its way. Fix the cause, not the gate.');
+        console.log('NEVER ATTEMPTED — these never got the chance to run. Whatever is in their way is');
+        console.log('at fault, not the gates, and none of this says anything about the product.');
+        console.log('A gate here is not dead weight: nobody decided it was unnecessary. The cause is');
+        console.log('named by the reason code below — a failed predecessor, an absent prerequisite,');
+        console.log('support not yet written, or a grader that disowned its own answer. Fix that.');
         // Grouped by cause, so one absent prerequisite reads as a single actionable line rather
         // than N separate mystery gates — which is the difference between "install a binary" and
         // "five probes are broken".
@@ -1026,7 +1044,9 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             // audit correct code and find nothing, which wastes exactly the attention this section
             // exists to direct.
             const swallowing = declined.filter(row => row.tally.notApplicable > 0);
-            const starved = declined.filter(row => row.tally.notApplicable === 0);
+            const disowned = declined.filter(row => row.tally.notApplicable === 0 &&
+                (row.tally.notAttemptedReasons.has(GRADER_ERROR_REASON) || row.tally.notAttemptedReasons.has('GRADER_EXIT_3')));
+            const starved = declined.filter(row => !swallowing.includes(row) && !disowned.includes(row));
             console.log('');
             console.log('  NEVER RED, AND NEVER SEEN TO DISCRIMINATE — look at these first, ahead of the');
             console.log('  rest. Each one passed or stood down every time it had the chance to object.');
@@ -1038,10 +1058,22 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
                     console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notApplicable} declined (${topReasons(tally.notApplicableReasons)})`);
                 }
             }
+            if (disowned.length > 0) {
+                console.log('');
+                console.log('  Disowned its own answer — the grader ran and reported that its result should');
+                console.log('  not be scored. Fix the grader, not the product; it could not read its input:');
+                for (const { gate, tally } of disowned) {
+                    console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notAttempted} untrustworthy (${topReasons(tally.notAttemptedReasons)})`);
+                }
+            }
             if (starved.length > 0) {
                 console.log('');
-                console.log('  Blocked before it could run — the gate is innocent here; the fault is');
-                console.log('  upstream, and it has simply never had a chance to object:');
+                // Deliberately does not say "upstream". A cascade has a failed predecessor; a missing
+                // binary does not, and sending someone to hunt for a predecessor that never existed
+                // is the same wasted attention this section exists to prevent. The reason code says
+                // which it is, so name that instead of guessing.
+                console.log('  Never got to look — the gate is innocent. Check whatever the reason code');
+                console.log('  names: a failed predecessor, an absent prerequisite, or support not yet written:');
                 for (const { gate, tally } of starved) {
                     console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notAttempted} blocked (${topReasons(tally.notAttemptedReasons)})`);
                 }
