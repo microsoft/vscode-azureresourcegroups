@@ -512,6 +512,17 @@ confirmation from the MSBench team (<CodeExService@microsoft.com>).
 > would be: a known cost can be budgeted, an unpredictable one can only be absorbed.
 > Sizing to the median would have been beaten by a run we have already observed.
 >
+> **It is left recorded as unexplained rather than attributed.** If it recurs it becomes
+> a pattern with its first data point already logged; attributed to the wrong cause, the
+> recurrence looks like a new problem.
+>
+> **Cheapest way to sanity-check any setup figure: total run duration bounds it from
+> above.** `results.json` carries `timestamps.initialized` and `timestamps.completed`,
+> and a run that finished in 242s cannot contain 897s of setup. That check needs two
+> fields and no trajectory parsing, and it is what refuted the claim that the 896.6s
+> figure had become the norm — the two-extension runs that followed took 4m32s and 4m33s
+> end to end. Reach for it before parsing anything.
+>
 > **Erring low is the safe direction, which is why the headroom is generous rather than
 > tight.** Too low: the agent timeout fires, `runnerGraceSeconds` runs, artifacts flush,
 > the run is diagnosable. Too high: the job is killed first and *nothing* is flushed.
@@ -2122,6 +2133,32 @@ three repository secrets still have to be set before a dispatch can authenticate
 until they are, the `Azure login` step fails before `run.sh` is reached. That is a
 different failure from the one this section used to describe, and it fails in a
 different place, so read the failing *step* rather than assuming the allowlist.
+
+### Known issue: the federated credential subject must be ID-based
+
+**This is unresolved at the time of writing, and recorded before its fix on purpose** —
+the next repository onboarded to MSBench hits it identically, and a known issue written
+while the error text is still to hand is worth more than one reconstructed later.
+
+A dispatch fails at `azure/login` with a subject mismatch. GitHub presents an **ID-based**
+subject; the federated credential was written in the **path-based** form:
+
+```
+presented:   repository_owner_id:6154722:repository_id:238360694:ref:refs/heads/feat/CoR
+credential:  repo:microsoft/vscode-azureresourcegroups:ref:refs/heads/feat/CoR
+```
+
+Two things make this cheap to act on. The failure costs **nothing** — it happens before
+`run.sh` is reached, so no run is submitted and no tokens are spent. And the fix is
+**known-good rather than speculative**: the same identity already carries an ID-based
+credential for `vscode-azure`, so someone has hit and solved this before.
+
+The blocker is not our configuration. The subscription carries a `ReadOnly` lock, so the
+credential cannot be added without an owner lifting it.
+
+**It also means a red `eval` job is not evidence about the eval.** Read which *step*
+failed before concluding anything: `Azure login` red is setup, `Run the MSBench eval` red
+is the pipeline, and only a completed submission says anything about the product.
 
 **It stays manual, and not only because of setup.** Every dispatch submits a real run and
 spends real tokens, so a schedule or a PR trigger would spend on every push. Local runs
