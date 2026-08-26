@@ -80,7 +80,7 @@ import type { BinaryFact, ContainerInventory } from './containerInventory.ts';
  * of a Go stack (see `knownGaps` below), and the type says it out loud.
  */
 export type StackEcosystem = Ecosystem | 'go';
-const STACK_ECOSYSTEMS: readonly StackEcosystem[] = ['node', 'python', 'dotnet', 'go'];
+export const STACK_ECOSYSTEMS: readonly StackEcosystem[] = ['node', 'python', 'dotnet', 'go'];
 
 /** The binary each ecosystem cannot run without. Used for a coherence check. */
 const ECOSYSTEM_BINARY: Record<StackEcosystem, string> = {
@@ -95,10 +95,10 @@ export type ApiKind = 'none' | 'http';
 export type DatastoreKind = 'none' | 'postgres' | 'cosmos' | 'blob' | 'queue';
 export type HostingKind = 'appService' | 'functions' | 'containerApps';
 
-const FRONTEND_KINDS: readonly FrontendKind[] = ['none', 'spa'];
-const API_KINDS: readonly ApiKind[] = ['none', 'http'];
-const DATASTORE_KINDS: readonly DatastoreKind[] = ['none', 'postgres', 'cosmos', 'blob', 'queue'];
-const HOSTING_KINDS: readonly HostingKind[] = ['appService', 'functions', 'containerApps'];
+export const FRONTEND_KINDS: readonly FrontendKind[] = ['none', 'spa'];
+export const API_KINDS: readonly ApiKind[] = ['none', 'http'];
+export const DATASTORE_KINDS: readonly DatastoreKind[] = ['none', 'postgres', 'cosmos', 'blob', 'queue'];
+export const HOSTING_KINDS: readonly HostingKind[] = ['appService', 'functions', 'containerApps'];
 
 /**
  * The facts gates are wired from.

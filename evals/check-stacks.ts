@@ -59,9 +59,9 @@ import { fileURLToPath } from 'node:url';
 import { ConfigValidationError } from './src/configValidation.ts';
 import { countAsserted, loadContainerInventory } from './src/containerInventory.ts';
 import { loadGateTable } from './src/gateTable.ts';
-import type { GateTable } from './src/gateTable.ts';
+import type { GatePredicate, GateTable } from './src/gateTable.ts';
 import { selfTestDeclaredGaps } from './src/declaredGaps.ts';
-import { checkKnownGapsAgainstTable, deriveWiring, explainWiring, teachesNothing } from './src/gateWiring.ts';
+import { checkKnownGapsAgainstTable, deriveWiring, evaluatePredicate, explainWiring, teachesNothing } from './src/gateWiring.ts';
 import { loadStack } from './src/stack.ts';
 import type { Stack, StackLoadOptions } from './src/stack.ts';
 
@@ -89,7 +89,7 @@ const VALIDATOR_SOURCES = ['src/stack.ts', 'src/containerInventory.ts', 'src/gat
  * mean that deleting a fixture — or adding a judgment-carrying rule and
  * forgetting to prove it — fails here instead of passing quietly.
  */
-const MIN_PROVEN_CODES = 34;
+const MIN_PROVEN_CODES = 36;
 
 /** `# expect: <code>` in a fixture header — the rule that fixture exists to prove. */
 const EXPECT_DIRECTIVE = /^#\s*expect:\s*([A-Za-z][A-Za-z0-9]*)\s*$/m;
@@ -278,6 +278,25 @@ function checkDerivationBranches(stacks: Stack[], table: GateTable): void {
         fail('a phase whose every wired gate is a declared known gap must warn, and did not');
     } else {
         console.error('  ✔ a run whose every wired gate is a known gap warns');
+    }
+
+    // The deny-list form. Added because an allow-list silently unwires its gate the
+    // day someone adds a value to the enum, and a gate wired nowhere reads as a
+    // clean run. Both directions are driven, because a `not:` that never excludes
+    // anything would look identical to one that works until the excluded value
+    // actually turns up.
+    const notNone: GatePredicate = { 'project.datastore': { not: ['none'] } };
+    if (!evaluatePredicate(stack, notNone).matched) {
+        fail(`{ not: [none] } must match ${stack.id}, whose datastore is ${stack.project.datastore}`);
+    } else {
+        console.error(`  ✔ { not: [none] } matches a stack with a datastore`);
+    }
+    const noDatastore: Stack = { ...stack, project: { ...stack.project, datastore: 'none' } };
+    const excluded = evaluatePredicate(noDatastore, notNone);
+    if (excluded.matched) {
+        fail('{ not: [none] } must NOT match a stack whose datastore is none');
+    } else {
+        console.error(`  ✔ { not: [none] } excludes a stack without one (${excluded.because})`);
     }
 
     // A phase with nothing wired must not warn: there is no run to describe.

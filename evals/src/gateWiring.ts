@@ -86,6 +86,12 @@ export function evaluatePredicate(stack: Stack, predicate: GatePredicate): { mat
             }
             continue;
         }
+        if (!Array.isArray(condition)) {
+            if (value !== undefined && condition.not.includes(value)) {
+                return { matched: false, because: `${fact} is ${value}` };
+            }
+            continue;
+        }
         if (value === undefined || !condition.includes(value)) {
             return { matched: false, because: describeMiss(fact, value, condition) };
         }
