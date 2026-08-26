@@ -30,11 +30,10 @@ import { spawnSync, type SpawnSyncOptions, type SpawnSyncReturns } from "node:ch
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "..");
+const scriptDir = import.meta.dirname;
+const repoRoot = path.resolve(scriptDir, "..");
 const WORKFLOW = ".github/workflows/agent-contracts.yml";
 const IMAGE_NODE = "22";
 

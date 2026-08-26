@@ -15,17 +15,15 @@ import { computeMetrics } from "@microsoft/vally";
 import type { Executor, ExecutorOptions, ExecutorRegistry, Stimulus, Trajectory, TrajectoryEvent } from "@microsoft/vally";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { buildEvalSkill, prepareAgentWorkspace, resolveEvalModel } from "./agent-assets.ts";
 import { workflowToolDefinitions } from "../mcp/workflow-tools.ts";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "../..");
+const scriptDir = import.meta.dirname;
+const repoRoot = path.resolve(scriptDir, "../..");
 const AGENT_NAME = "azure-project-plan";
 
 function getBundledCliPath() {
-    const pkgDir = path.resolve(__dirname, "../node_modules/@github/copilot");
+    const pkgDir = path.resolve(scriptDir, "../node_modules/@github/copilot");
     const candidates = [];
     try {
         const pkg = JSON.parse(fs.readFileSync(path.join(pkgDir, "package.json"), "utf8"));
@@ -81,7 +79,31 @@ function parseArgs(args: unknown): Record<string, unknown> {
     }
 }
 
-function convertSdkEvent(event: any): ExecutorEvent | ExecutorEvent[] | null {
+/**
+ * The subset of the SDK's event shape this converter reads. `rawEvents` is
+ * collected as `unknown[]` off the session bus, so rather than asserting at
+ * every property access the shape is narrowed once, at the boundary below.
+ */
+type SdkEvent = {
+    type: string;
+    timestamp: string | number;
+    data?: {
+        content?: string;
+        toolRequests?: { toolCallId: string; name?: string; arguments?: unknown }[];
+        toolCallId?: string;
+        toolName?: string;
+        name?: string;
+        arguments?: unknown;
+        result?: { content?: unknown };
+        skills?: unknown[];
+    };
+};
+
+function convertSdkEvent(raw: unknown): ExecutorEvent | ExecutorEvent[] | null {
+    if (!raw || typeof raw !== "object") {
+        return null;
+    }
+    const event = raw as SdkEvent;
     switch (event.type) {
         case "assistant.message": {
             const results: ExecutorEvent[] = [];
@@ -112,7 +134,9 @@ function convertSdkEvent(event: any): ExecutorEvent | ExecutorEvent[] | null {
                 type: "tool_call",
                 timestamp: new Date(event.timestamp),
                 data: {
-                    toolCallId: event.data?.toolCallId,
+                    // `?? ""` only satisfies the optional chain; downstream the id is
+                    // read behind a truthiness check, so "" and undefined behave alike.
+                    toolCallId: event.data?.toolCallId ?? "",
                     name: event.data?.toolName ?? event.data?.name ?? "unknown",
                     arguments: parseArgs(event.data?.arguments),
                 },
@@ -124,7 +148,7 @@ function convertSdkEvent(event: any): ExecutorEvent | ExecutorEvent[] | null {
                 type: "tool_result",
                 timestamp: new Date(event.timestamp),
                 data: {
-                    toolCallId: event.data?.toolCallId,
+                    toolCallId: event.data?.toolCallId ?? "",
                     toolName: event.data?.toolName ?? "_pending_lookup_",
                     result: event.data?.result?.content ?? event.data?.result ?? "",
                 },
@@ -154,7 +178,7 @@ class AzureAgentExecutor implements Executor {
         let assistantOutput = "";
         const rawEvents: unknown[] = [];
 
-        const skillDir = buildEvalSkill(repoRoot, AGENT_NAME, path.resolve(__dirname, "../.generated/skills"));
+        const skillDir = buildEvalSkill(repoRoot, AGENT_NAME, path.resolve(scriptDir, "../.generated/skills"));
         const skillDirs = [skillDir];
 
         // Put the shipped instruction folder (including references/) in the workspace,
