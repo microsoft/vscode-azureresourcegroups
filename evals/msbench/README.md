@@ -533,13 +533,26 @@ the kind of thing that gets read as a verdict:
 - **It clears no row.** It flagged one, confirmed three frontend exclusions, and was silent
   on the rest.
 - **It detects one failure direction only** — a gate going *dark* — and is structurally
-  blind to the opposite failure, a gate wired where it has nothing to look at.
-  `project-builds` on a Python stack is that failure, it is real, and only a human reasoning
-  about it caught it.
+  blind to two others. The first is a gate wired where it has nothing to look at:
+  `project-builds` on a Python stack, real, caught only by a human reasoning about it. The
+  second is worse, because the gate genuinely belongs where it is wired: a gate that is
+  applicable but then **demands something inapplicable**. `validate-integration-plan`
+  checked for a Database section unconditionally, so the first stack with
+  `datastore: none` would have been failed for correctly omitting one — a fabricated
+  product failure, latent only because both current stacks use PostgreSQL.
 - **Twelve of nineteen rows are `requires: {}`**, which can never go dark. All twelve come
   back clean and that result means nothing. **A trivially-satisfied computation is not
   evidence** — and those twelve rows are simultaneously where the risk concentrates and
   where a clean line is most misleading. It is the `COUNT(*) = 0` trap wearing another hat.
+
+That second blind spot moved the question this table should be audited against. It is not
+*"why does this row require nothing?"* — the `integration-plan` row's `requires: {}` was
+correct, and the defect was one field below it in `args:`, where no scrutiny of the
+predicate could have found it. The question is:
+
+> **Why does this row demand what it demands?**
+
+which covers `args:` as well as `requires:`, and is the one that would have caught it.
 
 So: a row with a stated reason has been thought about; a row without one is indistinguishable
 from a row nobody considered. `project-builds` is the model — its comment is the only one
