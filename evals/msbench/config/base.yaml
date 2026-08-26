@@ -24,6 +24,10 @@
 #
 # Run it with ./run.sh — see README.md.
 
+# Also the queueing key. CES serialises runs sharing the same (model, endpoint tag),
+# and the model half of that key is read from here: `--model .` makes the vscode
+# plugin resolve the model from this block rather than from the CLI flag. Changing
+# `id` therefore moves our runs into a different queue — see README.md, "Run queueing".
 modelSelector:
   id: claude-sonnet-4.5
   vendor: copilot

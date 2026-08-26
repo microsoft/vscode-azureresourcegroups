@@ -41,6 +41,37 @@ VSIX_DEST="${ASSETS}/extensions/vscode-azureresourcegroups.vsix"
 # we would get a richer starting workspace later.
 BENCHMARK="${BENCHMARK:-vscbench.say_hello}"
 
+# CES serialises runs that share the same (model, endpoint tag) pair, so two of
+# our runs queue instead of racing. Both halves of that key have to match
+# character-for-character or the runs land in different queues and queueing
+# silently does nothing — see README.md, "Run queueing".
+#
+# Only the endpoint half is set here. The model half is derived: `--model .`
+# makes the vscode plugin read `modelSelector` out of the staged
+# user-overrides.yaml, so `config/base.yaml` already fixes it.
+#
+# Deliberately a literal rather than `${QUEUE_ENDPOINT_TAG:-...}`: an env
+# override is exactly the drift this value cannot tolerate.
+QUEUE_ENDPOINT_TAG="copilot-on-rails"
+
+# Smoke is a CES preflight that takes the *first requested instance* of a
+# multi-instance run and executes it for real — real image, real model tokens,
+# real slot — before fanning out. Today it is opt-in and off by default, so this
+# flag changes nothing; it is set because the MSBench wiki states the default
+# will flip to on for eligible runs, and `--smoke_mode none` is the documented
+# opt-out that survives that flip.
+#
+# It is worth pinning now rather than later: smoke only applies to runs with
+# more than one instance, so it is inert while we submit one stimulus per run
+# and would start silently duplicating a full scenario the moment we don't.
+#
+# The trade is a lost early setup-validity check. Acceptable here — that check
+# earns its keep when a bad agent package would fail every instance identically,
+# and run.sh already validates the VSIX contents and rebuilds the config locally
+# before submitting. Placed before "${PASSTHRU[@]}" so `--smoke_mode auto` can
+# still be passed deliberately.
+SMOKE_MODE="none"
+
 # Resource id of the Azure DevOps first-party app, used to mint a feed token.
 ADO_RESOURCE="499b84ac-1321-427f-aa17-267ca6975798"
 VENV="${MSBENCH_VENV:-${HOME}/.msbench-venv}"
@@ -204,7 +235,9 @@ set +e
     --model . \
     --benchmark "$BENCHMARK" \
     --agent-assets "$ASSETS" \
-    ${PASSTHRU[@]+"${PASSTHRU[@]}"} 2>&1 | tee "$RUN_LOG"
+    --smoke_mode "$SMOKE_MODE" \
+    ${PASSTHRU[@]+"${PASSTHRU[@]}"} \
+    --tag "endpoint=${QUEUE_ENDPOINT_TAG}" 2>&1 | tee "$RUN_LOG"
 CLI_STATUS=${PIPESTATUS[0]}
 set -e
 
