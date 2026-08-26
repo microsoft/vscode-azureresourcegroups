@@ -12,6 +12,12 @@ promptSteps:
       quantities, locations. Just the API, no UI needed. I want to use CosmosDB
       since the data structure might change a lot and I want it on Azure Functions.
     assertions:
+      # Liveness sentinel — must come first. Without it the negative assertions
+      # below pass trivially against an empty table. See
+      # config/stimuli/photo-app-requirements.yaml.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
       # vally: file-exists .azure/requirements.json
       - comment: Agent should have written the requirements artifact
         query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'

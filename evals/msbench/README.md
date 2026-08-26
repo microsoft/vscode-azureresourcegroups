@@ -22,18 +22,26 @@ wired up.
 
 | Stimulus | Assertions | Validator flags |
 | --- | --- | --- |
-| `photo-app-requirements` (default) | 7 | — |
-| `api-only-inventory` | 5 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
-| `multi-service-order-processing` | 4 | `--assert-service-count=3` |
-| `no-datastore-converter` | 4 | `--assert-no-datastore` |
+| `photo-app-requirements` (default) | 8 | — |
+| `api-only-inventory` | 6 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
+| `multi-service-order-processing` | 5 | `--assert-service-count=3` |
+| `no-datastore-converter` | 5 | `--assert-no-datastore` |
 
 Assertion counts differ because they mirror each stimulus's graders one-for-one rather
 than being levelled up — only `photo-app-requirements` specifies
 `no-dotfile-requirements` and `transcript-not-contains`, and only it and
 `api-only-inventory` specify `no-premature-plan`.
 
+The one assertion every stimulus carries that `eval.yaml` does not specify is the
+**liveness sentinel**, `SELECT COUNT(*) > 0 FROM llm_responses`, which must be first.
+It exists because a negative assertion (`COUNT(*) = 0`) is trivially true against an
+empty table: a run that dies before the session database is populated would otherwise
+collect full marks on every negative check rather than failing. It is a property of
+*this* harness, not of the source spec, which is why it is not mirrored from there.
+
 All four are verified by a real green run; ids are under
-[Verified result](#verified-result).
+[Verified result](#verified-result). Those runs predate the sentinel, so they report
+one assertion fewer than the table above.
 
 ## Quick start
 
