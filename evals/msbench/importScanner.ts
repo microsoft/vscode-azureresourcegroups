@@ -68,9 +68,37 @@ type Token =
  */
 const SPECIFIER_KEYWORDS = new Set(['from', 'import']);
 
-export function findImportSpecifiers(source: string): string[] {
+/**
+ * One import, and whether it is loaded eagerly.
+ *
+ * The distinction is load-bearing for the clean-machine check. A **static**
+ * import runs on every invocation of the module, so a script `run.sh` calls on a
+ * host with no `node_modules` cannot have one reaching a third-party package. A
+ * **dynamic** `import()` runs only when that code path is taken, which is how
+ * `build-config.ts` offers `--stack` without making the stimulus path — the one
+ * every current run uses — depend on anything.
+ */
+export interface ImportReference {
+    specifier: string;
+    dynamic: boolean;
+    /**
+     * `import type { T } from './x.ts'` — erased before the code runs.
+     *
+     * The module is never loaded, so a type-only import cannot bring a runtime
+     * dependency with it. That distinction is invisible to a regex and matters:
+     * without it the clean-machine check reports `build-config.ts` as depending
+     * on `yaml` because it imports a *type* from a module that parses YAML,
+     * which is a false failure — and a check that cries wolf gets switched off.
+     *
+     * Only statement-level `import type` / `export type` counts. An inline
+     * `import { type A, b }` still loads the module.
+     */
+    typeOnly: boolean;
+}
+
+export function findImportReferences(source: string): ImportReference[] {
     const tokens = tokenize(source);
-    const specifiers: string[] = [];
+    const references: ImportReference[] = [];
 
     for (let index = 0; index < tokens.length; index++) {
         const token = tokens[index];
@@ -83,18 +111,46 @@ export function findImportSpecifiers(source: string): string[] {
         }
         // `import x from './y.ts'`, `export { a } from './y.ts'`, `import './y.ts'`.
         if (previous.kind === 'word' && SPECIFIER_KEYWORDS.has(previous.value)) {
-            specifiers.push(token.value);
+            references.push({ specifier: token.value, dynamic: false, typeOnly: isTypeOnlyStatement(tokens, index) });
             continue;
         }
         // `await import('./y.ts')` — the specifier sits behind the parenthesis.
         if (previous.kind === 'punct' && previous.value === '(') {
             const beforeParen = tokens[index - 2];
             if (beforeParen?.kind === 'word' && beforeParen.value === 'import') {
-                specifiers.push(token.value);
+                references.push({ specifier: token.value, dynamic: true, typeOnly: false });
             }
         }
     }
-    return specifiers;
+    return references;
+}
+
+/**
+ * Walk back to the statement's `import`/`export` keyword and ask whether `type`
+ * follows it.
+ *
+ * Bounded rather than unbounded: a malformed file should cost one wrong answer,
+ * not a scan of everything before it. An import clause long enough to exceed
+ * this is not something this repository contains.
+ */
+function isTypeOnlyStatement(tokens: Token[], specifierIndex: number): boolean {
+    const limit = Math.max(0, specifierIndex - 128);
+    for (let index = specifierIndex - 1; index >= limit; index--) {
+        const token = tokens[index];
+        if (token.kind !== 'word') {
+            continue;
+        }
+        if (token.value === 'import' || token.value === 'export') {
+            const next = tokens[index + 1];
+            return next?.kind === 'word' && next.value === 'type';
+        }
+    }
+    return false;
+}
+
+/** Specifiers only. `stage-graders.ts` stages every reachable file, eager or not. */
+export function findImportSpecifiers(source: string): string[] {
+    return findImportReferences(source).map(reference => reference.specifier);
 }
 
 function tokenize(source: string): Token[] {
@@ -301,6 +357,8 @@ interface ScannerCase {
     name: string;
     source: string;
     expected: string[];
+    /** Optional stricter expectation over the full references, not just specifiers. */
+    expectedReferences?: ImportReference[];
 }
 
 /**
@@ -358,9 +416,34 @@ const CASES: ScannerCase[] = [
         expected: ['./reexport.ts'],
     },
     {
-        name: 'type-only import is found, as before',
+        name: 'type-only import is found, and marked type-only',
         source: 'import type { T } from \'./types.ts\';',
         expected: ['./types.ts'],
+        expectedReferences: [{ specifier: './types.ts', dynamic: false, typeOnly: true }],
+    },
+    {
+        name: 'a value import is not marked type-only',
+        source: 'import { a } from \'./values.ts\';',
+        expected: ['./values.ts'],
+        expectedReferences: [{ specifier: './values.ts', dynamic: false, typeOnly: false }],
+    },
+    {
+        name: 'an inline type specifier still loads the module',
+        source: 'import { type A, b } from \'./mixed.ts\';',
+        expected: ['./mixed.ts'],
+        expectedReferences: [{ specifier: './mixed.ts', dynamic: false, typeOnly: false }],
+    },
+    {
+        name: 'export type is type-only too',
+        source: 'export type { T } from \'./reexported-types.ts\';',
+        expected: ['./reexported-types.ts'],
+        expectedReferences: [{ specifier: './reexported-types.ts', dynamic: false, typeOnly: true }],
+    },
+    {
+        name: 'a dynamic import is never type-only',
+        source: 'const m = await import(\'./dyn2.ts\');',
+        expected: ['./dyn2.ts'],
+        expectedReferences: [{ specifier: './dyn2.ts', dynamic: true, typeOnly: false }],
     },
     {
         name: 'multi-line import statement is found',
@@ -383,7 +466,10 @@ export function selfTest(): number {
     let failed = 0;
     for (const testCase of CASES) {
         const actual = findImportSpecifiers(testCase.source);
-        const ok = JSON.stringify(actual) === JSON.stringify(testCase.expected);
+        let ok = JSON.stringify(actual) === JSON.stringify(testCase.expected);
+        if (ok && testCase.expectedReferences) {
+            ok = JSON.stringify(findImportReferences(testCase.source)) === JSON.stringify(testCase.expectedReferences);
+        }
         if (ok) {
             console.error(`  ✔ ${testCase.name}`);
         } else {
