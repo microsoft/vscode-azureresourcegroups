@@ -64,6 +64,7 @@ import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
+import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
@@ -92,6 +93,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerDeploymentPlanAutoOpen(context);
     registerAutopilot(context);
     registerDebugPlanImplementedWatcher(context);
+    registerDeployInventoryWatcher(context);
     registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();

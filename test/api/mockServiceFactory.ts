@@ -6,7 +6,7 @@
 import { GenericResource, ResourceGroup } from "@azure/arm-resources";
 import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { randomUUID } from "crypto";
-import { AzureResourcesServiceFactory } from "../../src/services/AzureResourcesService";
+import { AzureResourcesServiceFactory, DeploymentOperationsResult } from "../../src/services/AzureResourcesService";
 import { MockAzureSubscriptionProvider } from "./MockAzureSubscriptionProvider";
 import { getCachedTestApi } from "../utils/testApiAccess";
 
@@ -122,6 +122,9 @@ export function createMockAzureResourcesServiceFactory(mockResources: MockResour
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resourceGroups;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
+            },
+            async listDeploymentOperations(_context, _subscription: AzureSubscription, _deploymentName: string, _resourceGroupName?: string): Promise<DeploymentOperationsResult> {
+                return { operations: [] };
             },
         };
     };

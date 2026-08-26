@@ -154,6 +154,7 @@ function readServices(value: unknown): DeploymentPlanService[] {
     return readArray(value).map(entry => ({
         name: readString(entry.name) ?? '',
         sku: readString(entry.sku) ?? '',
+        component: readString(entry.component) ?? '',
         purpose: readString(entry.purpose) ?? '',
         component: readString(entry.component) ?? '',
         region: readString(entry.region) ?? '',

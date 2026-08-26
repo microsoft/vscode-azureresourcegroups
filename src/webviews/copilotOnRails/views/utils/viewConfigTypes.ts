@@ -140,6 +140,16 @@ export type DeployResultViewStrings = {
     orphanedHeading: string;
     orphanedHint: string;
 
+    cleanupResourcesHeading: string;
+    cleanupResourcesHint: string;
+    reviewResourcesHeading: string;
+    reviewResourcesHint: string;
+    unverifiedInventoryHeading: string;
+    unverifiedInventoryForbidden: string;
+    unverifiedInventoryTransient: string;
+    failedBadge: string;
+    orphanedBadge: string;
+
     cleanupHeading: string;
     cleanupHint: string;
     copyButtonAriaLabel: string;

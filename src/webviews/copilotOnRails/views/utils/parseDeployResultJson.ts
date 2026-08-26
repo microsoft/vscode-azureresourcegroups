@@ -5,6 +5,7 @@
 
 import {
     type DeployResultData,
+    type DeployResultCleanupResource,
     type DeployResultEndpoint,
     type DeployResultHealingAttempt,
     type DeployResultHealthDetail,
@@ -243,11 +244,45 @@ function readResourceFromId(resourceId: string): DeployResultResource | undefine
     return { type, name };
 }
 
+function readCreatedResources(value: unknown): DeployResultResource[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    const resources: DeployResultResource[] = [];
+    for (const entry of value) {
+        if (!isRecord(entry)) {
+            continue;
+        }
+        const resourceId = readString(entry.id);
+        const fromId = readResourceFromId(resourceId);
+        const name = readString(entry.name) || fromId?.name || resourceId;
+        if (!name) {
+            continue;
+        }
+        const rawType = readString(entry.type);
+        const classification = readString(entry.classification);
+        const provisioningState = readString(entry.provisioningState);
+        resources.push({
+            type: rawType ? titleCase(rawType.split('/').pop() ?? rawType) : (fromId?.type ?? 'Resource'),
+            name,
+            status: [classification, provisioningState].filter(Boolean).join(' · ') || undefined,
+        });
+    }
+    return resources;
+}
+
 /**
- * Normalize resources from any of the three layouts the artifact may use:
- * object map, `resourceResults[]`, or a bare `resourceIds[]`.
+ * Normalize resources from any supported artifact layout. The deterministic
+ * `createdResources[]` inventory is authoritative when present; otherwise the
+ * object map, `resourceResults[]`, or a bare `resourceIds[]` layout is used.
  */
 function readResources(plan: Json): DeployResultResource[] {
+    const createdResources = readCreatedResources(plan.createdResources);
+    if (createdResources.length > 0) {
+        return createdResources;
+    }
+
     const map = plan.resources;
     if (isRecord(map)) {
         const resources: DeployResultResource[] = [];
@@ -282,6 +317,80 @@ function readResources(plan: Json): DeployResultResource[] {
     return readStringArray(plan.resourceIds)
         .map(readResourceFromId)
         .filter((r): r is DeployResultResource => r !== undefined);
+}
+
+/** Extract the resource group segment from a full ARM resource ID, if present. */
+function readResourceGroupFromId(resourceId: string): string {
+    const match = /\/resourceGroups\/([^/]+)/i.exec(resourceId);
+    return match ? match[1] : '';
+}
+
+/**
+ * Escape a value for safe embedding in a double-quoted shell argument. The inventory's strings
+ * ultimately originate from an artifact an LLM may author, and the result is a command the user is
+ * invited to copy and run, so `"`, `` ` ``, `$` and `\` must not be able to break out of the quotes.
+ */
+function shellQuote(value: string): string {
+    return `"${value.replace(/(["`$\\])/g, '\\$1')}"`;
+}
+
+/**
+ * Build the per-resource inventory lists from `createdResources[]`. `expected` resources are part
+ * of the working deployment and are excluded; the remainder splits by how confidently it is
+ * attributed to this deployment:
+ *
+ * - `failed` — a tracked deployment reported it with a non-succeeded state, so it is definitely
+ *   this deployment's. It gets an `az resource delete --ids` command scoped to that one resource.
+ * - `orphaned` — it appeared during the deploy window but no tracked deployment reported it. That
+ *   is a review signal, not proof of ownership: on a shared subscription a coworker's or a
+ *   concurrent pipeline's resource lands here too. No delete command is generated.
+ * - `unverified` — attribution was impossible (see `inventoryUnverified`), so it is excluded from
+ *   both lists entirely.
+ */
+function readInventoryResourceLists(value: unknown): { cleanup: DeployResultCleanupResource[]; review: DeployResultCleanupResource[] } {
+    if (!Array.isArray(value)) {
+        return { cleanup: [], review: [] };
+    }
+
+    const cleanup: DeployResultCleanupResource[] = [];
+    const review: DeployResultCleanupResource[] = [];
+    for (const entry of value) {
+        if (!isRecord(entry)) {
+            continue;
+        }
+        const classification = readString(entry.classification).toLowerCase();
+        if (classification !== 'failed' && classification !== 'orphaned') {
+            continue;
+        }
+        const resourceId = readString(entry.id);
+        const fromId = readResourceFromId(resourceId);
+        const name = readString(entry.name) || fromId?.name || resourceId;
+        if (!name) {
+            continue;
+        }
+        const rawType = readString(entry.type);
+        const resourceGroup = readString(entry.resourceGroup) || readResourceGroupFromId(resourceId) || undefined;
+        // Prefer the ARM ID — `az resource delete --ids` works for any resource
+        // type without needing to know the API version. Fall back to a
+        // name/group/type triple when the inventory omitted the ID.
+        const deleteCommand = classification !== 'failed'
+            ? ''
+            : resourceId.length > 0
+                ? `az resource delete --ids ${shellQuote(resourceId)}`
+                : (resourceGroup && rawType
+                    ? `az resource delete --name ${shellQuote(name)} --resource-group ${shellQuote(resourceGroup)} --resource-type ${shellQuote(rawType)}`
+                    : '');
+        const item: DeployResultCleanupResource = {
+            type: rawType ? titleCase(rawType.split('/').pop() ?? rawType) : (fromId?.type ?? 'Resource'),
+            name,
+            id: resourceId || undefined,
+            resourceGroup,
+            classification,
+            deleteCommand,
+        };
+        (classification === 'failed' ? cleanup : review).push(item);
+    }
+    return { cleanup, review };
 }
 
 function readHealthDetail(value: unknown): DeployResultHealthDetail | undefined {
@@ -475,6 +584,12 @@ export function parseDeployResultJson(content: string): DeployResultData {
     const resourceGroupName = readString(plan.resourceGroupName);
     const endpoints = readEndpoints(plan.endpoints);
 
+    // When attribution failed, the classifications carry no information, so neither list is shown.
+    const inventoryUnverified = readBoolean(plan.inventoryUnverified) === true;
+    const { cleanup, review } = inventoryUnverified
+        ? { cleanup: [], review: [] }
+        : readInventoryResourceLists(plan.createdResources);
+
     return {
         status: readStatus(plan.status),
         healthStatus: readHealthStatus(plan.healthStatus),
@@ -503,6 +618,11 @@ export function parseDeployResultJson(content: string): DeployResultData {
         warnings: readStringArray(plan.warnings),
 
         cleanupCommand: buildCleanupCommand(resourceGroupName),
+        resourcesToCleanup: cleanup,
+        resourcesToReview: review,
+        ...(inventoryUnverified
+            ? { inventoryUnverified: true, inventoryUnverifiedReason: readString(plan.inventoryUnverifiedReason) || 'error' }
+            : {}),
     };
 }
 

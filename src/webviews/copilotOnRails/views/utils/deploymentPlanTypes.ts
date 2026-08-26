@@ -32,6 +32,7 @@ export interface AzureLocationOption {
 export interface DeploymentPlanService {
     name: string;
     sku: string;
+    component: string;
     purpose: string;
     /** The app/workload component this resource serves (e.g. `scrapbook-api`). */
     component: string;

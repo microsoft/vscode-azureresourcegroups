@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEPLOY_RESULT_FILE_GLOB, findProjectFiles } from "../../../tree/project/projectPlanFiles";
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
+import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
 import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
@@ -78,21 +79,25 @@ function emptyDeployResult(): DeployResultData {
         orphanedResourceGroups: [],
         warnings: [],
         cleanupCommand: '',
+        resourcesToCleanup: [],
+        resourcesToReview: [],
     };
 }
 
 /**
- * Locate the deploy result to display. Each App Onboard session owns a folder
- * under `.copilot-azure/sessions/{sessionId}/`, so a workspace can accumulate
- * one artifact per session. The session that `active-session.json` points at
- * wins; if that pointer is missing or stale, the most recently modified file
- * does.
+ * Locate the deploy result to display. The deploy agent writes one artifact per
+ * App Onboard session, either at the `.azure/` root or under
+ * `.copilot-azure/sessions/{sessionId}/`, so a workspace can accumulate several.
+ * The session that `active-session.json` points at wins; if that pointer is
+ * missing or stale, the most recently modified file does.
  *
  * Resolved against the file system rather than the search index: the deploy agent git-ignores
  * `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
  */
 async function findLatestDeployResult(): Promise<vscode.Uri | undefined> {
-    const matches = await findProjectFiles(DEPLOY_RESULT_FILE_GLOB);
+    const matches = (await Promise.all(
+        DEPLOY_RESULT_FILE_GLOBS.map((glob) => findProjectFiles(glob)),
+    )).flat();
 
     if (matches.length === 0) {
         return undefined;
@@ -162,8 +167,13 @@ export async function openDeployResultViewFromWorkspace(_context: CopilotOnRails
 }
 
 async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
+    // Render immediately with whatever the artifact currently holds, then compute the deterministic
+    // inventory in the background. When it writes createdResources[] back, the single-file watcher
+    // reloads the view — so the safety net's (possibly multi-second) Azure call never blocks the
+    // first paint, even if the agent never called capture_deployment_inventory.
     openDeployResultViewWithContent(await readFileText(uri), uri);
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
+    void ensureDeployInventoryCaptured(uri);
 }
 
 async function reloadDeployResult(uri: vscode.Uri): Promise<void> {

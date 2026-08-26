@@ -463,6 +463,65 @@
             overflow-wrap: anywhere;
         }
     }
+
+    .cleanupResourceList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .cleanupResourceItem {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 12px;
+            border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+            border-radius: 6px;
+            background: var(--vscode-editorWidget-background);
+        }
+
+        .cleanupResourceHeader {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .cleanupResourceName {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .cleanupResourceType,
+        .cleanupResourceGroup {
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .cleanupResourceGroup::before {
+            content: '· ';
+        }
+
+        .cleanupBadge {
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-editor-background);
+
+            &.failed {
+                background: var(--vscode-editorError-foreground, #f14c4c);
+            }
+
+            &.orphaned {
+                background: var(--vscode-editorWarning-foreground, #cca700);
+            }
+        }
+    }
 }
 
 .parseFailureWarning {
