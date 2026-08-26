@@ -243,7 +243,17 @@ number for the chain that is measured rather than extrapolated from single-turn 
 > **+154% on uncached**, because a subagent starts a fresh context and so caches badly
 > (47.9% cached, against the main trajectory's 93.2%). Sum
 > `trajectories/*.trajectory.json`, not just the report, or every subagent-heavy phase
-> will look cheaper than it is — and scaffold is expected to use more of them, not fewer.
+> will look cheaper than it is.
+>
+> ~~and scaffold is expected to use more of them, not fewer~~ — **retracted, measured
+> false.** `scaffold-fullstack` (`2026082620153444`) produced **exactly one** trajectory
+> and made **no** `runSubagent` calls: 39 steps, 88 tool calls, all in the main
+> trajectory. It delegated *less* than the planning run above, not more. So the
+> undercount for that run is zero by construction, and phase complexity does not predict
+> subagent use — at least not in the direction assumed here. The rest of this box is
+> unaffected: the undercount is real whenever delegation happens, and you cannot tell
+> from the report whether it did. **That** is why summing the trajectory files is the
+> rule rather than a precaution for phases believed to delegate. n=1 in each direction.
 >
 > **This failure is silent.** You do not get an error or an obviously odd figure; you get
 > a plausible number that is 20% low on total and 154% low on uncached. Nothing about the
@@ -397,8 +407,8 @@ run, so they are set explicitly:
 
 | Key | Default | Ours | Why |
 | --- | --- | --- | --- |
-| `agentSeconds` | 6300 (1h45m) | 18000 (5h) | The E2E chain is describe → requirements → plan → scaffold → build → run → debug in **one** session. The default is a per-turn budget, not a chain budget. Sized to fit inside the job cap — see below. |
-| `stallSeconds` | 2700 (45m) | 5400 (90m) | See below. |
+| `agentSeconds` | 6300 (1h45m) | **5400 (90m)** | The E2E chain is describe → requirements → plan → scaffold → build → run → debug in **one** session, so the per-turn default is the wrong shape — but the budget is capped by the measured 7200s runner limit, not by what the chain would like. `7200 − 15m setup − 15m grace`. See below. |
+| `stallSeconds` | 2700 (45m) | **2700 (45m)** — the default | Must stay strictly below `agentSeconds` or it can never fire. Kept at the schema default rather than derived; the longest measured quiet stretch is 211.8s. See below. |
 | `runnerGraceSeconds` | 300 (5m) | 900 (15m) | A long session has far more to flush at the end (screen recording, trajectory, `session.sqlite`) than a 5-step run, and a truncated artifact is an unreadable result. |
 
 `stallSeconds` is the one that bites. It is **not** an agent-inactivity timeout — the
@@ -416,26 +426,26 @@ is killed *first*, the agent timeout never fires, and because `runnerGraceSecond
 time the runner takes **after** the agent timeout, the grace period never runs either.
 Nothing gets flushed — no screen recording, no trajectory, no `session.sqlite` — on
 precisely the runs you most need to diagnose. `agentSeconds` must therefore be the job
-cap minus setup minus grace, with margin:
+cap minus setup minus grace:
 
 ```
-6h job cap − ~15m setup − 15m grace ⇒ 5h agent
+7200s runner cap − ~15m setup − 15m grace ⇒ 5400s agent
 ```
 
 The schema gives all three a `maximum` of `9007199254740991`, so nothing above is
-schema-constrained. The real ceiling is the platform job limit. GitHub documents a 6-hour
-cap for hosted runners and 5 days for self-hosted; our runs report `dispatched to GitHub
-Actions` with `run_platform='linux_container'`, but **we could not verify which pool
-MSBench dispatches to** — that is decided by a server-side workflow not visible from the
-CLI or from `vscode-copilot-evaluation`. The 6h figure above is therefore an assumption,
-chosen because it is the safer of the two documented limits. If the cap is ever
-confirmed, re-derive `agentSeconds` from the arithmetic above rather than just raising
-it; raising it past 6h needs confirmation from the MSBench team
-(<CodeExService@microsoft.com>).
+schema-constrained. The real ceiling is the platform job limit, and that is **measured
+rather than assumed**: every instance runlog prints `Using timeout of 7200 seconds`
+before the agent starts. GitHub documents a 6-hour cap for hosted runners and 5 days for
+self-hosted, and our runs report `dispatched to GitHub Actions` with
+`run_platform='linux_container'` — but which pool MSBench dispatches to never had to be
+resolved, because the runner announces the limit it is actually applying. An earlier
+version of this section assumed the 6h figure and derived `agentSeconds: 18000` from it,
+which was 2.5x the real budget. Raising anything past the announced cap needs
+confirmation from the MSBench team (<CodeExService@microsoft.com>).
 
-> **The observed runner cap is 2h, not 6h — so `agentSeconds: 18000` is mis-derived.**
-> The instance runlog for `2026082614813342` says, verbatim, immediately after the
-> benchmark banner and before the agent starts:
+> **The runner cap is 7200s (2h), measured — and `agentSeconds` is now derived from it.**
+> The instance runlog says, verbatim, immediately after the benchmark banner and before
+> the agent starts:
 >
 > ```
 > containerName=vscbench.eval.x86_64.say_hello
@@ -446,22 +456,47 @@ it; raising it past 6h needs confirmation from the MSBench team
 > Runner script finished!
 > ```
 >
-> That is the outer runner applying a 2h timeout to `entry.sh` — the process that contains
-> the whole agent session — and the 5h `agentSeconds` above was derived from an *assumed*
-> 6h cap. If 7200s is the real per-instance limit then the agent budget is 2.5x the
-> runner's, which is precisely the failure this section warns about: the job is killed
-> first, the agent timeout never fires, `runnerGraceSeconds` never runs because it only
-> starts *after* the agent timeout, and nothing is flushed on the runs that most need
-> diagnosing. Re-derived from the observed cap, the arithmetic gives `7200 − ~15m setup −
-> 15m grace ⇒ ~1.5h agent (5400s)`.
+> That is the outer runner applying a 2h timeout to `entry.sh` — the process containing
+> the whole agent session. This was originally recorded as a single observation, and left
+> unactioned on two grounds: that it was one run, and that the line did not say whether
+> 7200s is fixed per instance or set per dispatch.
 >
-> This is left unchanged pending confirmation rather than fixed here, for two reasons:
-> it is one observation, and the line does not say whether 7200s is fixed per instance
-> or something the orchestrator sets per dispatch. Nothing has come close to it yet — the
-> longest run to date is 49m and `2026082614813342` used 465s of the 7200s (6.5%) — so
-> this is a latent trap rather than an active one. It becomes active on exactly the long
-> chain runs this timeout section exists for. Worth confirming with
-> <CodeExService@microsoft.com> before the scaffold and deploy phases get wired up.
+> **Both are now answered.** The value is identical in **all 30 cached runs**, spanning
+> three days, four models (`claude-sonnet-4.5`, `gpt-5`, `gpt-4.1`, `gpt-5.6`), several
+> benchmarks and multi-instance dispatches. Identical values across *different payloads*
+> is what rules out a per-dispatch setting — one run could not, thirty with varying
+> inputs can.
+>
+> So the arithmetic above is re-derived against 7200 rather than an assumed 21600:
+>
+> ```
+> 7200s runner cap − ~15m setup − 15m grace ⇒ 5400s agent
+> ```
+>
+> `config/base.yaml` now sets `agentSeconds: 5400`. The previous 18000 was **2.5x the
+> real budget** — the exact failure this section warns about, sitting in the config that
+> documents it.
+>
+> **Two consequences worth stating rather than discovering.**
+>
+> First, `stallSeconds` had to move. At 5400 it would have equalled `agentSeconds`, so a
+> stall could never fire before the agent budget expired — an inert timeout that reads as
+> protection, which is the same shape as a gate that cannot fail. It is now the schema
+> default of **2700**, and that is a *default, not a derivation*: no arithmetic here
+> yields a stall threshold. It is not unexamined, though — the longest gap between agent
+> steps in any successful cached run is **211.8s** (`2026082614813342`), and
+> `scaffold-fullstack`, which runs a real `npm install` and build, peaks at **82.4s**.
+> Those gaps are an *upper* bound on all-four-quiet, since workspace file activity
+> continues within a step gap, so 2700 sits at least 12.7x above anything measured. The
+> measurement that would refine it is a run that legitimately goes quiet for longer —
+> `azd provision` is the obvious candidate and has never been measured, so **revisit this
+> when the deploy gate lands** rather than treating a mystery kill as a product failure.
+>
+> Second, the new derivation leaves **no margin**: 5400 + 900 grace + 900 setup is 7200
+> exactly, where the old 6h derivation held 30m back. Nothing has come close — the
+> longest run to date is 49m, and `2026082614813342` used 465s of the 7200s (6.5%) — but
+> the first run that approaches the cap will find that edge. Worth confirming the setup
+> allowance with <CodeExService@microsoft.com> before the deploy phase is wired up.
 
 **`msbench-cli run --timeout` — not the same thing, and don't add it.** It is a *local*
 wait. From `cli/arguments.py`: *"Max seconds to wait locally for completion. When
@@ -974,6 +1009,25 @@ the wrong path" are indistinguishable from the outside:
 sqlite3 session.sqlite "SELECT output FROM exec WHERE command LIKE '%uname%'"
 sqlite3 session.sqlite "SELECT exitCode, stdErr FROM exec WHERE command LIKE '%validate-%'"
 ```
+
+**It also settles `config/container.yaml`, which is otherwise asserted rather than
+measured.** That file records what the container has in three states (`present`,
+`absent`, `unavailable`), and 14 of its 15 rows are marked `evidence: asserted` — copied
+from documentation, never observed. The fingerprint now sweeps the same binaries:
+
+```
+for b in node npm python3 pip3 func go dotnet docker azd java; do
+  printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"
+done
+```
+
+so **the next run anybody submits, for any reason, is also a measurement of the
+inventory** — at no extra cost, no extra assertion, and no risk of failing the run. The
+sweep was already in the generated stack stimuli; the hand-written ones carried three
+older variants that only listed directories, which meant the measurement depended on
+which kind of stimulus happened to run. The sweep is now identical in all of them and
+only the trailing directory listing varies, because which directories matter genuinely is
+per-stimulus.
 
 
 ## The second extension: the debug probe
@@ -2010,8 +2064,8 @@ on disk for the other.
 ## Running in CI
 
 [`.github/workflows/msbench-evals.yml`](../../.github/workflows/msbench-evals.yml) runs
-this on `ubuntu-latest`. It is **`workflow_dispatch` only**, because it cannot run yet
-without one-time setup.
+this on `ubuntu-latest`. It is **`workflow_dispatch` only**, and stays that way even now
+that the identity work is done — see below for what actually still gates it.
 
 The Vally CI path needed no secrets — `copilot-requests: write` lets the built-in
 `GITHUB_TOKEN` authenticate the Copilot CLI. That trick does not transfer. MSBench runs
@@ -2025,9 +2079,32 @@ on CES, which identifies callers by Entra client id, so CI needs a real Azure id
    [Submitting MSBench runs from GitHub Actions](https://dev.azure.com/devdiv/OnlineServices/_git/msbench?path=/wiki/Submitting-MSBench-runs-from-GitHub-Actions.md).
    This step is not self-service.
 
-Step 3 is the reason the workflow is manual-only and unscheduled: until the identity is
-allowlisted a scheduled run would only ever be red. Local runs need none of this —
-`az login` plus the `MSBench User` role is enough, which is why that path landed first.
+**Step 3 is done — the Entra-side permissions have been granted.** Step 2 is not: the
+three repository secrets still have to be set before a dispatch can authenticate, and
+until they are, the `Azure login` step fails before `run.sh` is reached. That is a
+different failure from the one this section used to describe, and it fails in a
+different place, so read the failing *step* rather than assuming the allowlist.
+
+**It stays manual, and not only because of setup.** Every dispatch submits a real run and
+spends real tokens, so a schedule or a PR trigger would spend on every push. Local runs
+need none of the above — `az login` plus the `MSBench User` role is enough, which is why
+that path landed first.
+
+### The first CI run should be one whose answer we already know
+
+`workflow_dispatch` takes a `stimulus` input, defaulting to **`scaffold-unapproved-plan`**
+rather than to `run.sh`'s own default of `photo-app-requirements`.
+
+That is deliberate, and it is about what a red result would *mean*. The first dispatches
+are testing the pipeline — federated auth, the feed token, VSIX staging, grader staging,
+config generation, submission, artifact upload — not the product. `scaffold-unapproved-plan`
+is the cheapest merged stimulus (a refusal that ends after two tool calls) **and** its
+answer is already established locally at 6/6 green. So a red is unambiguous: CI is
+broken. Against an unknown-answer stimulus a red cannot distinguish "CI is misconfigured"
+from "the product changed", which is the one distinction the exercise exists to make.
+
+Pass any other stimulus once the pipeline is proven. `STIMULUS` is read from the
+environment by `run.sh` exactly as `BENCHMARK` is, so `--stimulus` still wins locally.
 
 ## Troubleshooting
 
@@ -2041,8 +2118,7 @@ with a clear message:
   several PRs. `git checkout -- evals/results/` before committing.
 
 - **A `400 BadRequest` from CES at submission time is probably transient — retry before
-  changing anything.** Seen once in five back-to-back submissions, on a run submitted
-  within a second of the previous one completing:
+  changing anything.** Seen twice, from `/api/ces/benchmark/startRun`:
 
   ```
   requests.exceptions.HTTPError: 400 Client Error: Bad Request for url:
@@ -2050,11 +2126,28 @@ with a clear message:
   Response body: 400.0 BadRequest
   ```
 
-  The next submission, 13 seconds later with a byte-identical config, succeeded. No
-  tokens are spent and no run is created, so the only cost is the confusion. The trap is
-  that `400` reads as *"your config is malformed"*, which invites editing a config that
-  was fine — and the edit then gets credited with the fix when the retry was what worked.
-  Leave a few seconds between submissions and retry once before believing it.
+  No run id is allocated and no tokens are spent, so the only cost is the confusion. The
+  trap is that `400` reads as *"your config is malformed"*, which invites editing a config
+  that was fine — and the edit then gets credited with the fix when the retry was what
+  worked. **Retry once with the same config before changing anything.**
+
+  **The two observations do not fit a cooldown, and that is the useful part.** Both are
+  recorded here rather than averaged into a single waiting time, because together they
+  rule out the explanation each one separately suggests:
+
+  | | Gap after the previous run finished | Result |
+  | --- | --- | --- |
+  | A | ~1s | `400` |
+  | A, retried | ~14s | **succeeded** |
+  | B | ~90s | `400` |
+  | B, retried | a few minutes | **succeeded** |
+
+  A fixed minimum gap between submissions cannot make 14s succeed *and* 90s fail. So
+  "wait N seconds" is not the remedy, and any specific N here would be invented rather
+  than measured — what is actually established is only that **resubmitting an unchanged
+  config works**. Whether the trigger is concurrency, a server-side transient, or
+  something else is unknown; n=2, and neither observation was instrumented beyond the
+  timings above. Do not derive a cooldown from this entry.
 
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail
@@ -2100,11 +2193,6 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
-- **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
-  submitting ~90s after a previous run finished; no run id is allocated. The same
-  config submitted cleanly after a cooldown, so treat it as transient submission
-  throttling rather than a config error — wait a few minutes and resubmit before
-  debugging the YAML.
 - **`msbench-cli` silently installs an ancient version.** pip's 15s default read
   timeout treats a slow feed download as an *unusable candidate* rather than a network
   error, so it backtracks through older releases and reports success — once landing
