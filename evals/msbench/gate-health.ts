@@ -850,9 +850,10 @@ async function loadDeclaredGaps(): Promise<{ declared: Map<string, DeclaredGap>;
             .filter(name => name.endsWith('.yaml'))
             .sort()
             .map(name => loadStack(join(stacksDir, name), { inventory, phasesDirectory: join(config, 'phases') }));
-        const { findStaleDeclarations, annotationFor } = await import('../src/declaredGaps.ts');
+        const { findStaleDeclarations, annotationFor, lookupDeclaredGap } = await import('../src/declaredGaps.ts');
         staleDeclarationsSync = findStaleDeclarations;
         annotationForSync = annotationFor;
+        lookupGapSync = lookupDeclaredGap;
         return { declared: collectDeclaredGaps(stacks), reasonCodes: knownReasonCodes() };
     } catch (error) {
         return {
@@ -984,7 +985,13 @@ function printDeclaration(
     if (gaps.problem || gaps.declared.size === 0) {
         return;
     }
-    const gap = gaps.declared.get(`${gate}\t${reason}`);
+    // Looked up through the exported accessor, never by rebuilding the key here.
+    // This line used to restate `${gate}\t${reason}` as a literal, which is two
+    // representations of one format: change the key in `declaredGaps.ts` and this
+    // silently returns undefined for every gap, so every accounted-for red reads
+    // UNDECLARED — failure in the noisy direction, and invisible, because all
+    // twelve self-test cases go through the accessor and would stay green.
+    const gap = lookupGapSync(gaps.declared, gate, reason);
     // `notAttempted` merges NOT_APPLICABLE reason codes with instance faults like
     // `X_MODEL_NOT_FOUND_ERROR`. Only the former can appear in a `knownGaps`
     // entry, so the decision of whether to say anything at all lives in
@@ -1284,6 +1291,7 @@ function printStaleDeclarations(rows: GateRow[], gaps: { declared: Map<string, D
 
 let staleDeclarationsSync: (declared: Map<string, DeclaredGap>, observed: Map<string, Set<string>>) => DeclaredGap[] = () => [];
 let annotationForSync: (gap: DeclaredGap | undefined, reason: string, reasonCodes: Set<string>) => 'skip' | 'undeclared' | 'declared' = () => 'skip';
+let lookupGapSync: (declared: Map<string, DeclaredGap>, gate: string, reason: string) => DeclaredGap | undefined = () => undefined;
 
 async function main(): Promise<void> {
     const options = parseArgs(process.argv.slice(2));

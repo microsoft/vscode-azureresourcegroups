@@ -35,6 +35,9 @@
  * accounted for on the stack that actually produced it.
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Stack } from './stack.ts';
 
 export interface DeclaredGap {
@@ -157,7 +160,53 @@ function stackWith(id: string, gaps: Array<{ gates: string[]; reason: string; tr
 
 const REASON_CODES = new Set(['functionsHostUnavailable', 'ecosystemNotSupported', 'datastoreRequiresContainer']);
 
+/**
+ * Consumers that must reach the map through `lookupDeclaredGap`, never by
+ * rebuilding the key.
+ *
+ * This is a mechanism rather than a comment, because the comment was already
+ * there and did not work: `lookupDeclaredGap` was exported precisely so nobody
+ * would restate the key format, every one of the cases below used it, and the
+ * single real consumer bypassed it with a literal anyway. The tests all ran
+ * through the accessor and would have stayed green while production diverged —
+ * a suite structurally unable to fail for the defect it was written to prevent.
+ */
+const KEY_CONSUMERS = ['../msbench/gate-health.ts'];
+
+/** A map access that builds its own key: `something.get(`${a}\t${b}`)`. */
+const REBUILT_KEY = /\.get\(\s*`[^`]*\$\{[^`]*\\t/u;
+
 const CASES: Case[] = [
+    {
+        name: 'no consumer rebuilds the declared-gap key instead of using the accessor',
+        run: () => {
+            const here = dirname(fileURLToPath(import.meta.url));
+            const rebuilt: string[] = [];
+            const unreadable: string[] = [];
+            for (const consumer of KEY_CONSUMERS) {
+                try {
+                    if (REBUILT_KEY.test(readFileSync(join(here, consumer), 'utf8'))) {
+                        rebuilt.push(consumer);
+                    }
+                } catch {
+                    // A moved or renamed consumer fails too — a guard silently
+                    // covering nothing is the failure it exists to prevent. But it is
+                    // reported as its own problem: telling someone to go and find a
+                    // key literal in a file that does not exist sends them to the
+                    // wrong place and suppresses its own investigation.
+                    unreadable.push(consumer);
+                }
+            }
+            if (unreadable.length > 0) {
+                return `${unreadable.join(', ')} could not be read, so this guard is covering nothing. `
+                    + `Update KEY_CONSUMERS if the file moved.`;
+            }
+            return rebuilt.length === 0
+                ? undefined
+                : `${rebuilt.join(', ')} builds the gate\\treason key directly. Change the key format and it `
+                + `silently matches nothing, so every declared red reads UNDECLARED. Use lookupDeclaredGap.`;
+        },
+    },
     {
         name: 'an instance fault is not annotated at all — no stack could declare it',
         run: () => annotationFor(undefined, 'X_MODEL_NOT_FOUND_ERROR', REASON_CODES) === 'skip'
