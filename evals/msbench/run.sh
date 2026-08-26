@@ -154,6 +154,16 @@ log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du
 log "Staging graders"
 node "${HERE}/stage-graders.ts"
 
+# The scaffold and local-dev phases grade agents whose first action is to read
+# `.azure/project-plan.md`, so the workspace has to be seeded before turn 0. The
+# stimulus says *what state it needs* with a `# seed:` directive; this resolves
+# that to a recipe and writes assets/workspace/, which the phase `script:` copies
+# into /workspace. Run for every stimulus, including unseeded ones, because it
+# also *clears* assets/workspace/ — otherwise a previous run's plan would leak
+# into a stimulus whose whole premise is that no plan exists.
+log "Staging workspace seed"
+node "${HERE}/stage-workspace.ts" "$STIMULUS"
+
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.
 #
