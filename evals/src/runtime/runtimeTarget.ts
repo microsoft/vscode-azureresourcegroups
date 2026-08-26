@@ -47,7 +47,7 @@ export type PortSource =
     | 'undeclared';
 
 /** Where the health path came from. */
-export type HealthPathSource = 'stackDeclaration' | 'apiTestCollection' | 'debugPlan';
+export type HealthPathSource = 'stackDeclaration' | 'apiTestCollection' | 'integrationPlan' | 'debugPlan';
 
 /**
  * The closed vocabulary of not-applicable reasons, shared with the fidelity and
@@ -96,7 +96,6 @@ export type NotApplicableReason =
  */
 export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, 'outOfScope' | 'coverageGap'> = {
     // This project has nothing for the gate to look at, and no remedy would change that.
-    noHealthPathDeclared: 'outOfScope',
     noFrontendDeclared: 'outOfScope',
     noFrontendApiCalls: 'outOfScope',
     noCollectionRouteDeclared: 'outOfScope',
@@ -105,6 +104,11 @@ export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, 'outOfSco
     datastoreRequiresContainer: 'coverageGap',
     frontendDevServerUnsupported: 'coverageGap',
     ecosystemNotSupported: 'coverageGap',
+    // Reachable only on a *running* HTTP app that answered no conventional health path, so
+    // it is never "nothing to look at" — it is a missing feature we could not attribute,
+    // because the workspace carries no integration plan promising one. With that plan
+    // present the same evidence is a product failure, not an N/A.
+    noHealthPathDeclared: 'coverageGap',
 };
 
 /** How the port may be substituted, when the project lets us choose one. */
@@ -373,11 +377,22 @@ function isPort(value: string): boolean {
  * Find the health path the project declared for itself.
  *
  * The API test collection is the best source: the agent generates it as an executable
- * probe, so it is a commitment rather than a description. The debug plan comes second — it
- * is prose, and prose about ports has already been caught lying in the reference fixture,
- * but a *path* in it is still a declaration. Conventional guesses are deliberately not
- * here: the caller decides whether to guess, because "the project never declared a health
- * endpoint" is a different verdict from "it declared one and it 404s".
+ * probe, so it is a commitment rather than a description.
+ *
+ * `.azure/integration-plan.md` comes next, and it is the source this chain should have had
+ * from the start. The scaffold agent is *contracted* to record "health endpoint path" in
+ * that artifact's Backend section, and `validateIntegrationPlanArtifact` already fails the
+ * agent with `missingHealthEndpoint` when it doesn't — so it is the one place a health path
+ * is guaranteed to be declared for any project that went through the scaffold flow. Omitting
+ * it meant this gate could report "the project declares no health path" about a project
+ * whose plan declared one on the line above, and then quietly return not-applicable.
+ *
+ * The debug plan comes last — it is prose, and prose about ports has already been caught
+ * lying in the reference fixture, but a *path* in it is still a declaration.
+ *
+ * Conventional guesses are deliberately not here: the caller decides whether to guess,
+ * because "the project never declared a health endpoint" is a different verdict from
+ * "it declared one and it 404s".
  */
 async function discoverHealthPath(workspaceRoot: string): Promise<{ path: string; source: HealthPathSource } | undefined> {
     const collections = path.join(workspaceRoot, 'api-test-collections');
@@ -389,12 +404,28 @@ async function discoverHealthPath(workspaceRoot: string): Promise<{ path: string
         }
     }
 
-    const plan = await readFileSafe(path.join(workspaceRoot, '.azure', 'vscode-debug-plan.md'));
-    const fromPlan = plan && /(\/[\w\-./]*(?:health|healthz|readiness|livez)[\w\-./]*)/i.exec(plan);
-    if (fromPlan) {
-        return { path: fromPlan[1].replace(/[.,)]+$/, ''), source: 'debugPlan' };
+    for (const [file, source] of [
+        ['integration-plan.md', 'integrationPlan'],
+        ['vscode-debug-plan.md', 'debugPlan'],
+    ] as [string, HealthPathSource][]) {
+        const text = await readFileSafe(path.join(workspaceRoot, '.azure', file));
+        const match = text && /(\/[\w\-./]*(?:health|healthz|readiness|livez)[\w\-./]*)/i.exec(text);
+        if (match) {
+            return { path: match[1].replace(/[.,)`]+$/, ''), source };
+        }
     }
     return undefined;
+}
+
+/**
+ * Whether the project went through the scaffold flow, and therefore owed a health endpoint.
+ *
+ * `.azure/integration-plan.md` is the hand-off artifact the scaffold agent must write, and
+ * its Backend section must name a health endpoint path. Its presence is what turns "no
+ * health endpoint answered" from an open question into a contract the product did not meet.
+ */
+export function declaresBackendContract(workspaceRoot: string): Promise<boolean> {
+    return exists(path.join(workspaceRoot, '.azure', 'integration-plan.md'));
 }
 
 /**
