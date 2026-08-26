@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
@@ -12,12 +11,13 @@ import { ext } from "../../../../extensionVariables";
 import { corId, getCorProjectId } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 /**
  * Transient webview shown while Copilot generates the artifact (requirements,
  * plan, scaffold) that the next step's view will render.
  */
-export class LoadingViewController extends WebviewController<LoadingViewConfiguration> {
+export class LoadingViewController extends CopilotOnRailsWebviewController<LoadingViewConfiguration> {
     constructor(initialConfig: LoadingViewConfiguration) {
         super(ext.context, initialConfig.title, 'loadingView', initialConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 

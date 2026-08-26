@@ -5,7 +5,7 @@
 
 import { Button, Spinner, Tooltip } from '@fluentui/react-components';
 import { CommentEditRegular } from '@fluentui/react-icons';
-import { useEffect, useMemo, useState, type JSX } from 'react';
+import { useMemo, useState, type JSX, type SyntheticEvent } from 'react';
 import { type PaletteEntry, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
@@ -36,23 +36,6 @@ interface UiPreviewCardProps {
 }
 
 /**
- * Append the trusted navigation bridge to a preview page's HTML. The bridge is
- * the ONLY script allowed to run in the preview iframe (author scripts are
- * stripped in `previewPagesReader`). It turns a click on a cross-page link
- * (`data-preview-nav="<slug>"`, produced by the reader) into a `previewNavigate`
- * message the card handles by switching tabs, and neutralizes any other
- * navigation so a stray link can't break the sandboxed `about:srcdoc` document.
- * It is stamped with the host CSP nonce so it satisfies the inherited
- * `script-src 'nonce-…'` policy; if the nonce is ever wrong the script is simply
- * blocked and the links fall back to inert `#` anchors (no navigation, but
- * nothing breaks).
- */
-function withNavigationBridge(html: string, nonce: string): string {
-    const bridge = `<script${nonce ? ` nonce="${nonce}"` : ''}>(function(){document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a'):null;if(!a)return;var slug=a.getAttribute('data-preview-nav');if(slug){e.preventDefault();parent.postMessage({command:'previewNavigate',slug:slug},'*');return;}var href=a.getAttribute('href')||'';if(href&&href.charAt(0)!=='#'){e.preventDefault();}},true);})();</script>`;
-    return html.includes('</body>') ? html.replace('</body>', `${bridge}</body>`) : html + bridge;
-}
-
-/**
  * Read-only view of Section 6 (Design System & UI). The preview itself is a
  * sandboxed iframe loaded with planner-generated HTML/CSS; below it a per-color
  * hex selector lets the user recolor the design. Each pick is applied to the
@@ -67,33 +50,6 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     // Live CSS-variable overrides keyed by `--color-*` name. Applied to the
     // iframe HTML on every render so a hex pick recolors the preview instantly.
     const [overrides, setOverrides] = useState<Record<string, string>>({});
-
-    // CSP nonce from the host document — stamped onto the injected navigation
-    // bridge so it satisfies the (inherited) `script-src 'nonce-…'` policy when it
-    // runs inside the sandboxed srcdoc iframe. The base webview template renders
-    // its bootstrap as `<script type="module" nonce="…">`, so read the nonce off
-    // it (the `.nonce` IDL property returns the real value even after the DOM
-    // hides the content attribute).
-    const nonce = useMemo(() => {
-        const el = document.querySelector('script[type="module"]') as HTMLScriptElement | null;
-        return el?.nonce ?? '';
-    }, []);
-
-    // A click on an in-preview cross-page link posts its target slug up from the
-    // sandboxed iframe (via the injected bridge); switch to that page's tab.
-    useEffect(() => {
-        const handler = (event: MessageEvent): void => {
-            const data = event.data as { command?: string; slug?: string } | undefined;
-            if (data?.command === 'previewNavigate' && typeof data.slug === 'string') {
-                const idx = previewPages.findIndex(p => p.slug === data.slug);
-                if (idx >= 0) {
-                    setActivePageIdx(idx);
-                }
-            }
-        };
-        window.addEventListener('message', handler);
-        return () => window.removeEventListener('message', handler);
-    }, [previewPages]);
 
     // The card shows two things: the iframe preview and a color picker.
     // Render whenever either has content — if there's truly nothing to show,
@@ -123,8 +79,8 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     // inlined as a trailing `:root { … }` block so the iframe recolors the moment
     // a hex is picked — no regeneration, no feedback round-trip.
     const displayedHtml = useMemo(
-        () => (activePage?.html ? withNavigationBridge(applyOverrides(activePage.html, { ...baseOverrides, ...overrides }), nonce) : undefined),
-        [activePage?.html, baseOverrides, overrides, nonce],
+        () => (activePage?.html ? applyOverrides(activePage.html, { ...baseOverrides, ...overrides }) : undefined),
+        [activePage?.html, baseOverrides, overrides],
     );
 
     if (palette.length === 0 && !hasPages) {
@@ -137,6 +93,31 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
         const cssVar = cssVarForToken(entry.token);
         setOverrides(prev => ({ ...prev, [cssVar]: newHex }));
         onPaletteChange(entry.token, entry.hex, newHex);
+    };
+
+    const handlePreviewLoad = (event: SyntheticEvent<HTMLIFrameElement>): void => {
+        event.currentTarget.contentDocument?.addEventListener('click', (clickEvent: MouseEvent): void => {
+            const target = clickEvent.target as Element | null;
+            const anchor = target?.closest?.('a');
+            if (!anchor) {
+                return;
+            }
+
+            const slug = anchor.getAttribute('data-preview-nav');
+            if (slug) {
+                clickEvent.preventDefault();
+                const idx = previewPages.findIndex(page => page.slug === slug);
+                if (idx >= 0) {
+                    setActivePageIdx(idx);
+                }
+                return;
+            }
+
+            const href = anchor.getAttribute('href') ?? '';
+            if (href && !href.startsWith('#')) {
+                clickEvent.preventDefault();
+            }
+        }, true);
     };
 
     return (
@@ -196,7 +177,8 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                         className='uiPreviewCard__iframe'
                         title={`UI preview for ${activePage.title}`}
                         srcDoc={displayedHtml}
-                        sandbox='allow-same-origin allow-scripts'
+                        sandbox='allow-same-origin'
+                        onLoad={handlePreviewLoad}
                     />
                 )}
             </div>
