@@ -1001,15 +1001,37 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
     if (vacuous.length > 0) {
         console.log('');
         const confident = vacuous.filter(row => row.confident);
+        // A gate that has never failed *and* has sometimes declined to answer is a sharper signal
+        // than either alone: it was wired, it ran, it had the chance to have an opinion, and every
+        // time it either passed or excused itself. That is the shape of a gate whose failing branch
+        // is unreachable.
+        const declined = vacuous.filter(row => row.tally.notApplicable > 0 || row.tally.notAttempted > 0);
         console.log(`NEVER FAILED — ${vacuous.length} gate(s) have never discriminated between good and bad`);
         console.log('output. At this corpus size that is expected rather than alarming: a young suite');
         console.log('mostly passes. Watch whether it stays true as the corpus grows.');
-        if (confident.length > 0) {
-            console.log(`  Worth a look first (>= ${minRuns} runs and still never red):`);
-            for (const { gate, tally } of confident) {
+        if (declined.length > 0) {
+            console.log('');
+            console.log('  NEVER RED, AND SOMETIMES DECLINED TO ANSWER — look at these first, ahead of');
+            console.log('  the rest. A gate that only ever passes or excuses itself may have a failing');
+            console.log('  branch that cannot be reached; check that its not-applicable case is not');
+            console.log('  swallowing the evidence that should have made it fail.');
+            for (const { gate, tally } of declined) {
+                const excused = [...tally.notApplicableReasons.entries(), ...tally.notAttemptedReasons.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 2)
+                    .map(([reason, count]) => `${reason}\u00d7${count}`)
+                    .join(', ');
+                console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notApplicable + tally.notAttempted} declined (${excused})`);
+            }
+        }
+        const plain = confident.filter(row => !declined.includes(row));
+        if (plain.length > 0) {
+            console.log('');
+            console.log(`  Then these (>= ${minRuns} runs and still never red):`);
+            for (const { gate, tally } of plain) {
                 console.log(`  * ${gate}: ${tally.passed} passes, 0 failures over ${tally.runs.size} runs`);
             }
-        } else {
+        } else if (declined.length === 0) {
             console.log(`  None has reached ${minRuns} runs yet, so none is worth investigating on this evidence.`);
         }
     }
