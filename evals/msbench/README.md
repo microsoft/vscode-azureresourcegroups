@@ -407,7 +407,7 @@ run, so they are set explicitly:
 
 | Key | Default | Ours | Why |
 | --- | --- | --- | --- |
-| `agentSeconds` | 6300 (1h45m) | **5400 (90m)** | The E2E chain is describe → requirements → plan → scaffold → build → run → debug in **one** session, so the per-turn default is the wrong shape — but the budget is capped by the measured 7200s runner limit, not by what the chain would like. `7200 − 15m setup − 15m grace`. See below. |
+| `agentSeconds` | 6300 (1h45m) | **4500 (75m)** | The E2E chain is describe → requirements → plan → scaffold → build → run → debug in **one** session, so the per-turn default is the wrong shape — but the budget is capped by the measured 7200s runner limit, not by what the chain would like. `7200 − 30m setup − 15m grace`, both terms measured. See below. |
 | `stallSeconds` | 2700 (45m) | **2700 (45m)** — the default | Must stay strictly below `agentSeconds` or it can never fire. Kept at the schema default rather than derived; the longest measured quiet stretch is 211.8s. See below. |
 | `runnerGraceSeconds` | 300 (5m) | 900 (15m) | A long session has far more to flush at the end (screen recording, trajectory, `session.sqlite`) than a 5-step run, and a truncated artifact is an unreadable result. |
 
@@ -429,8 +429,11 @@ precisely the runs you most need to diagnose. `agentSeconds` must therefore be t
 cap minus setup minus grace:
 
 ```
-7200s runner cap − ~15m setup − 15m grace ⇒ 5400s agent
+7200s runner cap − 30m setup allowance − 15m grace ⇒ 4500s agent
 ```
+
+Both terms are measured; see the box below for how the setup allowance was derived and
+why it is 2x the observed maximum rather than equal to it.
 
 The schema gives all three a `maximum` of `9007199254740991`, so nothing above is
 schema-constrained. The real ceiling is the platform job limit, and that is **measured
@@ -470,17 +473,45 @@ confirmation from the MSBench team (<CodeExService@microsoft.com>).
 > So the arithmetic above is re-derived against 7200 rather than an assumed 21600:
 >
 > ```
-> 7200s runner cap − ~15m setup − 15m grace ⇒ 5400s agent
+> 7200s runner cap − 30m setup allowance − 15m grace ⇒ 4500s agent
 > ```
 >
-> `config/base.yaml` now sets `agentSeconds: 5400`. The previous 18000 was **2.5x the
-> real budget** — the exact failure this section warns about, sitting in the config that
+> `config/base.yaml` now sets `agentSeconds: 4500`. The previous 18000 was **4x the real
+> budget** — the exact failure this section warns about, sitting in the config that
 > documents it.
 >
-> **Two consequences worth stating rather than discovering.**
+> **The setup allowance is measured too, and that is the second half of the fix.** A first
+> attempt at this derivation used the measured cap with an *assumed* ~15m setup and
+> produced 5400 — replacing an assumption-derived number with another assumption-derived
+> number while calling it measured. Setup is now `timestamps.initialized` to the first
+> agent step, over 23 usable cached runs (two excluded: their own metadata reports
+> `completed` *before* `initialized`, so `initialized` there is a re-download rather than
+> a run start):
 >
-> First, `stallSeconds` had to move. At 5400 it would have equalled `agentSeconds`, so a
-> stall could never fire before the agent budget expired — an inert timeout that reads as
+> | | setup | agent time |
+> | --- | --- | --- |
+> | min | 147.9s | 45.1s |
+> | median | 181.0s | 107.0s |
+> | **max** | **896.6s** (14.9m) | 2826.1s (47.1m) |
+>
+> The ~15m assumption was, as it happens, almost exactly right — and that is the trap. It
+> matched the observed maximum at **1.00x headroom**, meaning none.
+>
+> **Setup is not a constant; it grows with what we install.** The 896.6s outlier is
+> `debug-probe-smoke` (`2026082620311350`), the one run that installs a *second*
+> extension. One extra extension took setup from ~181s to ~897s, so a third of similar
+> cost lands near 1600s and would blow a 15m allowance outright. 30m is 2.0x the observed
+> max and absorbs that.
+>
+> **Erring low is the safe direction, which is why the headroom is generous rather than
+> tight.** Too low: the agent timeout fires, `runnerGraceSeconds` runs, artifacts flush,
+> the run is diagnosable. Too high: the job is killed first and *nothing* is flushed.
+> Those are not symmetric, so the budget is sized against the bad direction. 4500s is
+> still 1.6x the longest agent time ever observed here.
+>
+> **`stallSeconds` had to move as a consequence, and this is the part worth reading.** It
+> was also 5400. Left there it would have equalled or exceeded `agentSeconds`, so a stall
+> could never fire before the agent budget expired — an inert timeout that reads as
 > protection, which is the same shape as a gate that cannot fail. It is now the schema
 > default of **2700**, and that is a *default, not a derivation*: no arithmetic here
 > yields a stall threshold. It is not unexamined, though — the longest gap between agent
@@ -492,11 +523,9 @@ confirmation from the MSBench team (<CodeExService@microsoft.com>).
 > `azd provision` is the obvious candidate and has never been measured, so **revisit this
 > when the deploy gate lands** rather than treating a mystery kill as a product failure.
 >
-> Second, the new derivation leaves **no margin**: 5400 + 900 grace + 900 setup is 7200
-> exactly, where the old 6h derivation held 30m back. Nothing has come close — the
-> longest run to date is 49m, and `2026082614813342` used 465s of the 7200s (6.5%) — but
-> the first run that approaches the cap will find that edge. Worth confirming the setup
-> allowance with <CodeExService@microsoft.com> before the deploy phase is wired up.
+> One caveat on the setup figures: `results.json` writes its timestamps as naive local
+> wall-clock while trajectory steps are UTC, so comparing them directly yields a ~7h
+> offset and nonsense numbers. Convert before subtracting.
 
 **`msbench-cli run --timeout` — not the same thing, and don't add it.** It is a *local*
 wait. From `cli/arguments.py`: *"Max seconds to wait locally for completion. When
@@ -2193,6 +2222,22 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
+- **A trailing `echo` after `&&` reports success unconditionally.** `cmd && check; echo
+  "done"` prints `done` whether or not `cmd` ran, because `;` is not `&&` — and if
+  anything earlier in the chain fails, everything after the `&&` is skipped while the
+  final `echo` still fires. This has bitten three times here, in two shapes: a
+  `git push` that never ran but reported "pushed" (caught only when PR creation failed
+  with *"No commits between feat/CoR and feat/CoR"*), and `npm run gates | tail`
+  reporting exit 0 because a pipeline's status is the *last* command's, not the first's.
+  Put the echo inside the chain, check `$?` explicitly, or use `${PIPESTATUS[0]}` after a
+  pipe. A false green from your own tooling is worth more suspicion than a red gate,
+  because nothing downstream will contradict it.
+
+- **`results.json` timestamps are naive local time; trajectory steps are UTC.**
+  Subtracting one from the other directly yields a ~7h offset — setup times of ~25,400s
+  on runs that finished in 240s. Convert before comparing. This is how the setup
+  measurement behind `agentSeconds` was nearly derived from garbage.
+
 - **`msbench-cli` silently installs an ancient version.** pip's 15s default read
   timeout treats a slow feed download as an *unusable candidate* rather than a network
   error, so it backtracks through older releases and reports success — once landing

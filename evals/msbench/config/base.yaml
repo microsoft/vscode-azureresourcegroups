@@ -50,24 +50,41 @@ timeouts:
   # first, the agent timeout never fires, runnerGraceSeconds never runs, and
   # nothing is flushed on exactly the runs that need diagnosing:
   #
-  #   7200s runner cap - ~15m setup - 15m grace => 5400s agent
+  #   7200s runner cap - 30m setup allowance - 15m grace => 4500s agent
   #
-  # The 7200s cap is MEASURED, not assumed. Every instance runlog prints
-  # `Using timeout of 7200 seconds` before the agent starts, and that value is
-  # identical in all 30 cached runs — across three days, four models
-  # (claude-sonnet-4.5, gpt-5, gpt-4.1, gpt-5.6) and multi-instance dispatches.
-  # Identical values across different payloads is what rules out its being set
-  # per dispatch, which was the open question that kept this at 18000.
+  # BOTH terms are measured, which is the difference from the value this replaces.
+  #
+  # The 7200s cap: every instance runlog prints `Using timeout of 7200 seconds`
+  # before the agent starts, identical in all 30 cached runs — across three days,
+  # four models (claude-sonnet-4.5, gpt-5, gpt-4.1, gpt-5.6) and multi-instance
+  # dispatches. Identical values across different payloads is what rules out its
+  # being set per dispatch.
+  #
+  # The setup allowance: measured as `timestamps.initialized` to the first agent
+  # step, over 23 usable cached runs (2 excluded — their own metadata reports
+  # completed before initialized, so `initialized` there is a re-download, not a
+  # run start).
+  #
+  #   min 147.9s   median 181.0s   max 896.6s
+  #
+  # 30m is 2.0x the observed max, and that headroom is bought deliberately rather
+  # than out of caution: the 896.6s outlier is `debug-probe-smoke`, the one run
+  # that installs a SECOND extension. One extra extension took setup from ~181s
+  # to ~897s. So setup is not a constant, it grows with what we install, and a
+  # third extension of similar cost lands near 1600s. A 15m allowance would have
+  # covered the observed max with 1.00x headroom — i.e. none — and would be
+  # exceeded by the next extension anyone adds.
+  #
+  # Erring LOW here is the safe direction and that is why the headroom is
+  # generous. Too low: the agent timeout fires, grace runs, artifacts flush, the
+  # run is diagnosable. Too high: the job is killed first and nothing is flushed
+  # at all. Those are not symmetric.
   #
   # This previously read 18000 (5h), derived from an *assumed* 6h GitHub-hosted
-  # runner cap. That was 2.5x the real budget, which is precisely the failure the
-  # paragraph above warns about — so the config documented the hazard while
-  # embodying it. See README.md, "Timeouts".
-  #
-  # NOTE: this leaves no margin (5400 + 900 grace + 900 setup = 7200 exactly),
-  # where the old 6h derivation kept 30m back. Nothing has come close — the
-  # longest run to date is 49m — but the first run that does will find the edge.
-  agentSeconds: 5400 # 90m
+  # runner cap — 4x the real budget. The first version of this fix read 5400,
+  # derived from the measured cap but an *assumed* 15m setup, which left exactly
+  # zero margin. See README.md, "Timeouts".
+  agentSeconds: 4500 # 75m
   # The trap. This is not agent inactivity — it fires only when the agent trace,
   # the CAPI proxy log, the Copilot Chat log AND workspace file activity are all
   # quiet. `npm install`, `azd provision`, a build or a test suite produce none
