@@ -970,10 +970,17 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             byCause.set(cause, [...(byCause.get(cause) ?? []), row]);
         }
         for (const [cause, gates] of [...byCause.entries()].sort((a, b) => b[1].length - a[1].length)) {
+            // A grader that disowned its answer *did* run — calling it "blocked" would be the same
+            // misdirection as pointing at a non-existent upstream failure.
+            const ran = cause === GRADER_ERROR_REASON;
             console.log('');
-            console.log(`  * ${cause} — ${gates.length} gate(s) blocked, 0 real verdicts between them`);
+            console.log(`  * ${cause} — ${gates.length} gate(s) ${ran ? 'errored' : 'blocked'}, 0 real verdicts between them`);
             for (const { gate, tally } of gates) {
-                console.log(`      ${gate} (${tally.notAttempted} blocked over ${tally.runs.size} run(s))`);
+                console.log(`      ${gate} (${tally.notAttempted} ${ran ? 'untrustworthy' : 'blocked'} over ${tally.runs.size} run(s))`);
+            }
+            if (ran) {
+                console.log('      These ran and reported their own results untrustworthy. Fix the grader,');
+                console.log('      not the product — it could not read its input.');
             }
         }
     }
