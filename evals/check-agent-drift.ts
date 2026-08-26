@@ -68,7 +68,7 @@ const contracts: Contract[] = [
         file: `${PLAN}.agent.md`,
         name: "skill-frontmatter",
         pattern: /^---\r?\n[\s\S]*?^name:\s*azure-project-plan\s*$[\s\S]*?^description:\s*\S[\s\S]*?^---/m,
-        grader: "evals/executor/agent-assets.ts generates SKILL.md from this frontmatter",
+        grader: "evals/src/agent-definition.ts reads the agent from this frontmatter",
     },
     {
         file: `${PLAN}.agent.md`,

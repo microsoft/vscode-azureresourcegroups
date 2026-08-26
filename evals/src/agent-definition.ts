@@ -6,11 +6,11 @@
 /**
  * Reads the *shipped* agent definition under `resources/agents/`.
  *
- * This is the half of the old `executor/agent-assets.ts` that outlives the Vally
+ * This is the half of the old `executor/agent-assets.ts` that outlived the Vally
  * runner. The drift check needs it to know which files constitute the agent and
- * which models the product declares support for; the executor needs it to build a
- * workspace and a skill. Splitting on that line keeps the drift check free of the
- * MCP tool table — and when the SDK executor is deleted, this module stays.
+ * which models the product declares support for. The SDK executor that owned the
+ * other half — building a workspace and a skill — has since been deleted, and as
+ * that split anticipated, this module stayed.
  */
 
 import * as fs from 'node:fs';

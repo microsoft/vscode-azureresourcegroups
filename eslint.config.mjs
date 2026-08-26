@@ -56,8 +56,10 @@ export default defineConfig([
             },
         },
         rules: {
-            // run-eval.cjs and generate-report.cjs are CommonJS entry points by design.
-            '@typescript-eslint/no-require-imports': 'off',
+            // Nothing under evals/ is CommonJS any more — the two .cjs entry points
+            // belonged to the deleted headless runner. The exemption for
+            // `no-require-imports` went with them, so a stray `require()` in a new
+            // eval script is now correctly a lint error.
         },
     },
     {

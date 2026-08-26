@@ -8,8 +8,10 @@ name: Agent Contracts
 # depends on. A broken grader or a drifted instruction file would otherwise only
 # surface as a confusing eval failure much later.
 #
-# Deliberately absent: check-copilot-auth.ts, check-gate-tools.ts and
-# run-eval.cjs. Those drive a live agent and belong to the MSBench path.
+# Deliberately absent: anything that drives a live agent. That now happens on
+# MSBench (see msbench-evals.yml), and the files that did it headlessly —
+# run-eval.cjs, check-copilot-auth.ts, check-gate-tools.ts and the SDK executor —
+# have been deleted rather than left unreferenced in the tree.
 on:
   pull_request:
     paths:

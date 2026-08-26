@@ -11,7 +11,8 @@
  * are the same code `graderCertification` certifies, so the certified path and
  * the executed path cannot drift.
  *
- * Exit codes are a contract with `generate-report.cjs`:
+ * Exit codes are the contract with whatever invokes a grader — `exec:` assertions
+ * in the MSBench config, and `program` graders in the Vally specs:
  *   0 — the artifact satisfies the contract
  *   1 — the product produced a bad artifact (a real, reportable failure)
  *   3 — the grader itself could not run (harness fault, never blamed on the agent)

@@ -1,12 +1,10 @@
 {
     "name": "evals",
     "version": "1.0.0",
-    "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run from repo root: npm run eval",
+    "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run the credential-free gates from evals/: npm run drift | typecheck | certify | lint",
     "private": true,
     "type": "module",
     "scripts": {
-        "eval": "node run-eval.cjs",
-        "eval:plan": "node run-eval.cjs --suite project-plan",
         "drift": "node check-agent-drift.ts",
         "lint": "npm run lint:plan && npm run lint:local-dev",
         "lint:plan": "vally lint --eval-spec project-plan/eval.yaml",
@@ -14,13 +12,11 @@
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
-        "gate-tools": "node check-gate-tools.ts",
         "ci:local": "node ci-local.ts",
         "msbench:self-test": "node msbench/verify-run.ts --self-test"
     },
     "license": "MIT",
     "dependencies": {
-        "@github/copilot-sdk": "^1.0.9-preview.2",
         "@microsoft/vally": "0.13.0",
         "jsonc-parser": "^2.3.1"
     },

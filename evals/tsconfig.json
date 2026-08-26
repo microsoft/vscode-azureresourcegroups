@@ -29,8 +29,6 @@
         "src/**/*.ts",
         "graders/**/*.ts",
         "msbench/*.ts",
-        "executor/*.ts",
-        "mcp/*.ts",
         "types/*.d.ts"
     ]
 }
