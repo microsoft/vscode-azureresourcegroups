@@ -88,7 +88,7 @@ promptSteps:
       # stimulus: a run that dies after turn 0 leaves every later negative
       # assertion vacuously true, and a single step-0 sentinel would still pass.
       # See README.md, "Multi-turn stimuli".
-      - comment: Sentinel; the setup turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: constraints.reject_tools [vscode_askQuestions]
@@ -113,7 +113,7 @@ promptSteps:
       # `llm_responses` non-empty, so the step-0 sentinel above still passes while
       # every negative assertion here passes vacuously. Bound to :stepIndex = 1,
       # this asserts the second turn happened at all.
-      - comment: Sentinel; the graded turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: program debug-plan-contract-valid

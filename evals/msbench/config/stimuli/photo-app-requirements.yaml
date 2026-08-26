@@ -20,7 +20,7 @@ promptSteps:
       # `llm_responses` rather than `toolCalls`, because an agent that correctly
       # refuses a request may legitimately call no tools, and that must not be
       # indistinguishable from an agent that never started.
-      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: file-exists .azure/requirements.json

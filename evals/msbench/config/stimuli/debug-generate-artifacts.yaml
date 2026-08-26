@@ -62,7 +62,7 @@ promptSteps:
       # stimuli". With four turns this file is the strongest case for the rule:
       # a run that dies at turn 1 would otherwise report the turn-3 negatives as
       # passes.
-      - comment: Sentinel; the scaffold setup turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: constraints.reject_tools [vscode_askQuestions] — turn 0 copy.
@@ -79,7 +79,7 @@ promptSteps:
   - text: |
       Now set up local debugging for this project so I can hit F5 in VS Code.
     assertions:
-      - comment: Sentinel; the debug planning turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       - comment: Agent should not fall back to the chat question tool (turn 1)
@@ -90,7 +90,7 @@ promptSteps:
   # status to Approved, call start_azure_debug_generate, and STOP.
   - text: "The debug plan looks good, approved. Generate the configuration."
     assertions:
-      - comment: Sentinel; the approval turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: tool-calls required [workflow-tools-start_azure_debug_generate]
@@ -122,7 +122,7 @@ promptSteps:
       # Liveness sentinel, turn 3. Every graded assertion in this stimulus hangs
       # off this turn, so a run that got this far and then stalled is exactly the
       # case that would otherwise report as a product failure.
-      - comment: Sentinel; the generate turn must have produced a response
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: program debug-plan-implemented --assert-status=Implemented --assert-checklist

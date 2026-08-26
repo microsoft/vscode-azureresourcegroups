@@ -77,6 +77,17 @@ jobs:
         run: npm run stacks:check
         working-directory: evals
 
+      # A SQL assertion has no grader filename, so its `comment` is the only
+      # stable identity it carries into stored run results. Rewording one forks
+      # that gate into a second identity with no history — silently, since the
+      # assertion still runs and still passes. The liveness sentinel reached ten
+      # different wordings across eleven stimuli before anyone noticed, and no
+      # identity scheme can repair that retroactively. Comments are the one place
+      # paraphrasing is normally harmless, so nothing but a check will stop it.
+      - name: Check shared assertion comments are canonical
+        run: npm run gates
+        working-directory: evals
+
       # Run through the evals package so the spec is actually linted: a bare
       # `vally lint` at the repo root discovers no skills and silently passes.
       - name: Lint eval specs

@@ -55,7 +55,7 @@ promptSteps:
       # config/stimuli/photo-app-requirements.yaml. It matters more than usual in
       # this file: two of the assertions below are negative, and one of them is
       # the gate-skip check that is the entire point of the stimulus.
-      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: program frontend-scaffold-valid  (validate-frontend-scaffold)

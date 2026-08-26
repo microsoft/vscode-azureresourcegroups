@@ -72,7 +72,7 @@ promptSteps:
     assertions:
       # Liveness sentinel — must come first. See
       # config/stimuli/photo-app-requirements.yaml for the full reasoning.
-      - comment: Sentinel; turn 0 must have produced a response or its checks are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: tool-calls turn: 0 required [workflow-tools-open_requirements_view]
@@ -112,7 +112,7 @@ promptSteps:
       # still passes, while every step-1 negative passes trivially and the
       # positives fail as if the product were broken. Bound to :stepIndex = 1,
       # this asserts the second turn actually happened.
-      - comment: Sentinel; turn 1 must have produced a response or its checks are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: file-exists .azure/project-plan.md

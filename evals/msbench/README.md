@@ -149,6 +149,7 @@ folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` 
 | --- | --- | --- |
 | `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
 | `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | **6/7, `resolved: false`** — a real product defect, below |
 
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
@@ -164,8 +165,57 @@ reports `ls: cannot access '.azure': No such file or directory` in the container
 ordering is load-bearing and is written down under
 [Run ordering](config/stimuli/README.md#run-ordering).
 
-**Neither run graded a project the agent built** — both are refusals. The scaffold happy
-path is still unmeasured.
+**Neither refusal run graded a project the agent built** — `scaffold-fullstack` did, and
+found a defect on the first attempt.
+
+### What the first real scaffold run found
+
+Run [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444)
+is the first time any of these gates has graded a project the scaffold agent actually
+produced. It came back **red, and correctly so**:
+
+```
+FAIL: scaffolded frontend is preview-embeddable and keeps the API seam
+  • [devServerRejectsWebviewOrigin] services/web/vite.config.ts: vite.config server must
+    set `allowedHosts: true` or the dev server 403-blocks the webview origin.
+```
+
+The agent wrote a `server` block containing `host: true`, `port`, `strictPort: false`
+and a `/api` proxy — and omitted `allowedHosts: true`. Two of the three settings
+`azure-project-scaffold.agent.md` requires, with the third missing.
+
+That is not a cosmetic miss. The same instructions explain the consequence: the scaffold
+agent opens the frontend preview webview and *stops*, because the webview's **Approve UI**
+button owns the hand-off to the integrate agent. A dev server that 403-blocks the webview
+origin never renders, so the button can never be clicked and **the workflow stalls with
+no error** — the app appears fine in an ordinary browser, which is exactly what makes it
+hard to diagnose in the field.
+
+Everything around it passed, which is what makes the finding precise rather than a
+general "scaffolding is broken":
+
+| | |
+| --- | --- |
+| `validate-project-builds --require-frontend` | **pass** — the project genuinely installs and builds |
+| `validate-integration-plan --has-frontend` | **pass** |
+| opened the preview gate (`open_frontend_preview_view`) | **pass** — called exactly once |
+| did not hand off before approval | **pass** |
+| `validate-frontend-scaffold` | **fail** — the one defect |
+
+Checked before being believed, per the rules in
+[One fidelity gap worth knowing](#one-fidelity-gap-worth-knowing): exit code **1**, not 3,
+so a product failure rather than a broken grader; no `NOT_APPLICABLE` marker on stderr, so
+not a coverage gap; no `error.json` and zero `-> 429` arrows, so not throttling; and the
+grader exited in seconds, nowhere near its 20-minute `timeoutMs`, so not a timeout kill.
+The defect was then confirmed against the agent's own `vite.config.ts` in `patch.diff`
+rather than trusted from the grader's message alone.
+
+**This is the result the suite was built to produce**, and it arrived on the first
+attempt: a specific, reproducible, user-visible defect in shipped agent instructions,
+found by a grader that had previously only ever seen fixtures written by hand.
+
+The stimulus and the grader were **not** modified in response. A gate edited until it
+passes is worth nothing.
 
 ### What a second turn actually costs
 
@@ -1803,6 +1853,17 @@ with a clear message:
   photo-app prompt.) `run.sh` now takes a lock (`assets/.run.lock`) and refuses to start
   rather than racing, and echoes the prompt it is actually submitting so a mismatch
   shows up in the log instead of only after unzipping the results.
+
+  **The lock does not serialise across sessions, and is not meant to.** It is taken on
+  `<worktree>/evals/msbench/assets/.run.lock`, so two sessions working in two worktrees
+  take two different locks and never contend — correctly, since they share no mutable
+  state. What that means is that the lock is *not* what keeps concurrent runs from
+  interfering: the CES `(model, endpoint tag)` queue is. Observed on 2026-08-25, when
+  runs `2026082620153444` and `2026082620311350` were submitted three minutes apart from
+  different worktrees and both `msbench-cli` processes were resident at once. Note that
+  two live CLI processes are *not* evidence of parallel execution — the CLI stays
+  resident whether or not CES has started its run — so this says the lock is
+  worktree-scoped, and says nothing either way about whether CES serialised them.
 - **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
   submitting ~90s after a previous run finished; no run id is allocated. The same
   config submitted cleanly after a cooldown, so treat it as transient submission

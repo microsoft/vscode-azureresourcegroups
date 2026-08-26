@@ -86,7 +86,7 @@ promptSteps:
       # or an absence check, so against an empty session database this file would
       # score full marks for a run that never started. See
       # config/stimuli/photo-app-requirements.yaml.
-      - comment: Sentinel; session data must exist or every check below is vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: program no-scaffold  (validate-no-scaffold)

@@ -80,7 +80,7 @@ promptSteps:
       # negative assertion over an empty table is trivially true, so without this
       # a run that died before the first turn collects full marks on every
       # negative check below instead of failing.
-      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: program frontend-scaffold-valid  (validate-frontend-scaffold)
