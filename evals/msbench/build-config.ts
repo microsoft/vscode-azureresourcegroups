@@ -31,7 +31,9 @@
  * which is how identical blocks drift apart.
  *
  * A stimulus selects its phase with a `# phase: <name>` directive; omitting it
- * means `plan`, so the original stimuli did not have to change.
+ * means `plan`, so the original stimuli did not have to change. The parallel
+ * `# seed: <name>` directive selects the *starting workspace* and is resolved by
+ * `stage-workspace.ts`, not here — it produces a directory, not config.
  *
  * The merge is deliberately textual rather than a YAML round-trip. The three
  * files define disjoint top-level keys, so concatenation is sufficient — and it
@@ -344,6 +346,7 @@ function buildFromStimulus(stimulus: string): void {
 
     writeFileSync(DEST, merged);
     assertParses(merged, stimulus, phase);
+    assertNoFilesQueriesWithoutSnapshot(merged, stimulus, phase);
     console.log(`Built assets/user-overrides.yaml for stimulus '${stimulus}' (phase '${phase}')`);
 }
 
@@ -383,6 +386,58 @@ function assertParses(merged: string, stimulus: string, phase: string): void {
     }
     if (!topLevelKeys.includes('promptSteps')) {
         console.error(`stimuli/${stimulus}.yaml does not define promptSteps`);
+        process.exit(1);
+    }
+}
+
+/**
+ * The local half of a fail-fast the schema already performs remotely.
+ *
+ * `snapshotWorkspace: false` empties the `files` table, and `TestConfig.schema.json`
+ * is explicit about what that means for assertions written against it:
+ *
+ *   "To avoid silent/confusing results, the run fails fast if snapshotting is
+ *    disabled while any assertion queries the 'files' table."
+ *
+ * That is the right behaviour and it is not being second-guessed here — it is
+ * being moved. Discovering the mistake remotely costs a submitted run: the queue
+ * wait, the container pull, the VSIX install, and the several minutes before the
+ * runner reaches assertion validation, all to be told about a typo. Discovering
+ * it here costs a few milliseconds, and says the same thing.
+ *
+ * It matters most for exactly the stimuli that are hardest to get right by hand:
+ * the scaffold and local-dev phases both disable snapshotting, so every artifact
+ * assertion in them has to be an `exec:` grader rather than the
+ * `SELECT ... FROM files WHERE path LIKE ...` one-liner that every pre-existing
+ * stimulus in this folder uses and that is therefore the obvious thing to copy.
+ *
+ * Deliberately conservative about what counts as a `files` query: a bare `files`
+ * word boundary after FROM/JOIN in an assertion `query:`. Comments are excluded,
+ * because the phase files and this rule are *explained* in prose that necessarily
+ * mentions the table by name.
+ */
+function assertNoFilesQueriesWithoutSnapshot(merged: string, stimulus: string, phase: string): void {
+    if (!/^snapshotWorkspace:\s*false\s*$/m.test(merged)) {
+        return;
+    }
+
+    const offenders = merged
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => /^-?\s*query:/.test(line))
+        .filter(line => /\b(?:from|join)\s+files\b/i.test(line));
+
+    if (offenders.length) {
+        console.error(
+            `stimuli/${stimulus}.yaml runs under phase '${phase}', which sets snapshotWorkspace: false,\n` +
+            `but ${offenders.length} assertion(s) query the 'files' table:\n` +
+            offenders.map(line => `  ${line}`).join('\n') + '\n\n' +
+            `TestConfig.schema.json: "To avoid silent/confusing results, the run fails fast if\n` +
+            `snapshotting is disabled while any assertion queries the 'files' table."\n\n` +
+            `The run would be rejected in-container after the queue wait and the container pull.\n` +
+            `Route artifact checks through an 'exec:' grader instead — exec/command, tool-call and\n` +
+            `LLM-response assertions all keep working with snapshotting disabled.`
+        );
         process.exit(1);
     }
 }
