@@ -1,0 +1,12 @@
+# expect: gatePredicatePathFactNeedsPresent
+# Matching an exact route in the gate table encodes one project's URL layout into
+# a rule meant to apply to every project.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: exact route
+    phases: [plan]
+    requires:
+      project.healthPath: ['/api/health']

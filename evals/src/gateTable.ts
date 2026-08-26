@@ -15,20 +15,28 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { ConfigValidationError, reject, requireObject, requireString, rejectUnknownKeys } from './configValidation.ts';
+import { API_KINDS, DATASTORE_KINDS, FRONTEND_KINDS, HOSTING_KINDS, STACK_ECOSYSTEMS } from './stack.ts';
 
 /**
  * A condition on a stack's declared facts.
  *
  * Deliberately tiny — two forms, no operators, no nesting:
  *
- *   `project.frontend: [spa]`      the field's value must be one of these
- *   `project.healthPath: present`  the optional field must be set
+ *   `project.frontend: [spa]`        the field's value must be one of these
+ *   `project.healthPath: present`    the optional field must be set
+ *   `project.datastore: { not: [none] }`  anything except these
+ *
+ * The deny-list exists because an allow-list is a maintenance trap in the
+ * invisible direction: `[postgres, cosmos, blob, queue]` silently unwires its
+ * gate the day someone adds a datastore kind, and a gate wired nowhere reads as
+ * a clean run. "Not none" keeps saying what it meant.
  *
  * An expression language would let a gate encode policy that belongs in the
  * gate, and would be unreviewable by the person the schema is written for: the
  * one checking a stack file against a prompt.
  */
-export type GatePredicate = Record<string, string[] | 'present'>;
+export type GateCondition = string[] | 'present' | { not: string[] };
+export type GatePredicate = Record<string, GateCondition>;
 
 export interface GateArgument {
     value: string;
@@ -73,8 +81,30 @@ const KNOWN_FACTS = [
     'project.collectionRoute',
 ] as const;
 
-/** Facts that are optional on a stack, and so are the only ones `present` is meaningful for. */
+/**
+ * Facts that are optional on a stack, and hold a free-form path rather than a
+ * value from a closed set. `present` is the only condition that makes sense on
+ * them: a gate table matching an exact route would be encoding one project's
+ * URL layout into a rule meant to apply to every project.
+ */
 const OPTIONAL_FACTS = ['project.healthPath', 'project.collectionRoute'];
+
+/**
+ * The values each closed-set fact may take, imported from the stack schema
+ * rather than re-typed so the two cannot drift.
+ *
+ * Values were previously unchecked, which left the same silent-unwiring failure
+ * the closed fact list was written to prevent: `project.datastore: [postgress]`
+ * parsed happily and matched nothing, unwiring its gate on every stack. A gate
+ * wired nowhere reads as a clean run.
+ */
+const FACT_VALUES: Record<string, readonly string[]> = {
+    ecosystem: STACK_ECOSYSTEMS,
+    'project.frontend': FRONTEND_KINDS,
+    'project.api': API_KINDS,
+    'project.datastore': DATASTORE_KINDS,
+    'project.hosting': HOSTING_KINDS,
+};
 
 export function loadGateTable(filePath: string, repoRoot: string): GateTable {
     let text: string;
@@ -188,6 +218,23 @@ function parseArguments(value: unknown, filePath: string, gateIndex: number): Ga
     });
 }
 
+function checkValues(values: string[], fact: string, filePath: string, what: string): void {
+    const allowed = FACT_VALUES[fact];
+    if (!allowed) {
+        return;
+    }
+    const unknown = values.filter(value => !allowed.includes(value));
+    if (unknown.length > 0) {
+        reject(
+            'gatePredicateUnknownValue',
+            filePath,
+            `${what} names ${unknown.join(', ')}, which '${fact}' can never be. Valid values: ${allowed.join(', ')}. `
+            + `A value that cannot occur matches nothing, silently unwiring this gate on every stack — and a gate `
+            + `wired nowhere looks exactly like a clean run.`,
+        );
+    }
+}
+
 export function parsePredicate(value: unknown, filePath: string, what: string): GatePredicate {
     const node = requireObject(value, 'gatePredicateNotObject', filePath, what);
     const predicate: GatePredicate = {};
@@ -214,9 +261,34 @@ export function parsePredicate(value: unknown, filePath: string, what: string): 
             predicate[fact] = 'present';
             continue;
         }
-        if (!Array.isArray(condition) || condition.length === 0 || condition.some(entry => typeof entry !== 'string')) {
-            reject('gatePredicateValue', filePath, `${what}.${fact} must be a non-empty list of values, or the literal 'present'.`);
+        if (OPTIONAL_FACTS.includes(fact)) {
+            reject(
+                'gatePredicatePathFactNeedsPresent',
+                filePath,
+                `${what}.${fact} holds a free-form path, so 'present' is the only condition it accepts. Matching an `
+                + `exact route here would encode one project's URL layout into a rule meant to apply to every project.`,
+            );
         }
+
+        // Deny-list: `{ not: [none] }`. An allow-list silently unwires its gate the
+        // day someone adds a value to the enum, which is a maintenance trap that
+        // fails invisibly; "not none" keeps saying what it meant.
+        if (!Array.isArray(condition) && typeof condition === 'object' && condition !== null) {
+            const node = requireObject(condition, 'gatePredicateValue', filePath, `${what}.${fact}`);
+            rejectUnknownKeys(node, ['not'], 'gatePredicateValue', filePath, `${what}.${fact}`);
+            const excluded = node.not;
+            if (!Array.isArray(excluded) || excluded.length === 0 || excluded.some(entry => typeof entry !== 'string')) {
+                reject('gatePredicateValue', filePath, `${what}.${fact}.not must be a non-empty list of values.`);
+            }
+            checkValues(excluded as string[], fact, filePath, `${what}.${fact}.not`);
+            predicate[fact] = { not: excluded as string[] };
+            continue;
+        }
+
+        if (!Array.isArray(condition) || condition.length === 0 || condition.some(entry => typeof entry !== 'string')) {
+            reject('gatePredicateValue', filePath, `${what}.${fact} must be a non-empty list of values, 'present', or { not: [...] }.`);
+        }
+        checkValues(condition as string[], fact, filePath, `${what}.${fact}`);
         predicate[fact] = condition as string[];
     }
     return predicate;
