@@ -52,6 +52,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      # `stage-graders.ts` copies an allowlist of dependency-free packages out of
+      # evals/node_modules into the staged tree, so a grader's bare import (today
+      # `jsonc-parser`, for the JSON-with-comments in launch.json) resolves inside
+      # the container, which has no install step. It hard-errors rather than
+      # staging a partial tree, so without this the build job fails before the
+      # VSIX assertions it exists to run.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
       - name: Build and verify the VSIX
         run: ./evals/msbench/run.sh --build-only
 
@@ -88,6 +98,14 @@ jobs:
         with:
           name: msbench-vsix
           path: evals/msbench/assets/extensions
+
+      # Needed here too, not just in `build`: `--skip-build` skips the VSIX, but
+      # graders are staged on every invocation because they are read straight off
+      # the working tree, and staging them needs evals/node_modules for the
+      # allowlisted packages.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
 
       # run.sh mints the MSBench feed token with `az account get-access-token`,
       # so it only needs an already-authenticated az. A self-hosted runner that
