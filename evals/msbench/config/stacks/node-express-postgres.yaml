@@ -1,0 +1,78 @@
+# The second stack, and the one that proves the schema is a schema rather than a
+# hypothesis with one instance in it.
+#
+# It differs from react-functions-postgres on four axes the derivation actually
+# reads — hosting, frontend, start-command rung, and the routes it contracts for
+# — rather than on its name.
+#
+# ## Why this one, out of everything we could have added
+#
+# Every stimulus today is Azure Functions and the container has no `func`, so all
+# five runtime-* gates have never once run. An Express app starts from
+# package.json `scripts.start`, which src/runtime/runtimeTarget.ts already
+# resolves and evals/grader-certification/reference-node-fullstack already
+# certifies. So the second stack buys the suite its **first real runtime signal**
+# as a side effect of proving the schema — two results for one piece of work.
+#
+# ## What it does not buy, stated before anyone is disappointed
+#
+# `runtime-crud` cannot run here, and the schema is how we found that out at
+# authoring time rather than after paying for a run: the CRUD probe refuses to
+# exercise a round-trip through a datastore that needs a server, because there is
+# no Docker in the container. That is declared below. `runtime-app-starts` and
+# `runtime-health` do run, which is two more than today.
+
+schemaVersion: 1
+id: node-express-postgres
+name: Express API on App Service with PostgreSQL
+ecosystem: node
+
+# Note what this prompt does not say: anything about how it will be built. No
+# artifact names, no agent names, no mention of the guided flow. That is a rule
+# the validator enforces, and the reason is a second axis we will want later —
+# the baseline arm, where plain Copilot builds the same project from a
+# hand-written prompt so we can measure what the guided flow is worth. A prompt
+# that describes only the app is usable by both arms unchanged.
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API. It should expose a health endpoint and
+  routes to list and create items, store the data in PostgreSQL, and run on
+  Azure App Service.
+
+project:
+  # Three frontend-shaped gates have nothing to look at here, and this single
+  # line is what unwires them. That is the whole idea: a fact anyone can check
+  # against the prompt, rather than a list of gate names nobody can review.
+  frontend: none
+  api: http
+  datastore: postgres
+  hosting: appService
+  # Both routes are declared because the prompt asks for both. This has a
+  # consequence worth stating: today a scaffold that forgets its health endpoint
+  # makes runtime-health report `noHealthPathDeclared`, which is classed
+  # outOfScope — so **an agent that ships no health endpoint currently gets a
+  # pass**. Declaring it here turns that silent pass into a real verdict.
+  healthPath: /api/health
+  collectionRoute: /api/items
+
+runtime:
+  binaries: [node, npm]
+  # No `start:` block, for the same reason as the other stack: rungs 1 and 2 of
+  # the discovery chain answer correctly for Node, and a declared command would
+  # replace working discovery with a guess about the layout the agent picks.
+
+knownGaps:
+  - gates: [runtime-crud]
+    reason: datastoreRequiresContainer
+    # Deliberately no `binary:`. The missing piece is a PostgreSQL *server*, not
+    # a binary this stack runs, and `docker` is marked unavailable in
+    # config/container.yaml — listing it under runtime.binaries would (correctly)
+    # get this stack refused outright.
+    tracking: >-
+      A CRUD round-trip needs a database server and the eval container has no
+      Docker, which is not practically installable there. Closing this needs
+      either a managed test database reachable from the container or a stack
+      variant that persists in memory — the latter is one data file, which is
+      the point of the schema.
+
+phases: [plan]

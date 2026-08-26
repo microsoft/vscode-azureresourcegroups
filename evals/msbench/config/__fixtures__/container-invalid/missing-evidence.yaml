@@ -1,0 +1,7 @@
+# expect: containerBinaryEvidence
+# Without evidence: a row copied from a README is indistinguishable from one
+# observed in the container.
+schemaVersion: 1
+verifiedOn: '2026-08-25'
+binaries:
+  node: { status: present }

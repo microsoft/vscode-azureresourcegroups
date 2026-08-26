@@ -1,0 +1,131 @@
+# What the MSBench container actually has on PATH.
+#
+# This file exists so that "this stack needs a binary we do not have" is a
+# millisecond-scale error on a developer machine, instead of a discovery made
+# forty minutes into a run that has already been paid for.
+#
+# Three states, and the third is the one that earns the file:
+#
+#   present      — on PATH. Nothing to do.
+#   absent       — not on PATH, but installable in the run preamble. `install:`
+#                  carries the command, so the resulting NOT_APPLICABLE red is
+#                  one actionable line rather than an investigation. A stack may
+#                  require one of these only if it also declares the matching
+#                  `knownGaps` entry, which is what keeps the red *expected*
+#                  rather than mysterious.
+#   unavailable  — there is no practical path to having it here. A stack that
+#                  requires one is rejected outright; no run is submitted.
+#
+# ## `evidence:` — read this before trusting a row
+#
+# Every row says whether it was **measured** in the container or merely
+# **asserted** from documentation. Most of this file is currently `asserted`:
+# it comes from the project brief and from msbench/README.md, both of which are
+# prose written by people (including us) repeating each other. Prose is how an
+# assumption survives being wrong.
+#
+# Making a row `measured` costs nothing. Every stimulus already ends with an
+# `Environment fingerprint for triage` exec: assertion that runs shell in the
+# container with `assertZeroExitCode: false` — recorded, never asserted on.
+# Extending that line with:
+#
+#   command -v pip3 go dotnet docker azd func; python3 -m ensurepip --version
+#
+# makes the next run anybody submits, for any reason, return the real inventory
+# as a free rider. Until that lands, treat every `asserted` row as a hypothesis
+# and say so out loud when quoting it.
+#
+# Consumed by evals/src/containerInventory.ts. Checked by `npm run stacks:check`.
+
+schemaVersion: 1
+
+# Bumped whenever a row moves between statuses or gains measurement.
+verifiedOn: '2026-08-25'
+
+binaries:
+  # Measured: msbench/README.md records "Verified in the container: Node
+  # v22.22.2 on Linux x86_64", which is past the 22.18 cutoff where TypeScript
+  # type-stripping is on by default. That is why the graders run off source.
+  node:
+    status: present
+    version: 22.22.2
+    evidence: measured
+
+  npm:
+    status: present
+    evidence: asserted
+
+  # Present, but see `pip` below — a Python interpreter you cannot install
+  # packages into runs the standard library and nothing else, which is the
+  # single fact standing between us and a Python stack.
+  python3:
+    status: present
+    version: '3.10'
+    evidence: asserted
+
+  az:
+    status: present
+    evidence: asserted
+
+  git:
+    status: present
+    evidence: asserted
+
+  make:
+    status: present
+    evidence: asserted
+
+  gcc:
+    status: present
+    evidence: asserted
+
+  curl:
+    status: present
+    evidence: asserted
+
+  # The most consequential row in the file. Every stimulus we run today is Azure
+  # Functions, so all five runtime-* gates emit `functionsHostUnavailable` on
+  # every single run — the 0-for-N pattern that gate-health.ts exists to flag,
+  # except here the gates are fine and the container is the problem.
+  func:
+    status: absent
+    install: npm install -g azure-functions-core-tools@4 --unsafe-perm true
+    evidence: asserted
+
+  # `install: unverified` means: we believe it is absent, and we have not
+  # established that installing it works. That is deliberately not the same as
+  # `unavailable` — it is an unanswered question, not a closed door, and a stack
+  # requiring one should expect to answer it before the schema will let it run.
+  pip:
+    status: absent
+    install: unverified
+    evidence: asserted
+
+  dotnet:
+    status: absent
+    install: unverified
+    evidence: asserted
+
+  go:
+    status: absent
+    install: unverified
+    evidence: asserted
+
+  azd:
+    status: absent
+    install: unverified
+    evidence: asserted
+
+  java:
+    status: absent
+    install: unverified
+    evidence: asserted
+
+  # The closed door. Not merely missing: a container runtime inside the eval
+  # container is not practically installable, so a stack whose datastore needs
+  # one (the `datastoreRequiresContainer` reason code) cannot be made to work by
+  # trying harder. Rejected at build time rather than discovered at runtime.
+  docker:
+    status: unavailable
+    note: a container runtime is not practically installable inside the MSBench container
+    evidence: asserted

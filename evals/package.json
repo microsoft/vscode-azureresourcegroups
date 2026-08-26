@@ -12,6 +12,7 @@
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "imports:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/importScanner.ts --self-test",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
+        "stacks:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON check-stacks.ts",
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
         "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
         "ci:local": "node ci-local.ts",
