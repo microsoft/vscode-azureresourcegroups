@@ -1138,6 +1138,101 @@ multi-turn stimuli straightforward. `llm_responses.response` is user-facing pros
 only, excluding tool output and thinking blocks, so substring assertions don't
 false-match text the agent merely read.
 
+## Chaining phases in one run, and the hand-off we cannot test
+
+A run that carries a project from requirements through to local debugging has to move
+between *phases*, and `chatMode` is set per config — one mode per run. So a chain needs
+the mode to change **within** a run. There were two candidate mechanisms, and one of them
+is already refuted.
+
+### The product's own hand-off cannot drive it
+
+In production the *agent* moves the flow along: the scaffold agent calls
+`start_project_integrate`, the frontend preview's **Approve UI** button fires the same
+command. It is tempting to let that drive a chain — it would be the most faithful test
+available, because the product would be doing exactly what it does for a user.
+
+It cannot, and the reason is a deliberate design decision rather than an accident.
+`launchAgentChat` in
+[`src/commands/copilotOnRails/openChatWithAgent.ts`](../../src/commands/copilotOnRails/openChatWithAgent.ts)
+does this on **every** hand-off — integrate, local dev, debug generate, deploy:
+
+```ts
+// Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
+// files on disk, not chat history, so a clean session keeps each agent focused on its phase.
+await vscode.commands.executeCommand('workbench.action.chat.newChat');
+await vscode.commands.executeCommand('workbench.action.chat.open', { mode: agentName, query, ... });
+```
+
+`promptSteps` feeds **one** chat session, and the assertion tables are populated from it.
+A hand-off that opens a new session moves the work somewhere the harness is not watching:
+the driven agent goes quiet and the run reads as one that died after turn 0. Those two
+commands are also fire-and-forget — `projectSession.ts` records that they *"return no
+session handle"* and that stable VS Code exposes no event for a chat session being closed
+or cleared, so there is nothing to follow either.
+
+**This was settled by reading the product rather than by running anything.** It is worth
+saying because the alternative — build the chain, watch it fail, guess why — costs a full
+product run and answers ambiguously.
+
+### So it is a *phase chain*, not an end-to-end test
+
+The remaining mechanism is `promptSteps[].chatMode`, where the **harness** performs the
+transition. That is a faithful test of the agents and a **simulation of the hand-off**.
+
+Do not call it end-to-end. A misleading name is its own defect — it is what stops the next
+person looking — and "E2E: green" would be read as covering the hand-off, which it does
+not. What such a chain does and does not establish:
+
+| | Covered |
+| --- | --- |
+| Each phase's agent behaves correctly given the previous phase's output | yes |
+| Phase N's real artifacts are phase N+1's input, with no seeding | yes |
+| The hand-off tool was **called**, with the right arguments | yes |
+| The hand-off **succeeded** — `newChat` fired, the new session got the right mode, the reload guard held | **no** |
+
+### The hand-off gap, and the one thing that would still catch it
+
+The hand-off's own failure modes are untestable in MSBench as configured, for the reason
+above. That is a real coverage gap and it is recorded here rather than papered over, so
+nobody spends a day rediscovering that `newChat` is fire-and-forget.
+
+One thing softens it, and it is worth being precise about how much. After a real hand-off
+the receiving agent does work that lands on disk, so a **downstream artifact's absence is
+detectable** even though the transition itself is not observable. That turns "untestable"
+into "we would notice if it broke" — a materially weaker claim than testing it, but not
+nothing.
+
+Be careful about *which* artifact, though. `azure-project-integrate` is contracted to
+**read** `.azure/integration-plan.md`, not to write one — the scaffold agent wrote it as a
+hand-off brief. So the presence of that file proves the scaffold phase ran, not that the
+integrate phase did. Any absence-based check has to name an artifact the *receiving* agent
+produces, or it silently tests the wrong phase.
+
+### `chain-mechanism-probe`
+
+`promptSteps[].chatMode` is schema-declared and **runner-unverified**, and so is what it
+does to the conversation. [`config/stimuli/chain-mechanism-probe.yaml`](config/stimuli/chain-mechanism-probe.yaml)
+is the cheap run that settles both, sized like `debug-probe-smoke`: two turns, trivial
+prompts, no artifacts.
+
+1. **Does the override change which agent answers?** Turn 1 overrides to
+   `azure-debug-plan` and is asked to name its own mode.
+2. **Does turn 1 inherit turn 0's conversation?** Turn 0 emits a marker token; turn 1 is
+   asserted not to reproduce it, *and* to say `NO-PRIOR-CONTEXT` explicitly.
+
+The second question matters more, and it decides two things at once. **Fidelity** — the
+product starts a fresh session per phase, so if the runner merely relabels the mode inside
+one conversation, every phase inherits its predecessor's transcript, which the product
+never does. And **cost** — that is the superlinear curve already measured here, where one
+extra turn multiplied total tokens by 6.3x because each step re-sends a growing
+transcript. Across four phases it is the difference between fitting inside
+`agentSeconds: 4500` and not.
+
+Both halves of question 2 are needed. An absence alone is ambiguous: an agent told to
+reply with one word may simply not have quoted the earlier message even though it could
+see it. The explicit denial is what turns silence into evidence.
+
 ## Multi-turn stimuli
 
 `promptSteps` is natively multi-turn: each entry is one user message into the **same**
