@@ -1,10 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T03:25:55.311Z",
+  "generatedAt": "2026-08-26T05:37:34.441Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
-    "reference-node-fullstack"
+    "reference-node-fullstack",
+    "reference-node-multiservice",
+    "reference-python-api",
+    "reference-dotnet-api",
+    "reference-go-unsupported"
   ],
   "outcome": "passed",
   "cases": [
@@ -510,6 +514,309 @@
       "expected": "redactedSecretPlaceholder",
       "actual": [
         "redactedSecretPlaceholder"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-planned-service-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "plannedServiceMissing",
+      "actual": [
+        "plannedServiceMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-service-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "unplannedServiceScaffolded",
+      "actual": [
+        "unplannedServiceScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-frontend-missing",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "frontendMissingFromScaffold",
+      "actual": [
+        "frontendMissingFromScaffold",
+        "plannedServiceMissing",
+        "serviceFrameworkMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-frontend-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "frontendNotPlanned",
+      "actual": [
+        "frontendNotPlanned",
+        "unexpectedFrontendSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-language-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "serviceLanguageMismatch",
+      "actual": [
+        "serviceLanguageMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-framework-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "serviceFrameworkMismatch",
+      "actual": [
+        "serviceFrameworkMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-plan-declares-no-services",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "planDeclaresNoServices",
+      "actual": [
+        "planDeclaresNoServices"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-import-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "unplannedDatastoreWired",
+      "actual": [
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-dependency-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "datastoreDependencyMissing",
+      "actual": [
+        "datastoreDependencyMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-resource-never-wired",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedResourceNotWired",
+      "actual": [
+        "plannedResourceNotWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-services-required-table-unreadable",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedResourcesUnreadable",
+      "actual": [
+        "plannedResourcesUnreadable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-swapped-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "unplannedDatastoreWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-unwired-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-nothing-scaffolded-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "noServicesScaffolded",
+      "actual": [
+        "noServicesScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-orm-owns-the-driver-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-swapped-dotnet",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-orm-owns-the-driver-dotnet",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-go-unsupported",
+      "validator": "service-fidelity",
+      "expected": "ecosystemNotSupported",
+      "actual": [
+        "ecosystemNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-go-unsupported",
+      "validator": "datastore-fidelity",
+      "expected": "ecosystemNotSupported",
+      "actual": [
+        "ecosystemNotSupported"
       ],
       "passed": true,
       "durationMs": 0

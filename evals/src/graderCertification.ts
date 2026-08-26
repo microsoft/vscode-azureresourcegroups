@@ -6,9 +6,11 @@
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { NON_VISUAL_APP_TYPES } from './artifacts/plannedProject.ts';
 import type { PlanGateState } from './artifacts/planEvaluation.ts';
 import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
 import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
+import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
@@ -16,6 +18,7 @@ import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
 import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
 import { validateRequirementsArtifact } from './artifacts/requirements.ts';
+import { validateServiceFidelity } from './artifacts/serviceFidelity.ts';
 import type { ArtifactValidationResult } from './artifacts/validationTypes.ts';
 import type { CorEvaluationScenario } from './scenario.ts';
 import { validateScenario } from './scenario.ts';
@@ -25,6 +28,16 @@ interface CertificationFixture {
     path: string;
     description: string;
     offlineValidators: string[];
+    /**
+     * Golden-case expectations other than "passed", keyed by validator id.
+     *
+     * A gate that answers "not applicable" needs its escape hatch certified like any other
+     * verdict. Without this, the only expressible golden expectation is a clean pass — so a
+     * fixture on an unsupported stack would certify green, which is indistinguishable from
+     * the gate having silently approved it. Pinning the exact code here means that if
+     * someone later makes unsupported stacks fall through to a pass, certification goes red.
+     */
+    offlineExpectations?: Record<string, string>;
 }
 
 interface CertificationManifest {
@@ -159,7 +172,8 @@ async function certifyFixture(
     const golden = await runOfflineValidators(root, scenario, fixture.offlineValidators);
     for (const validator of validators) {
         const result = golden.get(validator) ?? ['validatorNotExecuted'];
-        cases.push(createCase(`golden-${validator}`, 'offline', fixture.id, validator, 'passed', result));
+        const expected = fixture.offlineExpectations?.[validator] ?? 'passed';
+        cases.push(createCase(`golden-${validator}`, 'offline', fixture.id, validator, expected, result));
     }
     for (const mutation of mutations) {
         cases.push(await withMutatedFixture(root, mutation, async workspace => {
@@ -209,6 +223,10 @@ const OFFLINE_VALIDATORS: Record<
     },
     preview: async workspace => validatePreviewArtifacts(path.join(workspace, '.azure', '.preview-temp')),
     'frontend-scaffold': async workspace => validateFrontendScaffold(workspace),
+    'service-fidelity': async workspace =>
+        validateServiceFidelity(workspace, await readArtifact(workspace, '.azure/project-plan.md')),
+    'datastore-fidelity': async workspace =>
+        validateDatastoreFidelity(workspace, await readArtifact(workspace, '.azure/project-plan.md')),
     'debug-plan': async workspace =>
         validateLocalDebugPlanArtifact(await readArtifact(workspace, '.azure/vscode-debug-plan.md'), {
             expectedStatus: 'Implemented',
@@ -256,7 +274,7 @@ async function readPlanGateState(
 ): Promise<{ expectedFrontend: boolean; generatedFrontend: boolean; gate: PlanGateState }> {
     const expectedFrontend = (scenario.tags.frontend ?? 'none') !== 'none';
     const appType = /^\*\*App Type\*\*\s*:\s*(.+)$/im.exec(projectPlan)?.[1].trim().toLowerCase();
-    const generatedFrontend = !!appType && !['api only', 'background worker'].includes(appType);
+    const generatedFrontend = !!appType && !NON_VISUAL_APP_TYPES.includes(appType);
     return {
         expectedFrontend,
         generatedFrontend,
@@ -291,7 +309,10 @@ async function withMutatedFixture<T>(
         if (mutation.file) {
             const filePath = path.join(workspace, mutation.file);
             if (mutation.operation === 'delete') {
-                await fs.rm(filePath);
+                // Recursive so a mutation can delete a whole service directory — "the plan
+                // declared three services and the scaffold has two" is not expressible by
+                // removing a single file.
+                await fs.rm(filePath, { recursive: true });
             } else {
                 const content = await fs.readFile(filePath, 'utf8');
                 if (mutation.operation === 'replace') {

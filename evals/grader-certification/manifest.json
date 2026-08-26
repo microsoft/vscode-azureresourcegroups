@@ -23,6 +23,46 @@
                 "debug-config",
                 "debug-artifacts"
             ]
+        },
+        {
+            "id": "reference-node-multiservice",
+            "path": "evals/grader-certification/reference-node-multiservice",
+            "description": "A plan and a scaffold that agree: three declared services (API, web, worker) plus a shared library, wiring the PostgreSQL, Blob Storage and Queue Storage resources the plan's Services Required table promises. The fidelity validators compare a plan to a tree, so they need a fixture whose plan actually describes its own tree.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-python-api",
+            "path": "evals/grader-certification/reference-python-api",
+            "description": "The same contract on a Python stack \u2014 psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-dotnet-api",
+            "path": "evals/grader-certification/reference-dotnet-api",
+            "description": "The same contract on a .NET stack \u2014 Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-go-unsupported",
+            "path": "evals/grader-certification/reference-go-unsupported",
+            "description": "A stack no analyser covers. Its golden case must report ecosystemNotSupported rather than passing: a silent pass on an unsupported stack is the vacuous-gate failure, and this is the case that stops the not-applicable escape hatch quietly becoming green.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ],
+            "offlineExpectations": {
+                "service-fidelity": "ecosystemNotSupported",
+                "datastore-fidelity": "ecosystemNotSupported"
+            }
         }
     ],
     "mutations": [
@@ -406,6 +446,198 @@
             "replacement": "DATABASE_URL=postgres://golden:******@localhost:5432/golden",
             "expectedCode": "redactedSecretPlaceholder",
             "search": "PORT=7071"
+        },
+        {
+            "id": "fidelity-planned-service-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": "services/worker",
+            "operation": "delete",
+            "expectedCode": "plannedServiceMissing"
+        },
+        {
+            "id": "fidelity-service-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "replacement": "",
+            "expectedCode": "unplannedServiceScaffolded"
+        },
+        {
+            "id": "fidelity-frontend-missing",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": "services/web",
+            "operation": "delete",
+            "expectedCode": "frontendMissingFromScaffold"
+        },
+        {
+            "id": "fidelity-frontend-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "**App Type**: SPA + API",
+            "replacement": "**App Type**: API only",
+            "expectedCode": "frontendNotPlanned"
+        },
+        {
+            "id": "fidelity-language-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
+            "replacement": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
+            "expectedCode": "serviceLanguageMismatch"
+        },
+        {
+            "id": "fidelity-framework-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| **Framework** | React + Vite |",
+            "replacement": "| **Framework** | Angular |",
+            "expectedCode": "serviceFrameworkMismatch"
+        },
+        {
+            "id": "fidelity-plan-declares-no-services",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend \u2014 Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "replacement": "",
+            "expectedCode": "planDeclaresNoServices"
+        },
+        {
+            "id": "fidelity-datastore-import-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/src/db.ts",
+            "operation": "replace",
+            "search": "import { Pool } from 'pg';",
+            "replacement": "import { Pool } from 'sqlite3';",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-datastore-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/src/db.ts",
+            "operation": "replace",
+            "search": "import { Pool } from 'pg';",
+            "replacement": "import { Pool } from 'pg';\nimport { MongoClient } from 'mongodb';",
+            "expectedCode": "unplannedDatastoreWired"
+        },
+        {
+            "id": "fidelity-datastore-dependency-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/package.json",
+            "operation": "replace",
+            "search": ",\n        \"pg\": \"^8.13.1\"",
+            "replacement": "",
+            "expectedCode": "datastoreDependencyMissing"
+        },
+        {
+            "id": "fidelity-resource-never-wired",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| Blob Storage | Store ticket attachments | STORAGE_CONNECTION_STRING |",
+            "replacement": "| Blob Storage | Store ticket attachments | ATTACHMENTS_CONNECTION_STRING |",
+            "expectedCode": "plannedResourceNotWired"
+        },
+        {
+            "id": "fidelity-services-required-table-unreadable",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| Azure Service | Role in App | Environment Variable | Default Value (Local) | Classification |",
+            "replacement": "| Name | Responsibility | Variable | Local Default | Classification |",
+            "expectedCode": "plannedResourcesUnreadable"
+        },
+        {
+            "id": "fidelity-datastore-swapped-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from aiosqlite import connect",
+            "expectedCode": "unplannedDatastoreWired"
+        },
+        {
+            "id": "fidelity-datastore-unwired-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from aiosqlite import connect",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-nothing-scaffolded-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/requirements.txt",
+            "operation": "delete",
+            "expectedCode": "noServicesScaffolded"
+        },
+        {
+            "id": "fidelity-datastore-swapped-dotnet",
+            "tier": "offline",
+            "fixture": "reference-dotnet-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/Program.cs",
+            "operation": "replace",
+            "search": "using Npgsql;",
+            "replacement": "using Microsoft.Data.Sqlite;",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-orm-owns-the-driver-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from sqlalchemy import create_engine",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "fidelity-orm-owns-the-driver-dotnet",
+            "tier": "offline",
+            "fixture": "reference-dotnet-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/Program.cs",
+            "operation": "replace",
+            "search": "using Npgsql;",
+            "replacement": "using Npgsql.EntityFrameworkCore.PostgreSQL;",
+            "expectedCode": "passed"
         }
     ]
 }

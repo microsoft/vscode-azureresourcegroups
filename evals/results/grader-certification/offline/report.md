@@ -1,9 +1,9 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `sample-agent-output`, `reference-node-fullstack`
+- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`
 - Outcome: **PASSED**
-- Cases: 44/44 passed
+- Cases: 70/70 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -51,4 +51,30 @@
 | `debug-config-duplicate-task-label` | `reference-node-fullstack` | `debug-config` | `duplicateTaskLabels` | `duplicateTaskLabels, dependsOnUnresolved, dependsOnCycle` | PASS |
 | `debug-artifacts-extension-recommendations` | `reference-node-fullstack` | `debug-artifacts` | `invalidExtensionRecommendations` | `invalidExtensionRecommendations` | PASS |
 | `debug-artifacts-redacted-secret` | `reference-node-fullstack` | `debug-artifacts` | `redactedSecretPlaceholder` | `redactedSecretPlaceholder` | PASS |
+| `golden-service-fidelity` | `reference-node-multiservice` | `service-fidelity` | `passed` | `passed` | PASS |
+| `golden-datastore-fidelity` | `reference-node-multiservice` | `datastore-fidelity` | `passed` | `passed` | PASS |
+| `fidelity-planned-service-dropped` | `reference-node-multiservice` | `service-fidelity` | `plannedServiceMissing` | `plannedServiceMissing` | PASS |
+| `fidelity-service-invented` | `reference-node-multiservice` | `service-fidelity` | `unplannedServiceScaffolded` | `unplannedServiceScaffolded` | PASS |
+| `fidelity-frontend-missing` | `reference-node-multiservice` | `service-fidelity` | `frontendMissingFromScaffold` | `frontendMissingFromScaffold, plannedServiceMissing, serviceFrameworkMismatch` | PASS |
+| `fidelity-frontend-invented` | `reference-node-multiservice` | `service-fidelity` | `frontendNotPlanned` | `frontendNotPlanned, unexpectedFrontendSection` | PASS |
+| `fidelity-language-swapped` | `reference-node-multiservice` | `service-fidelity` | `serviceLanguageMismatch` | `serviceLanguageMismatch` | PASS |
+| `fidelity-framework-swapped` | `reference-node-multiservice` | `service-fidelity` | `serviceFrameworkMismatch` | `serviceFrameworkMismatch` | PASS |
+| `fidelity-plan-declares-no-services` | `reference-node-multiservice` | `service-fidelity` | `planDeclaresNoServices` | `planDeclaresNoServices` | PASS |
+| `fidelity-datastore-import-swapped` | `reference-node-multiservice` | `datastore-fidelity` | `plannedDatastoreNotWired` | `plannedDatastoreNotWired, unplannedDatastoreWired` | PASS |
+| `fidelity-datastore-invented` | `reference-node-multiservice` | `datastore-fidelity` | `unplannedDatastoreWired` | `unplannedDatastoreWired` | PASS |
+| `fidelity-datastore-dependency-dropped` | `reference-node-multiservice` | `datastore-fidelity` | `datastoreDependencyMissing` | `datastoreDependencyMissing` | PASS |
+| `fidelity-resource-never-wired` | `reference-node-multiservice` | `datastore-fidelity` | `plannedResourceNotWired` | `plannedResourceNotWired` | PASS |
+| `fidelity-services-required-table-unreadable` | `reference-node-multiservice` | `datastore-fidelity` | `plannedResourcesUnreadable` | `plannedResourcesUnreadable` | PASS |
+| `golden-service-fidelity` | `reference-python-api` | `service-fidelity` | `passed` | `passed` | PASS |
+| `golden-datastore-fidelity` | `reference-python-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
+| `fidelity-datastore-swapped-python` | `reference-python-api` | `datastore-fidelity` | `unplannedDatastoreWired` | `plannedDatastoreNotWired, unplannedDatastoreWired` | PASS |
+| `fidelity-datastore-unwired-python` | `reference-python-api` | `datastore-fidelity` | `plannedDatastoreNotWired` | `plannedDatastoreNotWired, unplannedDatastoreWired` | PASS |
+| `fidelity-nothing-scaffolded-python` | `reference-python-api` | `datastore-fidelity` | `noServicesScaffolded` | `noServicesScaffolded` | PASS |
+| `fidelity-orm-owns-the-driver-python` | `reference-python-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
+| `golden-service-fidelity` | `reference-dotnet-api` | `service-fidelity` | `passed` | `passed` | PASS |
+| `golden-datastore-fidelity` | `reference-dotnet-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
+| `fidelity-datastore-swapped-dotnet` | `reference-dotnet-api` | `datastore-fidelity` | `plannedDatastoreNotWired` | `plannedDatastoreNotWired, unplannedDatastoreWired` | PASS |
+| `fidelity-orm-owns-the-driver-dotnet` | `reference-dotnet-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
+| `golden-service-fidelity` | `reference-go-unsupported` | `service-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
+| `golden-datastore-fidelity` | `reference-go-unsupported` | `datastore-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
 
