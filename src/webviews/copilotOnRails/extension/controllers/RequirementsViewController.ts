@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { launchAgentAndRecordOutcome } from "../../../../commands/copilotOnRails/openChatWithAgent";
@@ -19,6 +18,7 @@ import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
 import { getRequirementsTelemetry, REQUIREMENTS_TELEMETRY_PREFIX } from "../utils/requirementsTelemetryUtils";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -31,7 +31,7 @@ interface ReadyMessage {
 
 type IncomingMessage = SubmitMessage | ReadyMessage;
 
-export class RequirementsViewController extends WebviewController<Record<string, never>> {
+export class RequirementsViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
     private requirementsData: RequirementsData;
 

@@ -273,6 +273,8 @@ Once the file is written, **stop**. Do NOT print the JSON, summarize inferences,
 
 Always write `.azure/requirements.json` and hand it off to the requirements webview, even when the prompt is fully unambiguous and every question is `inferred` in Step 2a. Inferred answers are pre-selected so review remains quick, but the user must still have an opportunity to confirm or change them before plan generation.
 
+This holds for **small, frontend-only projects too**. A prompt like *"a simple unit converter web app — nothing needs to be saved, no accounts, no backend, just a clean little frontend tool"* is a complete, valid project: emit exactly one `services` entry with `role: "frontend"`, its `language`/`framework`/`features` questions, and both shared questions — with `dataStores` recommended and answered as `["No datastore required"]` and `auth` recommended as `No auth`. Do **not** shortcut this by writing `index.html` or any other app code, and do **not** skip the webview because "there is nothing to ask".
+
 #### 2f. Re-entry — reading the answered file
 
 When re-invoked with a query mentioning submitted requirements (e.g. *"Requirements submitted at .azure/requirements.json..."*), or whenever `.azure/requirements.json` has all questions `confirmed`/`inferred`:

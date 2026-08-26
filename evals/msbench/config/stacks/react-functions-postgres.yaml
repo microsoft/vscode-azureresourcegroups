@@ -1,0 +1,67 @@
+# The suite as it exists today, written down as data for the first time.
+#
+# Every stimulus we run is this shape — React frontend, Azure Functions backend,
+# a relational store — and none of them said so anywhere a tool could read. That
+# is why all five runtime-* gates have been red on every run and nobody could
+# point at the one-line cause.
+#
+# This file changes no run. It exists so the second stack has something to differ
+# from, and so the `func` problem is stated in a place that can refuse things.
+
+schemaVersion: 1
+id: react-functions-postgres
+name: React frontend with an Azure Functions API and PostgreSQL
+ecosystem: node
+
+# Mirrors config/stimuli/photo-app-requirements.yaml, the default stimulus, word
+# for word in substance. Note what it does NOT ask for: a health endpoint, or a
+# list/create route. That silence is deliberate and is reflected in `project:`
+# below — declaring a contract the prompt never asked for would grade the agent
+# against a requirement nobody gave it.
+prompt: |
+  I'd like to create an app where you can upload photos and they get stored
+  with metadata like who uploaded them and when. I want a nice React frontend
+  and an Azure Functions backend with PostgreSQL for the data. Make it with
+  full test coverage.
+
+project:
+  frontend: spa
+  api: http
+  datastore: postgres
+  hosting: functions
+  # healthPath and collectionRoute are deliberately absent: the prompt does not
+  # ask for either, so the gates that look for them have nothing to grade here.
+
+runtime:
+  # `func` is listed even though it is missing, which is the point. Listing it is
+  # what makes the container check notice, and what makes the gap below required
+  # rather than optional.
+  binaries: [node, npm, func]
+  # No `start:` block. Rungs 1 and 2 of the discovery chain in
+  # src/runtime/runtimeTarget.ts (launch.json, then package.json `scripts.start`)
+  # answer correctly for a Node project, and a declared start command here would
+  # have to guess the directory layout the agent picks — replacing working
+  # discovery with an assumption. Rung 0 earns its keep on stacks where rungs 1
+  # and 2 structurally cannot answer, which means the non-Node ones.
+
+knownGaps:
+  # The 0-for-N story, in data. These three gates are wired (the project has a
+  # frontend and an app to start), they have a real question to ask, and they
+  # cannot ask it because the Functions host is not in the container. They stay
+  # red on purpose: "we are not testing something we claim to test" is true, and
+  # a green here would be a lie that no later report could undo.
+  # All five runtime gates, not three. The original list named only the gates
+  # that were wired at the time — and two of them were dark because the
+  # runtime-health and runtime-crud rows in gates.yaml each required the
+  # declaration they consume (#1736). Corrected together, because a knownGaps
+  # list that faithfully tracks a broken derivation is worth less than no list:
+  # it makes the wrong wiring look accounted for.
+  - gates: [runtime-app-starts, runtime-health, runtime-crud, runtime-frontend, runtime-frontend-api]
+    reason: functionsHostUnavailable
+    binary: func
+    tracking: >-
+      Install azure-functions-core-tools in the run preamble (see the install
+      command in config/container.yaml). Until then every Functions stack pays
+      three reds per run for a missing binary.
+
+phases: [plan]

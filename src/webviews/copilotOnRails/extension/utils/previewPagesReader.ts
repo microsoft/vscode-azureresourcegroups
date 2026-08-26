@@ -113,10 +113,9 @@ function preparePreviewHtml(html: string, themeCss: string | undefined): string 
 
 /**
  * Remove any author-supplied executable content. The preview iframe runs with
- * `allow-scripts` so the webview's trusted navigation bridge can drive page
- * switching — author HTML must never be able to run code, so `<script>` tags,
- * inline `on*=…` handlers, and `javascript:` URLs are stripped before the HTML
- * reaches the iframe.
+ * scripts disabled, and the host handles page switching directly. Strip
+ * `<script>` tags, inline `on*=…` handlers, and `javascript:` URLs as defense in
+ * depth before the HTML reaches the iframe.
  */
 function stripAuthorScripts(html: string): string {
     return html

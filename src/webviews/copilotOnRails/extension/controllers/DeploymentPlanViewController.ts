@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -16,6 +15,7 @@ import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../.
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -80,7 +80,7 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
     };
 }
 
-export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
+export class DeploymentPlanViewController extends CopilotOnRailsWebviewController<DeploymentPlanViewConfiguration> {
     private planData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
     private _isRefreshingPrereqs = false;

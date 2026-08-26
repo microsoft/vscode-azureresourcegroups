@@ -1,0 +1,70 @@
+# phase: debug-breakpoint
+#
+# Stimulus `debug-breakpoint-node` — the run that answers the remaining question:
+#
+#   Can a debugger actually reach a breakpoint inside the MSBench container?
+#
+# Everything about this gate has been proven locally (17/17 certification, real
+# VS Code, real js-debug) and the *installation* half has been proven in-container
+# by run 2026082620311350. What has never been observed is js-debug launching a
+# process, binding a breakpoint and stopping on it under this container's
+# constraints — Ubuntu 22.04, root, xvfb, no display of its own.
+#
+# WHY THE FIXTURE AND NOT GENERATED CODE
+#
+# The project is a known-debuggable fixture, staged by run.sh, not something the
+# agent wrote. That is deliberate: a red against generated code cannot tell you
+# whether the container cannot host a debugger or the agent produced a bad
+# project, and those have nothing to do with each other. This run isolates the
+# harness question. Putting the probe behind real generated output is worth doing
+# only after this is green — at which point a red genuinely does mean the product
+# produced something you cannot debug, which is the gate we actually want.
+#
+# WHAT EACH OUTCOME WOULD MEAN
+#
+#   exit 0   a breakpoint was hit in a container. The gate is viable end to end.
+#   exit 1   the probe ran and rendered a product verdict against a fixture we
+#            KNOW is good — so a red here is a container finding, not a product
+#            one, and the verdict's outcome field says which of launchConfig /
+#            appFailedToStart / breakpointNotHit it was.
+#   exit 3   the probe could not run. Harness fault; read the fingerprint.
+#
+# That third column is why the verdict discriminates six outcomes rather than
+# two: against a known-good fixture, `breakpointNotHit` and `appFailedToStart`
+# are diagnoses of the container, and they are different diagnoses.
+
+promptSteps:
+  - text: |
+      Reply with exactly the word: ready
+
+      Do not create, modify or read any files. Do not call any tools.
+    assertions:
+      # Liveness sentinel — must come first, and every stimulus needs one.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # Folded in from `debug-probe-smoke` rather than spending a run of its own:
+      # installation is already settled by 2026082620311350, so if this fails now
+      # it is unambiguously the assertion or the write, not installation.
+      #
+      # `exec:` runs with cwd set to the workspace, so this stays relative — the
+      # runner uses a worktree path rather than /workspace on some routes.
+      - comment: The probe extension installed and activated
+        exec: test -f .eval/probe.log
+
+      # THE question. The grader maps the probe's verdict onto the exit-code
+      # contract: 0 hit, 1 product-shaped failure, 3 harness fault. Note that
+      # against a KNOWN-GOOD fixture a "product-shaped" failure is really a
+      # container finding — see the header.
+      - comment: A breakpoint is hit in the debuggable fixture
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-breakpoint.ts
+
+      # Non-asserting, so it can never fail the run or change the assertion
+      # count. Read this FIRST when anything above is red. The verdict carries
+      # the timeline, the adapter's setBreakpoints responses, the debuggee's
+      # stdout/stderr and the resolved breakpoint location — which is the
+      # difference between "the debugger does not work in a container" and a
+      # specific, fixable reason it did not.
+      - comment: Fingerprint; probe breadcrumb and full debug verdict
+        assertZeroExitCode: false
+        exec: 'echo "--- breadcrumb ---"; cat .eval/probe.log 2>&1 || echo "NO PROBE LOG"; echo "--- verdict ---"; cat .eval/debug-verdict.json 2>&1 || echo "NO VERDICT"; echo "--- node ---"; node --version 2>&1'

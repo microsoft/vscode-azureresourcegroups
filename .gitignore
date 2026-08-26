@@ -67,3 +67,42 @@ testWorkspace
 test-results.xml
 dist
 stats.json
+results/
+
+# Generated eval skills (built from resources/agents/*.agent.md at run time)
+evals/.generated/
+
+# Grader sources staged into the MSBench agent assets by evals/msbench/run.sh.
+# Generated from the working tree on every run; a checked-in copy would drift.
+evals/msbench/assets/graders/
+
+# Built from evals/msbench/config/{base,stimuli/*}.yaml by run.sh. run-agent.sh
+# only ever reads this one filename, so selecting a stimulus means writing it.
+evals/msbench/assets/user-overrides.yaml
+
+# The resolved stack, projected as JSON for the container to read (the graders
+# run from staged source with no node_modules, so they cannot parse the YAML).
+# Written by build-config.ts on every --stack build, alongside the graders rather
+# than inside assets/graders/, which stage-graders.ts wipes.
+evals/msbench/assets/stack.json
+
+# Starting workspace materialised by evals/msbench/stage-workspace.ts from the
+# stimulus's `# seed:` directive. Derived from a checked-in fixture on every run,
+# and cleared between stimuli — a checked-in copy would be a third source of
+# truth for a document that already has two.
+evals/msbench/assets/workspace/
+
+# The known-debuggable project the breakpoint stimulus runs against, copied from
+# evals/grader-certification/reference-node-fullstack by run.sh on every run.
+# Same reason as the graders above: a second checked-in copy would drift from the
+# fixture that evals/debug-probe certifies against, and then a green run here and
+# a green certification would stop meaning the same thing.
+evals/msbench/assets/fixtures/
+
+# Mutual-exclusion lock taken by run.sh while it owns assets/.
+evals/msbench/assets/.run.lock/
+
+# Extraction cache for evals/msbench/regrade.ts, keyed by run id. Downloaded
+# from stored MSBench results and reused across iterations so re-grading stays a
+# local operation; safe to delete at any time.
+evals/msbench/.regrade/

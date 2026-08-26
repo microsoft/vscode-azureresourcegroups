@@ -1,0 +1,10 @@
+# expect: gatePhaseUnknown
+# names a phase outside the declared set — a typo that would silently unwire the gate.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: bad phase
+    phases: [planning]
+    requires: {}

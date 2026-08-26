@@ -83,3 +83,7 @@ Follow the generation steps in [generate.md](references/generate.md) in order.
 ## Post-Generation
 
 After validation completes with status `Implemented`, **stop**. Do not present next steps or a closing message — the `azure-debug-generate` agent handles post-generation guidance and interactive next steps.
+
+## Troubleshooting
+
+For Edge or Chrome related startup issues, consult [chromium.md](references/project-types/frontend-spa/debug-adapters/chromium.md).

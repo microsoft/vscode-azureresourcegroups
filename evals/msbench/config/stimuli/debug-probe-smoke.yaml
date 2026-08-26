@@ -1,0 +1,76 @@
+# phase: probe-smoke
+#
+# Stimulus `debug-probe-smoke` — the cheapest run that can answer one question.
+#
+#   Does a SECOND extension install and activate alongside our product VSIX?
+#
+# That is the only claim in the debug-breakpoint gate's design that could not be
+# settled locally. `installExtensions` concatenates across config layers rather
+# than replacing — that is how our VSIX already rides alongside
+# `github.copilot-chat` — so a second `mode: vsix` entry *should* install
+# cleanly. "Should" is doing a lot of work in that sentence, and it is load
+# bearing for the whole gate, so it gets one small run of its own.
+#
+# WHY THIS IS DELIBERATELY TINY
+#
+# The agent does essentially nothing: one trivial prompt, no product agent, no
+# artifacts. The evidence this run collects is produced by the extension host
+# during workspace setup, before the first turn — so paying for a real product
+# run to obtain it would be paying for the wrong thing, and would couple the
+# answer to whether the agent happened to behave that day.
+#
+# The rule this follows: a run that tests infrastructure should be able to fail
+# for exactly one reason.
+#
+# WHAT WOULD MAKE THIS RUN RED, AND WHAT THAT WOULD MEAN
+#
+#   assertion 2 red   the probe never activated. Either the second VSIX did not
+#                     install (installExtensions does NOT concatenate the way we
+#                     believe), or it installed and failed to activate. The
+#                     non-asserting fingerprint below separates those two.
+#
+# Note there is no assertion here about a breakpoint being hit. That is the next
+# run, not this one, and it is gated on this one passing: asserting it now would
+# conflate "the probe is installed" with "the debugger works in a container",
+# and a red result would not say which.
+
+promptSteps:
+  - text: |
+      Reply with exactly the word: ready
+
+      Do not create, modify or read any files. Do not call any tools.
+    assertions:
+      # Liveness sentinel — must come first, and every stimulus needs one.
+      # A run that dies before the session database is populated would otherwise
+      # be indistinguishable from one that passed, because the check below is
+      # about a file the *extension host* wrote rather than anything the agent
+      # did — it would happily pass on a run where the agent never spoke.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # THE question — ANSWERED YES by run 2026082620311350 (2026-08-25). Retained
+      # as a regression check, not as an open question.
+      #
+      # Asserted through `exec:` rather than the `files` table. The first version
+      # of this used `SELECT ... FROM files WHERE path LIKE '%.eval/probe.log'`
+      # and could never have passed: `files` holds tracked file *contents* scoped
+      # per step, not a filesystem listing, and the probe writes its breadcrumb
+      # from the extension host before the first turn. See the README section
+      # "What the `files` table can and cannot see".
+      #
+      # `exec:` runs with cwd set to the workspace, so this is relative rather
+      # than hardcoding /workspace — the runner uses a worktree path on some
+      # routes.
+      - comment: The probe extension installed and activated
+        exec: test -f .eval/probe.log
+
+      # Non-asserting, exactly like the environment fingerprint the other
+      # stimuli carry: `assertZeroExitCode: false` records output into the `exec`
+      # table without generating a check, so it can never fail the run or change
+      # the assertion count. Read this FIRST when the assertion above is red —
+      # "the VSIX was never staged", "it was staged but did not install" and "it
+      # installed but did not activate" are indistinguishable from the outside
+      # and have completely different fixes.
+      - comment: Fingerprint; extension inventory and probe breadcrumb
+        assertZeroExitCode: false
+        exec: 'ls -la /agent/assets/extensions/ 2>&1; echo "--- installed ---"; ls -la ~/.vscode-server/extensions ~/.vscode/extensions 2>&1 | head -40; echo "--- breadcrumb ---"; cat /workspace/.eval/probe.log 2>&1 || echo "NO PROBE LOG"'
