@@ -195,3 +195,32 @@ window, write no logs, and hang until killed — indistinguishable from a broken
 extension. `certify.ts` asserts against this explicitly rather than
 rediscovering it. MSBench chooses that path, not us, so this is a hazard to
 recognise rather than one we can configure away.
+
+## Port squatters
+
+A process that is not the project under test, holding a port the probe depends
+on, is a **harness fault** — and one that would otherwise be reported as a
+product failure with no sign of anything wrong:
+
+- something on the **trigger port** serves the request instead of the app, so
+  the breakpoint is never reached ⇒ `breakpointNotHit`, exit 1
+- something on the **inspector port** stops node starting at all ⇒
+  `appFailedToStart`, exit 1
+
+Both are wrong, and both look completely ordinary. The probe therefore checks
+both ports *before* launching and returns `probeError` if either is taken —
+afterwards a squatter is indistinguishable from a broken project.
+
+The check **connects** rather than binds. A bind test against `127.0.0.1`
+reports a port free while a squatter holds `0.0.0.0` on macOS, which is exactly
+how a stranger's process gets mistaken for the application. `certify.ts` proves
+this with `mutation-port-squatted`, which holds `0.0.0.0:7071` from a separate
+process and requires exit 3.
+
+The inspector port matters more than it looks: `reference-node-fullstack` pins
+`--inspect=9229`, and a pinned inspector port collides across concurrent runs
+and survives a crashed earlier session. The probe cannot remap it — VS Code
+reads `launch.json` directly and is only handed a configuration *name* — so
+detecting and declining is the only honest option. Certification runs its cases
+strictly sequentially for the same reason. A stack template emitting a hardcoded
+inspector port should be fixed at the source rather than worked around here.

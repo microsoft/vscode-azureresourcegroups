@@ -28,7 +28,7 @@
  *   node certify.ts --vscode=/path/to/code
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -246,6 +246,12 @@ interface LiveCase {
     expectedExit: number;
     /** Applied to the staged copy of the fixture before VS Code runs. */
     mutate?: (workspace: string) => void;
+    /**
+     * Occupy this port from a separate process for the duration of the case.
+     * Separate because `spawnSync` blocks this process's event loop, so an
+     * in-process listener would never accept a connection.
+     */
+    squatPort?: number;
 }
 
 const LIVE_CASES: LiveCase[] = [
@@ -297,6 +303,18 @@ const LIVE_CASES: LiveCase[] = [
         expectedOutcome: 'patternMatchedNothing',
         expectedExit: EXIT_GRADER_ERROR,
     },
+    {
+        id: 'mutation-port-squatted',
+        // A stranger holding the app port would otherwise serve the trigger, the
+        // breakpoint would never be hit, and a perfectly good project would be
+        // failed for it. Binds 0.0.0.0 specifically: a bind-based free-port check
+        // against 127.0.0.1 calls that port free on macOS.
+        description: 'a stranger on the app port is a harness fault, never a product failure',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
+        squatPort: 7071,
+        expectedOutcome: 'probeError',
+        expectedExit: EXIT_GRADER_ERROR,
+    },
 ];
 
 function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
@@ -317,6 +335,18 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
             testCase.mutate?.(workspace);
             writeFileSync(join(workspace, 'debug-probe.json'), `${JSON.stringify(testCase.spec, null, 2)}\n`, 'utf8');
 
+            // Squat from a separate process; spawnSync below blocks our event loop,
+            // so an in-process server would never accept the probe's connection.
+            let squatter: ReturnType<typeof spawn> | undefined;
+            if (testCase.squatPort !== undefined) {
+                squatter = spawn(process.execPath, [
+                    '-e',
+                    `require('node:net').createServer(s => s.end()).listen(${testCase.squatPort}, '0.0.0.0', () => setTimeout(() => {}, 1e9))`,
+                ], { stdio: 'ignore', detached: false });
+                spawnSync(process.execPath, ['-e', 'setTimeout(()=>{},1500)']);
+            }
+
+            try {
             process.stderr.write(`  running ${testCase.id} in real VS Code…\n`);
             // Hard wall clock per case. A hung VS Code must fail its own case, not
             // stall the whole certification the way it would stall an MSBench run.
@@ -381,6 +411,9 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
                     ? `outcome=${outcome}, exit ${code} — ${testCase.description}`
                     : `expected outcome=${testCase.expectedOutcome} exit=${testCase.expectedExit}, got outcome=${outcome} exit=${code}. Grader said: ${stderr.split('\n')[0] ?? '(nothing)'}`,
             });
+            } finally {
+                squatter?.kill();
+            }
         }
         return results;
     } finally {
