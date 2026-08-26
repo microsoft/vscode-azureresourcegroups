@@ -1,0 +1,26 @@
+# expect: stackPortValue
+# A port outside the legal range. The runtime gates move the app to a free port,
+# and a declaration they cannot apply means the gate cannot run at all.
+schemaVersion: 1
+id: bad-port
+name: Fixture
+ecosystem: python
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [python3]
+  start:
+    command: python3
+    args: [-m, uvicorn, main:app]
+    cwd: services/api
+    port:
+      value: 99999
+      remap: { kind: env, key: PORT }
+knownGaps: []
+phases: [plan]

@@ -428,6 +428,60 @@ shape that gets copy-pasted and then drifts.
 A stimulus picks its phase with a `# phase: <name>` directive in its header. Omitting it
 means `plan`, so a stimulus that predates the layer needs no change.
 
+### Stacks: a project type as data, not a fourth layer
+
+Every stimulus above is React + Azure Functions, hard-coded. Adding a Python or C#
+project that way means copying a YAML file and hand-editing its assertions, which is a
+fork rather than an addition. `config/stacks/<id>.yaml` is the fix: **a project type
+expressed as data.**
+
+A stack is deliberately **not** a fourth concatenated layer. The merge in
+`build-config.ts` is textual and guarded by "the three files must define disjoint
+top-level keys", while the two things a stack wants to control — the prompt and the gate
+wiring — both live *inside* `promptSteps`, which the stimulus owns. Concatenation cannot
+merge into a list, so a fourth layer would have to break that guard, and that guard is
+what stops a typo becoming a paid run that grades the wrong thing. A stack is therefore a
+fourth **input**: `build-config` will synthesise layer 3 from it, leaving the existing
+hand-written stimuli untouched.
+
+**A stack declares facts, not gates.** The obvious design — `gates: [...]` per stack — is
+a hand-maintained matrix that rots in the direction that looks safe (a gate quietly wired
+nowhere reads as a clean run), and it records a conclusion nobody can review without
+having read the gate. So a stack says `frontend: none`, and the gates that look at a
+frontend are not wired. Anyone can check that line against the prompt.
+
+The consequence worth knowing:
+
+> **An `outOfScope` NOT_APPLICABLE marker becomes a bug report against the stack schema.**
+> Under fact-derived wiring a gate is only ever attached when the stack declared the thing
+> it looks at, so `outOfScope` means the derivation is wrong or a stack lied. It is never
+> expected noise. `coverageGap` is unaffected and stays red on purpose — see
+> "Not-applicable, and the convention that got reversed".
+
+`config/container.yaml` records what the eval container actually has, in three states:
+`present`, `absent` (installable, with the command), and `unavailable` (`docker` — no
+practical path). A stack requiring an `absent` binary must declare the gap it causes; a
+stack requiring an `unavailable` one is refused outright. That turns "this stack needs
+something we do not have" into a millisecond-scale local error instead of a discovery made
+forty minutes into a run that has already been paid for.
+
+Most rows in that file are marked `evidence: asserted` — copied from documentation, not
+observed. `npm run stacks:check` prints the count on every run so the assumption stays
+visible.
+
+```
+npm run stacks:check
+```
+
+validates every stack and the inventory, **and** asserts that each of the twenty-four
+deliberately broken files under `config/__fixtures__/` is rejected with the exact error
+code its `# expect:` header names. The code is asserted rather than merely "it threw",
+because a validator broken so that it rejects everything would pass the weaker test — and
+a fixture rejected for the wrong reason proves the wrong rule. It also reports how many of
+the validators' error codes are exercised by a fixture and refuses to let that number
+fall, since a rule with no fixture is unproven and unproven is indistinguishable from
+broken.
+
 ## Running the real validators (`exec:`)
 
 Megan's `program` graders run as `exec:` assertions, so the contract is checked by the

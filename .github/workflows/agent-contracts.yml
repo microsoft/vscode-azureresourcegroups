@@ -69,6 +69,14 @@ jobs:
         run: npm run certify
         working-directory: evals
 
+      # Same idea one layer up: prove the stack schema still rejects the sixteen
+      # broken stack files it claims to reject. A schema that quietly accepts
+      # everything would let a stack requiring a binary the container does not
+      # have reach a paid run, which is the cost this check exists to avoid.
+      - name: Check stack schema
+        run: npm run stacks:check
+        working-directory: evals
+
       # Run through the evals package so the spec is actually linted: a bare
       # `vally lint` at the repo root discovers no skills and silently passes.
       - name: Lint eval specs
