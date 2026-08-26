@@ -1,0 +1,28 @@
+{
+    // The extension host cannot strip types, unlike everything else under evals/,
+    // so this is the one place in the eval tree that genuinely emits JavaScript.
+    // See README.md, "Why this one has a build step".
+    "compilerOptions": {
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "target": "es2022",
+        "lib": [
+            "es2022"
+        ],
+        "outDir": "out",
+        "rootDir": "src",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "types": [
+            "node",
+            "vscode"
+        ]
+    },
+    "include": [
+        "src/**/*.ts"
+    ]
+}
