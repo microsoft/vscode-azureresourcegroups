@@ -33,6 +33,20 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
 8. Once `deploy-result.json` is finalized, call `open_deploy_result_view` to show the user the Deployment Results view, then present the chat handoff.
 
+## Prerequisite status in the deployment plan
+
+The Deployment plan view shows the two CLIs this stage depends on. Record their status through **our** MCP tool - never by editing `prepare-plan.json` (that is the vendored pipeline's artifact).
+
+At the scaffold approval gate - as soon as `prepare-plan.json` is written and before (or right alongside) `open_deploy_plan_view` - you **MUST**:
+
+1. Probe each CLI with its version command in the user's own default shell:
+   - **Azure Developer CLI (azd)** - `azd version`
+   - **Azure CLI (az)** - `az version`
+2. Call `record_deploy_prerequisites` with one entry per tool: `installed: true` when the command returned a version, otherwise `installed: false`. Include the detected `version` when you have it.
+3. Do **not** pass or record install links or display names - the view resolves those deterministically from its own catalog.
+
+Example call: `record_deploy_prerequisites({ tools: [{ id: "azd", installed: true, version: "1.9.2" }, { id: "az", installed: false }] })`
+
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).

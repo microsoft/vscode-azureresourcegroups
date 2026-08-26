@@ -155,7 +155,7 @@ Detect both, then choose in this order:
 
 1. If **Chrome** is installed, choose Chrome and record it installed (`✅`) with its version if available.
 2. Otherwise if **Edge** is installed, choose Edge and record it installed (`✅`) with its version if available.
-3. If **neither** is detected, fall back by operating system, record the fallback as unknown (`❓`), and put its download URL in the Install column:
+3. If **neither** is detected, fall back by operating system and record the fallback as unknown (`❓`):
    - **Windows** → Edge (`msedge`). Edge ships with Windows and is normally detected as installed in step 2, so this fallback rarely triggers.
    - **macOS / Linux** → Chrome (`chrome`).
 
@@ -177,4 +177,8 @@ Test-Path "$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:Progr
 Test-Path "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"  # Edge
 ```
 
-Download URLs for the Install column: Chrome `https://www.google.com/chrome/`, Edge `https://www.microsoft.com/edge`.
+---
+
+## Never author install links
+
+Do **not** add an `Install` column, and never emit an install link or URL for any tool — not in the tables, the browser fallback, or anywhere else. The plan webviews append a deterministic Install link resolved from a built-in catalog keyed on the tool name, so any link authored here is ignored, and keeping install URLs out of the plan avoids surfacing an untrusted, model-authored link to the user. Just name the tool accurately (matching the catalog labels above) so the webview can resolve its link.

@@ -14,6 +14,7 @@ import { openLocalPlanViewTool } from "./openLocalPlanViewTool";
 import { openPlanViewTool } from "./openPlanViewTool";
 import { openRequirementsViewTool } from "./openRequirementsViewTool";
 import { openScaffoldNextStepsViewTool } from "./openScaffoldNextStepsViewTool";
+import { recordDeployPrerequisitesTool } from "./recordDeployPrerequisitesTool";
 import { startAzureDebugGenerateTool } from "./startAzureDebugGenerateTool";
 import { startDeploymentTool } from "./startDeploymentTool";
 import { startLocalDevelopmentTool } from "./startLocalDevelopmentTool";
@@ -37,6 +38,7 @@ export function registerCopilotOnRailsTools(mcpServer: McpServer): void {
 
     // Phase 3: Deployment tools
     registerMcpToolWithTelemetry(mcpServer, startDeploymentTool);
+    registerMcpToolWithTelemetry(mcpServer, recordDeployPrerequisitesTool);
     registerMcpToolWithTelemetry(mcpServer, openDeployPlanViewTool);
     registerMcpToolWithTelemetry(mcpServer, captureDeploymentInventoryTool);
     registerMcpToolWithTelemetry(mcpServer, openDeployResultViewTool);

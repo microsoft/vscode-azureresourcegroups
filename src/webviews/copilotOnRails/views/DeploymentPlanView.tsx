@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { ArrowSyncRegular, CheckmarkCircleRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, OpenRegular, QuestionCircleRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/deploymentPlanView.scss';
-import { type DeploymentPlanData, type DeploymentPlanTable } from './utils/deploymentPlanTypes';
+import { type DeploymentPlanData, type DeploymentPlanTable, type DeploymentPrerequisite } from './utils/deploymentPlanTypes';
+import { DEPLOY_PREREQUISITE_CATALOG } from './utils/deployPrerequisiteCatalog';
+import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from './utils/viewConfigTypes';
 
 export type { DeploymentPlanData, DeploymentPlanTable };
@@ -66,6 +68,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     const [freeformDraft, setFreeformDraft] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
+    const [isRefreshingPrereqs, setIsRefreshingPrereqs] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     // Tracks the ORIGINAL SKU value when first edited, keyed by row index.
     // Used to revert cells when a dropdown feedback item is discarded or the
@@ -110,6 +113,10 @@ export const DeploymentPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
+            } else if (message?.command === 'prerequisitesRefreshing') {
+                setIsRefreshingPrereqs(true);
+            } else if (message?.command === 'prerequisitesRefreshComplete') {
+                setIsRefreshingPrereqs(false);
             }
         };
         window.addEventListener('message', handler);
@@ -422,6 +429,13 @@ export const DeploymentPlanView = (): JSX.Element => {
                     )}
                 </div>
 
+                <DeploymentPrerequisites
+                    strings={strings}
+                    prerequisites={plan.prerequisites}
+                    onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites' })}
+                    isRefreshing={isRefreshingPrereqs}
+                />
+
                 {plan.resources.rows.length > 0 && (
                     <details className='sectionCard' open>
                         <summary><h2>{strings.azureResourcesHeading}</h2></summary>
@@ -511,6 +525,78 @@ export const DeploymentPlanView = (): JSX.Element => {
                 onSubmit={handleSubmitFeedback}
             />
         </div>
+    );
+};
+
+// The deploy stage always needs the same two CLIs, so the tool list is fixed
+// rather than something the agent invents. The agent only reports install status
+// via the record_deploy_prerequisites MCP tool; install links come from the
+// hardcoded catalog (never model output), matching the earlier project/local stages.
+const DEFAULT_DEPLOYMENT_PREREQUISITES: DeploymentPrerequisite[] = DEPLOY_PREREQUISITE_CATALOG.map(({ tool }) => ({ tool, installed: false }));
+
+const InstalledChip = ({ installed, strings }: { installed: boolean; strings: DeploymentPlanViewStrings }): JSX.Element => (
+    <span className={`installedChip ${installed ? 'installed-installed' : 'installed-unknown'}`}>
+        {installed ? <CheckmarkCircleRegular /> : <QuestionCircleRegular />}
+        <span>{installed ? strings.prerequisiteInstalledLabel : strings.prerequisiteUnknownLabel}</span>
+    </span>
+);
+
+const DeploymentInstallLinkCell = ({ toolName, label }: { toolName: string; label: string }): JSX.Element => {
+    const link = getPrerequisiteInstallLink(toolName);
+    if (!link) {
+        return <span className='installLinkEmpty' aria-hidden='true'>—</span>;
+    }
+    return (
+        <a className='installLink' href={link.url} target='_blank' rel='noreferrer' title={`Install ${link.label} - ${link.url}`}>
+            <OpenRegular />
+            <span>{label}</span>
+        </a>
+    );
+};
+
+const DeploymentPrerequisites = ({ strings, prerequisites, onRefreshPrerequisites, isRefreshing }: { strings: DeploymentPlanViewStrings; prerequisites?: DeploymentPrerequisite[]; onRefreshPrerequisites?: () => void; isRefreshing?: boolean }): JSX.Element => {
+    const rows = prerequisites && prerequisites.length > 0 ? prerequisites : DEFAULT_DEPLOYMENT_PREREQUISITES;
+    const showVersion = rows.some(prereq => (prereq.version ?? '').trim().length > 0);
+    return (
+        <details className='sectionCard' open>
+            <summary>
+                <h2>{strings.prerequisitesHeading}</h2>
+                {onRefreshPrerequisites && (
+                    <Tooltip content={isRefreshing ? strings.prerequisiteRefreshingTooltip : strings.prerequisiteRefreshTooltip} relationship='label'>
+                        <Button
+                            className='prereqRefreshButton'
+                            appearance='subtle'
+                            size='small'
+                            icon={isRefreshing ? <Spinner size='tiny' /> : <ArrowSyncRegular />}
+                            // The button lives inside <summary>, so stop the click from toggling the <details>.
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRefreshPrerequisites(); }}
+                            disabled={isRefreshing}
+                            aria-label={strings.prerequisiteRefreshTooltip}
+                        />
+                    </Tooltip>
+                )}
+            </summary>
+            <table className='planTable'>
+                <thead>
+                    <tr>
+                        <th>{strings.prerequisiteToolHeader}</th>
+                        <th>{strings.prerequisiteInstalledHeader}</th>
+                        {showVersion && <th>{strings.prerequisiteVersionHeader}</th>}
+                        <th>{strings.prerequisiteInstallHeader}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((prereq, i) => (
+                        <tr key={i}>
+                            <td>{prereq.tool}</td>
+                            <td><InstalledChip installed={prereq.installed} strings={strings} /></td>
+                            {showVersion && <td>{(prereq.version ?? '').trim() || '—'}</td>}
+                            <td><DeploymentInstallLinkCell toolName={prereq.tool} label={strings.prerequisiteInstallLinkLabel} /></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </details>
     );
 };
 
