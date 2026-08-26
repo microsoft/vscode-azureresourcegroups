@@ -53,13 +53,16 @@
  * Usage: npm run stacks:check
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ConfigValidationError } from './src/configValidation.ts';
 import { countAsserted, loadContainerInventory } from './src/containerInventory.ts';
+import { loadGateTable } from './src/gateTable.ts';
+import type { GateTable } from './src/gateTable.ts';
+import { checkKnownGapsAgainstTable, deriveWiring, explainWiring, teachesNothing } from './src/gateWiring.ts';
 import { loadStack } from './src/stack.ts';
-import type { StackLoadOptions } from './src/stack.ts';
+import type { Stack, StackLoadOptions } from './src/stack.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CONFIG = join(HERE, 'msbench', 'config');
@@ -67,9 +70,15 @@ const STACKS = join(CONFIG, 'stacks');
 const FIXTURES = join(CONFIG, '__fixtures__');
 const PHASES = join(CONFIG, 'phases');
 const CONTAINER = join(CONFIG, 'container.yaml');
+const GATES = join(CONFIG, 'gates.yaml');
+const SNAPSHOTS = join(CONFIG, '__snapshots__');
+const REPO_ROOT = resolve(HERE, '..');
+
+/** `--update` rewrites the wiring snapshots instead of asserting them. */
+const UPDATE_SNAPSHOTS = process.argv.includes('--update');
 
 /** The validator sources whose error codes the fixtures are measured against. */
-const VALIDATOR_SOURCES = ['src/stack.ts', 'src/containerInventory.ts'];
+const VALIDATOR_SOURCES = ['src/stack.ts', 'src/containerInventory.ts', 'src/gateTable.ts', 'src/gateWiring.ts'];
 
 /**
  * The floor for proven error codes. **This number may only ever go up.**
@@ -79,7 +88,7 @@ const VALIDATOR_SOURCES = ['src/stack.ts', 'src/containerInventory.ts'];
  * mean that deleting a fixture — or adding a judgment-carrying rule and
  * forgetting to prove it — fails here instead of passing quietly.
  */
-const MIN_PROVEN_CODES = 24;
+const MIN_PROVEN_CODES = 34;
 
 /** `# expect: <code>` in a fixture header — the rule that fixture exists to prove. */
 const EXPECT_DIRECTIVE = /^#\s*expect:\s*([A-Za-z][A-Za-z0-9]*)\s*$/m;
@@ -167,6 +176,118 @@ function checkFixtureDirectory(label: string, directory: string, load: (path: st
     return proven;
 }
 
+/**
+ * Assert the checked-in wiring snapshots still describe what the derivation does.
+ *
+ * The snapshot is the review artifact for the part of this system that is
+ * otherwise invisible. A one-line change to a gate's `requires:` can silently
+ * unwire a gate across every stack, and a gate wired nowhere reads as a clean
+ * run — so "this change moves no wiring" has to be something a reviewer can
+ * *see* rather than something they take on trust. Regenerate with `--update`.
+ *
+ * It also prints the derivation working in both directions, which is the only
+ * evidence that the schema does anything at all: the same gate table must wire
+ * a different set of gates for two different stacks.
+ */
+function checkWiringSnapshots(stacks: Stack[], table: GateTable): void {
+    console.error('\nWiring');
+    if (!existsSync(SNAPSHOTS)) {
+        mkdirSync(SNAPSHOTS, { recursive: true });
+    }
+
+    for (const stack of stacks) {
+        const snapshotPath = join(SNAPSHOTS, `${stack.id}.wiring.md`);
+        const rendered = explainWiring(stack, table);
+
+        if (UPDATE_SNAPSHOTS) {
+            writeFileSync(snapshotPath, rendered);
+            console.error(`  ↻ ${stack.id}.wiring.md written`);
+        } else if (!existsSync(snapshotPath)) {
+            fail(`${stack.id} has no wiring snapshot. Run \`npm run stacks:check -- --update\`.`);
+        } else if (readFileSync(snapshotPath, 'utf8') !== rendered) {
+            fail(
+                `${stack.id}.wiring.md is out of date — the derivation now produces different wiring. `
+                + `Review the change, then run \`npm run stacks:check -- --update\`.`,
+            );
+        }
+
+        // A per-phase summary, so the both-directions property is legible in the
+        // log and not only in a file nobody opens.
+        for (const phase of table.phases) {
+            const wiring = deriveWiring(stack, table, phase);
+            if (wiring.wired.length === 0 && wiring.excluded.length === 0) {
+                continue;
+            }
+            const warning = teachesNothing(wiring) ? '  ! every wired gate is a known gap' : '';
+            console.error(
+                `  ${stack.id} / ${phase}: ${wiring.wired.length} wired, ${wiring.excluded.length} not applicable${warning}`,
+            );
+        }
+    }
+
+    // The claim the schema rests on. Two stacks that wire an identical gate set
+    // would mean the facts are not reaching the derivation, and every "this is
+    // derived" statement in the tree would be decoration.
+    if (stacks.length >= 2) {
+        const signatures = stacks.map(stack => table.phases
+            .flatMap(phase => deriveWiring(stack, table, phase).wired.map(entry => `${phase}:${entry.gate.id}`))
+            .join(','));
+        if (new Set(signatures).size === 1) {
+            fail(
+                'every stack derives an identical gate set, so the derivation is not discriminating between them. '
+                + 'Either the stacks do not actually differ, or their facts are not reaching the gate table.',
+            );
+        }
+    }
+}
+
+/**
+ * Exercise the derivation branches no config fixture reaches.
+ *
+ * `teachesNothing` decides whether to warn that a run is pre-determined to
+ * produce no information. No real stack triggers it today, which is exactly the
+ * condition under which a branch quietly stops working — so it is driven here
+ * with a synthetic stack rather than left to be right by assumption.
+ *
+ * The third case is the one that matters: an *empty* wired set must NOT warn.
+ * "every gate is a known gap" over zero gates is vacuously true, which is the
+ * same shape as the `COUNT(*) = 0` assertion that passed against an empty table.
+ */
+function checkDerivationBranches(stacks: Stack[], table: GateTable): void {
+    console.error('\nDerivation branches');
+    const stack = stacks[0];
+    if (!stack) {
+        fail('no stack to exercise the derivation with');
+        return;
+    }
+
+    const real = deriveWiring(stack, table, 'plan');
+    if (teachesNothing(real)) {
+        fail(`${stack.id}/plan wires ${real.wired.length} gates and none should be a known gap, but it warns`);
+    } else {
+        console.error(`  ✔ a stack with real gates to run does not warn (${real.wired.length} wired)`);
+    }
+
+    // Same stack, but every gate the phase runs is declared as a known gap.
+    const allGapped: Stack = {
+        ...stack,
+        knownGaps: [{ gates: real.wired.map(entry => entry.gate.id), reason: 'ecosystemNotSupported', tracking: 'synthetic' }],
+    };
+    if (!teachesNothing(deriveWiring(allGapped, table, 'plan'))) {
+        fail('a phase whose every wired gate is a declared known gap must warn, and did not');
+    } else {
+        console.error('  ✔ a run whose every wired gate is a known gap warns');
+    }
+
+    // A phase with nothing wired must not warn: there is no run to describe.
+    const emptyWiring = { phase: 'plan', wired: [], excluded: [] };
+    if (teachesNothing(emptyWiring)) {
+        fail('an empty wired set must not warn — "every gate is a gap" over zero gates is vacuously true');
+    } else {
+        console.error('  ✔ an empty wired set does not warn vacuously');
+    }
+}
+
 /** Every error code the validators can emit, scanned from their sources. */
 function declaredCodes(): Set<string> {
     const codes = new Set<string>();
@@ -192,15 +313,29 @@ function main(): void {
 
     const options: StackLoadOptions = { inventory, phasesDirectory: PHASES };
 
+    // ---- The gate table ----------------------------------------------------
+    console.error('\nGate table');
+    const table = loadGateTable(GATES, REPO_ROOT);
+    console.error(`  ✔ ${table.gates.length} gates across phases: ${table.phases.join(', ')}`);
+    for (const phase of table.phases) {
+        const count = table.gates.filter(gate => gate.phases.includes(phase)).length;
+        console.error(`      ${phase}: ${count}`);
+    }
+
     // ---- Half one: the real stacks must load -------------------------------
     console.error('\nStacks');
     const stackFiles = yamlFilesIn(STACKS);
     if (stackFiles.length === 0) {
         fail('no stacks found — "every stack is valid" is vacuously true with nothing to check');
     }
+    const stacks: Stack[] = [];
     for (const name of stackFiles) {
         try {
             const stack = loadStack(join(STACKS, name), options);
+            // Deferred from the schema PR because it needs the derivation: a gap
+            // naming a gate this stack never wires cannot explain any red.
+            checkKnownGapsAgainstTable(stack, table);
+            stacks.push(stack);
             const gaps = stack.knownGaps.length === 0
                 ? 'no known gaps'
                 : `${stack.knownGaps.length} known gap(s): ${stack.knownGaps.map(gap => gap.reason).join(', ')}`;
@@ -210,20 +345,34 @@ function main(): void {
         }
     }
 
+    checkWiringSnapshots(stacks, table);
+    checkDerivationBranches(stacks, table);
+
     // ---- Half two: the broken fixtures must be rejected, by name -----------
     const provenStack = checkFixtureDirectory(
         'Stack rejection fixtures',
         join(FIXTURES, 'stacks-invalid'),
-        path => loadStack(path, options),
+        // The cross-check runs here too, so the rules that need the gate table —
+        // a gap for a gate that does not exist, or one this stack never wires —
+        // are provable by a fixture like every other rule.
+        path => {
+            const stack = loadStack(path, options);
+            checkKnownGapsAgainstTable(stack, table);
+        },
     );
     const provenContainer = checkFixtureDirectory(
         'Container rejection fixtures',
         join(FIXTURES, 'container-invalid'),
         path => loadContainerInventory(path),
     );
+    const provenGates = checkFixtureDirectory(
+        'Gate table rejection fixtures',
+        join(FIXTURES, 'gates-invalid'),
+        path => loadGateTable(path, REPO_ROOT),
+    );
 
     // ---- The ratchet -------------------------------------------------------
-    const proven = new Set([...provenStack, ...provenContainer]);
+    const proven = new Set([...provenStack, ...provenContainer, ...provenGates]);
     const declared = declaredCodes();
     const unproven = [...declared].filter(code => !proven.has(code)).sort();
     console.error(`\nRule coverage: ${proven.size} of ${declared.size} error codes proven by a fixture.`);
@@ -240,7 +389,7 @@ function main(): void {
         console.error(`FAIL: ${failures.length} problem(s) above.`);
         process.exit(1);
     }
-    console.error(`PASS: ${stackFiles.length} stack(s) valid, ${proven.size} rules proven by ${provenStack.length + provenContainer.length} fixtures.`);
+    console.error(`PASS: ${stackFiles.length} stack(s) valid, ${proven.size} rules proven by ${provenStack.length + provenContainer.length + provenGates.length} fixtures.`);
 }
 
 main();

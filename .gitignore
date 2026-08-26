@@ -80,6 +80,12 @@ evals/msbench/assets/graders/
 # only ever reads this one filename, so selecting a stimulus means writing it.
 evals/msbench/assets/user-overrides.yaml
 
+# The resolved stack, projected as JSON for the container to read (the graders
+# run from staged source with no node_modules, so they cannot parse the YAML).
+# Written by build-config.ts on every --stack build, alongside the graders rather
+# than inside assets/graders/, which stage-graders.ts wipes.
+evals/msbench/assets/stack.json
+
 # Mutual-exclusion lock taken by run.sh while it owns assets/.
 evals/msbench/assets/.run.lock/
 

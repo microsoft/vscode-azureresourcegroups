@@ -13,12 +13,18 @@
 #   ./run.sh --stimulus api-only-inventory
 #                            # run a different stimulus (default:
 #                            # photo-app-requirements). See config/stimuli/.
+#   ./run.sh --stack node-express-postgres --phase plan
+#                            # run a stack instead: the prompt and the gate
+#                            # wiring are derived from config/stacks/<id>.yaml
+#                            # rather than hand-written. See config/gates.yaml.
 #
 set -euo pipefail
 
 SKIP_BUILD=0
 BUILD_ONLY=0
 STIMULUS="photo-app-requirements"
+STACK=""
+PHASE=""
 PASSTHRU=()
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -26,6 +32,10 @@ while [ $# -gt 0 ]; do
         --build-only) BUILD_ONLY=1 ;;
         --stimulus) shift; [ $# -gt 0 ] || { echo "--stimulus needs a value" >&2; exit 1; }; STIMULUS="$1" ;;
         --stimulus=*) STIMULUS="${1#*=}" ;;
+        --stack) shift; [ $# -gt 0 ] || { echo "--stack needs a value" >&2; exit 1; }; STACK="$1" ;;
+        --stack=*) STACK="${1#*=}" ;;
+        --phase) shift; [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 1; }; PHASE="$1" ;;
+        --phase=*) PHASE="${1#*=}" ;;
         *) PASSTHRU+=("$1") ;;
     esac
     shift
@@ -146,8 +156,24 @@ node "${HERE}/stage-graders.ts"
 
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.
-log "Building config for stimulus '${STIMULUS}'"
-node "${HERE}/build-config.ts" "$STIMULUS"
+#
+# Two sources, never both. A hand-written stimulus is read verbatim; a stack has
+# its prompt and its gate wiring derived from data. Passing both would silently
+# grade one while the operator believed they had asked for the other, so it is
+# refused here rather than resolved by precedence.
+if [ -n "$STACK" ]; then
+    # Only the stack path needs the eval toolchain: resolving a stack parses YAML,
+    # and the graders' own promise — that run.sh works on a clean machine — is
+    # kept by leaving the stimulus path free of it. Installed here rather than at
+    # the top so a stimulus run on a bare host still costs nothing.
+    ( cd "${HERE}/.." && [ -d node_modules ] || npm install )
+    log "Building config for stack '${STACK}' (phase '${PHASE:-plan}')"
+    node "${HERE}/build-config.ts" --stack "$STACK" ${PHASE:+--phase "$PHASE"}
+else
+    [ -z "$PHASE" ] || die "--phase applies only with --stack; a stimulus selects its phase with its own '# phase:' directive"
+    log "Building config for stimulus '${STIMULUS}'"
+    node "${HERE}/build-config.ts" "$STIMULUS"
+fi
 
 if [ "$BUILD_ONLY" -eq 1 ]; then
     log "Build only; not submitting."
