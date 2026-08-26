@@ -99,6 +99,22 @@ export function gateId(): string {
 }
 
 /**
+ * Raised when the grader could not run — a port already taken, a start command that could
+ * not be determined, dependencies not installed, a machine under load.
+ *
+ * Distinct from an unexpected throw only in that it is deliberate; both exit 3. The
+ * runtime gates lean on this heavily, because "I could not run the app" and "the app is
+ * broken" are the same observation from the outside, and billing the first to the agent
+ * is a fabricated failure that nothing downstream can detect.
+ */
+export class HarnessFault extends Error { }
+
+/** Report that the grader itself could not run, and stop. */
+export function failAsHarnessFault(message: string): never {
+    throw new HarnessFault(message);
+}
+
+/**
  * The directory being graded. Vally runs a grader with its cwd already set to the
  * workspace, so cwd is a legitimate fallback — but when someone runs a grader by hand
  * and forgets `EVALUATE_WORKSPACE`, that fallback silently grades the wrong tree.
@@ -220,6 +236,12 @@ function exitForError(name: string, error: unknown): never {
     if (error instanceof ProductFailure) {
         console.error(`FAIL: gate=${gate} — ${name} — ${error.message}`);
         process.exit(EXIT_PRODUCT_FAILURE);
+    }
+    // A deliberate harness fault, not a crash: same exit code, but the message says the
+    // grader could not run rather than dumping a stack trace that implies it broke.
+    if (error instanceof HarnessFault) {
+        console.error(`GRADER ERROR: gate=${gate} — ${name} could not run — ${error.message}`);
+        process.exit(EXIT_GRADER_ERROR);
     }
     console.error(`GRADER ERROR: gate=${gate} — ${name} threw ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
     process.exit(EXIT_GRADER_ERROR);
