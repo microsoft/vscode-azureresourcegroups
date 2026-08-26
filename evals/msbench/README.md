@@ -1205,8 +1205,15 @@ mapping, so adding a reason is never a shared edit.
 
 | `class=` | Means | Tallied as | Because |
 | --- | --- | --- | --- |
-| `outOfScope` | The gate should not have been wired to this stack — `ecosystemNotSupported`, `noFrontendDeclared` | `notApplicable` | Applicability is a wiring-time decision; seeing it at runtime is a config bug with an owner |
-| `environmentGap` | The gate applies, the machine cannot run it — `functionsHostUnavailable`, `datastoreRequiresContainer` | `notAttempted` | Nobody decided the gate was unnecessary; we genuinely are not testing something we claim to |
+| `outOfScope` | The gate should not have been wired to this stack — `noFrontendDeclared`, `noHealthPathDeclared` | `notApplicable` | Applicability is a wiring-time decision; seeing it at runtime is a config bug with an owner |
+| `environmentGap` | The gate applies, the machine cannot run it — `functionsHostUnavailable`, `ecosystemNotSupported` | `notAttempted` | Nobody decided the gate was unnecessary; we genuinely are not testing something we claim to |
+
+Note which side `ecosystemNotSupported` sits on, because it is the instructive one. A Go
+project is **not** a scenario with nothing to test — it has a plan, a tree and a real
+fidelity question; we simply have no analyser for it. Classified `outOfScope` it would tell
+someone to delete the datastore gate because it keeps not applying to Go, when the correct
+action is to write the Go analyser. The producer owns that judgement, which is exactly why
+this tool buckets on `class=` and never on the reason code.
 
 An unrecognised or absent `class=` is read as `environmentGap`. That is the safe direction:
 it reports "something is in the way" rather than "this gate should not be here".
@@ -1216,9 +1223,12 @@ to fix a staging bug.
 
 Note what `always-not-applicable` does **not** license. Because applicability is decided at
 wiring time, a gate reporting `outOfScope` is a **wiring bug with an owner** — it was
-attached to a stack it cannot answer for. "Dead weight, consider deleting" is only correct
-if the gate is out of scope for *every* stack in the corpus, which this report cannot tell
-you by itself. Read the stack declarations before removing anything.
+attached to a stack it cannot answer for. Beyond that, this report can only ever say *out
+of scope for the stacks actually observed*. "Dead weight everywhere, delete it" is a claim
+about coverage that the report has no evidence for: it sees the runs it was given, not the
+set of stacks that exist. Overstating it once would teach people to discount the verdict
+entirely, so it deliberately stops short. Read the stack declarations before removing
+anything.
 
 A reason meaning *"we tried and it did not work"* does not belong on this path at all. That
 is a product failure and must go red; routing one through N/A turns a real bug into a

@@ -93,17 +93,20 @@ const EXIT_GRADER_ERROR = 3;
  * lookup table here so that a new reason code cannot silently default into the wrong bucket. Each
  * gate family owns its own reason-to-class mapping, so adding a reason is never a shared edit:
  *
- *   outOfScope     — the scenario genuinely does not apply (`ecosystemNotSupported`). Dead weight,
- *                    and the thing the always-not-applicable verdict is looking for.
- *   environmentGap — a prerequisite is missing (`functionsHostUnavailable`). **Not** dead weight:
- *                    nobody has decided this gate is unnecessary, the environment simply cannot run
- *                    it. Tallied with cascade, because that is what it is.
+ *   outOfScope     — the gate should not have been wired to this stack (`noFrontendDeclared`).
+ *                    Applicability is a wiring-time decision, so this is a config bug with an
+ *                    owner rather than proof the gate is unnecessary.
+ *   environmentGap — the gate applies, the machine cannot run it (`functionsHostUnavailable`,
+ *                    `ecosystemNotSupported`). Not dead weight: nobody has decided this gate is
+ *                    unnecessary. Tallied with cascade, because that is what it is.
  *
- * That distinction is load-bearing. `noProjectManifestFound` most likely means the tree was never
- * staged; reported as dead weight it would read "this gate is unnecessary, delete it" — the exact
- * inversion this whole tool exists to prevent. A missing or unrecognised `class=` is therefore read
- * as `environmentGap`, which is the safe direction: it says "something is in the way" rather than
- * "this gate is pointless".
+ * `ecosystemNotSupported` sits on the environmentGap side, which is the instructive case: a Go
+ * project has a plan, a tree and a real fidelity question — there is simply no analyser for it.
+ * Bucketed as dead weight it would suggest deleting the gate when the correct action is to write
+ * the analyser. That judgement belongs to the producer, which is why this tool buckets on `class=`
+ * alone and never interprets reason codes. A missing or unrecognised `class=` is read as
+ * `environmentGap`, the safe direction: it says "something is in the way" rather than "this gate
+ * should not be here".
  *
  * Note what does **not** belong here at all: a reason meaning "we tried and it did not work" is a
  * product failure and must go red. Routing one through the N/A path turns a real bug into a
@@ -804,9 +807,9 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
         console.log('');
         console.log('Applicability is a wiring-time decision. A gate that is out of scope for the stack');
         console.log('it was wired to is a WIRING BUG WITH AN OWNER — fix the stack declaration, not the');
-        console.log('gate. "Dead weight, consider deleting" is only the right reading if the gate is out');
-        console.log('of scope for every stack in the corpus, which this report cannot tell you on its');
-        console.log('own; check the stack declarations before removing anything.');
+        console.log('gate. And this report only sees the runs it was given, so it can say "out of scope');
+        console.log('for the stacks observed" and no more; "dead weight everywhere, delete it" is a claim');
+        console.log('about coverage it has no evidence for. Read the stack declarations first.');
         // Grouped by reason so a single cause reads as one line, not N mystery gates.
         const byReason = new Map<string, string[]>();
         for (const { gate, tally } of dead) {
