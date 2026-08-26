@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-19T18:41:01.315Z",
+  "generatedAt": "2026-08-26T03:11:58.458Z",
   "mode": "offline",
-  "fixture": "reference-node-fullstack",
+  "fixture": "sample-agent-output",
   "outcome": "passed",
   "cases": [
     {
@@ -36,6 +36,24 @@
       "id": "golden-preview",
       "tier": "offline",
       "validator": "preview",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-integration-plan",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-frontend-scaffold",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
       "expected": "passed",
       "actual": [],
       "passed": true,
@@ -93,6 +111,174 @@
       "expected": "previewNotReady",
       "actual": [
         "previewNotReady"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-preview-not-embeddable",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "devServerRejectsWebviewOrigin",
+      "actual": [
+        "devServerRejectsWebviewOrigin"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-dev-script-does-not-serve",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "devScriptDoesNotServe",
+      "actual": [
+        "devScriptDoesNotServe"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-frame-busting-csp",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "previewFrameBusting",
+      "actual": [
+        "previewFrameBusting"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-api-seam-bypassed",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "apiSeamBypassed",
+      "actual": [
+        "apiSeamBypassed"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-no-seed-rule",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingNoSeedRule",
+      "actual": [
+        "missingNoSeedRule"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-backend-run-command",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingBackendCommand",
+      "actual": [
+        "missingBackendCommand"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-route-inventory",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingRouteInventory",
+      "actual": [
+        "missingRouteInventory"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-api-seam",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingApiSeam",
+      "actual": [
+        "missingApiSeam"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-service-classification",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingServiceClassification",
+      "actual": [
+        "missingServiceClassification"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-api-client-interface-dropped",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "missingApiClientInterface",
+      "actual": [
+        "missingApiClientInterface"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-mock-client-dropped",
+      "tier": "offline",
+      "validator": "frontend-scaffold",
+      "expected": "missingMockClient",
+      "actual": [
+        "missingMockClient"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-no-seed-rule-in-heading",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-no-seed-rule-as-table-row",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-port-inside-run-command",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-backend-port",
+      "tier": "offline",
+      "validator": "integration-plan",
+      "expected": "missingBackendPort",
+      "actual": [
+        "missingBackendPort"
       ],
       "passed": true,
       "durationMs": 0
