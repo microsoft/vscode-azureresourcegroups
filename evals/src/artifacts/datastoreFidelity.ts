@@ -54,11 +54,15 @@ export type DatastoreFamily =
 
 /**
  * Issue codes that mean "this gate has no opinion here", not "the agent did something
- * wrong". The grader maps these to a not-applicable verdict; they must never be reported
- * as a product failure.
+ * wrong", mapped to the class each implies. The grader turns these into a not-applicable
+ * verdict; they must never be reported as a product failure.
+ *
+ * `environmentGap` rather than `outOfScope`: a Go project is not a scenario with nothing to
+ * test, it is one we are failing to test. The remedy is "write the analyser", not "unwire
+ * the gate", and the class is what tells those apart.
  */
-export const DATASTORE_NOT_APPLICABLE_CODES: Record<string, string> = {
-    ecosystemNotSupported: 'ecosystemNotSupported',
+export const DATASTORE_NOT_APPLICABLE_CODES: Record<string, 'outOfScope' | 'environmentGap'> = {
+    ecosystemNotSupported: 'environmentGap',
 };
 
 interface FamilySignature {

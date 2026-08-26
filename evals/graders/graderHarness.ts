@@ -27,62 +27,46 @@ export const EXIT_PRODUCT_FAILURE = 1;
 export const EXIT_GRADER_ERROR = 3;
 
 /**
- * A gate that has no opinion about this workspace exits **0**, not 3.
+ * A gate that has no opinion about this workspace exits **3**, and says why on stderr.
  *
- * Exit 3 means "do not trust this result — the harness broke". A not-applicable verdict is
- * the opposite: the gate ran, understood the input, and confidently concluded the property
- * it grades is absent here. Collapsing the two would spend the only signal that isolates
- * harness faults on cases that are working correctly, and would turn every gate red on
- * every stack it does not yet cover — which makes the rational move "wire each gate only
- * where it definitely applies", defeating the point of having a not-applicable path at all.
+ * The earlier design exited 0 on the grounds that the marker below made the verdict
+ * detectable. It is detectable — but detection is not correction. MSBench writes
+ * `exitCode = 0` as `passed: true`, `resolved` is computed from it, and the run-analysis
+ * site and the Kusto `resolved` rate publish that number. A separate report saying "not
+ * applicable" cannot correct a headline that says green, because nobody investigates green.
  *
- * The safety mechanism is therefore NOT the exit code, it is `NOT_APPLICABLE:` on stderr.
- * A gate that returns not-applicable *without* emitting the marker is worse than either
- * exit code, because it is then genuinely undetectable — it reports a pass forever and
- * nobody investigates a passing gate. Emitting the marker is part of every gate's contract.
+ * So the choice is between two kinds of wrong: exit 3 makes the raw score **pessimistic and
+ * recoverable** — a red run carrying a `NOT_APPLICABLE` marker is explainable in seconds —
+ * while exit 0 makes it **optimistic and unrecoverable**. A permanently-green gate is the
+ * vacuous-gate failure wearing a new hat, and an inflated green is permanent and invisible.
+ *
+ * The objection that exit 3 makes a gate costly to wire broadly is real but points the other
+ * way: applicability is a *wiring-time* decision, declared in `stacks/<id>.yaml`, not
+ * something a runtime verdict should be used to paper over.
+ *
+ * Which makes the marker more load-bearing, not less: red is now the not-applicable path, so
+ * the marker is what turns a red from "mysterious failure" into "known gap, here is the fix".
  */
-export const NOT_APPLICABLE_EXIT_CODE = EXIT_PASS;
+export const NOT_APPLICABLE_EXIT_CODE = EXIT_GRADER_ERROR;
 
 /**
- * Why a not-applicable verdict happened, in the only distinction that changes what someone
- * should *do* about it:
+ * What kind of gap a not-applicable verdict describes. The two demand opposite responses, so
+ * a verdict in the wrong bucket sends whoever reads the run in the wrong direction.
  *
- * - `outOfScope` — the subject genuinely lacks the property being graded (a backend-only
- *   project has no frontend to check). A gate that is always `outOfScope` is dead weight:
- *   delete it or re-target it.
- * - `notAttempted` — the gate wanted to run and could not (missing tool, unstaged tree,
- *   analyser not written yet). A gate that is always `notAttempted` is a **coverage hole**,
- *   not dead weight: fix the environment or implement the analyser. Deleting it would be
- *   exactly the wrong response.
+ * - `outOfScope` — the scenario has nothing for this gate to test. Under exit 3 an
+ *   `outOfScope` red is a complaint about the **wiring**: this gate should not be attached
+ *   to this stack, and the fix is in configuration.
+ * - `environmentGap` — the gate would apply, but a prerequisite is missing (a tool the
+ *   machine lacks, an analyser nobody has written yet). An `environmentGap` red is a true
+ *   statement that we are not testing something we claim to test, and is *correct* to stay
+ *   red until it is fixed.
  *
- * The two demand opposite remedies, so a reason code that lands in the wrong bucket sends
- * whoever reads the health report in the wrong direction.
+ * Note what is deliberately absent: "we tried and it did not work" is neither of these. That
+ * is a product failure and must exit 1. A reason code that quietly means "the thing was
+ * supposed to work and did not" makes a real bug self-suppressing, and files it under "no
+ * scenario ever exercised this" — which is the most expensive way to lose a defect.
  */
-export type NotApplicableClass = 'outOfScope' | 'notAttempted';
-
-/**
- * Every reason code, with its class.
- *
- * A registry rather than a free string because a reason code must not be able to *default*
- * into a bucket: `emitNotApplicable` rejects an unregistered code, so classifying a new
- * reason is a required step rather than something you can forget. It is a plain object
- * rather than a union type deliberately — adding a member is a new line, which merges
- * cleanly across the several sessions adding codes, where a one-line union would conflict.
- */
-export const NOT_APPLICABLE_REASONS: Record<string, NotApplicableClass> = {
-    /** The tree has manifests, but only for an ecosystem no analyser covers yet. */
-    ecosystemNotSupported: 'notAttempted',
-    /**
-     * No project manifest of any recognised ecosystem anywhere in the tree.
-     *
-     * For a gate that has *not* already read an artifact out of the same workspace, this most
-     * likely means the tree was never staged, which is a harness fault. A gate that reached
-     * this point after successfully reading, say, `.azure/project-plan.md` from that same
-     * workspace knows the tree is staged, so for it the same observation means the agent
-     * shipped nothing — a product failure, and it should say so rather than use this code.
-     */
-    noProjectManifestFound: 'notAttempted',
-};
+export type NotApplicableClass = 'outOfScope' | 'environmentGap';
 
 /** Raised for a bad artifact — anything else thrown is treated as a harness fault. */
 export class ProductFailure extends Error { }
@@ -139,27 +123,35 @@ export function failWithIssues(summary: string, issues: ArtifactValidationIssue[
 
 /** Thrown to end a grader with a not-applicable verdict; see `NOT_APPLICABLE_EXIT_CODE`. */
 export class NotApplicable extends Error {
+    readonly gate: string;
+    readonly classification: NotApplicableClass;
     readonly reason: string;
     readonly detail: string;
-    /** Extra structured `key=value` pairs, e.g. `{ ecosystem: 'go' }`. Never prose. */
-    readonly facts: Record<string, string>;
 
-    constructor(reason: string, detail: string, facts: Record<string, string> = {}) {
+    constructor(gate: string, classification: NotApplicableClass, reason: string, detail: string) {
         super(detail);
+        this.gate = gate;
+        this.classification = classification;
         this.reason = reason;
         this.detail = detail;
-        this.facts = facts;
     }
 }
 
 /**
  * End the grader with a not-applicable verdict.
  *
- * `reason` must be registered in `NOT_APPLICABLE_REASONS`; an unregistered code throws,
- * which surfaces as a grader error rather than being quietly emitted with a guessed class.
+ * `classification` is a required argument rather than something looked up from a shared
+ * table, so a new reason code cannot be introduced without deciding what should be done
+ * about it — and so that each family of gates owns its own reason vocabulary instead of the
+ * several sessions adding codes all editing one registry line.
  */
-export function notApplicable(reason: string, detail: string, facts: Record<string, string> = {}): never {
-    throw new NotApplicable(reason, detail, facts);
+export function skipAsNotApplicable(
+    gate: string,
+    classification: NotApplicableClass,
+    reason: string,
+    detail: string,
+): never {
+    throw new NotApplicable(gate, classification, reason, detail);
 }
 
 /**
@@ -199,13 +191,8 @@ export async function runGraderAsync(name: string, body: () => Promise<void>): P
 function exitForError(name: string, error: unknown): never {
     const gate = gateId();
     if (error instanceof NotApplicable) {
-        const classification = NOT_APPLICABLE_REASONS[error.reason];
-        if (!classification) {
-            console.error(`GRADER ERROR: gate=${gate} — ${name} reported unregistered not-applicable reason "${error.reason}"`);
-            process.exit(EXIT_GRADER_ERROR);
-        }
-        const facts = Object.entries(error.facts).map(([key, value]) => ` ${key}=${value}`).join('');
-        console.error(`NOT_APPLICABLE: gate=${gate} reason=${error.reason} class=${classification}${facts} detail="${error.detail.replace(/"/g, "'")}"`);
+        console.error(`NOT_APPLICABLE gate=${error.gate} class=${error.classification} reason=${error.reason} detail="${error.detail.replace(/"/g, "'")}"`);
+        console.error(`SKIP: gate=${error.gate} — ${name} did not apply here; see the NOT_APPLICABLE line above.`);
         process.exit(NOT_APPLICABLE_EXIT_CODE);
     }
     if (error instanceof ProductFailure) {

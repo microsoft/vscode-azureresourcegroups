@@ -15,9 +15,14 @@
 
 import { readPlannedProject } from '../src/artifacts/plannedProject.ts';
 import { validateServiceFidelity } from '../src/artifacts/serviceFidelity.ts';
-import { failWithIssues, notApplicable, readArtifact, runGraderAsync, workspacePath } from './graderHarness.ts';
+import { failWithIssues, gateId, readArtifact, runGraderAsync, skipAsNotApplicable, workspacePath } from './graderHarness.ts';
 
-const NOT_APPLICABLE_CODES = new Set(['ecosystemNotSupported']);
+/**
+ * This family's reason vocabulary, with the class each code implies. Kept local rather than
+ * in a shared registry so adding a fidelity reason never collides with another gate family
+ * doing the same thing — but still a table, so a code cannot reach the marker unclassified.
+ */
+const FIDELITY_NOT_APPLICABLE = { ecosystemNotSupported: 'environmentGap' } as const;
 
 void runGraderAsync('scaffolded services match the ones the plan declared', async () => {
     const planMarkdown = readArtifact('.azure/project-plan.md');
@@ -26,22 +31,22 @@ void runGraderAsync('scaffolded services match the ones the plan declared', asyn
         return;
     }
 
-    const blocking = result.issues.filter(value => !NOT_APPLICABLE_CODES.has(value.code));
+    const blocking = result.issues.filter(value => !(value.code in FIDELITY_NOT_APPLICABLE));
     if (blocking.length === 0) {
-        const reason = result.issues[0];
-        notApplicable(reason.code, reason.message, ecosystemFact(planMarkdown));
+        const reason = result.issues[0].code as keyof typeof FIDELITY_NOT_APPLICABLE;
+        skipAsNotApplicable(gateId(), FIDELITY_NOT_APPLICABLE[reason], reason, describeSkip(planMarkdown, result.issues[0].message));
     }
     failWithIssues('service fidelity errors:', blocking);
 });
 
 /**
- * Attach the plan's own languages to a not-applicable verdict, so an unsupported stack
- * collapses to one actionable line — "the Go analyser is missing" — rather than a pile of
+ * Name the languages the plan asked for alongside the reason, so a coverage hole collapses
+ * to one actionable line — "the Go analyser is missing" — rather than a pile of
  * individually uninformative skips that nobody can group.
  */
-function ecosystemFact(planMarkdown: string): Record<string, string> {
+function describeSkip(planMarkdown: string, message: string): string {
     const languages = [...new Set(readPlannedProject(planMarkdown).services
         .map(service => service.language?.trim().toLowerCase())
         .filter((language): language is string => !!language))];
-    return languages.length > 0 ? { plannedLanguages: languages.join('+') } : {};
+    return languages.length > 0 ? `${message} Plan languages: ${languages.join(', ')}.` : message;
 }

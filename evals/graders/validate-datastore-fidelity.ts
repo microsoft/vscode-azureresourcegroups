@@ -14,12 +14,12 @@
  *
  * On a stack with no dependency analyser this reports **not-applicable**, never a pass —
  * a datastore check that silently approves every Go project is indistinguishable from no
- * check at all. See `NOT_APPLICABLE_EXIT_CODE` in the harness for why that still exits 0
- * and why the stderr marker, not the exit code, is the safety mechanism.
+ * check at all. That verdict exits 3 and carries a `NOT_APPLICABLE` marker naming the gap;
+ * see `NOT_APPLICABLE_EXIT_CODE` in the harness for why red-and-explained beats green.
  */
 
 import { DATASTORE_NOT_APPLICABLE_CODES, validateDatastoreFidelity } from '../src/artifacts/datastoreFidelity.ts';
-import { failWithIssues, notApplicable, readArtifact, runGraderAsync, workspacePath } from './graderHarness.ts';
+import { failWithIssues, gateId, readArtifact, runGraderAsync, skipAsNotApplicable, workspacePath } from './graderHarness.ts';
 
 void runGraderAsync('the wired datastore matches the one the plan chose', async () => {
     const planMarkdown = readArtifact('.azure/project-plan.md');
@@ -30,8 +30,8 @@ void runGraderAsync('the wired datastore matches the one the plan chose', async 
 
     const blocking = result.issues.filter(value => !(value.code in DATASTORE_NOT_APPLICABLE_CODES));
     if (blocking.length === 0) {
-        const reason = result.issues[0];
-        notApplicable(reason.code, reason.message);
+        const skipped = result.issues[0];
+        skipAsNotApplicable(gateId(), DATASTORE_NOT_APPLICABLE_CODES[skipped.code], skipped.code, skipped.message);
     }
     failWithIssues('datastore fidelity errors:', blocking);
 });
