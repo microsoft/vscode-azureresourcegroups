@@ -78,7 +78,24 @@ const PARKED = join(EVALS_ROOT, 'node_modules.parked-by-clean-machine-check');
  * script added there and not here is unguarded.
  */
 const ENTRYPOINTS = [
-    { script: 'evals/msbench/stage-graders.ts', args: [] as string[] },
+    // `stagesPackages` marks the one entrypoint the executed half cannot hold to
+    // the letter, and says why rather than quietly dropping it.
+    //
+    // The static half — no eagerly imported bare specifiers — still applies and is
+    // what this check is really protecting: it is what decides whether the script
+    // can *run* at all on a bare host. Staging is a different thing. It COPIES an
+    // allowlisted, dependency-free package (`jsonc-parser`, which the debug graders
+    // import because launch.json is JSON with comments) into the staged tree,
+    // because the container has no install step. A copy needs a source, so with
+    // every node_modules hidden there is nothing to copy and no implementation can
+    // succeed. That is a data dependency of the operation, not an import by the
+    // script.
+    //
+    // run.sh handles the real case: it installs only when neither the repo root nor
+    // evals/ has the package, so a bare host works and an installed one still pays
+    // nothing. What is asserted here instead is that the failure is a clean,
+    // diagnostic error rather than a crash — see runEntrypoints.
+    { script: 'evals/msbench/stage-graders.ts', args: [] as string[], stagesPackages: true },
     { script: 'evals/msbench/build-config.ts', args: ['photo-app-requirements'] },
     { script: 'evals/msbench/verify-run.ts', args: ['--self-test'] },
 ];
@@ -202,12 +219,31 @@ function checkExecutesWithoutDependencies(): void {
 }
 
 function runEntrypoints(): void {
-    for (const { script, args } of ENTRYPOINTS) {
+    for (const entry of ENTRYPOINTS) {
+        const { script, args } = entry;
         const result = spawnSync(
             process.execPath,
             ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', join(REPO_ROOT, script), ...args],
             { encoding: 'utf8', cwd: REPO_ROOT },
         );
+
+        // A staging entrypoint may legitimately fail here — it has nothing to copy —
+        // but it must fail *legibly*. A clean diagnostic naming the package and the
+        // places searched is the difference between "install something" and a stack
+        // trace on a host where nobody can tell what went wrong. Anything else,
+        // including a crash or a silent exit, is still a failure.
+        if ('stagesPackages' in entry && result.status !== 0) {
+            const stderr = `${result.stderr ?? ''}`;
+            const diagnostic = /is staged for the container but is not installed anywhere/.test(stderr)
+                && /Looked in:/.test(stderr);
+            if (diagnostic) {
+                console.error(`  ✔ ${script} — no package to copy, and says so legibly`);
+                continue;
+            }
+            fail(`${script} failed without a usable diagnostic:\n        ${stderr.trim().split('\n').slice(0, 6).join('\n        ')}`);
+            continue;
+        }
+
         if (result.status === 0) {
             console.error(`  ✔ ${script} ${args.join(' ')} — exit 0`);
             continue;

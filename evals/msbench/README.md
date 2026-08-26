@@ -14,25 +14,36 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-Five stimuli from [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) are ported
-here — the four **single-turn** ones and the first **multi-turn** one — with one config
-per stimulus in [`config/stimuli/`](config/stimuli). `evals/project-plan/eval.yaml` stays
-the source of truth; this folder is a port of it, so changes there need mirroring here
-until the remaining two (multi-turn) stimuli are wired up.
+**Eleven** stimuli are ported here, covering three product phases, with one config per
+stimulus in [`config/stimuli/`](config/stimuli). The Vally specs stay the source of
+truth — [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) for the plan phase
+and [`evals/local-dev/eval.yaml`](../local-dev/eval.yaml) for local development — so
+changes there need mirroring here. The scaffold stimuli have no Vally spec to mirror;
+they are wired directly against the graders merged in #1707.
 
-| Stimulus | Turns | Assertions | Validator flags |
-| --- | --- | --- | --- |
-| `photo-app-requirements` (default) | 1 | 8 | — |
-| `api-only-inventory` | 1 | 6 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
-| `multi-service-order-processing` | 1 | 5 | `--assert-service-count=3` |
-| `no-datastore-converter` | 1 | 5 | `--assert-no-datastore` |
-| `plan-generation-task-app` | 2 | 9 | — |
+| Stimulus | Phase | Turns | Assertions | Seed | Validator flags |
+| --- | --- | --- | --- | --- | --- |
+| `photo-app-requirements` (default) | plan | 1 | 8 | — | — |
+| `api-only-inventory` | plan | 1 | 6 | — | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
+| `multi-service-order-processing` | plan | 1 | 5 | — | `--assert-service-count=3` |
+| `no-datastore-converter` | plan | 1 | 5 | — | `--assert-no-datastore` |
+| `plan-generation-task-app` | plan | 2 | 9 | — | — |
+| `scaffold-missing-plan` | scaffold | 1 | 7 | `none` | — |
+| `scaffold-fullstack` | scaffold | 1 | 7 | `approved-fullstack` | `--has-frontend` `--require-frontend` |
+| `scaffold-autopilot` | scaffold | 1 | 7 | `approved-fullstack` | `--has-frontend` `--require-frontend` |
+| `scaffold-unapproved-plan` | scaffold | 1 | 6 | `unapproved-plan` | — |
+| `debug-plan-approval-gate` | local-dev | 2 | 8 | `approved-fullstack` | — |
+| `debug-generate-artifacts` | local-dev | 4 | 12 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+
+The six scaffold and local-dev stimuli also each carry a `preConditions` `exec:`
+(except `scaffold-missing-plan`, which seeds nothing), which is not counted above
+because it runs before the prompts rather than grading them.
 
 Assertion counts differ because they mirror each stimulus's graders one-for-one rather
 than being levelled up — only `photo-app-requirements` specifies
 `no-dotfile-requirements` and `transcript-not-contains`, and only it and
-`api-only-inventory` specify `no-premature-plan`. `plan-generation-task-app` is the one
-exception to one-for-one, and deliberately so: it carries a sentinel *per turn* and a
+`api-only-inventory` specify `no-premature-plan`. The multi-turn stimuli are the
+exception to one-for-one, and deliberately so: they carry a sentinel *per turn* and a
 copy of the `reject_tools` constraint *per turn*, because a step-scoped assertion only
 ever sees its own turn. See [Multi-turn stimuli](#multi-turn-stimuli).
 
@@ -43,9 +54,25 @@ empty table: a run that dies before the session database is populated would othe
 collect full marks on every negative check rather than failing. It is a property of
 *this* harness, not of the source spec, which is why it is not mirrored from there.
 
-All four single-turn stimuli are verified by a real green run; ids are under
+All four single-turn plan stimuli are verified by a real green run; ids are under
 [Verified result](#verified-result). Those runs predate the sentinel, so they report
 one assertion fewer than the table above.
+
+> **Two of the six scaffold/local-dev stimuli have now been run; four have not.**
+> `scaffold-unapproved-plan` ([`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091), 6/6)
+> and `scaffold-missing-plan` ([`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117), 7/7)
+> are green, `resolved: true`. Both are **refusal** cases, so no run has yet graded
+> a project the agent actually built — `validate-frontend-scaffold`,
+> `validate-integration-plan` and `validate-project-builds` are still wired but
+> unexercised, as are both local-dev stimuli. For those, everything below is a
+> claim about the *configuration*, not a measurement: they are certified offline
+> against hand-authored fixtures, which proves a grader agrees with a fixture and
+> says nothing about whether the stimulus elicits the behaviour it looks for.
+
+A twelfth stimulus, `scaffold-api-only`, is **deliberately not authored**, and the
+coverage that costs is written down in
+[`config/stimuli/README.md`](config/stimuli/README.md) rather than left implicit.
+
 
 ## Quick start
 
@@ -113,6 +140,82 @@ genuinely executing under the flags that distinguish them:
 | `no-datastore-converter` | [`2026082585315961`](https://msbenchapp.azurewebsites.net/run-analysis/2026082585315961) | 4/4 |
 | `multi-service-order-processing` | [`2026082586199078`](https://msbenchapp.azurewebsites.net/run-analysis/2026082586199078) | 4/4 |
 | `plan-generation-task-app` (2 turns) | [`2026082614813342`](https://msbenchapp.azurewebsites.net/run-analysis/2026082614813342) | **9/9**, `resolved: true` |
+
+The two scaffold **refusal** stimuli are also verified, and are the first runs in this
+folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` and
+`snapshotWorkspace: false`:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
+| `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | **6/7, `resolved: false`** — a real product defect, below |
+
+A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
+`validate-no-scaffold` is negative, and a run that died early scores the same. So both
+were checked past the tally. In `2026082618693091` the agent called `read_file` and
+refused naming `**Status**: Planning`; in `2026082619460117` it called `read_file`, got a
+genuine not-found, called `file_search`, then emitted the contracted refusal verbatim.
+Those are refusals for the contracted reason, not by luck. `exec` rows are present for
+the grader and the fingerprint in both, so the graders demonstrably ran.
+
+`2026082619460117` also confirms the seed-clear: it ran immediately after
+`2026082618693091` left an unapproved plan in `assets/workspace/`, and its fingerprint
+reports `ls: cannot access '.azure': No such file or directory` in the container. That
+ordering is load-bearing and is written down under
+[Run ordering](config/stimuli/README.md#run-ordering).
+
+**Neither refusal run graded a project the agent built** — `scaffold-fullstack` did, and
+found a defect on the first attempt.
+
+### What the first real scaffold run found
+
+Run [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444)
+is the first time any of these gates has graded a project the scaffold agent actually
+produced. It came back **red, and correctly so**:
+
+```
+FAIL: scaffolded frontend is preview-embeddable and keeps the API seam
+  • [devServerRejectsWebviewOrigin] services/web/vite.config.ts: vite.config server must
+    set `allowedHosts: true` or the dev server 403-blocks the webview origin.
+```
+
+The agent wrote a `server` block containing `host: true`, `port`, `strictPort: false`
+and a `/api` proxy — and omitted `allowedHosts: true`. Two of the three settings
+`azure-project-scaffold.agent.md` requires, with the third missing.
+
+That is not a cosmetic miss. The same instructions explain the consequence: the scaffold
+agent opens the frontend preview webview and *stops*, because the webview's **Approve UI**
+button owns the hand-off to the integrate agent. A dev server that 403-blocks the webview
+origin never renders, so the button can never be clicked and **the workflow stalls with
+no error** — the app appears fine in an ordinary browser, which is exactly what makes it
+hard to diagnose in the field.
+
+Everything around it passed, which is what makes the finding precise rather than a
+general "scaffolding is broken":
+
+| | |
+| --- | --- |
+| `validate-project-builds --require-frontend` | **pass** — the project genuinely installs and builds |
+| `validate-integration-plan --has-frontend` | **pass** |
+| opened the preview gate (`open_frontend_preview_view`) | **pass** — called exactly once |
+| did not hand off before approval | **pass** |
+| `validate-frontend-scaffold` | **fail** — the one defect |
+
+Checked before being believed, per the rules in
+[One fidelity gap worth knowing](#one-fidelity-gap-worth-knowing): exit code **1**, not 3,
+so a product failure rather than a broken grader; no `NOT_APPLICABLE` marker on stderr, so
+not a coverage gap; no `error.json` and zero `-> 429` arrows, so not throttling; and the
+grader exited in seconds, nowhere near its 20-minute `timeoutMs`, so not a timeout kill.
+The defect was then confirmed against the agent's own `vite.config.ts` in `patch.diff`
+rather than trusted from the grader's message alone.
+
+**This is the result the suite was built to produce**, and it arrived on the first
+attempt: a specific, reproducible, user-visible defect in shipped agent instructions,
+found by a grader that had previously only ever seen fixtures written by hand.
+
+The stimulus and the grader were **not** modified in response. A gate edited until it
+passes is worth nothing.
 
 ### What a second turn actually costs
 
@@ -369,7 +472,7 @@ way.
 
 ## Layout
 
-Three things under `assets/` are **generated on every run and gitignored**, because a
+Four things under `assets/` are **generated on every run and gitignored**, because a
 second checked-in copy is exactly the drift this eval exists to catch:
 
 | Path | Built by | From |
@@ -377,10 +480,11 @@ second checked-in copy is exactly the drift this eval exists to catch:
 | `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
 | `assets/graders/**` | `stage-graders.ts` | `evals/graders`, `evals/src`, `src/webviews` |
 | `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/phases/<phase>.yaml` + `config/stimuli/<name>.yaml` |
+| `assets/workspace/**` | `stage-workspace.ts` | the stimulus's `# seed:` directive |
 
 Edit `config/`, never `assets/`.
 
-Both generators are TypeScript run directly by Node, which strips the types at load
+All three generators are TypeScript run directly by Node, which strips the types at load
 time — there is no build step and no emitted JavaScript. The same is true of
 [`verify-run.ts`](verify-run.ts), which `run.sh` calls after a run to decide whether the
 results are readable at all. `evals/tsconfig.json` type-checks them
@@ -427,6 +531,165 @@ shape that gets copy-pasted and then drifts.
 
 A stimulus picks its phase with a `# phase: <name>` directive in its header. Omitting it
 means `plan`, so a stimulus that predates the layer needs no change.
+
+The `scaffold` and `local-dev` phases both set `snapshotWorkspace: false`, and that has
+a consequence for how their stimuli must be written. The schema is explicit: *"To avoid
+silent/confusing results, the run fails fast if snapshotting is disabled while any
+assertion queries the `files` table."* So in those two phases the
+`SELECT ... FROM files WHERE path LIKE ...` one-liner that every plan stimulus uses is
+not merely unavailable — it takes the run with it. Every artifact assertion there is an
+`exec:` grader instead. `build-config.ts` re-implements that fail-fast locally, so the
+mistake costs milliseconds rather than a submitted run that is rejected in-container
+after the queue wait and the container pull. Exec/command, tool-call and LLM-response
+assertions all keep working with snapshotting off, per the same schema description.
+
+That guard is justified by observation now, not only by reading the schema. Run
+[`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091)
+came back with **`files` at 0 rows**, exactly as `snapshotWorkspace: false` promises — so
+a single `files` query left in that stimulus would have killed the run in-container,
+after the queue wait, the container pull and the payment. The local check costs
+milliseconds and catches the same mistake.
+
+### Seeding the starting workspace
+
+The plan phase begins with an empty workspace, so nothing was needed until the scaffold
+and local-dev phases arrived. Both grade agents whose contracted **first action** is to
+read `.azure/project-plan.md`, so something has to put one there before turn 0.
+
+A stimulus declares *what state it needs*, never how it arrives:
+
+```yaml
+# seed: approved-fullstack
+```
+
+[`stage-workspace.ts`](stage-workspace.ts) resolves that name to a recipe and writes
+`assets/workspace/`; the phase `script:` copies `/agent/assets/workspace/.` into
+`/workspace/` when it exists. No stimulus names a file path or a shell command, so if
+starting workspaces later come from baked container images — or from a private
+benchmark repository, the documented supported route — that replaces one module and
+leaves every stimulus untouched. Three recipes exist: `none`, `approved-fullstack`, and
+`unapproved-plan`.
+
+`stage-workspace.ts` runs for *every* stimulus, including unseeded ones, because it also
+**clears** `assets/workspace/`. `assets/` is shared mutable state reused across
+invocations (which is why `run.sh` takes a lock over it), so without the clear,
+`scaffold-missing-plan` would inherit the previous run's plan and the one thing it
+exists to establish would silently stop being true while every assertion still passed.
+
+Each seeded stimulus also carries a `preConditions` `exec:` asserting the seed landed.
+The schema describes `preConditions` as assertions validated "before running any
+prompts. If these fail, the benchmark will not proceed", and that is exactly the
+property wanted here: a seed that silently failed to copy leaves the agent staring at an
+empty workspace, where it correctly refuses to scaffold and every assertion goes red as
+though the product were broken — after the run has been paid for.
+
+#### The seed is a checked-in fixture, and that was once rejected
+
+Both plan seeds derive from `evals/local-dev/fixtures/functions-postgres/`, the same
+fixture `evals/local-dev/eval.yaml` uses. This is the option a previous design
+deliberately avoided: `harvest-seed.mjs` (commit `cc75a4e1`, not on `feat/CoR`) promoted
+a finished MSBench run into the scaffold workspace precisely because *"checking one in
+makes that document a second source of truth: edit the planner's template and the stored
+copy still describes the old shape, so the scaffold graders keep passing against a plan
+no agent would emit."*
+
+That objection is not answered here; it is **bounded**, by the second of the two
+properties that script relied on: *"It is an input, not an expected answer. No scaffold
+grader reads the plan — they assert against `resources/agents/**`. A wrong plan
+therefore makes scaffold trials fail loudly; it cannot make them pass wrongly."*
+
+The drift is therefore **fail-safe, not fail-open**. A stale plan makes real runs go red
+for a bad reason — expensive and confusing — but cannot make a broken scaffolder look
+green, which is the failure that would actually matter. What is given up is the drift
+control: `harvest-seed.mjs` had a `--check` mode that reported seed freshness and exited
+1 when stale. Nothing here replaces it. See
+[`config/stimuli/README.md`](config/stimuli/README.md).
+
+The seed names (`approved-fullstack`, `unapproved-plan`) are that script's own target
+names, reused so that switching to harvested seeds later is a no-op at the stimulus
+level.
+
+#### The `files` table is not a filesystem listing
+
+> A `files`-table assertion can only see what the **agent** wrote through the tracked
+> channel during a step. Anything written by an extension, a `script:` preamble, or the
+> container itself is invisible to it, regardless of whether the file exists on disk. Use
+> `exec:` for those.
+
+This is a *different* failure from the `snapshotWorkspace` guard above, and the
+difference is why it needs its own checks. That one catches **"the table is empty, so
+every query over it is vacuous"**. This one catches **"the table is populated, but this
+query structurally cannot match"** — and the population is precisely what hides it,
+because a `COUNT(*) > 0` sanity check passes happily while the assertion underneath
+means nothing. The abstraction lies at the point of use.
+
+Only two of the four ways a file can be invisible are decidable from `build-config.ts`'s
+inputs, which are the stimulus YAML and the phase YAML and nothing else:
+
+| File written by | Decidable at build time? |
+| --- | --- |
+| the phase's `script:` preamble | **yes** |
+| the `# seed:` recipe | **yes** |
+| a VS Code extension | no |
+| the container | no |
+
+So there are two mechanisms, matching that split:
+
+1. **A hard error on the decidable half.** A `files` assertion whose path matches
+   anything the resolved phase's `script:` writes, or anything in the stimulus's seed
+   recipe, is rejected. It covers a real and recurring class — and, importantly, it
+   would **not** have caught the `debug-probe-smoke` run that prompted it, whose path
+   was written by an extension during workspace setup and therefore appears in neither
+   input. A guard that reads as covering more than it does is worse than no guard,
+   because it stops people looking.
+2. **A hard error requiring a paired triage `exec:`** — `test -f <path>` with
+   `assertZeroExitCode: false`, recording without generating a check, so it costs
+   nothing and cannot change an assertion count. This is the undecidable half, not
+   solved but made cheap: every `files` assertion arrives with its own discriminator, so
+   **present on disk but absent from `files` is readable immediately as the wrong-channel
+   signature** rather than as a product failure. That turns a forensic pass over a spent
+   run into reading one row of the `exec` table.
+
+The pairing is enforced rather than documented because it is decidable from the stimulus
+YAML alone, and this directory's recurring lesson is that remembered rules decay while
+mechanical ones do not.
+
+Worth stating plainly: **none of the six scaffold or local-dev stimuli has a `files`
+assertion at all**, since both phases set `snapshotWorkspace: false`. These guards
+protect the `plan` phase's existing five and any stimulus added later; they fix nothing
+that is broken today. And the class is not hypothetical — a session that had spent two
+PRs building guards against exactly this then shipped an instance of it. That is
+evidence about the abstraction rather than about the author, and it is the strongest
+argument for why the rule has to be mechanical.
+
+
+
+Two pairs of scaffold stimuli differ in exactly one thing each **about the input the
+agent sees** — `scaffold-fullstack`/`scaffold-autopilot` in the prompt's
+`[AUTOPILOT MODE]` prefix, and `scaffold-fullstack`/`scaffold-unapproved-plan` in the
+plan's status line. Their *assertions* differ, and must: autopilot is contracted to skip
+the UI approval gate, so asserting the same thing on both would mean asserting
+product-incorrect behaviour on one of them. That asymmetry is the point — an agent that
+always opens the gate passes `scaffold-fullstack` and fails `scaffold-autopilot`; one
+that never opens it does the reverse, so no degenerate strategy passes both.
+`stage-workspace.ts` keeps the second pair honest by deriving the unapproved plan from
+the approved one in code and asserting the status line was found — a silent no-op there
+would make the two stimuli identical while both still read green. The property and its
+rules are in [`config/stimuli/README.md`](config/stimuli/README.md).
+
+#### A whole chain might fit in one run
+
+Recorded rather than left to be re-derived, and **untested**: because `chatMode` is
+settable per prompt step (`promptSteps[].chatMode`, used by the local-dev stimuli for
+their scaffold setup turn) and the schema also defines a first-class `handoff` step
+type, a full end-to-end chain may fit in a *single* run — requirements
+(`azure-project-plan`) → scaffold (`azure-project-scaffold`) → local dev
+(`azure-debug-plan`), each its own step with its own mode, assertions scoped by
+`stepIndex`, in one workspace with no rehydration between phases. That would remove the
+need for cross-run workspace hand-off entirely, and with it most of the seeding above.
+
+It has never been run and is not attempted here — the per-phase stimuli need to work
+individually first. The phase layer is simply the mechanism that would make it possible.
 
 ### Stacks: a project type as data, not a fourth layer
 
@@ -656,6 +919,15 @@ semantic part — schema version, per-question shape, service roles and counts, 
 recommendations. Those are the ones that become `exec:`; the rest stay SQL rather than
 being converted for the sake of it.
 
+That balance is a *plan-phase* balance. In the `scaffold` and `local-dev` phases the
+choice is made for us: those phases set `snapshotWorkspace: false`, the `files` table is
+empty, and the schema fails the run fast rather than degrading quietly if anything
+queries it — so `file-exists` becomes an `exec:` grader there too. In practice no
+separate existence check is needed, because the contract grader for an artifact already
+fails when the artifact is missing; a bare `test -f` alongside it would be a strictly
+weaker duplicate. `toolCalls` and `llm_responses` assertions are unaffected and stay SQL
+in every phase.
+
 Concretely, the check this replaced was
 `json_valid(content) AND json_array_length(json_extract(content, '$.questions')) > 0`.
 Given `{"projectName":"x","questions":[{"id":"dataStores","label":"nope"}]}` that returns
@@ -744,6 +1016,26 @@ express rule 3 as a single whole-conversation check and preserve the one-for-one
 mapping. It is deliberately **not** used yet — it is unverified against the harness
 version we run, and a config the runner rejects costs a whole run to discover. Plain YAML
 that cannot fail schema validation is worth one extra assertion.
+
+### Switching agent mid-conversation
+
+The local-dev stimuli need more than one agent in one session: a setup turn that
+scaffolds a real project as `azure-project-scaffold`, then graded turns as
+`azure-debug-plan`. `promptSteps[].chatMode` does that — the schema calls it an override
+of "the test-level chatMode for this step", and a step without one inherits the
+top-level value, which `config/phases/local.yaml` sets. So the phase file names the
+mode of the *graded* turns and only the setup turns override it.
+
+There is a strictly more faithful mechanism, and it is deliberately not used for exactly
+the reason `enableImpliedStepIndexFilter: false` is not. The schema defines a
+`promptSteps[].handoff: { id }` step type — *"Execute a handoff to another agent/mode.
+The handoff carries its own prompt, so no text is needed"*, with ids of the form
+`<target-agent>:<slugified-label>` discovered via `workbench.action.chat.getHandoffs`.
+That is the product's real hand-off path and would exercise the transition itself rather
+than simulating it. But the ids cannot be discovered without running VS Code, and a
+config the runner rejects costs a whole paid run to find out. It is the documented
+upgrade for `debug-generate-artifacts`'s fourth turn once someone has enumerated them
+from a live instance.
 
 `exec:` needs the same care for a different reason: it runs **after the step it is
 attached to**. The two plan validators are declared under the last step because attached
@@ -946,20 +1238,22 @@ Both obvious levers are unavailable, so this is documented rather than fixed:
 - **Screen recording cannot be shortened or disabled.** `TestConfig.schema.json` has no
   `screenRecording`/`recording` property — nothing matching `record`, `video`, `mp4`, or
   any artifact size limit. There is no supported setting to turn it down.
-- **`snapshotWorkspace: false` would fail our runs fast, by design.** It defaults to
-  `true` and its own schema description warns it "can produce multi-gigabyte
-  `session.sqlite` files" — precisely our risk, since these stimuli run a real
-  `npm install` and build, so `node_modules` lands in the snapshot. But the schema also
-  says the run **fails fast if snapshotting is disabled while any assertion queries the
-  `files` table**, and *every* stimulus does:
+- **`snapshotWorkspace: false` is now used, but only where the assertions allow it.** It
+  defaults to `true` and its own schema description warns it "can produce multi-gigabyte
+  `session.sqlite` files" — precisely the risk for any stimulus that runs a real
+  `npm install` and build, since `node_modules` lands in the snapshot. But the schema
+  also says the run **fails fast if snapshotting is disabled while any assertion queries
+  the `files` table**, and every *plan* stimulus does:
 
   ```
   SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
   ```
 
-  Turning it off means first rewriting every artifact assertion in all four stimuli from
-  SQL to `exec:`. That is a much larger change than a size guard and would alter what the
-  eval measures, so it is deliberately not done here.
+  So it is off in the `scaffold` and `local-dev` phases, whose artifact assertions were
+  written as `exec:` from the start, and on in the `plan` phase, where turning it off
+  would mean rewriting every artifact assertion and altering what the eval measures for
+  a workspace that never grows large enough to need it. It is a per-phase decision
+  rather than a global size guard — see [The three layers](#the-three-layers).
 
 If a run ever does come back `missing`, check the artifact size before filing it as
 platform flakiness. The upstream fix — stream oversized artifacts to blob instead of
@@ -1674,6 +1968,24 @@ with a clear message:
   photo-app prompt.) `run.sh` now takes a lock (`assets/.run.lock`) and refuses to start
   rather than racing, and echoes the prompt it is actually submitting so a mismatch
   shows up in the log instead of only after unzipping the results.
+
+  **The lock does not serialise across sessions, and is not meant to.** It is taken on
+  `<worktree>/evals/msbench/assets/.run.lock`, so two sessions working in two worktrees
+  take two different locks and never contend — correctly, since they share no mutable
+  state. What that means is that the lock is *not* what keeps concurrent runs from
+  interfering: the CES `(model, endpoint tag)` queue is. Observed on 2026-08-25, when
+  runs `2026082620153444` and `2026082620311350` were submitted three minutes apart from
+  different worktrees and both `msbench-cli` processes were resident at once. Note that
+  two live CLI processes are *not* evidence of parallel execution — the CLI stays
+  resident whether or not CES has started its run — so this says the lock is
+  worktree-scoped, and says nothing either way about whether CES serialised them.
+- **`output.zip` sits at an unpredictable index inside `results.zip`.** Across 24 local
+  archives it has appeared at indices 1, 2, 3, 4, 5, 6 and 10; `2026082620153444` has it
+  last. Any consumer that assumes a fixed member position will eventually read the wrong
+  member or none. Recorded because it is a real property of the artifact — **not**
+  because it explained anything: the artifact scare that prompted the enumeration turned
+  out to be a read that predated the run's completion by about five minutes, and member
+  order was not the cause. Noted here so nobody re-derives it as one.
 - **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
   submitting ~90s after a previous run finished; no run id is allocated. The same
   config submitted cleanly after a cooldown, so treat it as transient submission

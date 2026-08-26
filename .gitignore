@@ -86,6 +86,12 @@ evals/msbench/assets/user-overrides.yaml
 # than inside assets/graders/, which stage-graders.ts wipes.
 evals/msbench/assets/stack.json
 
+# Starting workspace materialised by evals/msbench/stage-workspace.ts from the
+# stimulus's `# seed:` directive. Derived from a checked-in fixture on every run,
+# and cleared between stimuli — a checked-in copy would be a third source of
+# truth for a document that already has two.
+evals/msbench/assets/workspace/
+
 # Mutual-exclusion lock taken by run.sh while it owns assets/.
 evals/msbench/assets/.run.lock/
 

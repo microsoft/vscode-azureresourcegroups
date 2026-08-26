@@ -32,7 +32,7 @@
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findImportSpecifiers } from './importScanner.ts';
@@ -50,6 +50,14 @@ const ENTRYPOINTS = [
     'evals/graders/validate-requirements.ts',
     'evals/graders/validate-project-plan.ts',
     'evals/graders/validate-webview-parseable.ts',
+    'evals/graders/validate-integration-plan.ts',
+    'evals/graders/validate-frontend-scaffold.ts',
+    'evals/graders/validate-no-scaffold.ts',
+    'evals/graders/validate-project-builds.ts',
+    'evals/graders/validate-debug-plan.ts',
+    'evals/graders/validate-debug-config.ts',
+    'evals/graders/validate-debug-gate.ts',
+    'evals/graders/validate-debug-artifacts.ts',
 ];
 
 // Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a
@@ -63,11 +71,24 @@ const ENTRYPOINTS = [
 // correctness.
 
 /**
+ * Bare specifiers a grader may import, staged from `evals/node_modules` alongside the
+ * sources. The container has no install step, so anything not listed here is a hard
+ * error rather than a runtime surprise four minutes into a run.
+ *
+ * Kept to genuinely dependency-free packages on purpose. `launch.json` is JSON with
+ * comments and trailing commas, and a hand-rolled tolerant reader is a few dozen lines
+ * of subtle escape handling whose failure mode is a *silent* mis-parse — so the real
+ * parser travels with the graders instead. Transitive dependencies are not resolved;
+ * a package that declares any is rejected below rather than staged incompletely.
+ */
+const STAGED_PACKAGES = new Set(['jsonc-parser']);
+
+/**
  * Walk the import graph from `repoRelative`, adding every reachable repo-relative
  * source file to `seen`. `trail` names the importer, so a missing file reports who
  * asked for it rather than just that it is absent.
  */
-function collect(repoRelative: string, seen: Set<string>, trail: string): Set<string> {
+function collect(repoRelative: string, seen: Set<string>, trail: string, packages: Set<string>): Set<string> {
     if (seen.has(repoRelative)) {
         return seen;
     }
@@ -83,17 +104,71 @@ function collect(repoRelative: string, seen: Set<string>, trail: string): Set<st
             continue;
         }
         if (!specifier.startsWith('.')) {
+            const packageName = specifier.startsWith('@')
+                ? specifier.split('/').slice(0, 2).join('/')
+                : specifier.split('/')[0];
+            if (STAGED_PACKAGES.has(packageName)) {
+                packages.add(packageName);
+                continue;
+            }
             throw new Error(
                 `${repoRelative} imports '${specifier}' from node_modules.\n` +
                 `The container stages source files only, with no install step, so a grader\n` +
                 `reachable from a bare specifier cannot run there. Inline it, make the import\n` +
-                `type-only, or teach this script to stage node_modules.`
+                `type-only, or add the package to STAGED_PACKAGES if it has no dependencies.`
             );
         }
         const target = relative(REPO_ROOT, resolve(dirname(absolute), specifier));
-        collect(toPosix(target), seen, repoRelative);
+        collect(toPosix(target), seen, repoRelative, packages);
     }
     return seen;
+}
+
+/**
+ * Copy one dependency-free package into the staged tree's `node_modules`, so a grader's
+ * bare import resolves there exactly as it does locally.
+ */
+/**
+ * Where a staged package may be found, in order.
+ *
+ * Both are searched because `jsonc-parser` is a declared runtime dependency of the
+ * *extension* (`package.json` at the repo root) as well as of `evals/`, so the copy at
+ * the repo root is not a fallback — it is the package's primary home. Requiring the
+ * `evals/` copy specifically was an unnecessary constraint, and it broke
+ * `check-clean-machine.ts`, which hides `evals/node_modules` to prove `run.sh` still
+ * works on a host where nothing has been installed into `evals/`.
+ *
+ * Note what this does NOT claim. Staging is a copy, so it cannot succeed if the package
+ * is absent from every location — you cannot stage what does not exist on disk. That is
+ * a data dependency of the operation, not an eager import by this script, which has no
+ * bare imports at all.
+ */
+const PACKAGE_ROOTS = [
+    join(REPO_ROOT, 'evals', 'node_modules'),
+    join(REPO_ROOT, 'node_modules'),
+];
+
+function stagePackage(name: string): void {
+    const source = PACKAGE_ROOTS.map(root => join(root, name)).find(candidate => existsSync(candidate));
+    if (!source) {
+        throw new Error(
+            `${name} is staged for the container but is not installed anywhere.\n` +
+            `Looked in:\n${PACKAGE_ROOTS.map(root => `  ${relative(REPO_ROOT, root)}/${name}`).join('\n')}\n` +
+            `Staging copies the package into the staged tree, so one of these must exist.\n` +
+            `Run 'npm ci' at the repo root or in evals/.`
+        );
+    }
+    const manifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')) as {
+        dependencies?: Record<string, string>;
+    };
+    if (manifest.dependencies && Object.keys(manifest.dependencies).length > 0) {
+        throw new Error(
+            `${name} declares dependencies (${Object.keys(manifest.dependencies).join(', ')}).\n` +
+            `Only dependency-free packages can be staged, because this script does not walk\n` +
+            `the node_modules graph — a partial copy would fail inside the container instead.`
+        );
+    }
+    cpSync(source, join(DEST, 'node_modules', name), { recursive: true });
 }
 
 function toPosix(p: string): string {
@@ -102,8 +177,9 @@ function toPosix(p: string): string {
 
 function main(): void {
     const files = new Set<string>();
+    const packages = new Set<string>();
     for (const entrypoint of ENTRYPOINTS) {
-        collect(entrypoint, files, '<entrypoint>');
+        collect(entrypoint, files, '<entrypoint>', packages);
     }
 
     rmSync(DEST, { recursive: true, force: true });
@@ -111,6 +187,9 @@ function main(): void {
         const target = join(DEST, file);
         mkdirSync(dirname(target), { recursive: true });
         writeFileSync(target, readFileSync(join(REPO_ROOT, file)));
+    }
+    for (const name of [...packages].sort()) {
+        stagePackage(name);
     }
 
     // The graders are ESM. Without a `type` the nearest package.json lookup walks out
@@ -122,7 +201,7 @@ function main(): void {
         JSON.stringify({ name: 'msbench-graders', private: true, type: 'module' }, null, 2) + '\n'
     );
 
-    console.log(`Staged ${files.size} grader source files to ${relative(REPO_ROOT, DEST)}`);
+    console.log(`Staged ${files.size} grader source files and ${packages.size} package(s) to ${relative(REPO_ROOT, DEST)}`);
     for (const file of [...files].sort()) {
         console.log(`  ${file}`);
     }

@@ -151,8 +151,33 @@ log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du
 # their sources have to travel with the run. Staged on every invocation —
 # including --skip-build — because they are source files read straight off the
 # working tree: staging a stale copy would grade the wrong contract.
+# The debug graders import `jsonc-parser` (launch.json is JSON with comments), and
+# the container has no install step, so the package has to travel with the staged
+# tree. Staging is a *copy*, so it needs the package to exist on disk somewhere —
+# it cannot be conjured on a host where nothing was ever installed.
+#
+# stage-graders.ts looks in the repo root as well as evals/, and the repo root is
+# where `jsonc-parser` actually lives (it is a declared dependency of the
+# extension). So this only has to run in the one case neither is populated, which
+# keeps the "a stimulus run on a bare host costs nothing" property for every host
+# that has installed either.
+if [ ! -d "${REPO_ROOT}/node_modules/jsonc-parser" ] && [ ! -d "${HERE}/../node_modules/jsonc-parser" ]; then
+    log "Installing eval dependencies (needed to stage graders)"
+    ( cd "${HERE}/.." && npm install )
+fi
+
 log "Staging graders"
 node "${HERE}/stage-graders.ts"
+
+# The scaffold and local-dev phases grade agents whose first action is to read
+# `.azure/project-plan.md`, so the workspace has to be seeded before turn 0. The
+# stimulus says *what state it needs* with a `# seed:` directive; this resolves
+# that to a recipe and writes assets/workspace/, which the phase `script:` copies
+# into /workspace. Run for every stimulus, including unseeded ones, because it
+# also *clears* assets/workspace/ — otherwise a previous run's plan would leak
+# into a stimulus whose whole premise is that no plan exists.
+log "Staging workspace seed"
+node "${HERE}/stage-workspace.ts" "$STIMULUS"
 
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.

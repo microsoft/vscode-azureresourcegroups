@@ -1,0 +1,168 @@
+# Stimulus 2.2 `debug-generate-artifacts` from evals/local-dev/eval.yaml.
+#
+# phase: local
+# seed: approved-fullstack
+#
+# Ports the second local-development stimulus: the approved debug plan is carried
+# through to `azure-debug-generate`, which must emit `.vscode/launch.json`,
+# `.vscode/tasks.json` and friends that conform to the plan the user approved.
+#
+# This is the longest chain in the folder — four turns, two agents, a real
+# scaffold and a real generate. Everything about the setup is shared with
+# config/stimuli/debug-plan-approval-gate.yaml: why the scaffold is chained rather
+# than seeded, why `promptSteps[].chatMode` is used, why the `handoff` step type
+# is the documented upgrade but not used yet, and why `snapshotWorkspace: false`
+# forces `file-exists` to become `exec:`. That file carries the full reasoning;
+# it is not repeated here.
+#
+# ── The fourth turn, and why it is verbatim ───────────────────────────────────
+#
+# Turn 2 approves the plan. Turn 3 looks like it says the same thing again, and it
+# is the most likely part of this file to be "tidied up" into oblivion, so
+# eval.yaml's note is worth restating in full:
+#
+#   azure-debug-plan is contracted to call start_azure_debug_generate and STOP
+#   (azure-debug-plan.agent.md step 4). In VS Code that tool call spawns the
+#   generate agent; the harness MCP tool is a stub, so this turn carries the
+#   exact hand-off prompt the tool would have sent, verbatim from that step.
+#
+# So turn 3 is not a repeat of turn 2 — it is standing in for a tool call whose
+# real implementation opens a new chat session that the harness cannot open. Turn
+# 2 ends the planning agent's work at its hand-off; turn 3 is the message that
+# hand-off would have delivered. Reword it and the generate agent is being given
+# an instruction the product would never send, which is the one thing this
+# stimulus is trying not to do.
+#
+# One consequence worth being explicit about, since it is a fidelity gap rather
+# than a detail: the generate turns run in the SAME chat session as the planning
+# turns, whereas in product the generate agent starts fresh. It therefore sees
+# conversation history the real agent would not. `.azure/vscode-debug-plan.md` is
+# the contracted channel between the two, and validate-debug-artifacts grades the
+# workspace against that document rather than against the transcript, so the
+# graded property is still the right one — but an agent that leaned on chat
+# history instead of the artifact would be flattered here.
+
+# Same seed and same precondition as debug-plan-approval-gate.yaml. A seed that
+# silently failed to copy would take out the scaffold turn, then the plan turn,
+# then the generate turns, and report four turns of red for a failed `cp`.
+preConditions:
+  - comment: The approved plan seed must be present before the agent starts
+    exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
+
+promptSteps:
+  # ─── Turn 0: SETUP — scaffold a real project ──────────────────────────────
+  # Byte-identical to debug-plan-approval-gate.yaml's turn 0, in the scaffold
+  # agent. Not graded; see that file.
+  - chatMode: azure-project-scaffold
+    text: |
+      The project plan has been approved. Execute the approved
+      `.azure/project-plan.md` and scaffold the project.
+    assertions:
+      # Liveness sentinel, turn 0. One per turn — see README.md, "Multi-turn
+      # stimuli". With four turns this file is the strongest case for the rule:
+      # a run that dies at turn 1 would otherwise report the turn-3 negatives as
+      # passes.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: constraints.reject_tools [vscode_askQuestions] — turn 0 copy.
+      # Four copies, one per turn, for the same reason as in the paired file: the
+      # implied stepIndex filter means each copy sees exactly one turn.
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Turn 1: SETUP — produce the debug plan ───────────────────────────────
+  # Inherits chatMode: azure-debug-plan from config/phases/local.yaml.
+  # The gate behaviour this turn produces is graded in full by
+  # config/stimuli/debug-plan-approval-gate.yaml; here it is a step on the way,
+  # so only the harness-level assertions are attached.
+  - text: |
+      Now set up local debugging for this project so I can hit F5 in VS Code.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Turn 2: the user approves ────────────────────────────────────────────
+  # Still azure-debug-plan. Step 4 of azure-debug-plan.agent.md: set the plan
+  # status to Approved, call start_azure_debug_generate, and STOP.
+  - text: "The debug plan looks good, approved. Generate the configuration."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: tool-calls required [workflow-tools-start_azure_debug_generate]
+      # Declared HERE rather than on the last step, and that is load-bearing. The
+      # hand-off is contracted to happen on the turn the user approves; the
+      # implied stepIndex filter binds this to :stepIndex = 2, so it asserts the
+      # hand-off happened at the gate rather than at some point in the session.
+      # In debug-plan-approval-gate.yaml the same tool is asserted ABSENT on the
+      # pre-approval turn — together those two are the gate.
+      - comment: Agent should hand off to the generate agent once the plan is approved
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_azure_debug_generate%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 2)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Turn 3: the hand-off prompt the stub tool could not send ─────────────
+  #
+  # Verbatim from azure-debug-plan.agent.md step 4 — see the header. Do not
+  # reword.
+  #
+  # Runs as azure-debug-generate, which is a per-step override of the phase's
+  # azure-debug-plan. In product this mode switch is performed by the
+  # start_azure_debug_generate tool asserted on turn 2; here the tool is a stub,
+  # so the switch is declared. This is the step the schema's `handoff:` type
+  # would replace outright once its ids are known.
+  - chatMode: azure-debug-generate
+    text: "The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."
+    assertions:
+      # Liveness sentinel, turn 3. Every graded assertion in this stimulus hangs
+      # off this turn, so a run that got this far and then stalled is exactly the
+      # case that would otherwise report as a product failure.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program debug-plan-implemented --assert-status=Implemented --assert-checklist
+      # The same validator as turn 1's, under stricter expectations: the plan must
+      # now say `Implemented` and its checklist must be filled in. That is what
+      # makes the plan a record of what was generated rather than a proposal.
+      #
+      # Also subsumes eval.yaml's `file-exists launch-json-exists`, which cannot
+      # be ported as a `files` query under snapshotWorkspace: false — the
+      # structural grader below reads `.vscode/launch.json` directly and fails
+      # when it is absent, so a separate existence check would be weaker.
+      - comment: The debug plan is marked Implemented with a completed checklist
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts --assert-status=Implemented --assert-checklist
+
+      # vally: program debug-config-structurally-sound
+      # launch.json and tasks.json: named configurations, resolvable
+      # preLaunchTask and dependsOn chains, terminating dependency graphs,
+      # compounds that start each service exactly once. These are the defects a
+      # user hits on the first F5, all detectable without running anything.
+      #
+      # This is the grader that made `jsonc-parser` travel with the staged tree —
+      # launch.json is JSON with comments, and a hand-rolled tolerant reader
+      # fails by silently mis-parsing rather than by erroring.
+      - comment: launch.json and tasks.json are structurally sound
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
+
+      # vally: program artifacts-conform-to-plan
+      # The conformance check: every plan row marked `[x]` produced exactly one
+      # artifact and every `[ ]` produced none. Catches generation quietly
+      # diverging from what the user actually approved, which none of the
+      # structural graders above can see.
+      - comment: Generated debug artifacts match the approved plan
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
+
+      # vally: constraints.reject_tools [vscode_askQuestions] — turn 3 copy.
+      - comment: Agent should not fall back to the chat question tool (turn 3)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. On the last step, where the `exec:` graders run.
+      # See config/stimuli/photo-app-requirements.yaml.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure .vscode 2>&1 | head -40'
+        assertZeroExitCode: false
