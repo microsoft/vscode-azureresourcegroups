@@ -1,3 +1,12 @@
+# evals/ and resources/agents/ must be LF in every working tree. Git for
+# Windows sets core.autocrlf=true system-wide, so a plain Windows clone gets
+# CRLF and three byte-exact checks fail locally while CI stays green:
+#   npm run certify       manifest.json mutations search for strings with "\n"
+#   npm run stacks:check  .wiring.md snapshots are compared byte-for-byte
+#   npm run drift         sha256 over the raw bytes of resources/agents/**
+evals/** text=auto eol=lf
+resources/agents/** text=auto eol=lf
+
 NOTICE.html linguist-vendored=true
 
 .github/workflows/*.lock.yml linguist-generated=true merge=ours
