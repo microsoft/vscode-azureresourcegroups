@@ -1840,7 +1840,7 @@ Changing a grader used to mean paying for a run to find out whether it still wor
 graders against a run that already happened, for **zero tokens**.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"     # Windows: .msbench-venv/Scripts
 cd evals && npm run regrade -- 2026082582510393
 ```
 
@@ -1953,7 +1953,7 @@ Two traps, both of which cost real time:
 reads past runs and asks, per gate, whether that gate has ever actually done its job.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"        # Windows: .msbench-venv/Scripts
 cd evals && npm run gate-health                    # every run in the local cache
 npm run gate-health -- 2026082579322454 …          # specific runs, extracted on demand
 ```

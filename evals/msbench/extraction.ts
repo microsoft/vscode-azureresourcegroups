@@ -39,6 +39,19 @@ export class MsBenchToolError extends Error { }
 /** Where extractions are cached when no explicit directory is given. Gitignored. */
 export const CACHE_ROOT = join(import.meta.dirname, '.regrade');
 
+/**
+ * The virtualenv script directory for this platform: `Scripts` on Windows, `bin` elsewhere.
+ *
+ * Only ever used to build the "put msbench-cli on PATH" hint, but a hint naming a directory
+ * that does not exist is worse than no hint — it reads as authoritative and sends the reader
+ * looking for a bug in their own setup. `run.sh` has always branched on this; the tools that
+ * print the same advice did not, and told every Windows developer to add a `bin` directory
+ * their venv has never had.
+ */
+export function venvBinDir(): string {
+    return process.platform === 'win32' ? 'Scripts' : 'bin';
+}
+
 export interface Instance {
     /** Directory name minus the `-output` suffix, e.g. `vscbench.eval.x86_64.say_hello`. */
     name: string;
@@ -107,7 +120,7 @@ export function resolveExtraction(request: ExtractRequest, log: Logger = console
     if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new MsBenchToolError(
             'msbench-cli is not on PATH. Run:\n' +
-            '  export PATH="$HOME/.msbench-venv/bin:$PATH"\n' +
+            `  export PATH="$HOME/.msbench-venv/${venvBinDir()}:$PATH"\n` +
             'Invoking it by absolute path breaks its plugin discovery, so it has to be on PATH.'
         );
     }
