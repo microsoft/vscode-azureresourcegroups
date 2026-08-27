@@ -306,7 +306,7 @@ esac
 if [ ! -x "${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" ]; then
     log "Installing msbench-cli into ${VENV} (using $($PYTHON --version))"
     "$PYTHON" -m venv "$VENV"
-    "${VENV}/${VENV_BIN}/python" -m pip install --quiet --upgrade pip
+    "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet --upgrade pip
 
     # Token goes in the index URL rather than via keyring, which otherwise drops
     # into an interactive prompt and hangs a non-tty shell.
@@ -315,24 +315,24 @@ if [ ! -x "${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" ]; then
         || die "Could not get a DevOps token. Request the 'MSBench User' role at https://aka.ms/msbench/access"
 
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/${VENV_BIN}/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
         || die "msbench-cli install failed. Confirm feed access at https://aka.ms/msbench/access"
     unset ADO_TOKEN
 fi
-log "msbench-cli $("${VENV}/${VENV_BIN}/msbench-cli" version 2>/dev/null | tail -1)"
+log "msbench-cli $("${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" version 2>/dev/null | tail -1)"
 
 # Special agents are discovered as console scripts on PATH, not as imports, so
-# calling ${VENV}/bin/msbench-cli directly reports every plugin as "not
-# installed". This is the equivalent of activating the venv.
+# calling the msbench-cli in ${VENV}/${VENV_BIN} directly reports every plugin
+# as "not installed". This is the equivalent of activating the venv.
 export PATH="${VENV}/${VENV_BIN}:${PATH}"
 
 # msbench-cli depends on this, but a plugin missing from PATH and one missing
 # from site-packages produce the same error, so verify the real thing.
-if ! "${VENV}/${VENV_BIN}/python" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
+if ! "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
     log "Installing the vscode special agent plugin"
     ADO_TOKEN="$(az account get-access-token --resource "$ADO_RESOURCE" --query accessToken -o tsv)"
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/${VENV_BIN}/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
         || die "Could not install msbench-agent-vscode"
     unset ADO_TOKEN
 fi
@@ -368,7 +368,7 @@ RUN_LOG="$(mktemp -t msbench-run.XXXXXX)"
 trap 'rm -f "$RUN_LOG"; rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 set +e
-"${VENV}/${VENV_BIN}/msbench-cli" run \
+"${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" run \
     --agent vscode \
     --model . \
     --benchmark "$BENCHMARK" \
