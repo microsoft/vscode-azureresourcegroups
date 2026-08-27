@@ -414,6 +414,29 @@ function issueCodes(result: ArtifactValidationResult): string[] {
     return result.issues.map(value => value.code);
 }
 
+/**
+ * How an `expectedCode` is compared against what a validator actually reported.
+ *
+ * - `passed` means the validator raised nothing at all.
+ * - `!someCode` means that code must be absent, whatever else was reported.
+ * - anything else means that code must be present.
+ *
+ * The negative form exists because `includes` alone cannot falsify the removal of a spurious
+ * issue: a validator that reports the right code *plus* a wrong one looks identical to one
+ * that reports only the right code. `noPackagesFound` was exactly that — it fired alongside
+ * `unparseablePackageManifest` and told the reader the workspace had no package.json when it
+ * demonstrably had one — and no mutation could have caught it.
+ */
+function matchesExpectation(expected: string, actual: string[]): boolean {
+    if (expected === 'passed') {
+        return actual.length === 0;
+    }
+    if (expected.startsWith('!')) {
+        return !actual.includes(expected.slice(1));
+    }
+    return actual.includes(expected);
+}
+
 function createCase(
     id: string,
     tier: 'offline' | 'aca',
@@ -429,7 +452,7 @@ function createCase(
         validator,
         expected,
         actual,
-        passed: expected === 'passed' ? actual.length === 0 : actual.includes(expected),
+        passed: matchesExpectation(expected, actual),
         durationMs: 0,
     };
 }

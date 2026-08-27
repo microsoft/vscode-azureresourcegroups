@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`
 - Outcome: **PASSED**
-- Cases: 106/106 passed
+- Cases: 110/110 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -14,6 +14,7 @@
 | `golden-integration-plan` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `golden-frontend-scaffold` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `golden-project-builds` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
+| `frontend-scaffold-dot-directory-ignored` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `requirements-schema-version` | `sample-agent-output` | `requirements` | `schemaVersion` | `schemaVersion` | PASS |
 | `project-plan-numbering` | `sample-agent-output` | `project-plan` | `nonSequentialHeading` | `nonSequentialHeading, nonSequentialHeading` | PASS |
 | `plan-gate-frontend-dropped` | `sample-agent-output` | `plan-gate` | `frontendIntentMismatch` | `frontendIntentMismatch` | PASS |
@@ -110,6 +111,9 @@
 | `debug-breakpoint-schema-drift-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:schemaDrift` | `harnessFault:schemaDrift` | PASS |
 | `debug-breakpoint-missing-verdict-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:noVerdict` | `harnessFault:noVerdict` | PASS |
 | `golden-no-scaffold` | `unapproved-plan-refusal` | `no-scaffold` | `passed` | `passed` | PASS |
+| `golden-project-builds` | `unapproved-plan-refusal` | `project-builds` | `noPackagesFound` | `noPackagesFound, frontendNotScaffolded` | PASS |
+| `project-builds-unparseable-only-reports-the-real-problem` | `unapproved-plan-refusal` | `project-builds` | `unparseablePackageManifest` | `unparseablePackageManifest, frontendNotScaffolded` | PASS |
+| `project-builds-unparseable-only-not-called-empty` | `unapproved-plan-refusal` | `project-builds` | `!noPackagesFound` | `unparseablePackageManifest, frontendNotScaffolded` | PASS |
 | `no-scaffold-nested-source-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
 | `no-scaffold-root-manifest-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
 | `golden-integration-plan` | `api-only-no-datastore` | `integration-plan` | `passed` | `passed` | PASS |

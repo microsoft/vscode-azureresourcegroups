@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T03:48:53.794Z",
+  "generatedAt": "2026-08-27T04:31:01.788Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -82,6 +82,18 @@
       "validator": "project-builds",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-dot-directory-ignored",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
+      ],
       "passed": true,
       "durationMs": 0
     },
@@ -1195,6 +1207,45 @@
       "validator": "no-scaffold",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-builds",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "noPackagesFound",
+      "actual": [
+        "noPackagesFound",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-reports-the-real-problem",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "unparseablePackageManifest",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-not-called-empty",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "!noPackagesFound",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
       "passed": true,
       "durationMs": 0
     },

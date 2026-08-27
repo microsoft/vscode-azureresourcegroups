@@ -47,7 +47,7 @@ const MAX_DEPTH = 6;
 export const MAX_REPORTED_SCAFFOLD_ARTIFACTS = 10;
 
 function collectScaffoldArtifacts(root: string, directory: string, depth: number, found: string[], seeded: Set<string>): void {
-    if (depth > MAX_DEPTH || found.length > MAX_REPORTED_SCAFFOLD_ARTIFACTS) {
+    if (depth > MAX_DEPTH || found.length >= MAX_REPORTED_SCAFFOLD_ARTIFACTS) {
         return;
     }
     let entries: Dirent[];

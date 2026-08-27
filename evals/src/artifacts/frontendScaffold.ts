@@ -95,8 +95,12 @@ export async function discoverFrontendDirectory(workspaceRoot: string): Promise<
     // A frontend does not have to live under a group folder. The scaffold instructions let the
     // agent pick a product-named folder, and a plan can place it at the repo root (`web/`), so a
     // root-level scan is required — without it a plan-compliant frontend reports as `frontendNotFound`.
+    // Dot-directories are excluded: they hold tooling and harness input (`.azure` carries the plan,
+    // `.github` the agent instructions), never product code, so a frontend-looking manifest inside
+    // one is someone else's config rather than the app under test. `discoverPackages` in
+    // projectPackages.ts draws the same line.
     for (const entry of await readDirectorySafe(workspaceRoot)) {
-        if (entry.isDirectory() && !IGNORED_DIRECTORIES.has(entry.name)) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && !IGNORED_DIRECTORIES.has(entry.name)) {
             candidates.push(path.join(workspaceRoot, entry.name));
         }
     }

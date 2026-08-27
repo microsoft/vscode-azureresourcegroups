@@ -121,7 +121,10 @@ export async function validateProjectPackages(
         });
     }
 
-    if (packages.length === 0) {
+    // Only when there is nothing at all. A manifest that exists but does not parse is already
+    // reported above, and claiming the scaffold "produced no package.json anywhere" on top of
+    // that is a false statement about a workspace that plainly has one.
+    if (packages.length === 0 && unparseable.length === 0) {
         issues.push({
             code: 'noPackagesFound',
             path: '.',
