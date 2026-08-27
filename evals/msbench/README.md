@@ -126,8 +126,15 @@ az acr login --name codeexecservice
 `codeexecservice.azurecr.io` is where `benchmarks/build_and_push.py` publishes, and it
 is not visible in any subscription that account can see. So running the suite and
 *publishing an image for it* are two different grants, and only the first is in place.
-That matters the moment anyone tries the custom-image route — see
-[Seeding the starting workspace](#seeding-the-starting-workspace).
+
+**That turned out not to block the custom-image route.** MSBench supports a
+per-instance `container_registry`, so an image can live in a registry we own and
+never touch the shared ACR — no `MSBench User` role, no local Docker daemon.
+`container/` builds exactly that, and run `2026082777513216` measured
+`func 4.14.0` inside it. The one prerequisite is granting the CES service
+principal `AcrPull` on your own registry; without it every instance returns
+`missing` with no output, because the CES job dies at its `Login to ACR` step.
+See [`container/README.md`](container/README.md).
 
 `run.sh` mints the feed token with `az account get-access-token` rather than using
 `keyring`, which otherwise drops into an interactive prompt and hangs.

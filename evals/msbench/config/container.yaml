@@ -103,6 +103,26 @@ binaries:
   # `evidence` is now `measured`: run 2026082762322354's fingerprint reported
   # `func=MISSING` directly, so the absence is observed rather than inherited from
   # documentation. The install failing is a separate measurement, above.
+  #
+  # ── Solved, but deliberately still `absent` here ────────────────────────────
+  #
+  # `container/` now builds an image that carries func 4.14.0, and run
+  # 2026082777513216 measured it in the container:
+  #
+  #     + command -v func
+  #     ++ func --version
+  #     + echo 'func already present: 4.14.0'
+  #
+  # The agent then ran `func init services/functions --typescript --model V4`.
+  #
+  # This row still says `absent` because it describes the STOCK image, which is
+  # what a run gets unless its dataset row names our registry. Flipping it to
+  # `present` would let a stack require func without declaring the matching
+  # knownGap, and that stack would then fail on the default image with exactly
+  # the mysterious red this file exists to prevent. The custom image is opt-in
+  # per instance, so the conservative default is the true one.
+  #
+  # See container/README.md for the registry setup that makes the image usable.
   func:
     status: absent
     install: npm install -g azure-functions-core-tools@4 --unsafe-perm true
