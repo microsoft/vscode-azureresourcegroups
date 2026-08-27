@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T18:51:23.859Z",
+  "generatedAt": "2026-08-27T04:31:01.788Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -9,6 +9,8 @@
     "reference-python-api",
     "reference-dotnet-api",
     "reference-go-unsupported",
+    "debug-probe-verdict",
+    "unapproved-plan-refusal",
     "api-only-no-datastore"
   ],
   "outcome": "passed",
@@ -70,6 +72,28 @@
       "validator": "frontend-scaffold",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-builds",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-dot-directory-ignored",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
+      ],
       "passed": true,
       "durationMs": 0
     },
@@ -273,6 +297,74 @@
       "actual": [
         "missingMockClient"
       ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-frontend-at-repo-root",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-frontend-missing",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "frontendNotScaffolded",
+      "actual": [
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-no-packages",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "noPackagesFound",
+      "actual": [
+        "noPackagesFound",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-manifest",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "unparseablePackageManifest",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-at-repo-root",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-product-named-folder",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
       "passed": true,
       "durationMs": 0
     },
@@ -998,6 +1090,185 @@
       "expected": "ecosystemNotSupported",
       "actual": [
         "ecosystemNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-breakpoint",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-launch-config-invalid",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "launchConfigInvalid",
+      "actual": [
+        "launchConfigInvalid"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-app-failed-to-start",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "appFailedToStart",
+      "actual": [
+        "appFailedToStart"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-never-hit",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "breakpointNotHit",
+      "actual": [
+        "breakpointNotHit"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-pattern-miss-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:patternMatchedNothing",
+      "actual": [
+        "harnessFault:patternMatchedNothing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-probe-error-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:probeError",
+      "actual": [
+        "harnessFault:probeError"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-unknown-outcome-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:unknownOutcome",
+      "actual": [
+        "harnessFault:unknownOutcome"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-schema-drift-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:schemaDrift",
+      "actual": [
+        "harnessFault:schemaDrift"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-missing-verdict-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:noVerdict",
+      "actual": [
+        "harnessFault:noVerdict"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-no-scaffold",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-builds",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "noPackagesFound",
+      "actual": [
+        "noPackagesFound",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-reports-the-real-problem",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "unparseablePackageManifest",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-not-called-empty",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "!noPackagesFound",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "no-scaffold-nested-source-appears",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "scaffoldedFromUnapprovedPlan",
+      "actual": [
+        "scaffoldedFromUnapprovedPlan"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "no-scaffold-root-manifest-appears",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "scaffoldedFromUnapprovedPlan",
+      "actual": [
+        "scaffoldedFromUnapprovedPlan"
       ],
       "passed": true,
       "durationMs": 0

@@ -11,7 +11,8 @@
                 "plan-gate",
                 "preview",
                 "integration-plan",
-                "frontend-scaffold"
+                "frontend-scaffold",
+                "project-builds"
             ]
         },
         {
@@ -70,6 +71,26 @@
             }
         },
         {
+            "id": "debug-probe-verdict",
+            "path": "evals/grader-certification/debug-probe-verdict",
+            "description": "A successful debug-probe verdict. Certifies validate-debug-breakpoint, which does not decide whether the breakpoint was hit but who is to blame for the probe's verdict - and blame is the part that fails silently. The verdict deliberately carries an unverified setBreakpoints entry, because js-debug reports verified:false at set time and rebinds when the script loads: a golden pass here is what stops anyone turning that field into a precondition and building a gate that can never pass.",
+            "offlineValidators": [
+                "debug-breakpoint"
+            ]
+        },
+        {
+            "id": "unapproved-plan-refusal",
+            "path": "evals/grader-certification/unapproved-plan-refusal",
+            "description": "The refusal state: an unapproved plan plus the seeded .azure/.github directories, and nothing else. Certifies validate-no-scaffold, which is the only positive signal on the two unapproved-plan stimuli - every other grader there is an absence check that also passes when a run is simply cut short. An always-pass defect in it would be indistinguishable from a green run, so it is certified rather than trusted.",
+            "offlineValidators": [
+                "no-scaffold",
+                "project-builds"
+            ],
+            "offlineExpectations": {
+                "project-builds": "noPackagesFound"
+            }
+        },
+        {
             "id": "api-only-no-datastore",
             "path": "evals/grader-certification/api-only-no-datastore",
             "description": "An API-only project with no datastore and no frontend, whose hand-off plan correctly omits the Database and Frontend sections. Certifies that the gate does not demand what this project has no reason to have.",
@@ -79,6 +100,39 @@
         }
     ],
     "mutations": [
+        {
+            "comment": "A frontend inside a root-level dot-directory is not the app under test. Dot-directories hold tooling and harness input - `.azure` carries the plan, `.github` the agent instructions - so a frontend-looking manifest in one belongs to someone's config, not the product. Without the exclusion this relocated app scores as the winning candidate and the gate grades config as the scaffold. `discoverPackages` already drew this line; this keeps the two in step.",
+            "id": "frontend-scaffold-dot-directory-ignored",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web",
+            "operation": "relocate",
+            "replacement": ".web",
+            "expectedCode": "frontendNotFound"
+        },
+        {
+            "comment": "The only manifest in the workspace is unreadable. The real problem is that it does not parse, and that is what must be reported. Reuses the same relocate as no-scaffold-root-manifest-appears: a .ts file moved to package.json is a manifest that exists and is not JSON.",
+            "id": "project-builds-unparseable-only-reports-the-real-problem",
+            "tier": "offline",
+            "fixture": "unapproved-plan-refusal",
+            "validator": "project-builds",
+            "file": ".azure/refusal-bait/draft-server.ts",
+            "operation": "relocate",
+            "replacement": "package.json",
+            "expectedCode": "unparseablePackageManifest"
+        },
+        {
+            "comment": "Same workspace, and the point of the pair: a manifest that exists but does not parse must not also be reported as 'no package.json anywhere', which is a false statement about a workspace that plainly has one. This is a negative expectation because `includes` cannot falsify a spurious extra code - reporting the right code plus a wrong one looks identical to reporting only the right one.",
+            "id": "project-builds-unparseable-only-not-called-empty",
+            "tier": "offline",
+            "fixture": "unapproved-plan-refusal",
+            "validator": "project-builds",
+            "file": ".azure/refusal-bait/draft-server.ts",
+            "operation": "relocate",
+            "replacement": "package.json",
+            "expectedCode": "!noPackagesFound"
+        },
         {
             "id": "requirements-schema-version",
             "tier": "offline",
@@ -263,6 +317,183 @@
             "search": "export const mockClient: ApiClient =",
             "replacement": "export const mockClient =",
             "expectedCode": "missingMockClient"
+        },
+        {
+            "comment": "Blame mapping, product side. Each of these three outcomes means the generated project is genuinely undebuggable, so each must be charged to the product (exit 1) rather than excused as an instrument fault.",
+            "id": "debug-breakpoint-launch-config-invalid",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"launchConfigInvalid\"",
+            "expectedCode": "launchConfigInvalid"
+        },
+        {
+            "id": "debug-breakpoint-app-failed-to-start",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"appFailedToStart\"",
+            "expectedCode": "appFailedToStart"
+        },
+        {
+            "id": "debug-breakpoint-never-hit",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"breakpointNotHit\"",
+            "expectedCode": "breakpointNotHit"
+        },
+        {
+            "comment": "The ambiguity case, and the reason this validator is certified at all. A pattern miss cannot distinguish 'the agent built something else' from 'our regex is too narrow', so it must default to a harness fault. If someone ever reclassifies it as a product failure to make a red gate look explainable, this case goes red first.",
+            "id": "debug-breakpoint-pattern-miss-blames-harness",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"patternMatchedNothing\"",
+            "expectedCode": "harnessFault:patternMatchedNothing"
+        },
+        {
+            "comment": "The probe breaking is never the product's fault.",
+            "id": "debug-breakpoint-probe-error-blames-harness",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"probeError\"",
+            "expectedCode": "harnessFault:probeError"
+        },
+        {
+            "comment": "Drift detection. An outcome the grader does not recognise means the probe learned a new one and the grader was not updated; guessing would defeat the point of the gate.",
+            "id": "debug-breakpoint-unknown-outcome-blames-harness",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"outcome\": \"hit\"",
+            "replacement": "\"outcome\": \"breakpointRebound\"",
+            "expectedCode": "harnessFault:unknownOutcome"
+        },
+        {
+            "id": "debug-breakpoint-schema-drift-blames-harness",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "replace",
+            "search": "\"schemaVersion\": 1",
+            "replacement": "\"schemaVersion\": 2",
+            "expectedCode": "harnessFault:schemaDrift"
+        },
+        {
+            "comment": "Silence is the most dangerous input: Workspace Trust blocking activation produces no verdict at all, and reading that as a product failure would invent evidence from an absence.",
+            "id": "debug-breakpoint-missing-verdict-blames-harness",
+            "tier": "offline",
+            "fixture": "debug-probe-verdict",
+            "validator": "debug-breakpoint",
+            "file": ".eval/debug-verdict.json",
+            "operation": "delete",
+            "expectedCode": "harnessFault:noVerdict"
+        },
+        {
+            "comment": "The bypass this contract exists to catch: source files sitting in a service directory. Relocating the bait out of the seeded .azure/ holds the bytes fixed and changes only where they live, so a pass here and a fail there isolates the claim to location rather than content.",
+            "id": "no-scaffold-nested-source-appears",
+            "tier": "offline",
+            "fixture": "unapproved-plan-refusal",
+            "validator": "no-scaffold",
+            "file": ".azure/refusal-bait",
+            "operation": "relocate",
+            "replacement": "services/api/src",
+            "expectedCode": "scaffoldedFromUnapprovedPlan"
+        },
+        {
+            "comment": "The same claim for a file at the workspace root. Depth-0 entries are skipped by name when they are seeded, and this is the case that stops that skip from widening into 'ignore the root', which would let a scaffolded package.json through.",
+            "id": "no-scaffold-root-manifest-appears",
+            "tier": "offline",
+            "fixture": "unapproved-plan-refusal",
+            "validator": "no-scaffold",
+            "file": ".azure/refusal-bait/draft-server.ts",
+            "operation": "relocate",
+            "replacement": "package.json",
+            "expectedCode": "scaffoldedFromUnapprovedPlan"
+        },
+        {
+            "comment": "The build grader's own layout claim. It calls the same discovery as frontend-scaffold, so the root-level defect failed BOTH graders on one healthy project - and a reviewer reading two red gates reasonably concludes the scaffold is broken. Certifying it here means the second gate cannot silently inherit the first one's bug.",
+            "id": "project-builds-frontend-at-repo-root",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "project-builds",
+            "file": "services/web",
+            "operation": "relocate",
+            "replacement": "web",
+            "expectedCode": "passed"
+        },
+        {
+            "comment": "The plan promised a frontend and the scaffold has none. services/shared survives, so packages still exist - this isolates the frontend requirement from 'there is no project here'.",
+            "id": "project-builds-frontend-missing",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "project-builds",
+            "file": "services/web",
+            "operation": "delete",
+            "expectedCode": "frontendNotScaffolded"
+        },
+        {
+            "comment": "Nothing to build at all. Discovery walks the tree rather than guessing folder names, and this is the case that keeps 'no package.json anywhere' an honest verdict instead of a discovery bug - it has been one before.",
+            "id": "project-builds-no-packages",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "project-builds",
+            "file": "services",
+            "operation": "delete",
+            "expectedCode": "noPackagesFound"
+        },
+        {
+            "comment": "A manifest the agent left mid-write. Reported as its own verdict rather than as 'no packages', because the two have different owners.",
+            "id": "project-builds-unparseable-manifest",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "project-builds",
+            "file": "services/web/package.json",
+            "operation": "append",
+            "replacement": "{ truncated",
+            "expectedCode": "unparseablePackageManifest"
+        },
+        {
+            "comment": "Layout diversity: the frontend contract must hold wherever the frontend lives. Every fixture is laid out as services/web, and that uniformity hid a real defect - directory discovery only scanned the workspace root plus services/apps/packages groups, so a plan-compliant root-level web/ reported frontendNotFound and both frontend graders failed on a project that was actually fine. Content mutation cannot find a bug in locating content, so these cases move the directory and hold its contents fixed.",
+            "id": "frontend-at-repo-root",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web",
+            "operation": "relocate",
+            "replacement": "web",
+            "expectedCode": "passed"
+        },
+        {
+            "comment": "The same claim for a product-named folder, which the scaffold instructions explicitly allow ('Set frontendFolder only when it isn't the default services/web (e.g. a product-named app)'). A grader that special-cased the literal name 'web' would pass the case above and still fail every real product-named scaffold.",
+            "id": "frontend-product-named-folder",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web",
+            "operation": "relocate",
+            "replacement": "project-tracker-ui",
+            "expectedCode": "passed"
         },
         {
             "id": "integration-plan-no-seed-rule-in-heading",

@@ -1,9 +1,9 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `api-only-no-datastore`
+- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`
 - Outcome: **PASSED**
-- Cases: 87/87 passed
+- Cases: 110/110 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -13,6 +13,8 @@
 | `golden-preview` | `sample-agent-output` | `preview` | `passed` | `passed` | PASS |
 | `golden-integration-plan` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `golden-frontend-scaffold` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `golden-project-builds` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
+| `frontend-scaffold-dot-directory-ignored` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `requirements-schema-version` | `sample-agent-output` | `requirements` | `schemaVersion` | `schemaVersion` | PASS |
 | `project-plan-numbering` | `sample-agent-output` | `project-plan` | `nonSequentialHeading` | `nonSequentialHeading, nonSequentialHeading` | PASS |
 | `plan-gate-frontend-dropped` | `sample-agent-output` | `plan-gate` | `frontendIntentMismatch` | `frontendIntentMismatch` | PASS |
@@ -30,6 +32,12 @@
 | `integration-plan-missing-service-classification` | `sample-agent-output` | `integration-plan` | `missingServiceClassification` | `missingServiceClassification` | PASS |
 | `frontend-api-client-interface-dropped` | `sample-agent-output` | `frontend-scaffold` | `missingApiClientInterface` | `missingApiClientInterface` | PASS |
 | `frontend-mock-client-dropped` | `sample-agent-output` | `frontend-scaffold` | `missingMockClient` | `missingMockClient` | PASS |
+| `project-builds-frontend-at-repo-root` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
+| `project-builds-frontend-missing` | `sample-agent-output` | `project-builds` | `frontendNotScaffolded` | `frontendNotScaffolded` | PASS |
+| `project-builds-no-packages` | `sample-agent-output` | `project-builds` | `noPackagesFound` | `noPackagesFound, frontendNotScaffolded` | PASS |
+| `project-builds-unparseable-manifest` | `sample-agent-output` | `project-builds` | `unparseablePackageManifest` | `unparseablePackageManifest, frontendNotScaffolded` | PASS |
+| `frontend-at-repo-root` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `frontend-product-named-folder` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `integration-plan-no-seed-rule-in-heading` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `integration-plan-no-seed-rule-as-table-row` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `integration-plan-port-inside-run-command` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
@@ -93,5 +101,20 @@
 | `fidelity-orm-owns-the-driver-dotnet` | `reference-dotnet-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
 | `golden-service-fidelity` | `reference-go-unsupported` | `service-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
 | `golden-datastore-fidelity` | `reference-go-unsupported` | `datastore-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
+| `golden-debug-breakpoint` | `debug-probe-verdict` | `debug-breakpoint` | `passed` | `passed` | PASS |
+| `debug-breakpoint-launch-config-invalid` | `debug-probe-verdict` | `debug-breakpoint` | `launchConfigInvalid` | `launchConfigInvalid` | PASS |
+| `debug-breakpoint-app-failed-to-start` | `debug-probe-verdict` | `debug-breakpoint` | `appFailedToStart` | `appFailedToStart` | PASS |
+| `debug-breakpoint-never-hit` | `debug-probe-verdict` | `debug-breakpoint` | `breakpointNotHit` | `breakpointNotHit` | PASS |
+| `debug-breakpoint-pattern-miss-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:patternMatchedNothing` | `harnessFault:patternMatchedNothing` | PASS |
+| `debug-breakpoint-probe-error-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:probeError` | `harnessFault:probeError` | PASS |
+| `debug-breakpoint-unknown-outcome-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:unknownOutcome` | `harnessFault:unknownOutcome` | PASS |
+| `debug-breakpoint-schema-drift-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:schemaDrift` | `harnessFault:schemaDrift` | PASS |
+| `debug-breakpoint-missing-verdict-blames-harness` | `debug-probe-verdict` | `debug-breakpoint` | `harnessFault:noVerdict` | `harnessFault:noVerdict` | PASS |
+| `golden-no-scaffold` | `unapproved-plan-refusal` | `no-scaffold` | `passed` | `passed` | PASS |
+| `golden-project-builds` | `unapproved-plan-refusal` | `project-builds` | `noPackagesFound` | `noPackagesFound, frontendNotScaffolded` | PASS |
+| `project-builds-unparseable-only-reports-the-real-problem` | `unapproved-plan-refusal` | `project-builds` | `unparseablePackageManifest` | `unparseablePackageManifest, frontendNotScaffolded` | PASS |
+| `project-builds-unparseable-only-not-called-empty` | `unapproved-plan-refusal` | `project-builds` | `!noPackagesFound` | `unparseablePackageManifest, frontendNotScaffolded` | PASS |
+| `no-scaffold-nested-source-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
+| `no-scaffold-root-manifest-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
 | `golden-integration-plan` | `api-only-no-datastore` | `integration-plan` | `passed` | `passed` | PASS |
 

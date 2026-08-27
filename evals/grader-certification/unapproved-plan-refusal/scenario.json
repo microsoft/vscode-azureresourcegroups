@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-unapproved-plan-refusal",
+    "prompt": "Build a small project tracker with a browser UI and a persistent Node.js API.",
+    "baselinePrompt": "Create a runnable project tracker with a browser UI and persistent Node.js API. Include build, test, lint, launch, and deployment files.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "node",
+        "database": "file",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "File storage"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}
