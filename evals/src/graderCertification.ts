@@ -10,6 +10,7 @@ import { NON_VISUAL_APP_TYPES } from './artifacts/plannedProject.ts';
 import type { PlanGateState } from './artifacts/planEvaluation.ts';
 import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
 import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
+import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdict.ts';
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
@@ -17,7 +18,9 @@ import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
 import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
 import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
+import { validateProjectPackages } from './artifacts/projectPackages.ts';
 import { validateRequirementsArtifact } from './artifacts/requirements.ts';
+import { validateScaffoldAbsence } from './artifacts/scaffoldAbsence.ts';
 import { validateServiceFidelity } from './artifacts/serviceFidelity.ts';
 import {
     validateAppStarts,
@@ -60,7 +63,7 @@ interface CertificationMutation {
     fixture: string;
     validator: string;
     file?: string;
-    operation: 'replace' | 'append' | 'delete' | 'scenario-status';
+    operation: 'replace' | 'append' | 'delete' | 'relocate' | 'scenario-status';
     search?: string;
     replacement?: string;
     expectedCode: string;
@@ -252,6 +255,19 @@ const OFFLINE_VALIDATORS: Record<
         await readArtifact(workspace, '.vscode/tasks.json'),
     ),
     'debug-artifacts': async workspace => validateDebugArtifacts(workspace),
+    // Only the offline half of the build grader — is there a project, are its manifests
+    // readable, does it contain the frontend the plan promised. The `npm ci` half needs a
+    // network and minutes, so it cannot join this tier; these are the decisions that have
+    // actually regressed, and they cost nothing to pin.
+    'project-builds': async (workspace, scenario) =>
+        validateProjectPackages(workspace, { requireFrontend: (scenario.tags.frontend ?? 'none') !== 'none' }),
+    // Certified with the default adjudication — `patternMatchedNothing` blamed on the harness.
+    // That default is the whole safety property, so it is what the manifest pins.
+    'debug-breakpoint': async workspace => validateDebugBreakpointVerdict(workspace),
+    // `scenario.json` is the certification harness's own file, not agent output. See the
+    // option's docs in scaffoldAbsence.ts for why this is declared here rather than widened
+    // into the contract every stimulus runs against.
+    'no-scaffold': async workspace => validateScaffoldAbsence(workspace, { seededEntries: ['scenario.json'] }),
 
     // The runtime gates. Unlike everything above, these start the application and probe it
     // over HTTP, so certifying them costs a real process launch per fixture copy — which is
@@ -361,6 +377,21 @@ async function withMutatedFixture<T>(
                 // declared three services and the scaffold has two" is not expressible by
                 // removing a single file.
                 await fs.rm(filePath, { recursive: true });
+            } else if (mutation.operation === 'relocate') {
+                // Moves a directory without touching its contents, so a case can vary *where*
+                // a project lives while holding *what it contains* fixed.
+                //
+                // This exists because layout was the one variable certification could not
+                // express, and a real bug used that gap: every frontend fixture is laid out as
+                // `services/web`, so all six frontend-scaffold cases passed while directory
+                // discovery could not find a plan-compliant root-level `web/` at all. Content
+                // mutation cannot catch a defect in locating the content.
+                if (!mutation.replacement) {
+                    throw new Error(`Mutation ${mutation.id} is a relocate and needs a destination in "replacement".`);
+                }
+                const destination = path.join(workspace, mutation.replacement);
+                await fs.mkdir(path.dirname(destination), { recursive: true });
+                await fs.rename(filePath, destination);
             } else {
                 const content = await fs.readFile(filePath, 'utf8');
                 if (mutation.operation === 'replace') {
