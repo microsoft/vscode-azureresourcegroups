@@ -3,6 +3,7 @@
 .eslintrc.js
 .github/**
 .gitignore
+.vs/**
 .vscode-test/**
 .vscode/**
 *.tgz

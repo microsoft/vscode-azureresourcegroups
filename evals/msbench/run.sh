@@ -284,22 +284,29 @@ fi
 command -v az >/dev/null || die "Azure CLI not found. Install it, then run: az login"
 az account show >/dev/null 2>&1 || die "Not logged in to Azure. Run: az login"
 
-# msbench-cli needs 3.10+; macOS still ships 3.9 as python3.
+# msbench-cli needs 3.10+; macOS still ships 3.9 as python3, and on Windows
+# python3 is usually the WindowsApps stub, so plain python is the real one.
 PYTHON=""
-for candidate in python3.12 python3.11 python3.10 python3; do
+for candidate in python3.12 python3.11 python3.10 python3 python; do
     if command -v "$candidate" >/dev/null 2>&1 && \
        "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)' 2>/dev/null; then
         PYTHON="$candidate"; break
     fi
 done
-[ -n "$PYTHON" ] || die "Need Python 3.10+ for msbench-cli. Try: brew install python@3.12"
+[ -n "$PYTHON" ] || die "Need Python 3.10+ for msbench-cli. macOS: brew install python@3.12"
+
+# Windows venvs put executables in Scripts/ with an .exe suffix, not bin/.
+VENV_BIN="bin"; VENV_EXE=""
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) VENV_BIN="Scripts"; VENV_EXE=".exe" ;;
+esac
 
 # --- msbench-cli -------------------------------------------------------------
 
-if [ ! -x "${VENV}/bin/msbench-cli" ]; then
+if [ ! -x "${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" ]; then
     log "Installing msbench-cli into ${VENV} (using $($PYTHON --version))"
     "$PYTHON" -m venv "$VENV"
-    "${VENV}/bin/python" -m pip install --quiet --upgrade pip
+    "${VENV}/${VENV_BIN}/python" -m pip install --quiet --upgrade pip
 
     # Token goes in the index URL rather than via keyring, which otherwise drops
     # into an interactive prompt and hangs a non-tty shell.
@@ -308,24 +315,24 @@ if [ ! -x "${VENV}/bin/msbench-cli" ]; then
         || die "Could not get a DevOps token. Request the 'MSBench User' role at https://aka.ms/msbench/access"
 
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
         || die "msbench-cli install failed. Confirm feed access at https://aka.ms/msbench/access"
     unset ADO_TOKEN
 fi
-log "msbench-cli $("${VENV}/bin/msbench-cli" version 2>/dev/null | tail -1)"
+log "msbench-cli $("${VENV}/${VENV_BIN}/msbench-cli" version 2>/dev/null | tail -1)"
 
 # Special agents are discovered as console scripts on PATH, not as imports, so
 # calling ${VENV}/bin/msbench-cli directly reports every plugin as "not
 # installed". This is the equivalent of activating the venv.
-export PATH="${VENV}/bin:${PATH}"
+export PATH="${VENV}/${VENV_BIN}:${PATH}"
 
 # msbench-cli depends on this, but a plugin missing from PATH and one missing
 # from site-packages produce the same error, so verify the real thing.
-if ! "${VENV}/bin/python" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
+if ! "${VENV}/${VENV_BIN}/python" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
     log "Installing the vscode special agent plugin"
     ADO_TOKEN="$(az account get-access-token --resource "$ADO_RESOURCE" --query accessToken -o tsv)"
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
         || die "Could not install msbench-agent-vscode"
     unset ADO_TOKEN
 fi
@@ -361,7 +368,7 @@ RUN_LOG="$(mktemp -t msbench-run.XXXXXX)"
 trap 'rm -f "$RUN_LOG"; rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 set +e
-"${VENV}/bin/msbench-cli" run \
+"${VENV}/${VENV_BIN}/msbench-cli" run \
     --agent vscode \
     --model . \
     --benchmark "$BENCHMARK" \
@@ -391,13 +398,17 @@ if [ -z "$RUN_ID" ] && [ "$CLI_STATUS" -eq 0 ]; then
 fi
 if [ -n "$RUN_ID" ]; then
     # msbench-cli writes to `<data_dir>/<run_id>/results.zip`. The default data_dir
-    # is platform-specific (macOS Application Support, Linux XDG), and `--data_dir`
-    # overrides it outright — note the default already ends in `runs`, so a custom
-    # value does NOT get a `runs` component appended.
+    # is platform-specific — msbench uses AppDirs("msbench", "Microsoft"), so it is
+    # Application Support on macOS, XDG on Linux, and LOCALAPPDATA\Microsoft on
+    # Windows — and `--data_dir` overrides it outright — note the default already
+    # ends in `runs`, so a custom value does NOT get a `runs` component appended.
     RESULTS_CANDIDATES=(
         "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip"
         "${HOME}/.local/share/msbench/runs/${RUN_ID}/results.zip"
     )
+    if [ -n "${LOCALAPPDATA:-}" ]; then
+        RESULTS_CANDIDATES+=("$(cygpath -u "$LOCALAPPDATA" 2>/dev/null || echo "$LOCALAPPDATA")/Microsoft/msbench/runs/${RUN_ID}/results.zip")
+    fi
     [ -n "$DATA_DIR" ] && RESULTS_CANDIDATES=("${DATA_DIR}/${RUN_ID}/results.zip" "${RESULTS_CANDIDATES[@]}")
 
     RESULTS_ZIP=""
