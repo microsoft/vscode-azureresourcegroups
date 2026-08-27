@@ -17,6 +17,19 @@
 #
 # The top-level chatMode below is therefore the mode of the *graded* turns.
 # The setup turn overrides it per step — see the stimuli.
+#
+# ── The setup turn, for generated stimuli ──────────────────────────────────────────
+#
+# A stack carries a prompt, not a script, so a generated stimulus has no way to know it
+# must scaffold before it can debug. Without this it would send an app description to
+# azure-debug-plan against an empty workspace and red every gate for a reason that has
+# nothing to do with the product.
+#
+# Same sentence the hand-written stimuli use for their own turn 0, kept here so the two
+# cannot drift into grading different setups. Inert YAML for the hand-written ones, which
+# continue to declare their turns themselves.
+# turn-before-mode: azure-project-scaffold
+# turn-before: The project plan has been approved. Execute the approved `.azure/project-plan.md` and scaffold the project.
 
 chatMode: azure-debug-plan
 
