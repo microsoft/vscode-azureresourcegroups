@@ -17,7 +17,6 @@ wired:
   project-plan
   webview-parseable
   no-scaffold
-  debug-gate
 
 ## phase: scaffold (phase not configured for this stack)
 
@@ -33,6 +32,7 @@ not wired:
 ## phase: local (phase not configured for this stack)
 
 wired:
+  debug-gate
   debug-plan
   debug-config
   debug-artifacts

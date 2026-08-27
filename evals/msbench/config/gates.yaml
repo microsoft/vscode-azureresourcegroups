@@ -129,7 +129,21 @@ gates:
   - id: debug-gate
     grader: evals/graders/validate-debug-gate.ts
     summary: the approval gate at the end of planning behaved
-    phases: [plan]
+    # `local`, not `plan`, and the summary's "planning" means *debug* planning. The
+    # grader reads `.azure/vscode-debug-plan.md`, which the local-dev phase produces
+    # and the plan phase cannot — so wired here it graded an artifact that does not
+    # exist yet and failed every time.
+    #
+    # It went unnoticed because the only stimulus that runs it,
+    # config/stimuli/debug-plan-approval-gate.yaml, is a local-dev stimulus that
+    # hardcodes the `exec:` and never consulted this row. Run 2026082713357491 — the
+    # first stack-generated stimulus, which derives its assertions from this table
+    # rather than hardcoding them — is what surfaced it, with
+    # `/workspace/.azure/vscode-debug-plan.md does not exist`.
+    #
+    # The header warns that a wrong phase name "silently unwires a gate". This is the
+    # other direction of the same fault: silently wiring one that can never pass.
+    phases: [local]
     requires: {}
 
   # --- scaffold phase -----------------------------------------------------

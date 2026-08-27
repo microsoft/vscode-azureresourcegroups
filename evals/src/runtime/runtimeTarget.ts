@@ -232,11 +232,21 @@ export interface StackProjection {
 /**
  * Where the projection is staged. `/agent/assets/stack.json` is the container path;
  * the env var exists so a grader run by hand can be pointed at one.
+ *
+ * An explicit setting is **authoritative**, not merely first. It used to be prepended to
+ * the defaults, which meant it could select a projection but never deselect one — so a
+ * caller that legitimately has no stack still inherited whichever `assets/stack.json` the
+ * last `--stack` build happened to leave behind. Grader certification is exactly that
+ * caller: it grades fixtures whose routes it already knows, and a projection from an
+ * unrelated stack silently rewrote them, turning two `runtime-crud` cases red with a 404
+ * against a route the fixture never had.
  */
 function stackProjectionCandidates(): string[] {
     const configured = process.env.COR_STACK_PROJECTION;
+    if (configured) {
+        return [configured];
+    }
     return [
-        ...(configured ? [configured] : []),
         '/agent/assets/stack.json',
         path.resolve(import.meta.dirname, '..', '..', 'msbench', 'assets', 'stack.json'),
     ];
