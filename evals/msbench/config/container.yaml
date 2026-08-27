@@ -40,7 +40,7 @@
 schemaVersion: 1
 
 # Bumped whenever a row moves between statuses or gains measurement.
-verifiedOn: '2026-08-25'
+verifiedOn: '2026-08-27'
 
 binaries:
   # Measured: msbench/README.md records "Verified in the container: Node
@@ -53,7 +53,7 @@ binaries:
 
   npm:
     status: present
-    evidence: asserted
+    evidence: measured
 
   # Present, but see `pip` below — a Python interpreter you cannot install
   # packages into runs the standard library and nothing else, which is the
@@ -61,7 +61,7 @@ binaries:
   python3:
     status: present
     version: '3.10'
-    evidence: asserted
+    evidence: measured
 
   az:
     status: present
@@ -100,13 +100,13 @@ binaries:
   # in it. The preamble now retries against the public registry explicitly, which
   # is the next thing to measure.
   #
-  # `evidence` stays `asserted` because that field describes the *status* claim —
-  # that `func` is absent from the image — and nothing has measured that directly
-  # either. What has now been measured is that the install does not fix it.
+  # `evidence` is now `measured`: run 2026082762322354's fingerprint reported
+  # `func=MISSING` directly, so the absence is observed rather than inherited from
+  # documentation. The install failing is a separate measurement, above.
   func:
     status: absent
     install: npm install -g azure-functions-core-tools@4 --unsafe-perm true
-    evidence: asserted
+    evidence: measured
 
   # `install: unverified` means: we believe it is absent, and we have not
   # established that installing it works. That is deliberately not the same as
@@ -115,33 +115,45 @@ binaries:
   pip:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   dotnet:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   go:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   azd:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   java:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
-  # The closed door. Not merely missing: a container runtime inside the eval
-  # container is not practically installable, so a stack whose datastore needs
-  # one (the `datastoreRequiresContainer` reason code) cannot be made to work by
-  # trying harder. Rejected at build time rather than discovered at runtime.
+  # The closed door, and now a measured one. Not merely missing: a container
+  # runtime inside the eval container is not practically installable, so a stack
+  # whose datastore needs one (the `datastoreRequiresContainer` reason code)
+  # cannot be made to work by trying harder. Rejected at build time rather than
+  # discovered at runtime.
+  #
+  # msbench-cli has a `--dind` flag ("Enable Docker-in-Docker"), which looked like
+  # it might reopen the door and retire that reason code outright. Run
+  # 2026082762322354 submitted with `--dind` to the default ces-dev1 backend: the
+  # flag was accepted, the run resolved 100%, and the fingerprint still reported
+  # `docker=MISSING`. So it does not reach the agent's container here — the
+  # neighbouring `--keep_container` is documented "Only valid with --backend
+  # local", and this behaves the same way.
+  #
+  # Worth writing down because the flag's existence is a standing invitation to
+  # assume the problem is solved by one argument. It is not, on this backend.
   docker:
     status: unavailable
     note: a container runtime is not practically installable inside the MSBench container
-    evidence: asserted
+    evidence: measured
