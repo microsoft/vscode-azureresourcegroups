@@ -102,10 +102,32 @@ and Node.
 
 ### Access
 
-You need the **`MSBench User`** role, requested at <https://aka.ms/msbench/access>
-(manager approval; syncs within the hour). That is the *only* access prerequisite —
-it grants the artifact feed, ACR, and Kusto in one go. Nothing else needs
-provisioning, and no other team needs to be involved.
+You need a role on the MSBench entitlement, requested at <https://aka.ms/msbench/access>
+(manager approval; syncs within the hour). Running the suite needs nothing else, and no
+other team needs to be involved.
+
+**The entitlement has more than one role, and they are not interchangeable.** MSBench's
+own docs name different ones for different jobs:
+
+| Doc | Role | Grants |
+| --- | --- | --- |
+| `doc/CONTRIBUTING.md`, "For Evaluation Runners" | `MSBench-CLI pip reader` | the pip feed `run.sh` installs from |
+| `doc/benchmarks/PUBLISHING_DOCKER_IMAGES.md` | `MSBench User` | pushing benchmark images to ACR |
+
+This file used to say the role "grants the artifact feed, ACR, and Kusto in one go".
+The feed half is confirmed — that is how `msbench-cli` installs. The ACR half is
+**measured false** for the identity that has been running this suite:
+
+```
+az acr login --name codeexecservice
+→ Access to registry 'codeexecservice.azurecr.io' was denied. Response code: 401
+```
+
+`codeexecservice.azurecr.io` is where `benchmarks/build_and_push.py` publishes, and it
+is not visible in any subscription that account can see. So running the suite and
+*publishing an image for it* are two different grants, and only the first is in place.
+That matters the moment anyone tries the custom-image route — see
+[Seeding the starting workspace](#seeding-the-starting-workspace).
 
 `run.sh` mints the feed token with `az account get-access-token` rather than using
 `keyring`, which otherwise drops into an interactive prompt and hangs.
