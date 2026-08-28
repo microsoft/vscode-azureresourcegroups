@@ -17,6 +17,19 @@
 #
 # The top-level chatMode below is therefore the mode of the *graded* turns.
 # The setup turn overrides it per step — see the stimuli.
+#
+# ── The setup turn, for generated stimuli ──────────────────────────────────────────
+#
+# A stack carries a prompt, not a script, so a generated stimulus has no way to know it
+# must scaffold before it can debug. Without this it would send an app description to
+# azure-debug-plan against an empty workspace and red every gate for a reason that has
+# nothing to do with the product.
+#
+# Same sentence the hand-written stimuli use for their own turn 0, kept here so the two
+# cannot drift into grading different setups. Inert YAML for the hand-written ones, which
+# continue to declare their turns themselves.
+# turn-before-mode: azure-project-scaffold
+# turn-before: The project plan has been approved. Execute the approved `.azure/project-plan.md` and scaffold the project.
 
 chatMode: azure-debug-plan
 
@@ -60,3 +73,38 @@ script: |
     cp -r /agent/assets/workspace/. /workspace/
   fi
   ls -la /workspace/ /workspace/.azure 2>&1 || true
+  # Azure Functions Core Tools.
+  #
+  # Every stimulus in this phase is an Azure Functions project, and all five
+  # runtime-* gates need `func` to answer at all. Without it they emit
+  # functionsHostUnavailable, which is the one-line cause of their having been red
+  # on every run since they were written.
+  #
+  # Run 2026082682123151 measured what actually happens, and it is not what
+  # config/container.yaml assumed. The recorded command fails with npm E401
+  # "Unable to authenticate, your authentication token seems to be invalid" — the
+  # container's npm resolves through an authenticated registry whose token this
+  # process does not hold. So the second attempt names the public registry
+  # explicitly, which is the difference between "npm is broken here" (it is not:
+  # validate-project-builds runs `npm ci` in this same image) and "the default
+  # registry needs credentials we do not have".
+  #
+  # Deliberately fail-soft, and that is the whole point of the block rather than an
+  # afterthought. `set -e` is on, so an unguarded install that 401s would abort the
+  # preamble and take down a run before the agent ever started. The rule it has to
+  # obey is that failing leaves the run exactly as it is today — five gates red for
+  # a stated reason — and can never make things worse than not trying. Verified
+  # twice: locally with npm stubbed to fail, and in run 2026082682123151, where the
+  # 401 was caught and the preamble still seeded the workspace and started the
+  # agent.
+  if command -v func >/dev/null 2>&1; then
+    echo "func already present: $(func --version 2>&1 | tail -1)"
+  else
+    npm install -g azure-functions-core-tools@4 --unsafe-perm true \
+      || npm install -g azure-functions-core-tools@4 --unsafe-perm true --registry https://registry.npmjs.org/ \
+      || echo "func install FAILED on both the default and the public registry; the runtime gates will report functionsHostUnavailable exactly as before"
+  fi
+  # Recorded either way, and the stimuli's environment fingerprint probes `func`
+  # independently, so the `exec` table carries the answer even though preamble
+  # output only reaches customScript/output.log.
+  command -v func >/dev/null 2>&1 && func --version 2>&1 | tail -1 || echo "func: still unavailable"

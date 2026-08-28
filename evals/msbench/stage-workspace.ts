@@ -34,6 +34,17 @@
  * reconstruct with a `cp` in a `script:` block. It is named here so that the fork in the
  * road does not have to be rediscovered by whoever next asks "why is this a shell copy?".
  *
+ * That claim has since been TESTED, and it held. `container/` builds an image in a
+ * registry we own, pointed at by a `container_registry` column in our own
+ * `dataset.jsonl`, and run 2026082777513216 ran the vscode agent inside it. No PR into
+ * the eval repo, no approval from another team — the only prerequisite was granting the
+ * CES service principal `AcrPull` on our registry, which we could do ourselves.
+ *
+ * So the fork in the road is now open, not hypothetical. What is still missing before
+ * this module can be deleted is the *workspace* half: baking the starting workspace into
+ * the image means it stops being a `cp` here and starts being a property of the instance.
+ * See `container/README.md`.
+ *
  * ── Why a checked-in fixture, when that was explicitly rejected once ────────────────
  *
  * The seed is the checked-in fixture at `evals/local-dev/fixtures/functions-postgres/`,

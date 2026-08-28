@@ -95,6 +95,13 @@ const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const manifestPath = path.join(repoRoot, 'evals', 'grader-certification', 'manifest.json');
 
 async function main(): Promise<void> {
+    // Certification grades fixtures whose routes it already knows, so a stack projection
+    // is never right here — and `evals/msbench/assets/stack.json` survives on any machine
+    // where someone has run a `--stack` build, gitignored and invisible to git. Pointing
+    // the lookup at a path that cannot exist opts out of the whole cascade rung, rather
+    // than trusting the file to be absent.
+    process.env.COR_STACK_PROJECTION = path.join(os.tmpdir(), 'cor-certification-no-stack-projection.json');
+
     if (process.argv.includes('--aca')) {
         throw new Error('ACA certification is not available in the planning-only subset. Add scaffold/build/runtime graders first.');
     }

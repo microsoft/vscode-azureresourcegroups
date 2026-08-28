@@ -1,0 +1,99 @@
+# The first stack the eval container can run end to end.
+#
+# Both existing stacks declare a gap they cannot close. `react-functions-postgres`
+# loses all five runtime-* gates to a missing `func`, and run 2026082682123151
+# measured why that is not a quick fix: the install dies on npm E401 because the
+# container's registry wants credentials the run does not have.
+# `node-express-postgres` gets two runtime gates and loses `runtime-crud`, because
+# a round-trip needs a database server and there is no Docker.
+#
+# This stack has `knownGaps: []`, and that empty list is the entire point of the
+# file. Nothing here needs a binary the container lacks:
+#
+#   - a Node API rather than Azure Functions, so `func` is irrelevant. The
+#     runtime target chain resolves `scripts.start` for a Node project, and
+#     `detectFunctionsProject` only stands down when `@azure/functions` or a
+#     `host.json` is present.
+#   - persistence in a file rather than a service, so `runtime-crud` can actually
+#     exercise a write and a read back. gates.yaml already says this is the only
+#     shape where it can: "A project storing in memory is the one shape where this
+#     gate can currently go green at all."
+#
+# So this is the stack that turns the runtime gates from a documented 0-for-N into
+# a measurement. That is worth having even though it is not the flagship shape:
+# a gate nobody has ever seen pass is a gate nobody should trust, and proving the
+# mechanism on a runnable shape is what makes a later red on the Functions shape
+# mean something about the product rather than about the container.
+#
+# ## What it deliberately does not claim
+#
+# Users build React + Azure Functions + PostgreSQL. This is not that, and it must
+# not be quoted as coverage of it. It covers the debug and runtime *gates*, on a
+# shape chosen because the container can execute it.
+#
+# ## Why `phases: [plan]` when the point is the runtime gates
+#
+# Because a stack cannot drive a local-dev run yet, and saying so here is cheaper
+# than someone discovering it after paying. `build-config.ts`'s `renderStimulus`
+# emits exactly one prompt step, while every local-dev stimulus needs a scaffold
+# setup turn first (`promptSteps[].chatMode: azure-project-scaffold`) so there is
+# a project on disk for the debug agent to scan. Declaring `local` here would
+# produce a run that sends this prompt to `azure-debug-plan` against an empty
+# workspace and reds every gate for a reason that has nothing to do with the
+# product.
+#
+# The plan phase is what this file buys today, and it is the step that matters
+# first: it is how the seed for that local-dev stimulus gets harvested from real
+# planner output rather than hand-written into the drift `harvest-seed.ts` exists
+# to prevent.
+
+schemaVersion: 1
+id: react-express-file
+name: React SPA with a Node API persisting to a file
+ecosystem: node
+
+# Describes the app and nothing else — no artifact names, no agent names, no
+# mention of the guided flow — so the same prompt is usable unchanged by a
+# baseline arm where plain Copilot builds it. The file-persistence requirement is
+# stated as a user would state it ("I don't want to run a database") rather than
+# as a technical instruction, because that is what a real request looks like and
+# what the planner has to interpret.
+prompt: |
+  I'd like a project tracker with a React frontend and a Node API. I want to see
+  a list of projects, add a new one with a name and a status, and have it still
+  be there after a restart. Keep the data in a file on disk — I don't want to run
+  a database for something this small. It should also expose a health endpoint so
+  I can tell when it is up.
+
+project:
+  frontend: spa
+  api: http
+  # `none` is the honest value and it is not the same as "no persistence". It
+  # means no Azure datastore *service*, which is exactly what the prompt asks
+  # for. The runtime CRUD probe stands down on container-requiring datastore
+  # packages (`pg`, `mongodb`, `redis`, …), and a file-backed store is none of
+  # them — see CONTAINER_DATASTORE_PACKAGES in src/runtime/runtimeGates.ts.
+  datastore: none
+  hosting: appService
+  # Both declared because the prompt asks for both. Declaring healthPath is what
+  # passes `--require-health` to the gate, which turns "no health endpoint found"
+  # from an outOfScope pass into a real verdict.
+  healthPath: /api/health
+  collectionRoute: /api/projects
+
+runtime:
+  # Both present in the container, which is the property this whole file is built
+  # on. Listing anything else would get the stack refused, and rightly.
+  binaries: [node, npm]
+  # No `start:` block. Rungs 1 and 2 of the discovery chain in
+  # src/runtime/runtimeTarget.ts (launch.json, then package.json `scripts.start`)
+  # answer correctly for a Node project, and a declared command here would have
+  # to guess the directory layout the agent picks — replacing working discovery
+  # with an assumption.
+
+# Empty, and asserted rather than omitted: there is no gate in this table that
+# this stack wires and cannot answer. If a run proves otherwise, the finding
+# belongs here as an entry rather than in someone's memory.
+knownGaps: []
+
+phases: [plan]
