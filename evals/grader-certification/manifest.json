@@ -97,6 +97,14 @@
             "offlineValidators": [
                 "integration-plan"
             ]
+        },
+        {
+            "id": "reference-iac-bicep",
+            "path": "evals/grader-certification/reference-iac-bicep",
+            "description": "Deploy-scaffold output: a Bicep template that compiles cleanly, plus the scaffold-manifest.json recording how the agent validated it. Certifies the offline half of the iac-compiles gate \u2014 IaC discovery and the coherence of the agent self-report. Compiling needs a Bicep CLI that certification may not assume, so the rules that turn compiler output into a verdict are covered by selfTestIacCompiles instead.",
+            "offlineValidators": [
+                "iac-compiles"
+            ]
         }
     ],
     "mutations": [
@@ -999,6 +1007,144 @@
             "file": "package.json",
             "operation": "delete",
             "expectedCode": "runtimeNotAttempted"
+        },
+        {
+            "comment": "No template at all. The gate must report having nothing to look at rather than a clean pass \u2014 a bicep gate that goes green on a project with no bicep is indistinguishable from no gate at all.",
+            "id": "iac-compiles-no-template-is-not-a-pass",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": "infra/main.bicep",
+            "operation": "delete",
+            "expectedCode": "noIacFound"
+        },
+        {
+            "comment": "The scaffold phase is contracted to record what it generated. With no manifest there is no self-report to check, which is a different failure from a self-report that turns out to be false.",
+            "id": "iac-compiles-missing-manifest-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "delete",
+            "expectedCode": "missingScaffoldManifest"
+        },
+        {
+            "comment": "A manifest that exists and does not parse. Reported as unparseable rather than missing \u2014 the file is plainly there, and saying otherwise sends the reader looking for the wrong problem.",
+            "id": "iac-compiles-unparseable-manifest-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"sessionId\"",
+            "replacement": "\"sessionId\" \"sessionId\"",
+            "expectedCode": "unparseableScaffoldManifest"
+        },
+        {
+            "comment": "Paired with the case above: an unparseable manifest must not ALSO be reported as missing. Negative because includes() cannot falsify a spurious extra code \u2014 reporting the right code plus a wrong one looks identical to reporting only the right one.",
+            "id": "iac-compiles-unparseable-manifest-not-called-missing",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"sessionId\"",
+            "replacement": "\"sessionId\" \"sessionId\"",
+            "expectedCode": "!missingScaffoldManifest"
+        },
+        {
+            "comment": "The one-line bypass. Measured on bicep 0.46.1, `#disable-next-line BCP035` above a resource missing required properties emits nothing and exits 0, so without this the gate's central claim — that the template compiles — is defeatable by a comment. The agent has been taught the syntax: bicep-patterns-security.md instructs it to write `#disable-next-line no-hardcoded-env-urls`.",
+            "id": "iac-compiles-suppressed-blocking-diagnostic-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": "infra/main.bicep",
+            "operation": "replace",
+            "search": "targetScope = 'resourceGroup'",
+            "replacement": "#disable-next-line BCP035\ntargetScope = 'resourceGroup'",
+            "expectedCode": "suppressedBlockingDiagnostic"
+        },
+        {
+            "comment": "Paired with the case above. `no-hardcoded-env-urls` is a linter rule this gate does not block on, and the product tells the agent to suppress it for the Container Apps Key Vault URL, so reporting it would fail an agent for following its instructions. Negative because the allowance is derived from the blocking rule rather than an allow-list, and a derivation that silently stopped allowing it would be invisible otherwise.",
+            "id": "iac-compiles-sanctioned-suppression-is-allowed",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": "infra/main.bicep",
+            "operation": "replace",
+            "search": "targetScope = 'resourceGroup'",
+            "replacement": "#disable-next-line no-hardcoded-env-urls\ntargetScope = 'resourceGroup'",
+            "expectedCode": "!suppressedBlockingDiagnostic"
+        },
+        {
+            "comment": "Paired with the absent-build-check case: an agent that ran the required compile and recorded it under a plainer name must not be reported as having skipped it. Verbatim from run 2026082782003660, whose Bicep the compiler independently confirmed valid \u2014 the exact-spelling matcher failed that honest run, scoring vocabulary rather than infrastructure. Negative because a spurious extra code is indistinguishable from a correct one under includes().",
+            "id": "iac-compiles-build-check-synonym-is-accepted",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"name\": \"bicep build\"",
+            "replacement": "\"name\": \"Bicep syntax validation\"",
+            "expectedCode": "!missingBicepBuildCheck"
+        },
+        {
+            "comment": "The manifest was written while recording that validation did not succeed. Partial and Failed are both legal per scaffold-schemas.ts, and both mean the phase knows it did not finish validating.",
+            "id": "iac-compiles-unvalidated-status-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"status\": \"Validated\"",
+            "replacement": "\"status\": \"Failed\"",
+            "expectedCode": "iacNotValidated"
+        },
+        {
+            "comment": "The agent recorded its own bicep build as failed and wrote the manifest anyway. validation-and-manifest.md forbids exactly that ordering, so it is a contract violation the gate has to name.",
+            "id": "iac-compiles-self-reported-build-failure-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"name\": \"bicep build\",\n                \"passed\": true",
+            "replacement": "\"name\": \"bicep build\",\n                \"passed\": false",
+            "expectedCode": "bicepBuildSelfReportedFailure"
+        },
+        {
+            "comment": "Compilation is the one check the contract requires, so a validationResult that never mentions it has not validated the thing that matters, however many other checks it lists. Both the name and the detail are rewritten: renaming alone left `detail: \"az bicep build ...\"` in place, which still records the compilation, so the case stopped testing its own premise once the grader learned to read the detail.",
+            "id": "iac-compiles-absent-build-check-is-reported",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": ".copilot-azure/sessions/11111111-2222-3333-4444-555555555555/scaffold-manifest.json",
+            "operation": "replace",
+            "search": "\"name\": \"bicep build\",\n                \"passed\": true,\n                \"detail\": \"az bicep build --file infra/main.bicep --stdout completed with no errors and no BCP diagnostics.\"",
+            "replacement": "\"name\": \"template style review\",\n                \"passed\": true,\n                \"detail\": \"Reviewed parameter descriptions and naming conventions.\"",
+            "expectedCode": "missingBicepBuildCheck"
+        },
+        {
+            "comment": "A Terraform workspace must be reported as a gap this gate cannot cover, never as a pass. terraformNotSupported maps to coverageGap in IAC_NOT_APPLICABLE_CODES, which the grader turns into a skip rather than a failure - the gap is ours, not the agent's, and charging it to the agent would be a false accusation. The relocated file still contains Bicep source, which is deliberate and sufficient: discovery keys on the entry-point filename and returns before anything reads the contents, so a hand-written .tf would exercise no additional code.",
+            "id": "iac-compiles-terraform-is-a-coverage-gap-not-a-pass",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": "infra/main.bicep",
+            "operation": "relocate",
+            "replacement": "infra/main.tf",
+            "expectedCode": "terraformNotSupported"
+        },
+        {
+            "comment": "Paired with the case above. A Terraform project has infrastructure, so reporting noIacFound alongside terraformNotSupported would send the reader to look for a missing template that is plainly there. Negative because includes() cannot falsify a spurious extra code.",
+            "id": "iac-compiles-terraform-is-not-called-missing",
+            "tier": "offline",
+            "fixture": "reference-iac-bicep",
+            "validator": "iac-compiles",
+            "file": "infra/main.bicep",
+            "operation": "relocate",
+            "replacement": "infra/main.tf",
+            "expectedCode": "!noIacFound"
         }
     ]
 }

@@ -343,6 +343,20 @@ fi
 # before uploading it. Two overlapping runs therefore race, and the loser
 # silently submits the winner's stimulus -- a run that looks entirely normal but
 # grades the wrong prompt. Serialise instead.
+#
+# Ctrl-C, or killing this script, does NOT cancel the run. Submission hands the
+# work to a server-side queue and everything after it is just a progress
+# monitor, so a killed run.sh leaves the run executing remotely -- and CES
+# dispatches one run at a time per user, so it also blocks every later
+# submission. That looks like an infrastructure stall rather than a local
+# mistake: the next run sits at "waiting to dispatch to GitHub Actions" for
+# hours with no indication of what it is waiting for. Observed 2026-08-27, when
+# a killed run held the queue for 2h11m. To abandon a run, cancel it for real:
+#
+#     msbench-cli status --run_id <id>   # "in progress" means still running
+#     msbench-cli cancel --run_id <id>
+#
+# then remove this lock if the killed run.sh did not run its EXIT trap.
 LOCK="${ASSETS}/.run.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
     die "Another run.sh is using ${ASSETS} (lock: ${LOCK}).

@@ -67,6 +67,7 @@ import { basename, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { Ecosystem } from './artifacts/scaffoldTree.ts';
 import { DATASTORE_NOT_APPLICABLE_CODES } from './artifacts/datastoreFidelity.ts';
+import { IAC_NOT_APPLICABLE_CODES } from './artifacts/iacCompiles.ts';
 import { RUNTIME_NOT_APPLICABLE_CLASS } from './runtime/runtimeTarget.ts';
 import type { PortRemap } from './runtime/runtimeTarget.ts';
 import { ConfigValidationError, reject, requireEnum, requireObject, requireString, rejectUnknownKeys } from './configValidation.ts';
@@ -249,6 +250,7 @@ export function knownReasonCodes(): Set<string> {
     return new Set([
         ...Object.keys(RUNTIME_NOT_APPLICABLE_CLASS),
         ...Object.keys(DATASTORE_NOT_APPLICABLE_CODES),
+        ...Object.keys(IAC_NOT_APPLICABLE_CODES),
     ]);
 }
 

@@ -32,7 +32,7 @@
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findImportSpecifiers } from './importScanner.ts';
@@ -42,9 +42,14 @@ const REPO_ROOT = resolve(HERE, '..', '..');
 const DEST = join(HERE, 'assets', 'graders');
 
 /**
- * The graders an `exec:` assertion may invoke. All three are staged even though only
- * the requirements validator is wired up today, because the marginal cost is a few
- * kilobytes and it keeps the multi-turn stimuli a config change rather than a code one.
+ * The graders an `exec:` assertion may invoke. Every grader is staged even though only
+ * some are wired up today, because the marginal cost is a few kilobytes and it keeps
+ * adding a stimulus a config change rather than a code one.
+ *
+ * A grader missing from this list stages nothing and fails only in the container, as a
+ * MODULE_NOT_FOUND against an `exec:` path — a paid run spent discovering a typo. The
+ * `gates` check cross-references this list against every `exec:` in config/stimuli/, so
+ * the omission is caught here instead.
  */
 const ENTRYPOINTS = [
     'evals/graders/validate-requirements.ts',
@@ -54,6 +59,7 @@ const ENTRYPOINTS = [
     'evals/graders/validate-frontend-scaffold.ts',
     'evals/graders/validate-no-scaffold.ts',
     'evals/graders/validate-project-builds.ts',
+    'evals/graders/validate-iac-compiles.ts',
     'evals/graders/validate-debug-plan.ts',
     'evals/graders/validate-debug-config.ts',
     'evals/graders/validate-debug-gate.ts',
@@ -64,6 +70,8 @@ const ENTRYPOINTS = [
     // what keeps the two from drifting.
     'evals/graders/validate-debug-breakpoint.ts',
 ];
+
+export { ENTRYPOINTS };
 
 // Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a
 // regex over raw source. The regex that used to live here did not know what a comment
@@ -212,4 +220,17 @@ function main(): void {
     }
 }
 
-main();
+// Guarded so `check-stimulus-comments.ts` can import ENTRYPOINTS to verify every
+// `exec:` in a stimulus is staged, without that import triggering a staging run.
+//
+// Both sides are realpath'd. Node resolves the main entry through realpath before forming
+// `import.meta.url`, while `run.sh` passes a path built from bash's `pwd`, which is logical
+// and keeps symlinks. Comparing the two raw strings meant that reaching the repo through any
+// symlinked path segment made this test false: `main()` would not run, the script would exit
+// 0 having printed nothing, and `run.sh` would carry on and stage the container from a stale
+// grader tree — the exact MODULE_NOT_FOUND-in-container failure `checkGradersStaged` was
+// added to prevent, arriving by a different route.
+const invokedPath = process.argv[1];
+if (invokedPath && realpathSync(resolve(invokedPath)) === realpathSync(fileURLToPath(import.meta.url))) {
+    main();
+}

@@ -13,6 +13,7 @@ import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
 import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdict.ts';
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
+import { selfTestIacCompiles, validateScaffoldedIac } from './artifacts/iacCompiles.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
 import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
@@ -112,12 +113,24 @@ async function main(): Promise<void> {
     for (const fixture of manifest.fixtures) {
         cases.push(...await certifyFixture(manifest, fixture, only));
     }
+
+    // The half of `iac-compiles` no fixture can reach. Certification may not assume a Bicep
+    // CLI, so the rules that turn compiler output into a verdict — which warnings block, and
+    // the two spellings of the manifest's self-report — are pinned by pure cases instead.
+    // Run here rather than as its own command so `certify` remains the single answer to "are
+    // the graders sound?", matching how check-stacks.ts hosts the declared-gap join.
+    let selfTestFailures = 0;
+    if (!only || only.has('iac-compiles')) {
+        console.error('\nIaC compile-classification self-test');
+        selfTestFailures = selfTestIacCompiles(line => console.error(line));
+    }
+
     const report: CertificationReport = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
         mode: 'offline',
         fixtures: manifest.fixtures.map(value => value.id),
-        outcome: cases.every(value => value.passed) ? 'passed' : 'failed',
+        outcome: cases.every(value => value.passed) && selfTestFailures === 0 ? 'passed' : 'failed',
         cases,
     };
     await fs.mkdir(outputDirectory, { recursive: true });
@@ -126,6 +139,9 @@ async function main(): Promise<void> {
         fs.writeFile(path.join(outputDirectory, 'report.md'), renderMarkdown(report)),
     ]);
     console.log(`${report.outcome.toUpperCase()}: ${cases.filter(value => value.passed).length}/${cases.length} grader certification cases passed${only ? ` (filtered to ${[...only].join(', ')})` : ''}.`);
+    if (selfTestFailures > 0) {
+        console.log(`${selfTestFailures} IaC compile-classification self-test case(s) failed.`);
+    }
     if (report.outcome !== 'passed') {
         process.exitCode = 1;
     }
@@ -261,6 +277,11 @@ const OFFLINE_VALIDATORS: Record<
     // actually regressed, and they cost nothing to pin.
     'project-builds': async (workspace, scenario) =>
         validateProjectPackages(workspace, { requireFrontend: (scenario.tags.frontend ?? 'none') !== 'none' }),
+    // Only the offline half of the IaC gate — is there a template, and does the scaffold
+    // manifest's account of its own validation hold together. Compiling needs the Bicep CLI,
+    // which certification may not assume, so the parsing and blocking rules that decide a
+    // compile's verdict are covered by `selfTestIacCompiles` instead.
+    'iac-compiles': async workspace => validateScaffoldedIac(workspace),
     // Certified with the default adjudication — `patternMatchedNothing` blamed on the harness.
     // That default is the whole safety property, so it is what the manifest pins.
     'debug-breakpoint': async workspace => validateDebugBreakpointVerdict(workspace),

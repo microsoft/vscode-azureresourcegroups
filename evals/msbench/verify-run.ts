@@ -413,7 +413,7 @@ function main(): void {
                 ...(throttle.recoveredOn
                     ? [
                         `${throttle.recoveredOn} then succeeded${throttle.recoveredAfterMs !== undefined ? ` ${throttle.recoveredAfterMs}ms later` : ''}, so the`,
-                        'limit is scoped to that one API surface, not to the account.',
+                        'limit had already cleared by the next request.',
                     ]
                     : []),
                 '',
@@ -427,8 +427,14 @@ function main(): void {
             'trivially, which looks exactly like an agent regression.',
             '',
             ...detail,
-            'Runs cost ~250k tokens each; roughly 3 in 15 minutes is the',
-            'observed ceiling. Wait ~15 minutes and re-run.',
+            'Retry; do not wait for a quota window. Measured on run',
+            '2026082811285762: the 429 arrived after only 2 requests in the',
+            'preceding 10s, and the same surface returned 200 again 335ms',
+            'later — shared backend congestion, not a budget this account',
+            'spent. Waiting 15-45min did not improve the next attempt, and',
+            'successful calls before the throttle varied 3/11/15/44 with no',
+            'relation to idle time. Attempts are independent draws, so retry',
+            'promptly and expect several before one lands.',
             '',
             `Run id: ${runId}`,
         ]);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T04:31:01.788Z",
+  "generatedAt": "2026-08-28T16:09:54.099Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -11,7 +11,8 @@
     "reference-go-unsupported",
     "debug-probe-verdict",
     "unapproved-plan-refusal",
-    "api-only-no-datastore"
+    "api-only-no-datastore",
+    "reference-iac-bicep"
   ],
   "outcome": "passed",
   "cases": [
@@ -1280,6 +1281,156 @@
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-iac-compiles",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-no-template-is-not-a-pass",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "noIacFound",
+      "actual": [
+        "noIacFound"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-missing-manifest-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "missingScaffoldManifest",
+      "actual": [
+        "missingScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unparseable-manifest-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "unparseableScaffoldManifest",
+      "actual": [
+        "unparseableScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unparseable-manifest-not-called-missing",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!missingScaffoldManifest",
+      "actual": [
+        "unparseableScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-suppressed-blocking-diagnostic-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "suppressedBlockingDiagnostic",
+      "actual": [
+        "suppressedBlockingDiagnostic"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-sanctioned-suppression-is-allowed",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!suppressedBlockingDiagnostic",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-build-check-synonym-is-accepted",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!missingBicepBuildCheck",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unvalidated-status-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "iacNotValidated",
+      "actual": [
+        "iacNotValidated"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-self-reported-build-failure-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "bicepBuildSelfReportedFailure",
+      "actual": [
+        "bicepBuildSelfReportedFailure"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-absent-build-check-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "missingBicepBuildCheck",
+      "actual": [
+        "missingBicepBuildCheck"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-terraform-is-a-coverage-gap-not-a-pass",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "terraformNotSupported",
+      "actual": [
+        "terraformNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-terraform-is-not-called-missing",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!noIacFound",
+      "actual": [
+        "terraformNotSupported"
+      ],
       "passed": true,
       "durationMs": 0
     }

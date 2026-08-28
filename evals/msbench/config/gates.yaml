@@ -87,7 +87,13 @@ schemaVersion: 1
 
 # The closed set of phase names. A gate naming anything else is a typo, and a
 # typo here silently unwires a gate — the failure that reads as a clean run.
-phases: [plan, scaffold, local]
+#
+# `deploy` names the deploy agent's *scaffold* sub-phase, which generates IaC and
+# is contracted to provision nothing ("validation is syntax-only (`bicep build`),
+# never `az deployment sub create`" — subagent-validate.md). The provisioning half
+# of deploy is deliberately not a phase here: it costs real money per run, so it is
+# not something the suite can gate on.
+phases: [plan, scaffold, local, deploy]
 
 gates:
   # --- plan phase ---------------------------------------------------------
@@ -208,6 +214,31 @@ gates:
         when: { project.datastore: [none] }
 
   # --- local-dev phase ----------------------------------------------------
+  # --- deploy phase -------------------------------------------------------
+  - id: iac-compiles
+    grader: evals/graders/validate-iac-compiles.ts
+    summary: the generated infrastructure compiles, and the agent reported that honestly
+    phases: [deploy]
+    # No requirement, and the reason is the same one service-fidelity gives: every
+    # project this suite runs has a real "does your infrastructure compile?"
+    # question. Absent IaC is resolved at runtime against what the stimulus asked
+    # for — a finding when the agent was told to generate it, not-applicable when
+    # it was not — and a `requires:` would collapse both into silence here.
+    #
+    # Not requiring `ecosystem` either: bicep is language-agnostic, so unlike
+    # project-builds this grader can read a Python or Go project's infra folder
+    # exactly as well as a Node one.
+    requires: {}
+    # No `args:` derived from the stack, deliberately.
+    #
+    # The two flags this grader accepts are not facts a stack knows.
+    # `--require-artifacts` asks whether the agent was entered under the contract
+    # that produces a template and scaffold-manifest.json, which is a property of
+    # the phase and belongs in the stimulus that selects it.
+    # `--strict-types` is not a stack fact either — it asserts the pinned bicep's
+    # type index is at least as current as the API versions under test, which is a
+    # property of the container, not the project. Left off; see iacCompiles.ts for
+    # the run that showed blocking BCP081 penalises agents for being up to date.
   - id: debug-plan
     grader: evals/graders/validate-debug-plan.ts
     summary: .azure/vscode-debug-plan.md satisfies the debug-plan contract

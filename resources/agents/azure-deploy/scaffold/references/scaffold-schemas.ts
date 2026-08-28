@@ -62,6 +62,10 @@ export interface ValidationCheck {
   detail?: string;
 }
 
+/**
+ * Result of Step 11 IaC validation. This is what `ScaffoldManifest.validationResult` holds.
+ * Distinct from `ConformanceResult` below — do not substitute one for the other.
+ */
 export interface ValidationResult {
   status: "Validated" | "Partial" | "Failed";
   checks: ValidationCheck[];
