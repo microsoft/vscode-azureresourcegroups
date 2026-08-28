@@ -17,6 +17,11 @@
 #                            # run a stack instead: the prompt and the gate
 #                            # wiring are derived from config/stacks/<id>.yaml
 #                            # rather than hand-written. See config/gates.yaml.
+#   BENCHMARK=corbench.cor_functions_host \
+#     ./run.sh --dataset evals/msbench/container/dataset.jsonl
+#                            # run inside our own container image, which carries
+#                            # the Azure Functions Core Tools. Paths resolve from
+#                            # the repo root. See container/README.md.
 #
 set -euo pipefail
 
@@ -26,6 +31,17 @@ STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
 PASSTHRU=()
+# The benchmark dataset naming the container image to run in. Empty means "use
+# whatever MSBench's published data says for $BENCHMARK", which is the stock
+# image. Env-overridable for the same reason BENCHMARK and STIMULUS are: the CI
+# workflow can only reach this script through the environment.
+#
+# Handled explicitly rather than left to the passthrough catch-all so the path
+# can be resolved and CHECKED. A dataset that does not exist is the worst input
+# this script takes: msbench-cli falls back to the default registry, the run is
+# submitted against an image that is not there, and the instance comes back
+# `missing` with no output — indistinguishable from an infrastructure outage.
+DATASET="${DATASET:-}"
 # Observed, not chosen: msbench-cli writes results to `<data_dir>/<run_id>/`, and
 # `--data_dir` is a passthrough flag we do not otherwise interpret. The results
 # lookup after the run has to know where they landed, so the value is recorded
@@ -41,6 +57,8 @@ while [ $# -gt 0 ]; do
         --stack=*) STACK="${1#*=}" ;;
         --phase) shift; [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 1; }; PHASE="$1" ;;
         --phase=*) PHASE="${1#*=}" ;;
+        --dataset) shift; [ $# -gt 0 ] || { echo "--dataset needs a value" >&2; exit 1; }; DATASET="$1" ;;
+        --dataset=*) DATASET="${1#*=}" ;;
         # Recorded AND forwarded. Both spellings, both forms — the CLI accepts
         # `--data_dir` and `--data-dir`, so matching only one would reintroduce
         # the silent skip this exists to prevent.
@@ -122,6 +140,26 @@ MSBENCH_VSCODE_SPEC="msbench-agent-vscode>=0.0.22"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# --- resolve the dataset ------------------------------------------------------
+#
+# Relative paths resolve against the repo root, not the caller's cwd, so the same
+# value works from a shell, from CI, and from an editor task. The existence check
+# is the point of doing this here rather than passing the flag straight through:
+# see the note at the top of the file for why a missing dataset is worse than a
+# missing flag.
+if [ -n "$DATASET" ]; then
+    case "$DATASET" in
+        /*|[A-Za-z]:[\\/]*) ;;
+        *) DATASET="${REPO_ROOT}/${DATASET}" ;;
+    esac
+    [ -f "$DATASET" ] || die "No dataset at ${DATASET}.
+    A dataset names the container image to run in. If it is missing, msbench-cli
+    falls back to the default registry and the instance returns \`missing\` with no
+    output, which reads as an infrastructure failure rather than a typo."
+    PASSTHRU+=(--dataset "$DATASET")
+    log "Dataset: ${DATASET}"
+fi
 
 # --- build + stage the extension ---------------------------------------------
 #

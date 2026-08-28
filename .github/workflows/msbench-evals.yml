@@ -37,6 +37,10 @@ on:
         description: 'Stimulus to submit. The default is the cheapest one whose answer we already know.'
         required: false
         default: 'scaffold-unapproved-plan'
+      dataset:
+        description: 'Repo-relative dataset naming a custom container image. Leave empty for the stock image. Use evals/msbench/container/dataset.jsonl together with benchmark=corbench.cor_functions_host to get one with func.'
+        required: false
+        default: ''
 
 env:
   NODE_VERSION: '22'
@@ -136,6 +140,12 @@ jobs:
         env:
           BENCHMARK: ${{ inputs.benchmark }}
           STIMULUS: ${{ inputs.stimulus }}
+          # Empty means the stock image, which is the default for every run that
+          # is not specifically exercising the custom one. Note the CI identity
+          # needs no registry permission either way: CES pulls the image with its
+          # own service principal, so the AcrPull grant is on that principal and
+          # nothing about it is caller- or machine-specific.
+          DATASET: ${{ inputs.dataset }}
 
       # Keep the report and per-instance data so a failure can be diagnosed from
       # the transcript and patch rather than by re-running.
