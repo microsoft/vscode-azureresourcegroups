@@ -8,7 +8,7 @@ table and re-run. This file exists so a wiring change is visible in review.
 - project: frontend=spa api=http datastore=none hosting=appService
 - healthPath: /api/health
 - collectionRoute: /api/projects
-- phases configured for this stack: plan
+- phases configured for this stack: plan, local
 
 ## phase: plan
 
@@ -29,7 +29,7 @@ wired:
 not wired:
   datastore-fidelity — project.datastore is none
 
-## phase: local (phase not configured for this stack)
+## phase: local
 
 wired:
   debug-gate

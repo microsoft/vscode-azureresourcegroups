@@ -31,21 +31,32 @@
 # not be quoted as coverage of it. It covers the debug and runtime *gates*, on a
 # shape chosen because the container can execute it.
 #
-# ## Why `phases: [plan]` when the point is the runtime gates
+# ## Why this stack now runs the local phase
 #
-# Because a stack cannot drive a local-dev run yet, and saying so here is cheaper
-# than someone discovering it after paying. `build-config.ts`'s `renderStimulus`
-# emits exactly one prompt step, while every local-dev stimulus needs a scaffold
-# setup turn first (`promptSteps[].chatMode: azure-project-scaffold`) so there is
-# a project on disk for the debug agent to scan. Declaring `local` here would
-# produce a run that sends this prompt to `azure-debug-plan` against an empty
-# workspace and reds every gate for a reason that has nothing to do with the
-# product.
+# It did not, and the reason it did not is worth keeping, because the fix is not
+# obvious from here. `build-config.ts`'s `renderStimulus` used to emit exactly one
+# prompt step, while every local-dev stimulus needs a scaffold setup turn first
+# (`promptSteps[].chatMode: azure-project-scaffold`) so there is a project on disk
+# for the debug agent to scan. Declaring `local` back then would have sent this
+# prompt to `azure-debug-plan` against an empty workspace and redded every gate
+# for a reason that had nothing to do with the product.
 #
-# The plan phase is what this file buys today, and it is the step that matters
-# first: it is how the seed for that local-dev stimulus gets harvested from real
-# planner output rather than hand-written into the drift `harvest-seed.ts` exists
-# to prevent.
+# That is fixed. `config/phases/local.yaml` declares the setup turn as a
+# `# turn-before:` / `# turn-before-mode:` directive, and `renderStimulus` renders
+# it as its own step with its own liveness sentinel, putting the graders on the
+# last turn where an `exec:` grader can actually see the finished workspace. The
+# phase file owns the turn shape, so hand-written and generated stimuli cannot
+# drift into grading different setups.
+#
+# This is what makes the five `runtime-*` gates reachable at all. They only wire
+# under a stack projection — their `requires:` name `project.api` and
+# `project.frontend`, which no hand-written stimulus declares — and neither
+# local-dev stimulus carries a runtime assertion. So a stack driving the local
+# phase is the ONLY path to executing them, and until now there wasn't one.
+#
+# The plan phase still matters and is still declared: it is how the seed for the
+# hand-written local-dev stimuli gets harvested from real planner output rather
+# than hand-written into the drift `harvest-seed.ts` exists to prevent.
 
 schemaVersion: 1
 id: react-express-file
@@ -96,4 +107,4 @@ runtime:
 # belongs here as an entry rather than in someone's memory.
 knownGaps: []
 
-phases: [plan]
+phases: [plan, local]
