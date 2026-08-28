@@ -347,7 +347,7 @@ function renderStimulus(stack: Stack, wiring: PhaseWiring, turns: PhaseTurns): s
     // of it, at no extra cost.
     graded.push('      # Recorded, not asserted: the container inventory config/container.yaml claims.');
     graded.push(`      - comment: ${FINGERPRINT_COMMENT}`);
-    graded.push("        exec: 'uname -sm; echo \"cwd=$(pwd)\"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf \"%s=%s\\n\" \"$b\" \"$(command -v $b || echo MISSING)\"; done; python3 -m ensurepip --version 2>&1 | head -1'");
+    graded.push("        exec: 'uname -sm; echo \"cwd=$(pwd)\"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf \"%s=%s\\n\" \"$b\" \"$(command -v $b || echo MISSING)\"; done; python3 -m ensurepip --version 2>&1 | head -1'");
     graded.push('        assertZeroExitCode: false');
 
     const lines: string[] = [

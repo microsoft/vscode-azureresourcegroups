@@ -27,13 +27,21 @@
 # Making a row `measured` costs nothing. Every stimulus already ends with an
 # `Environment fingerprint for triage` exec: assertion that runs shell in the
 # container with `assertZeroExitCode: false` — recorded, never asserted on.
-# Extending that line with:
 #
-#   command -v pip3 go dotnet docker azd func; python3 -m ensurepip --version
+# That line now covers the emulators too:
 #
-# makes the next run anybody submits, for any reason, return the real inventory
-# as a free rider. Until that lands, treat every `asserted` row as a hypothesis
-# and say so out loud when quoting it.
+#   for b in ... func ... azurite psql postgres mongod redis-server
+#
+# so the next run anybody submits, for any reason, returns the real inventory as
+# a free rider. That matters most for the rows this file does NOT yet carry: no
+# datastore server has ever been observed here, and `runtime-crud` stands down on
+# `datastoreRequiresContainer` reasoning from the *absence of Docker* rather than
+# from having looked. The next fingerprint settles whether a datastore could be
+# installed directly, without a container, which is a different question.
+#
+# Rows are deliberately not added for those binaries ahead of the measurement.
+# Writing `azurite: absent` now would be exactly the `asserted` hypothesis this
+# section warns about, dressed as a fact.
 #
 # Consumed by evals/src/containerInventory.ts. Checked by `npm run stacks:check`.
 

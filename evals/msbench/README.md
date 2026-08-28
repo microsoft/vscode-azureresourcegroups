@@ -1154,7 +1154,7 @@ measured.** That file records what the container has in three states (`present`,
 from documentation, never observed. The fingerprint now sweeps the same binaries:
 
 ```
-for b in node npm python3 pip3 func go dotnet docker azd java; do
+for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do
   printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"
 done
 ```
