@@ -87,7 +87,7 @@
  * type index being up to date.
  */
 
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { type ArtifactValidationIssue, type ArtifactValidationResult, createValidationResult } from './validationTypes.ts';
@@ -494,15 +494,44 @@ export function discoverIac(workspace: string): DiscoveredIac {
  * `project-plan.md`, and the failure printed the plain "does not compile" message rather
  * than the "agent recorded PASS" one.
  *
- * Every session is searched, not just the newest. That is the product's own convention for
- * this directory (`azd-template-routing.md` line 84 — "checking every session, not just the
- * active one, catches leftovers from a prior abandoned run"), and picking a single session
- * would need a tie-break rule this gate has no way to get right.
+ * Which session to read matters once a workspace holds more than one. `active-session.json`
+ * is the product's own pointer to the live session (`session-protocol.md`), and old sessions
+ * are explicitly read-only, so the pointer is followed first. Without it — a run that failed
+ * before writing one, or a workspace assembled by hand — the newest manifest is the best
+ * available guess at the run being graded.
+ *
+ * The alternative, taking whichever session sorts first, is worse than arbitrary here: session
+ * ids are UUIDs, so the winner is effectively random, and an abandoned earlier session that
+ * recorded PASS would be graded in place of the real one. (`azd-template-routing.md` does say
+ * to check every session, but that is about spotting leftover files before overwriting them,
+ * not about deciding which run to grade.)
  */
 const SESSIONS_ROOT = '.copilot-azure/sessions';
 const MANIFEST_FILENAME = 'scaffold-manifest.json';
+const ACTIVE_SESSION_FILENAME = 'active-session.json';
 /** For messages, when there is no concrete file to point at. */
 const SCAFFOLD_MANIFEST = `${SESSIONS_ROOT}/*/${MANIFEST_FILENAME}`;
+
+/** The session id `active-session.json` points at, if it names one usably. */
+function readActiveSessionId(sessionsRoot: string): string | undefined {
+    try {
+        const parsed: unknown = JSON.parse(readFileSync(path.join(sessionsRoot, ACTIVE_SESSION_FILENAME), 'utf8'));
+        const id = (parsed as { activeSessionId?: unknown } | null)?.activeSessionId;
+        // A pointer naming a path rather than a bare id would escape the sessions directory.
+        return typeof id === 'string' && id.length > 0 && !id.includes('/') && !id.includes('\\') && id !== '..'
+            ? id
+            : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function manifestIn(sessionsRoot: string, session: string): { absolute: string; relative: string } | undefined {
+    const absolute = path.join(sessionsRoot, session, MANIFEST_FILENAME);
+    return existsSync(absolute)
+        ? { absolute, relative: `${SESSIONS_ROOT}/${session}/${MANIFEST_FILENAME}` }
+        : undefined;
+}
 
 export function discoverScaffoldManifest(workspace: string): { absolute: string; relative: string } | undefined {
     const sessionsRoot = path.join(workspace, ...SESSIONS_ROOT.split('/'));
@@ -515,13 +544,36 @@ export function discoverScaffoldManifest(workspace: string): { absolute: string;
     } catch {
         return undefined;
     }
+
+    const activeId = readActiveSessionId(sessionsRoot);
+    if (activeId !== undefined) {
+        const active = manifestIn(sessionsRoot, activeId);
+        if (active) {
+            return active;
+        }
+        // The pointer is authoritative about which session is live, so a missing manifest
+        // there is a real finding. Falling through to another session would hide it.
+        return undefined;
+    }
+
+    let newest: { found: { absolute: string; relative: string }; mtimeMs: number } | undefined;
     for (const session of sessions) {
-        const absolute = path.join(sessionsRoot, session, MANIFEST_FILENAME);
-        if (existsSync(absolute)) {
-            return { absolute, relative: `${SESSIONS_ROOT}/${session}/${MANIFEST_FILENAME}` };
+        const found = manifestIn(sessionsRoot, session);
+        if (!found) {
+            continue;
+        }
+        let mtimeMs: number;
+        try {
+            mtimeMs = statSync(found.absolute).mtimeMs;
+        } catch {
+            continue;
+        }
+        // `sessions` is sorted, so an mtime tie resolves by name and stays deterministic.
+        if (!newest || mtimeMs > newest.mtimeMs) {
+            newest = { found, mtimeMs };
         }
     }
-    return undefined;
+    return newest?.found;
 }
 
 /**

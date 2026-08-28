@@ -86,6 +86,13 @@ function compile(entryPoint: string): { output: string; status: number | null } 
     const result = spawnSync('az', ['bicep', 'build', '--file', entryPoint, '--stdout'], {
         encoding: 'utf8',
         timeout: 5 * 60_000,
+        // `--stdout` keeps the compiled ARM out of the workspace, so no later gate mistakes a
+        // build artefact for something the agent scaffolded. The cost is that the whole
+        // template lands in this buffer, and spawnSync's 1 MiB default is well inside the
+        // range a real deployment reaches — expanding a few modules clears it easily.
+        // Overflow surfaces as ENOBUFS, which the spawn-failure branch below would report as
+        // a harness fault, so a large but perfectly valid template would fail to grade.
+        maxBuffer: 64 * 1024 * 1024,
         // On Windows `az` is `az.cmd`, a batch file CreateProcess cannot execute, and since
         // CVE-2024-27980 Node refuses to spawn `.cmd` without a shell. Safe here because
         // every argument is a hardcoded literal except a path we resolved ourselves.
