@@ -35,7 +35,7 @@ import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { discoverPackages, type ProjectPackage, validateProjectPackages } from '../src/artifacts/projectPackages.ts';
 import { discoverFrontendDirectory } from '../src/artifacts/frontendScaffold.ts';
-import { fail, failWithIssues, runGraderAsync, workspacePath } from './graderHarness.ts';
+import { fail, failAsHarnessFault, failWithIssues, runGraderAsync, workspacePath } from './graderHarness.ts';
 
 /**
  * Package discovery and the pre-build checks live in src/artifacts/projectPackages.ts,
@@ -51,12 +51,25 @@ function run(label: string, pkg: ProjectPackage, args: string[], timeoutMs: numb
         timeout: timeoutMs,
         // npm resolves its own config relative to cwd; inheriting the eval's env is enough.
         env: { ...process.env, CI: '1' },
+        // On Windows `npm` is `npm.cmd`, a batch file CreateProcess cannot execute, and
+        // since CVE-2024-27980 Node refuses to spawn `.cmd` without a shell. Safe here
+        // because every argument is a hardcoded literal.
+        shell: process.platform === 'win32',
     });
+    const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+    // "npm is not runnable here" is not evidence that the project is broken, so it must not
+    // be reported as one. Without a shell that arrives as an error; with one, the shell
+    // starts fine and complains on stdout with a non-zero exit, so check both shapes.
+    const npmMissing = /'npm(\.\w+)?' is not recognized|\bnpm: (command )?not found|command not found: npm\b/i.test(output);
+    const spawnFailed = result.error && (result.error as NodeJS.ErrnoException).code !== 'ETIMEDOUT';
+    if (spawnFailed || npmMissing) {
+        failAsHarnessFault(`${pkg.relative}: ${label} could not start: ${result.error?.message ?? 'npm is not on PATH'}`);
+    }
     if (result.error) {
-        return `${label} could not start: ${result.error.message}`;
+        // A timeout is the project's problem, not ours.
+        return `${label} did not finish within ${Math.round(timeoutMs / 60_000)} minutes`;
     }
     if (result.status !== 0) {
-        const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
         // npm dumps its entire config reference after a usage error, so a tail-only
         // excerpt shows help text instead of the cause. Drop the reference block, then
         // keep both ends: npm reports usage errors first, builds report them last.

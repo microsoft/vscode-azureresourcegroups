@@ -16,7 +16,22 @@ Run these checks directly. All must pass.
 ```powershell
 az bicep build --file infra/main.bicep --stdout > $null
 ```
-(Bash: redirect to `/dev/null` instead of `$null`.) Pass: exit 0. Fail: fix errors and retry.
+(Bash: redirect to `/dev/null` instead of `$null`.) This discards the compiled ARM JSON; diagnostics still arrive on **stderr**, so read stderr — do not just check the exit code.
+
+> ⛔ **Exit 0 does NOT mean the template is valid.** `az bicep build` exits 0 on `Warning BCP*` diagnostics, and those warnings describe a template that will not do what it says. Measured on bicep 0.46.1: a resource missing its required `location`, `sku` and `kind` compiles with **exit 0** and only `Warning BCP035`. An agent that trusts the exit code ships a resource with no SKU and reports it as validated.
+
+**Pass criteria — all three must hold:**
+
+| Signal | Verdict |
+|---|---|
+| Non-zero exit, or any `Error BCP*` | **Fail** — fix and retry |
+| `Warning BCP*` (e.g. `BCP035` missing required property, `BCP036` wrong property type) | **Fail** — fix and retry |
+| `BCP081` "does not have types available" | **Advisory only** — see below |
+| Linter warnings (`no-unused-params`, `prefer-interpolation`, …) | Pass — do not block |
+
+`BCP081` is carved out because bicep ships a bundled type index that lags ARM, so it also fires on API versions that are real and current. It cannot distinguish an invented resource type from a merely newer one. Do not treat it as a failure, but do read it — if the resource type is genuinely misspelled, that is a real bug.
+
+Fail: fix errors and retry.
 
 **11b. Static RBAC review** — review generated Bicep for correct role assignments per [rbac-roles.md](rbac-roles.md). Every managed identity ↔ resource pair must have a `Microsoft.Authorization/roleAssignments` resource with the correct role GUID.
 
@@ -26,12 +41,19 @@ az bicep build --file infra/main.bicep --stdout > $null
   "validationResult": {
     "status": "Validated",
     "checks": [
-      { "name": "bicep build", "result": "PASS" },
-      { "name": "RBAC review", "result": "PASS" }
+      { "name": "bicep build", "passed": true, "detail": "<the command you ran and what it reported>" },
+      { "name": "RBAC review", "passed": true, "detail": "<which identity/resource pairs you checked>" }
     ]
   }
 }
 ```
+
+> ⛔ **Field names are fixed — copy them exactly.** `validationResult` MUST match `ValidationResult` in [`scaffold-schemas.ts`](scaffold-schemas.ts): `status` + `checks[]`, where each check is `{ name, passed: boolean, detail?: string }`.
+> - `passed` is a **boolean** — not `"result": "PASS"`, not `"status"`.
+> - The array is `checks` — not `notes`, `warnings`, or `errors`.
+> - Do NOT use `ConformanceResult` (`{ passed, failures[], source }`) here. That is a **different type** for a different gate (the Step 3c plan-conformance script). `validationResult` is never shaped like it.
+>
+> ⛔ **`detail` must describe what you actually observed** — the command you ran and its real output. Do not copy the placeholder text above, and never write a `detail` claiming a command succeeded unless you ran it and it did.
 
 **Terraform path:** Replace 11a with `terraform init -backend=false && terraform validate`.
 
@@ -42,7 +64,7 @@ az bicep build --file infra/main.bicep --stdout > $null
 
 ⛔ **You MUST read [`scaffold-schemas.ts`](scaffold-schemas.ts)** to get the exact `ScaffoldManifest` interface. Write to the session folder with ALL fields populated: `files[]`, `selfReview.findings[]`, AND `validationResult` (from Step 11). This is a single write — validation is already complete.
 
-> ⛔ **Phase exit gate: `scaffold-manifest.json.validationResult` MUST NOT be null.** If validation ran: `{ status: 'Validated'/'Partial'/'Failed', details }` (per `ValidationResult` in [`scaffold-schemas.ts`](scaffold-schemas.ts)). Null = incomplete scaffold.
+> ⛔ **Phase exit gate: `scaffold-manifest.json.validationResult` MUST NOT be null.** If validation ran: `{ status: 'Validated'/'Partial'/'Failed', checks: [{ name, passed, detail? }] }` (per `ValidationResult` in [`scaffold-schemas.ts`](scaffold-schemas.ts)). Null = incomplete scaffold.
 
 **You MUST also update `context.json`** per `AppOnboardContext` in [`session-schemas.ts`](../../references/session-schemas.ts): append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc`.
 

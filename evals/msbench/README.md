@@ -1695,7 +1695,7 @@ read the table, and it owns the verdict:
 | Exit | Meaning |
 | --- | --- |
 | `0` | The run is a result. Read the table. |
-| `75` | `EX_TEMPFAIL` — throttled. Not a result at all; retry in ~15 minutes. |
+| `75` | `EX_TEMPFAIL` — throttled. Not a result at all; retry promptly (see below). |
 | `65` | `EX_DATAERR` — the run measured something other than what was requested. |
 
 Both are deliberately distinct from `1`, which still means a genuine red run. **A
@@ -2496,9 +2496,23 @@ with a clear message:
   throttling. A **completely empty `exec` table** is another tell: the graders never ran
   at all, rather than running and failing.
 
-  Observed budget: **three runs inside 14 minutes succeeded and the fourth was
-  throttled**, at ~250k tokens each. So this is a rolling token allowance rather than a
-  minimum gap between runs; spacing runs ~15 minutes apart is the practical rule.
+  Not a token budget, despite the initial reading. Three runs inside 14 minutes
+  succeeded and the fourth was throttled, which looked like a rolling allowance at
+  ~250k tokens per run — but measuring the proxy log of a throttled run
+  (`2026082811285762`) contradicts that: the 429 arrived after only **2 requests in
+  the preceding 10 seconds**, on a run that logged 20 responses in total, and the same
+  surface returned 200 again **335 ms later**. Nothing that small can exhaust a
+  client-side budget.
+
+  Successful calls before the throttle across four consecutive runs were 3, 11, 15 and
+  44, with no relation to how long the harness had been idle beforehand — waiting 16,
+  25 and 45 minutes each produced a throttle anyway. The limit is shared backend
+  congestion, so attempts are independent draws.
+
+  Practical rule: **retry promptly and expect several attempts**, rather than spacing
+  runs out. What makes a self-healing blip fatal is on our side — the agent hard-stops
+  on the first 429 instead of retrying, so a hiccup that clears in 335 ms costs a whole
+  run. Fixing that retry behaviour would matter more than any spacing policy.
 
 - **Two `run.sh` invocations at once submit each other's stimulus.** `assets/` is shared
   mutable state — every invocation rewrites `user-overrides.yaml` before uploading it —

@@ -1,9 +1,9 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`
+- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
 - Outcome: **PASSED**
-- Cases: 110/110 passed
+- Cases: 123/123 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -117,4 +117,17 @@
 | `no-scaffold-nested-source-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
 | `no-scaffold-root-manifest-appears` | `unapproved-plan-refusal` | `no-scaffold` | `scaffoldedFromUnapprovedPlan` | `scaffoldedFromUnapprovedPlan` | PASS |
 | `golden-integration-plan` | `api-only-no-datastore` | `integration-plan` | `passed` | `passed` | PASS |
+| `golden-iac-compiles` | `reference-iac-bicep` | `iac-compiles` | `passed` | `passed` | PASS |
+| `iac-compiles-no-template-is-not-a-pass` | `reference-iac-bicep` | `iac-compiles` | `noIacFound` | `noIacFound` | PASS |
+| `iac-compiles-missing-manifest-is-reported` | `reference-iac-bicep` | `iac-compiles` | `missingScaffoldManifest` | `missingScaffoldManifest` | PASS |
+| `iac-compiles-unparseable-manifest-is-reported` | `reference-iac-bicep` | `iac-compiles` | `unparseableScaffoldManifest` | `unparseableScaffoldManifest` | PASS |
+| `iac-compiles-unparseable-manifest-not-called-missing` | `reference-iac-bicep` | `iac-compiles` | `!missingScaffoldManifest` | `unparseableScaffoldManifest` | PASS |
+| `iac-compiles-suppressed-blocking-diagnostic-is-reported` | `reference-iac-bicep` | `iac-compiles` | `suppressedBlockingDiagnostic` | `suppressedBlockingDiagnostic` | PASS |
+| `iac-compiles-sanctioned-suppression-is-allowed` | `reference-iac-bicep` | `iac-compiles` | `!suppressedBlockingDiagnostic` | `passed` | PASS |
+| `iac-compiles-build-check-synonym-is-accepted` | `reference-iac-bicep` | `iac-compiles` | `!missingBicepBuildCheck` | `passed` | PASS |
+| `iac-compiles-unvalidated-status-is-reported` | `reference-iac-bicep` | `iac-compiles` | `iacNotValidated` | `iacNotValidated` | PASS |
+| `iac-compiles-self-reported-build-failure-is-reported` | `reference-iac-bicep` | `iac-compiles` | `bicepBuildSelfReportedFailure` | `bicepBuildSelfReportedFailure` | PASS |
+| `iac-compiles-absent-build-check-is-reported` | `reference-iac-bicep` | `iac-compiles` | `missingBicepBuildCheck` | `missingBicepBuildCheck` | PASS |
+| `iac-compiles-terraform-is-a-coverage-gap-not-a-pass` | `reference-iac-bicep` | `iac-compiles` | `terraformNotSupported` | `terraformNotSupported` | PASS |
+| `iac-compiles-terraform-is-not-called-missing` | `reference-iac-bicep` | `iac-compiles` | `!noIacFound` | `terraformNotSupported` | PASS |
 

@@ -1,0 +1,224 @@
+# Stimulus `deploy-scaffold-iac` — does the infrastructure the agent generated compile?
+#
+# phase: deploy-scaffold
+# seed: approved-fullstack
+#
+# The first stimulus to grade `azure-deploy`, and the first whose grader runs a
+# compiler that is not a package manager.
+#
+# ── Why this is worth a run, when the agent already checks its own work ───────
+#
+# The scaffold sub-phase is contracted to validate what it generates and to record
+# the outcome in `.copilot-azure/sessions/{uuid}/scaffold-manifest.json`. Re-running
+# that check would be redundant if the agent's check were sound. It is not, and the
+# way it fails is the reason this stimulus exists.
+#
+# `validation-and-manifest.md` step 11a tells the agent to run
+# `az bicep build --file infra/main.bicep --stdout > $null` and reads the result
+# as "Pass: exit 0". Measured against bicep 0.46.1, every one of these exits 0:
+#
+#   - a resource type that does not exist        (BCP081, warning)
+#   - an API version that does not exist         (BCP081, warning)
+#   - a required property omitted                (BCP035, warning)
+#   - a property given the wrong type            (BCP036, warning)
+#
+# Those four are the generative failure modes — a model inventing a plausible
+# `Microsoft.*/thing@date` is the single most likely way this phase goes wrong —
+# and the agent's own gate waves all four through. An agent can therefore emit
+# infrastructure that cannot deploy, read exit 0, write `"passed": true` into its
+# manifest, and have followed its instructions exactly.
+#
+# So the assertion below is not "did it compile". It is **"is the agent's report
+# of whether it compiled true"**, which is a question only an independent compile
+# can answer. See evals/src/artifacts/iacCompiles.ts for the measured table and
+# for why the grader blocks on `BCP*` warnings other than BCP081 while ignoring
+# linter ones.
+#
+# BCP081 is the exception, and the two rows above are correspondingly weaker than
+# the other two: bicep's bundled type index lags the live ARM registry, so BCP081
+# also fires on API versions that are real and merely newer than the pinned
+# compiler. Run 2026082775134461 hit exactly that. The gate therefore records
+# BCP081 as advisory rather than failing on it, and the hallucinated-type case is
+# caught only when the invented shape also violates something BCP035/BCP036 can
+# see. That is a real and acknowledged hole; closing it needs the live registry.
+#
+# ── This stimulus must never provision ────────────────────────────────────────
+#
+# Grading deploy for real costs money per run. This phase exists because the
+# product already separates IaC generation from provisioning and forbids the
+# scaffold sub-phase from touching Azure. That prohibition is asserted here rather
+# than assumed: an agent that ignores it would spend real money, and a run that
+# silently did so would look like a pass.
+
+# Fail before any tokens are spent if the seed did not land.
+#
+# Same reasoning as scaffold-fullstack.yaml: without this, a seed that failed to
+# copy leaves the agent with no plan, it correctly declines to generate
+# infrastructure, and every assertion below goes red as though the product were
+# broken — for a paid run whose diagnosis is true and completely misleading.
+preConditions:
+  - comment: The approved plan seed must be present before the agent starts
+    exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
+
+promptSteps:
+  # ─── Turn 0: plan, and stop at the scaffold approval gate ─────────────────
+  #
+  # Measured, not assumed. In run 2026082773787007 this prompt alone produced a
+  # complete deployment plan — 7 services, SKUs, costs, and a "Files to Generate"
+  # list naming infra/main.bicep and 7 modules — and then stopped on:
+  #
+  #   "✅ Ready to proceed with scaffolding? (Yes / Edit plan / Private access / Cancel)"
+  #
+  # That is `approval-gates.md` being obeyed exactly. The agent is contracted to
+  # stop before generating infrastructure, so a single-turn stimulus can never
+  # reach the scaffold sub-phase no matter how the prompt is worded, and grading
+  # one turn would permanently report the approval gate as a missing-IaC failure.
+  #
+  # The wording still matters: "generate the infrastructure" enters the scaffold
+  # sub-phase, whereas "deploy this" would enter the provisioning one and the
+  # negative assertions below would be failing the agent for doing what it was
+  # asked.
+  - text: |
+      Generate the Azure infrastructure needed to host the approved
+      `.azure/project-plan.md`. Generate and validate the IaC only — do not
+      provision anything and do not deploy.
+    assertions:
+      # Liveness sentinel, turn 0. One per turn is mandatory in a multi-turn
+      # stimulus: a run that dies after turn 0 leaves every later negative
+      # assertion vacuously true, and a single step-0 sentinel would still pass.
+      # See README.md, "Multi-turn stimuli".
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # The approval gate itself, graded. `approval-gates.md` requires the agent to
+      # stop before generating infrastructure, so a template existing at this point
+      # means it scaffolded without consent. Written as `exec:` rather than a query
+      # over `files` because this phase disables workspace snapshots.
+      - comment: Agent should not have generated infrastructure before approval
+        exec: 'test ! -f /workspace/infra/main.bicep && test ! -f /workspace/main.bicep'
+
+      - comment: Agent should not have provisioned any Azure resources (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%deployment%create%' OR tool LIKE '%azd_up%'
+
+  # ─── Turn 1: approve, and grade what the scaffold sub-phase produced ──────
+  #
+  # "Yes" is the literal first option the agent offers at the gate. Everything
+  # this stimulus exists to measure happens in this turn.
+  - text: |
+      Yes — proceed with scaffolding. Generate and validate the IaC only; do not
+      provision anything and do not deploy.
+    assertions:
+      # Liveness sentinel, turn 1 — the one that actually catches the multi-turn
+      # failure. A run throttled or stalled on the second turn leaves
+      # `llm_responses` non-empty, so the turn-0 sentinel still passes while every
+      # assertion here passes vacuously.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program iac-compiles --require-artifacts
+      # The gate this stimulus exists for. Compiles the generated template with
+      # the real Bicep compiler and cross-checks the verdict against what the
+      # agent recorded in scaffold-manifest.json.
+      #
+      # `--require-artifacts` is passed because this turn *did* enter the phase
+      # contracted to produce a template and a manifest, which is the only
+      # circumstance in which demanding them grades a contract the agent was
+      # actually given. It also converts the total no-show — the agent writing no
+      # infrastructure at all — from a skip into the failure it plainly is here.
+      #
+      # `timeoutMs` is generous relative to a compile because `az bicep build` may
+      # have to install or refresh the Bicep CLI on first use in a cold container.
+      # The failure mode being designed against is the one project-builds
+      # documents: MSBench collapses every non-zero exit into "failed", so a
+      # grader killed early is indistinguishable from infrastructure that
+      # genuinely does not compile.
+      - comment: The generated infrastructure compiles, and the manifest's account of it is true
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-iac-compiles.ts --require-artifacts
+        timeoutMs: 600000
+
+      # The prohibition in subagent-validate.md, asserted rather than assumed.
+      # This is the assertion that keeps the phase affordable: an agent that
+      # provisions here spends real money, and without this the run would report a
+      # clean pass for having done so.
+      - comment: Agent should not have provisioned any Azure resources (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%deployment%create%' OR tool LIKE '%azd_up%'
+
+      # The other half of the same rule. Scaffold validates syntax only; what-if
+      # is the deploy sub-phase's job and needs real secret parameters, so running
+      # it here means the agent crossed the phase boundary even if nothing was
+      # created.
+      - comment: Agent should not have run what-if or terraform plan
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%what_if%' OR tool LIKE '%terraform_plan%'
+
+      # A grader that has only ever returned PASS has not been shown to work — it is
+      # indistinguishable from a grader that cannot fail. The offline certification
+      # suite covers that, but it runs on a developer machine against fixtures; it
+      # says nothing about whether this grader still detects a defect *here*, with
+      # this container's Bicep, this node, and these paths.
+      #
+      # So: seed a scratch workspace with infrastructure that is definitely wrong
+      # (BCP036, a property given a number where a string is required) and a
+      # manifest that definitely lies about it, then require the grader to catch
+      # it. BCP036 is chosen because `az bicep build` exits 0 on it — the exact
+      # blind spot this gate exists to cover, so the probe fails if the grader
+      # ever regresses to trusting the exit code.
+      #
+      # The lying check is named "Bicep syntax validation" rather than the
+      # contract's literal "bicep build" because that is what a real agent wrote
+      # in run 2026082782003660. An exact-spelling matcher does not recognise it,
+      # reports `missingBicepBuildCheck` instead of the contradiction, and so
+      # never notices the lie — which is precisely the regression this line
+      # guards. Do not "tidy" it back to the literal spelling.
+      #
+      # Inverted on purpose: this check passes when the grader FAILS its scratch
+      # workspace. It is a test of the instrument, not of the agent, and it runs
+      # against a temp directory so it cannot touch what the agent produced.
+      - comment: The grader still detects broken IaC and a lying manifest in this container
+        exec: |
+          P=$(mktemp -d)
+          S="$P/.copilot-azure/sessions/00000000-0000-4000-8000-000000000000"
+          mkdir -p "$P/infra" "$S"
+          {
+            echo "targetScope = 'resourceGroup'"
+            echo "param location string = resourceGroup().location"
+            echo "resource probeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {"
+            echo "  name: 123"
+            echo "  location: location"
+            echo "}"
+          } > "$P/infra/main.bicep"
+          {
+            echo '{'
+            echo '  "sessionId": "00000000-0000-4000-8000-000000000000",'
+            echo '  "iacFormat": "bicep",'
+            echo '  "targetScope": "resourceGroup",'
+            echo '  "entryPoint": "infra/main.bicep",'
+            echo '  "files": [{"path": "infra/main.bicep", "purpose": "probe"}],'
+            echo '  "validationResult": {'
+            echo '    "status": "Validated",'
+            echo '    "checks": [{"name": "Bicep syntax validation", "passed": true, "detail": "probe claims success"}]'
+            echo '  }'
+            echo '}'
+          } > "$S/scaffold-manifest.json"
+          OUT=$(EVALUATE_WORKSPACE="$P" node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-iac-compiles.ts --require-artifacts 2>&1)
+          RC=$?
+          echo "$OUT"
+          echo "probe: grader exited $RC"
+          if [ "$RC" -ne 1 ]; then echo "PROBE FAILED: expected the grader to exit 1, got $RC"; exit 1; fi
+          echo "$OUT" | grep -q "BCP036" || { echo "PROBE FAILED: the compile defect was not reported"; exit 1; }
+          echo "$OUT" | grep -q "recorded" || { echo "PROBE FAILED: the false self-report was not reported"; exit 1; }
+          echo "PROBE OK: grader caught an exit-0 defect and the manifest lying about it"
+        timeoutMs: 600000
+
+      # Recorded, not asserted. `assertZeroExitCode: false` stores the command in
+      # the `exec` table without generating a check, so it can never fail the run
+      # or change the assertion count. Read it first when the grader above goes
+      # red.
+      #
+      # `az bicep version` is included because `az` being present does NOT imply
+      # the Bicep CLI is: it is a separate download that `az bicep install`
+      # fetches. Run 2026082773787007 measured `bicep=MISSING` in this container,
+      # which is why the phase `script:` now installs it — this line is how a
+      # regression in that install becomes visible next to the verdict.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm az azd bicep terraform docker jq bash grep find pwsh pip3; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; echo "az-bicep=$(az bicep version 2>&1 | head -1 || echo MISSING)"; ls -la . .azure infra 2>&1 | head -40'
+        assertZeroExitCode: false

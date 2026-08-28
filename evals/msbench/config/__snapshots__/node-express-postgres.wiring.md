@@ -44,3 +44,8 @@ wired:
 not wired:
   runtime-frontend — project.frontend is none, not spa
   runtime-frontend-api — project.frontend is none, not spa
+
+## phase: deploy (phase not configured for this stack)
+
+wired:
+  iac-compiles
