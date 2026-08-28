@@ -31,6 +31,7 @@ wired:
 
 wired:
   debug-gate
+  project-builds --require-frontend
   debug-plan
   debug-config
   debug-artifacts

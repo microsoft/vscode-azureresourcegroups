@@ -33,6 +33,7 @@ not wired:
 
 wired:
   debug-gate
+  project-builds
   debug-plan
   debug-config
   debug-artifacts
