@@ -30,6 +30,7 @@
 # continue to declare their turns themselves.
 # turn-before-mode: azure-project-scaffold
 # turn-before: The project plan has been approved. Execute the approved `.azure/project-plan.md` and scaffold the project.
+# turn-instead: Now set up local debugging for this project so I can hit F5 in VS Code.
 # seed: approved-fullstack
 
 chatMode: azure-debug-plan

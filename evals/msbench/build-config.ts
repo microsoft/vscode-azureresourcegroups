@@ -278,16 +278,33 @@ interface PhaseTurn {
 interface PhaseTurns {
     readonly before?: PhaseTurn;
     readonly after?: PhaseTurn;
+    /**
+     * Replaces the stack prompt as the phase's own ask.
+     *
+     * A stack's `prompt` describes the application to build, which is exactly the right
+     * thing to send in the plan phase and exactly the wrong thing anywhere else. The local
+     * phase asks a different question — "now set up debugging for the project that already
+     * exists" — and the app description has no place in it: the app was already described
+     * in the plan the seed staged.
+     *
+     * Without this, a stack-driven local run sent "I'd like to create an app where you can
+     * upload photos…" to `azure-debug-plan`. The agent was never asked to plan debugging,
+     * never wrote `.azure/vscode-debug-plan.md`, and all four debug gates failed on its
+     * absence — a red with nothing to say about the product (run 2026082875609243).
+     */
+    readonly instead?: PhaseTurn;
 }
 
 const TURN_BEFORE = /^#\s*turn-before:\s*(.+)$/im;
 const TURN_BEFORE_MODE = /^#\s*turn-before-mode:\s*(\S+)\s*$/im;
 const TURN_AFTER = /^#\s*turn-after:\s*(.+)$/im;
+const TURN_INSTEAD = /^#\s*turn-instead:\s*(.+)$/im;
 
 function phaseTurns(phaseText: string, phase: string): PhaseTurns {
     const before = TURN_BEFORE.exec(phaseText)?.[1].trim();
     const chatMode = TURN_BEFORE_MODE.exec(phaseText)?.[1].trim();
     const after = TURN_AFTER.exec(phaseText)?.[1].trim();
+    const instead = TURN_INSTEAD.exec(phaseText)?.[1].trim();
 
     // A mode with no turn to apply it to is a directive that silently does nothing, which
     // is the failure mode this whole file family keeps rediscovering.
@@ -295,9 +312,17 @@ function phaseTurns(phaseText: string, phase: string): PhaseTurns {
         console.error(`config/phases/${phase}.yaml declares turn-before-mode but no turn-before.`);
         process.exit(1);
     }
+    // `turn-after` grades a turn that follows the ask, so it needs an ask to follow. With
+    // `turn-instead` also replacing the ask the two are answerable but the ordering is not
+    // obvious to a reader, and a phase that wanted both has not existed yet.
+    if (instead && after) {
+        console.error(`config/phases/${phase}.yaml declares both turn-instead and turn-after; only one may replace the stack prompt.`);
+        process.exit(1);
+    }
     return {
         before: before ? { text: before, chatMode } : undefined,
         after: after ? { text: after } : undefined,
+        instead: instead ? { text: instead } : undefined,
     };
 }
 
@@ -363,7 +388,7 @@ function renderStimulus(stack: Stack, wiring: PhaseWiring, turns: PhaseTurns): s
     if (turns.before) {
         lines.push(...renderStep(turns.before, sentinel()));
     }
-    const promptTurn: PhaseTurn = { text: stack.prompt };
+    const promptTurn: PhaseTurn = turns.instead ?? { text: stack.prompt };
     if (turns.after) {
         lines.push(...renderStep(promptTurn, sentinel()));
         lines.push(...renderStep(turns.after, [...sentinel(), ...graded]));
