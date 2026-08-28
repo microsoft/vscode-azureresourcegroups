@@ -8,7 +8,7 @@ table and re-run. This file exists so a wiring change is visible in review.
 - project: frontend=spa api=http datastore=postgres hosting=functions
 - healthPath: (none)
 - collectionRoute: (none)
-- phases configured for this stack: plan
+- phases configured for this stack: plan, local
 
 ## phase: plan
 
@@ -27,7 +27,7 @@ wired:
   datastore-fidelity
   integration-plan --has-frontend
 
-## phase: local (phase not configured for this stack)
+## phase: local
 
 wired:
   debug-gate

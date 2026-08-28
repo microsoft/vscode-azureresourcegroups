@@ -69,4 +69,22 @@ knownGaps:
       it when a run reports a path for `func` rather than MISSING, and not
       before.
 
-phases: [plan]
+# ## Why this stack drives the local phase
+#
+# Because the `approved-fullstack` seed *is* this stack. That seed's plan document
+# describes "a React frontend, an Azure Functions HTTP backend, and a PostgreSQL
+# database ... attachments are held in Blob Storage", which is frontend=spa,
+# api=http, datastore=postgres, hosting=functions — this file, line for line. It
+# was written for the hand-written local-dev stimuli, which are Functions-shaped
+# for the same reason.
+#
+# That matters because a seed carries project *content*, not just turn shape. A
+# stack whose declaration and whose seeded plan disagree scaffolds one thing and
+# grades another: `react-express-file` was pointed at this phase first, and its
+# runtime gates reported `functionsHostUnavailable` on an Express stack, because
+# the workspace it was handed was a Functions project.
+#
+# So this is also the stack that can finally test the custom container image. The
+# `knownGaps` entry below exists precisely because `func` was unavailable, and the
+# image built in `container/` is what changes that — see the tracking note.
+phases: [plan, local]

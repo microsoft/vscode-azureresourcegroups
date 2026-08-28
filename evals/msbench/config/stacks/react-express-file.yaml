@@ -31,32 +31,35 @@
 # not be quoted as coverage of it. It covers the debug and runtime *gates*, on a
 # shape chosen because the container can execute it.
 #
-# ## Why this stack now runs the local phase
+# ## Why `phases: [plan]`, when the point of this stack is the runtime gates
 #
-# It did not, and the reason it did not is worth keeping, because the fix is not
-# obvious from here. `build-config.ts`'s `renderStimulus` used to emit exactly one
-# prompt step, while every local-dev stimulus needs a scaffold setup turn first
-# (`promptSteps[].chatMode: azure-project-scaffold`) so there is a project on disk
-# for the debug agent to scan. Declaring `local` back then would have sent this
-# prompt to `azure-debug-plan` against an empty workspace and redded every gate
-# for a reason that had nothing to do with the product.
+# Two things have to be true before this stack can drive a local-dev run, and only
+# one of them is.
 #
-# That is fixed. `config/phases/local.yaml` declares the setup turn as a
-# `# turn-before:` / `# turn-before-mode:` directive, and `renderStimulus` renders
-# it as its own step with its own liveness sentinel, putting the graders on the
-# last turn where an `exec:` grader can actually see the finished workspace. The
-# phase file owns the turn shape, so hand-written and generated stimuli cannot
-# drift into grading different setups.
+# The first was a scaffold setup turn: `renderStimulus` used to emit exactly one
+# prompt step, while local-dev needs `chatMode: azure-project-scaffold` first so
+# there is a project on disk for the debug agent to scan. That is now solved —
+# `config/phases/local.yaml` declares it as `# turn-before:`, and the phase file
+# owns the turn shape for hand-written and generated stimuli alike.
 #
-# This is what makes the five `runtime-*` gates reachable at all. They only wire
-# under a stack projection — their `requires:` name `project.api` and
-# `project.frontend`, which no hand-written stimulus declares — and neither
-# local-dev stimulus carries a runtime assertion. So a stack driving the local
-# phase is the ONLY path to executing them, and until now there wasn't one.
+# The second is a seed whose plan describes *this* stack, and that does not exist
+# yet. The only seeded plan today is `approved-fullstack`: React + Azure Functions
+# + PostgreSQL + Blob Storage, which is `react-functions-postgres`, not this file.
+# Declaring `local` here was tried, and the result was exactly what the mismatch
+# predicts — the scaffold turn built a Functions project, and all five runtime
+# gates reported `functionsHostUnavailable` on a stack whose entire premise is
+# that it uses no Functions at all (run 2026082867546686).
 #
-# The plan phase still matters and is still declared: it is how the seed for the
-# hand-written local-dev stimuli gets harvested from real planner output rather
-# than hand-written into the drift `harvest-seed.ts` exists to prevent.
+# The fix is NOT a second checked-in fixture. A hand-maintained plan per stack is
+# the drift `harvest-seed.ts` exists to prevent: edit the planner's template and
+# every stored copy still describes the old shape. The supported path is already
+# here — this stack declares the plan phase, so run it, then harvest that run's
+# real `.azure/project-plan.md` as this stack's seed. Real planner output, for
+# this stack's own prompt, with provenance and a staleness check attached.
+#
+# Until that seed exists, `knownGaps: []` below is a claim about *wiring* — all
+# ten local gates wire with nothing declared not-applicable — and not yet a claim
+# that they pass.
 
 schemaVersion: 1
 id: react-express-file
@@ -107,4 +110,4 @@ runtime:
 # belongs here as an entry rather than in someone's memory.
 knownGaps: []
 
-phases: [plan, local]
+phases: [plan]
