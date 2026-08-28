@@ -87,6 +87,34 @@ role assignment regardless of whether unauthenticated pulls are allowed. This
 was measured — enabling anonymous pull changed nothing, and it has been turned
 back off.
 
+### 4. Use at least the Standard SKU
+
+The image is ~3.7 GB. **Basic cannot reliably serve it**, and the way it fails is
+expensive: the pull races a timeout and usually wins, so the failure is
+intermittent and looks like flaky infrastructure rather than a fixed limit.
+
+Measured on Basic:
+
+| Puller | Result |
+|---|---|
+| CES runner, 3 runs | `Pull requested benchmark image from ACR` succeeded |
+| CES runner, 4th run | **failed** — instance returned `missing` after burning 50 minutes |
+| ACR Tasks (`az acr run`) | `504 Gateway Time-out` after **16m43s** |
+
+Basic caps registry download bandwidth at roughly 30 Mbps, which is about
+sixteen minutes for this image — the 16m43s timeout above is that limit, not a
+transient blip. Standard roughly doubles the throughput and the pull has been
+reliable since:
+
+```bash
+az acr update -n cormsbench --sku Standard
+```
+
+Upgrading the SKU preserves role assignments and the role-assignment mode; both
+were re-checked afterwards. The longer-term fix is a smaller image — the base
+carries Playwright dependencies, ffmpeg, xvfb and a full Python toolchain that
+this benchmark never uses.
+
 ## Pointing a run at the image
 
 The registry is a per-instance property of the benchmark data, so a single run
