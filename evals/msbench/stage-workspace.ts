@@ -263,9 +263,31 @@ export function stageWorkspace(seed: string): SeededFile[] {
 }
 
 function main(): void {
+    // Two callers, because two things can select a workspace. A hand-written stimulus
+    // names its own seed; a stack-generated stimulus has no header to carry one, and the
+    // phase file is what already owns the rest of its shape (`# turn-before:`), so it
+    // owns the seed too. Splitting that would let a generated run scaffold against a
+    // different starting workspace than the hand-written run of the same phase, which is
+    // precisely the drift the phase file exists to prevent.
+    const phaseFlag = process.argv.indexOf('--phase');
+    if (phaseFlag !== -1) {
+        const phase = process.argv[phaseFlag + 1];
+        if (!phase) {
+            console.error('usage: stage-workspace.ts --phase <phase>');
+            process.exit(1);
+        }
+        const phasePath = join(HERE, 'config', 'phases', `${phase}.yaml`);
+        if (!existsSync(phasePath)) {
+            console.error(`Unknown phase '${phase}': ${phasePath} does not exist.`);
+            process.exit(1);
+        }
+        stageAndReport(seedFor(readFileSync(phasePath, 'utf8')), `phase '${phase}'`);
+        return;
+    }
+
     const stimulus = process.argv[2];
     if (!stimulus) {
-        console.error('usage: stage-workspace.ts <stimulus>');
+        console.error('usage: stage-workspace.ts <stimulus> | --phase <phase>');
         process.exit(1);
     }
     const stimulusPath = join(STIMULI, `${stimulus}.yaml`);
@@ -277,7 +299,10 @@ function main(): void {
         process.exit(1);
     }
 
-    const seed = seedFor(readFileSync(stimulusPath, 'utf8'));
+    stageAndReport(seedFor(readFileSync(stimulusPath, 'utf8')), `stimulus '${stimulus}'`);
+}
+
+function stageAndReport(seed: string, describedBy: string): void {
     let files: SeededFile[];
     try {
         files = stageWorkspace(seed);
@@ -287,10 +312,10 @@ function main(): void {
     }
 
     if (files.length === 0) {
-        console.log(`Seed '${seed}' for stimulus '${stimulus}': empty workspace (assets/workspace/ cleared)`);
+        console.log(`Seed '${seed}' for ${describedBy}: empty workspace (assets/workspace/ cleared)`);
         return;
     }
-    console.log(`Staged seed '${seed}' for stimulus '${stimulus}' to assets/workspace/`);
+    console.log(`Staged seed '${seed}' for ${describedBy} to assets/workspace/`);
     for (const file of files) {
         console.log(`  ${file.path}`);
     }

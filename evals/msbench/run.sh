@@ -289,7 +289,18 @@ node "${HERE}/stage-graders.ts"
 # also *clears* assets/workspace/ — otherwise a previous run's plan would leak
 # into a stimulus whose whole premise is that no plan exists.
 log "Staging workspace seed"
-node "${HERE}/stage-workspace.ts" "$STIMULUS"
+
+# A stack-generated stimulus has no header to carry `# seed:`, and passing $STIMULUS
+# here would seed from a stimulus the run never uses — which is exactly what happened:
+# a `--stack ... --phase local` run seeded from the default `photo-app-requirements`,
+# got `none`, and handed the scaffold agent a turn telling it to execute an
+# `.azure/project-plan.md` that was not there. Every gate then redded on an empty
+# workspace, for a reason with nothing to do with the product.
+if [ -n "$STACK" ]; then
+    node "${HERE}/stage-workspace.ts" --phase "${PHASE:-plan}"
+else
+    node "${HERE}/stage-workspace.ts" "$STIMULUS"
+fi
 
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.
