@@ -155,6 +155,22 @@ export interface RuntimeTarget {
     apiKind?: 'none' | 'http';
     /** The stack's declared collection endpoint, replacing a regex over frontend source. */
     collectionRoute?: string;
+    /**
+     * True when the process picks its own port and does not read `PORT`.
+     *
+     * Set for Azure Functions, where `func start` binds 7071 and takes `--port`, never the
+     * environment variable. Without it a Functions app is treated like any other Node
+     * project: nothing declares a port, so the harness injects `PORT` speculatively, `func`
+     * ignores it, and the app is reported as having "ignored the PORT environment variable"
+     * and being undeployable — about a variable it does not read. Measured on run
+     * 2026082875609243, which was the first run ever to reach this path, because until
+     * `func` existed in the container a Functions project stopped at `functionsHostUnavailable`.
+     *
+     * The same mistake is recorded a few lines below for scripts that assign the port
+     * internally: claiming a remap the app cannot honour produces a finding that accuses
+     * the product of a defect the harness invented.
+     */
+    portEnvUnsupported?: boolean;
     workspaceRoot: string;
     /** Directory of the `package.json` the app belongs to. */
     packageDirectory: string;
@@ -306,15 +322,19 @@ export async function resolveRuntimeTarget(workspaceRoot: string): Promise<Runti
     if (functions) {
         return functions;
     }
+    // Whether this is a Functions project, asked once and reused below. `detectFunctionsProject`
+    // returns undefined in two different situations — not a Functions project, and a Functions
+    // project whose host is available — and only the second needs the port flag.
+    const isFunctions = await usesFunctionsHost(workspaceRoot, packages);
 
     const fromLaunch = await resolveFromLaunchConfiguration(workspaceRoot, packages, stack);
     if (fromLaunch) {
-        return fromLaunch;
+        return withFunctionsPortPolicy(fromLaunch, isFunctions);
     }
 
     const fromScript = resolveFromStartScript(workspaceRoot, packages, stack);
     if (fromScript) {
-        return fromScript;
+        return withFunctionsPortPolicy(await fromScript, isFunctions);
     }
 
     // Neither rung answered. This is a harness fault by policy *for the runtime gates* —
@@ -565,9 +585,7 @@ async function detectFunctionsProject(
     workspaceRoot: string,
     packages: PackageManifest[],
 ): Promise<RuntimeTargetResolution | undefined> {
-    const usesFunctions = packages.some(value => '@azure/functions' in value.dependencies)
-        || (await findFiles(workspaceRoot, name => name === 'host.json', MAX_PACKAGE_DEPTH)).length > 0;
-    if (!usesFunctions || findExecutable('func')) {
+    if (!await usesFunctionsHost(workspaceRoot, packages) || findExecutable('func')) {
         return undefined;
     }
     return {
@@ -577,6 +595,30 @@ async function detectFunctionsProject(
             + 'so the app cannot be started. Install it in the run preamble with '
             + '`npm install -g azure-functions-core-tools@4 --unsafe-perm true`.',
     };
+}
+
+/** Whether this workspace is an Azure Functions app, independent of whether `func` is present. */
+async function usesFunctionsHost(workspaceRoot: string, packages: PackageManifest[]): Promise<boolean> {
+    return packages.some(value => '@azure/functions' in value.dependencies)
+        || (await findFiles(workspaceRoot, name => name === 'host.json', MAX_PACKAGE_DEPTH)).length > 0;
+}
+
+/**
+ * Mark a resolved Functions target as not taking `PORT`.
+ *
+ * Applied after discovery rather than inside it because a Functions project reaches the
+ * normal rungs: its launch configuration is `request: attach` and gets filtered out, so
+ * resolution falls through to the `start` script, which is `func start`. Everything about
+ * that is correct except the port, and that is the one thing worth saying here.
+ */
+function withFunctionsPortPolicy(
+    resolution: RuntimeTargetResolution,
+    isFunctions: boolean,
+): RuntimeTargetResolution {
+    if (!isFunctions || resolution.kind !== 'resolved') {
+        return resolution;
+    }
+    return { ...resolution, target: { ...resolution.target, portEnvUnsupported: true } };
 }
 
 async function describeMissingNodeProject(workspaceRoot: string): Promise<RuntimeTargetResolution> {
