@@ -102,10 +102,39 @@ and Node.
 
 ### Access
 
-You need the **`MSBench User`** role, requested at <https://aka.ms/msbench/access>
-(manager approval; syncs within the hour). That is the *only* access prerequisite —
-it grants the artifact feed, ACR, and Kusto in one go. Nothing else needs
-provisioning, and no other team needs to be involved.
+You need a role on the MSBench entitlement, requested at <https://aka.ms/msbench/access>
+(manager approval; syncs within the hour). Running the suite needs nothing else, and no
+other team needs to be involved.
+
+**The entitlement has more than one role, and they are not interchangeable.** MSBench's
+own docs name different ones for different jobs:
+
+| Doc | Role | Grants |
+| --- | --- | --- |
+| `doc/CONTRIBUTING.md`, "For Evaluation Runners" | `MSBench-CLI pip reader` | the pip feed `run.sh` installs from |
+| `doc/benchmarks/PUBLISHING_DOCKER_IMAGES.md` | `MSBench User` | pushing benchmark images to ACR |
+
+This file used to say the role "grants the artifact feed, ACR, and Kusto in one go".
+The feed half is confirmed — that is how `msbench-cli` installs. The ACR half is
+**measured false** for the identity that has been running this suite:
+
+```
+az acr login --name codeexecservice
+→ Access to registry 'codeexecservice.azurecr.io' was denied. Response code: 401
+```
+
+`codeexecservice.azurecr.io` is where `benchmarks/build_and_push.py` publishes, and it
+is not visible in any subscription that account can see. So running the suite and
+*publishing an image for it* are two different grants, and only the first is in place.
+
+**That turned out not to block the custom-image route.** MSBench supports a
+per-instance `container_registry`, so an image can live in a registry we own and
+never touch the shared ACR — no `MSBench User` role, no local Docker daemon.
+`container/` builds exactly that, and run `2026082777513216` measured
+`func 4.14.0` inside it. The one prerequisite is granting the CES service
+principal `AcrPull` on your own registry; without it every instance returns
+`missing` with no output, because the CES job dies at its `Login to ACR` step.
+See [`container/README.md`](container/README.md).
 
 `run.sh` mints the feed token with `az account get-access-token` rather than using
 `keyring`, which otherwise drops into an interactive prompt and hangs.
@@ -1125,7 +1154,7 @@ measured.** That file records what the container has in three states (`present`,
 from documentation, never observed. The fingerprint now sweeps the same binaries:
 
 ```
-for b in node npm python3 pip3 func go dotnet docker azd java; do
+for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do
   printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"
 done
 ```
@@ -1811,7 +1840,7 @@ Changing a grader used to mean paying for a run to find out whether it still wor
 graders against a run that already happened, for **zero tokens**.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"     # Windows: .msbench-venv/Scripts
 cd evals && npm run regrade -- 2026082582510393
 ```
 
@@ -1924,7 +1953,7 @@ Two traps, both of which cost real time:
 reads past runs and asks, per gate, whether that gate has ever actually done its job.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"        # Windows: .msbench-venv/Scripts
 cd evals && npm run gate-health                    # every run in the local cache
 npm run gate-health -- 2026082579322454 …          # specific runs, extracted on demand
 ```

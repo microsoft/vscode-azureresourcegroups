@@ -27,25 +27,38 @@
 # Making a row `measured` costs nothing. Every stimulus already ends with an
 # `Environment fingerprint for triage` exec: assertion that runs shell in the
 # container with `assertZeroExitCode: false` — recorded, never asserted on.
-# Extending that line with:
 #
-#   command -v pip3 go dotnet docker azd func; python3 -m ensurepip --version
+# That line now covers the emulators too:
 #
-# makes the next run anybody submits, for any reason, return the real inventory
-# as a free rider. Until that lands, treat every `asserted` row as a hypothesis
-# and say so out loud when quoting it.
+#   for b in ... func ... azurite psql postgres mongod redis-server
+#
+# so the next run anybody submits, for any reason, returns the real inventory as
+# a free rider. That matters most for the rows this file does NOT yet carry: no
+# datastore server has ever been observed here, and `runtime-crud` stands down on
+# `datastoreRequiresContainer` reasoning from the *absence of Docker* rather than
+# from having looked. The next fingerprint settles whether a datastore could be
+# installed directly, without a container, which is a different question.
+#
+# Rows are deliberately not added for those binaries ahead of the measurement.
+# Writing `azurite: absent` now would be exactly the `asserted` hypothesis this
+# section warns about, dressed as a fact.
 #
 # Consumed by evals/src/containerInventory.ts. Checked by `npm run stacks:check`.
 
 schemaVersion: 1
 
 # Bumped whenever a row moves between statuses or gains measurement.
-verifiedOn: '2026-08-25'
+verifiedOn: '2026-08-28'
 
 binaries:
   # Measured: msbench/README.md records "Verified in the container: Node
   # v22.22.2 on Linux x86_64", which is past the 22.18 cutoff where TypeScript
   # type-stripping is on by default. That is why the graders run off source.
+  #
+  # The version is the stock image's. Our custom image reports 22.23.2, because
+  # `nvm install 22` in Dockerfile.vscbench resolves to whatever the latest 22.x
+  # is on the day it is built. Worth knowing before quoting any row here as a
+  # fact about both images: they share a Dockerfile, not a build date.
   node:
     status: present
     version: 22.22.2
@@ -53,7 +66,7 @@ binaries:
 
   npm:
     status: present
-    evidence: asserted
+    evidence: measured
 
   # Present, but see `pip` below — a Python interpreter you cannot install
   # packages into runs the standard library and nothing else, which is the
@@ -61,7 +74,7 @@ binaries:
   python3:
     status: present
     version: '3.10'
-    evidence: asserted
+    evidence: measured
 
   az:
     status: present
@@ -87,10 +100,46 @@ binaries:
   # Functions, so all five runtime-* gates emit `functionsHostUnavailable` on
   # every single run — the 0-for-N pattern that gate-health.ts exists to flag,
   # except here the gates are fine and the container is the problem.
+  #
+  # `config/phases/local.yaml` runs the command below in its preamble. Run
+  # 2026082682123151 measured the result for the first time, and it FAILED:
+  #
+  #     npm error code E401
+  #     npm error Unable to authenticate, your authentication token seems to be invalid.
+  #
+  # So the install command recorded here is not sufficient on its own. The failure
+  # is registry authentication, not the package, the platform or `--unsafe-perm`:
+  # npm itself works in this image, since `validate-project-builds` runs `npm ci`
+  # in it. The preamble now retries against the public registry explicitly, which
+  # is the next thing to measure.
+  #
+  # `evidence` is now `measured`: run 2026082762322354's fingerprint reported
+  # `func=MISSING` directly, so the absence is observed rather than inherited from
+  # documentation. The install failing is a separate measurement, above.
+  #
+  # ── Solved, but deliberately still `absent` here ────────────────────────────
+  #
+  # `container/` now builds an image that carries func 4.14.0, and run
+  # 2026082777513216 measured it in the container:
+  #
+  #     + command -v func
+  #     ++ func --version
+  #     + echo 'func already present: 4.14.0'
+  #
+  # The agent then ran `func init services/functions --typescript --model V4`.
+  #
+  # This row still says `absent` because it describes the STOCK image, which is
+  # what a run gets unless its dataset row names our registry. Flipping it to
+  # `present` would let a stack require func without declaring the matching
+  # knownGap, and that stack would then fail on the default image with exactly
+  # the mysterious red this file exists to prevent. The custom image is opt-in
+  # per instance, so the conservative default is the true one.
+  #
+  # See container/README.md for the registry setup that makes the image usable.
   func:
     status: absent
     install: npm install -g azure-functions-core-tools@4 --unsafe-perm true
-    evidence: asserted
+    evidence: measured
 
   # `install: unverified` means: we believe it is absent, and we have not
   # established that installing it works. That is deliberately not the same as
@@ -99,33 +148,78 @@ binaries:
   pip:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   dotnet:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   go:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   azd:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
   java:
     status: absent
     install: unverified
-    evidence: asserted
+    evidence: measured
 
-  # The closed door. Not merely missing: a container runtime inside the eval
-  # container is not practically installable, so a stack whose datastore needs
-  # one (the `datastoreRequiresContainer` reason code) cannot be made to work by
-  # trying harder. Rejected at build time rather than discovered at runtime.
+  # ── Datastore emulators ──────────────────────────────────────────────────────
+  #
+  # Measured by inspecting the image directly (`az acr run`, 2026-08-28), which
+  # is why these are `measured` without a run having asked for them. All five of
+  # `azurite`, `psql`, `postgres`, `mongod` and `redis-server` reported MISSING.
+  # Only two get rows: the other three name datastores no stack can declare, since
+  # DatastoreKind is `none | postgres | cosmos | blob | queue`, and a row nothing
+  # can require is noise.
+  #
+  # This closes a real gap in what the suite knew about itself. `runtime-crud`
+  # stands down with `datastoreRequiresContainer`, and that reason was derived
+  # from the absence of *Docker* rather than from anyone checking whether a
+  # datastore was present or installable. Now it has been checked.
+  # Both are `install: unverified` rather than carrying a command, and the reason
+  # is measured. `npm root -g` inside the image resolves to a real writable path
+  # (`/opt/nvm/.../lib/node_modules`), so `npm install -g azurite` would very
+  # likely work at IMAGE BUILD time — but `install:` documents the *run preamble*,
+  # and npm in the preamble is measured-broken with `E401 Unable to authenticate`
+  # (see the func row). Writing a command here that we know fails in the place
+  # this field describes would be worse than admitting the question is open.
+  #
+  # Postgres is the harder one either way: a server has to be *running* while the
+  # agent works, and the image's setup script only runs at build time.
+  azurite:
+    status: absent
+    install: unverified
+    evidence: measured
+
+  postgres:
+    status: absent
+    install: unverified
+    evidence: measured
+
+  # The closed door, and now a measured one. Not merely missing: a container
+  # runtime inside the eval container is not practically installable, so a stack
+  # whose datastore needs one (the `datastoreRequiresContainer` reason code)
+  # cannot be made to work by trying harder. Rejected at build time rather than
+  # discovered at runtime.
+  #
+  # msbench-cli has a `--dind` flag ("Enable Docker-in-Docker"), which looked like
+  # it might reopen the door and retire that reason code outright. Run
+  # 2026082762322354 submitted with `--dind` to the default ces-dev1 backend: the
+  # flag was accepted, the run resolved 100%, and the fingerprint still reported
+  # `docker=MISSING`. So it does not reach the agent's container here — the
+  # neighbouring `--keep_container` is documented "Only valid with --backend
+  # local", and this behaves the same way.
+  #
+  # Worth writing down because the flag's existence is a standing invitation to
+  # assume the problem is solved by one argument. It is not, on this backend.
   docker:
     status: unavailable
     note: a container runtime is not practically installable inside the MSBench container
-    evidence: asserted
+    evidence: measured

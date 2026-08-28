@@ -67,7 +67,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, type Instance } from './extraction.ts';
+import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, venvBinDir, type Instance } from './extraction.ts';
 import {
     checkFreshness, currentAgentAssetsHash, EXIT_FRESH, EXIT_NOT_HARVESTED, EXIT_STALE, EXIT_TOOL_ERROR,
     freshnessOf, HARVESTED_PLAN, PROVENANCE_PATH, writeSeed, type Freshness, type Provenance,
@@ -98,7 +98,7 @@ Options:
   -h, --help        Show this help.
 
 Harvesting requires \`msbench-cli\` on PATH; --check is purely local:
-  export PATH="$HOME/.msbench-venv/bin:$PATH"`;
+  export PATH="$HOME/.msbench-venv/${venvBinDir()}:$PATH"`;
 
 // ---------------------------------------------------------------------------
 // Reporting

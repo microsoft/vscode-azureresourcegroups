@@ -89,7 +89,7 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, normalize, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, type Instance } from './extraction.ts';
+import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, venvBinDir, type Instance } from './extraction.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
@@ -205,7 +205,7 @@ Options:
   -h, --help           Show this help.
 
 Requires \`msbench-cli\` on PATH unless --extracted is used:
-  export PATH="$HOME/.msbench-venv/bin:$PATH"`;
+  export PATH="$HOME/.msbench-venv/${venvBinDir()}:$PATH"`;
 
 function parseArgs(argv: string[]): Options {
     const options: Options = { refresh: false, keepWorkspace: false, json: false };

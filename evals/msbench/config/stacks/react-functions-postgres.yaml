@@ -60,8 +60,13 @@ knownGaps:
     reason: functionsHostUnavailable
     binary: func
     tracking: >-
-      Install azure-functions-core-tools in the run preamble (see the install
-      command in config/container.yaml). Until then every Functions stack pays
-      three reds per run for a missing binary.
+      config/phases/local.yaml installs azure-functions-core-tools in the
+      preamble, fail-soft. Run 2026082682123151 measured it for the first time
+      and it FAILED with npm E401 "Unable to authenticate" — the container's npm
+      resolves through an authenticated registry this process has no token for.
+      The preamble now retries against the public registry explicitly. This gap
+      therefore stays, and is no longer a guess: it is the observed state. Clear
+      it when a run reports a path for `func` rather than MISSING, and not
+      before.
 
 phases: [plan]
