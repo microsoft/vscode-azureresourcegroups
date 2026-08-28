@@ -42,3 +42,8 @@ wired:
   runtime-frontend --require-frontend
   runtime-frontend-api
   runtime-crud
+
+## phase: deploy (phase not configured for this stack)
+
+wired:
+  iac-compiles
