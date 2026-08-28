@@ -48,12 +48,17 @@
 schemaVersion: 1
 
 # Bumped whenever a row moves between statuses or gains measurement.
-verifiedOn: '2026-08-27'
+verifiedOn: '2026-08-28'
 
 binaries:
   # Measured: msbench/README.md records "Verified in the container: Node
   # v22.22.2 on Linux x86_64", which is past the 22.18 cutoff where TypeScript
   # type-stripping is on by default. That is why the graders run off source.
+  #
+  # The version is the stock image's. Our custom image reports 22.23.2, because
+  # `nvm install 22` in Dockerfile.vscbench resolves to whatever the latest 22.x
+  # is on the day it is built. Worth knowing before quoting any row here as a
+  # fact about both images: they share a Dockerfile, not a build date.
   node:
     status: present
     version: 22.22.2
@@ -161,6 +166,39 @@ binaries:
     evidence: measured
 
   java:
+    status: absent
+    install: unverified
+    evidence: measured
+
+  # ── Datastore emulators ──────────────────────────────────────────────────────
+  #
+  # Measured by inspecting the image directly (`az acr run`, 2026-08-28), which
+  # is why these are `measured` without a run having asked for them. All five of
+  # `azurite`, `psql`, `postgres`, `mongod` and `redis-server` reported MISSING.
+  # Only two get rows: the other three name datastores no stack can declare, since
+  # DatastoreKind is `none | postgres | cosmos | blob | queue`, and a row nothing
+  # can require is noise.
+  #
+  # This closes a real gap in what the suite knew about itself. `runtime-crud`
+  # stands down with `datastoreRequiresContainer`, and that reason was derived
+  # from the absence of *Docker* rather than from anyone checking whether a
+  # datastore was present or installable. Now it has been checked.
+  # Both are `install: unverified` rather than carrying a command, and the reason
+  # is measured. `npm root -g` inside the image resolves to a real writable path
+  # (`/opt/nvm/.../lib/node_modules`), so `npm install -g azurite` would very
+  # likely work at IMAGE BUILD time — but `install:` documents the *run preamble*,
+  # and npm in the preamble is measured-broken with `E401 Unable to authenticate`
+  # (see the func row). Writing a command here that we know fails in the place
+  # this field describes would be worse than admitting the question is open.
+  #
+  # Postgres is the harder one either way: a server has to be *running* while the
+  # agent works, and the image's setup script only runs at build time.
+  azurite:
+    status: absent
+    install: unverified
+    evidence: measured
+
+  postgres:
     status: absent
     install: unverified
     evidence: measured
