@@ -215,6 +215,55 @@ line matches a direct `az acr run` inspection of the same image exactly, so two
 independent methods agree. Note `node=v22.23.2` rather than the 22.22.2 this folder
 records for the stock image: same Dockerfile, different build date.
 
+### The runtime gates have run
+
+Run [`2026082875609243`](https://msbenchapp.azurewebsites.net/run-analysis/2026082875609243)
+is the first in which the five `runtime-*` gates executed against a running application.
+`react-functions-postgres` drives the local phase on the custom image, and the Functions
+host starts:
+
+```
+[runtime-app-starts] started with "npm start" in /workspace/services/functions
+[runtime-app-starts] listening on http://127.0.0.1:7071 (port announced)
+PASS: gate=runtime-app-starts — the scaffolded app starts and listens
+```
+
+| Gate | Verdict |
+| --- | --- |
+| `runtime-app-starts` | **pass** — plus one product finding, below |
+| `runtime-health` | **fail** — the endpoint exists and hangs, below |
+| `runtime-frontend` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-frontend-api` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-crud` | not applicable, `datastoreRequiresContainer` |
+
+The three not-applicables are the gates being honest rather than the harness failing.
+`runtime-crud`'s in particular was predicted from the measured container inventory before
+the run: the project persists through `pg`, which needs a server, and there is no Docker.
+
+**Finding: the app ignores `PORT`.** `runtime-app-starts` passed and reported it anyway:
+
+> the app ignored the PORT environment variable and listened on its hard-coded port 7071.
+> Azure App Service and Container Apps inject the port, so this app would not receive
+> traffic there.
+
+**Finding: `/api/health` is registered, invoked, and never answers.** The host lists it and
+begins executing it, then the probe times out:
+
+```
+Functions:
+	health: [GET] http://localhost:7071/api/health
+[…] Executing 'Functions.health' (Reason='This function was programmatically called…')
+
+[healthEndpointUnreachable] /api/health: the app is listening on http://127.0.0.1:7071 but
+the health endpoint /api/health (declared in .azure/integration-plan.md) could not be
+reached: The operation was aborted due to timeout.
+```
+
+There is no matching `Executed 'Functions.health' (Succeeded…)` line, so the invocation
+starts and does not return. The cause is **not yet established** — a plausible candidate is
+that the handler touches PostgreSQL, which this container has no server for, but that has
+not been checked and should not be repeated as fact until it is.
+
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
 were checked past the tally. In `2026082618693091` the agent called `read_file` and

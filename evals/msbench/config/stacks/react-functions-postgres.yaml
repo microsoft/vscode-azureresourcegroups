@@ -64,10 +64,22 @@ knownGaps:
       preamble, fail-soft. Run 2026082682123151 measured it for the first time
       and it FAILED with npm E401 "Unable to authenticate" — the container's npm
       resolves through an authenticated registry this process has no token for.
-      The preamble now retries against the public registry explicitly. This gap
-      therefore stays, and is no longer a guess: it is the observed state. Clear
-      it when a run reports a path for `func` rather than MISSING, and not
-      before.
+      The preamble now retries against the public registry explicitly.
+
+      SUPERSEDED for runs on the custom image. container/ builds an image with
+      func 4.14.0 baked in, and run 2026082875609243 started the Functions host
+      from it: runtime-app-starts PASSED, and the remaining four gates stopped
+      reporting functionsHostUnavailable entirely. runtime-health then failed on
+      a real product finding (the endpoint registers, is invoked, and never
+      returns), while runtime-frontend and runtime-frontend-api report
+      frontendDevServerUnsupported and runtime-crud reports
+      datastoreRequiresContainer — three different, honest reasons.
+
+      The gap declaration STAYS, because it is still correct for the stock image
+      that a run gets unless its dataset names our registry, and this file cannot
+      express "gap on one image, not on another". Clearing it would make a
+      default-image run red for an undeclared reason. Revisit if the custom image
+      becomes the default, not before.
 
 # ## Why this stack drives the local phase
 #
