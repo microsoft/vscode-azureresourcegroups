@@ -172,9 +172,13 @@ binaries:
 
   # ── Datastore emulators ──────────────────────────────────────────────────────
   #
-  # Measured by inspecting the image directly (`az acr run`, 2026-08-28), which
-  # is why these are `measured` without a run having asked for them. All five of
-  # `azurite`, `psql`, `postgres`, `mongod` and `redis-server` reported MISSING.
+  # Measured twice, by independent methods that agree. First by inspecting the
+  # image directly (`az acr run`, 2026-08-28), then by the environment fingerprint
+  # in run 2026082863403911 — which is the stronger of the two, because it observes
+  # the container the eval actually ran in rather than one started separately.
+  # Both report all five of `azurite`, `psql`, `postgres`, `mongod` and
+  # `redis-server` MISSING.
+  #
   # Only two get rows: the other three name datastores no stack can declare, since
   # DatastoreKind is `none | postgres | cosmos | blob | queue`, and a row nothing
   # can require is noise.

@@ -189,6 +189,32 @@ also happens to be the cleanest rate-limit datapoint in the folder: 98 successfu
 `POST /v1/messages` calls and not one 429, which is what establishes that the throttling
 seen elsewhere is a burst limit rather than a spent budget.
 
+The **local-dev phase** then produced its first clean result, in the custom container
+image that carries the Functions Core Tools:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `debug-plan-approval-gate` | [`2026082863403911`](https://msbenchapp.azurewebsites.net/run-analysis/2026082863403911) | **8/8, `resolved: true`** |
+
+Four earlier attempts at this stimulus were all voided by `RATE_LIMIT`, never by the
+harness or the product. This one ran 102 `POST /v1/messages` calls untouched.
+
+Its environment fingerprint is the first to carry the emulator binaries, and it settles
+what `runtime-crud` had only ever assumed:
+
+```
+Linux x86_64   cwd=/workspace   node=v22.23.2
+func=/usr/bin/func
+pip3=MISSING  go=MISSING  dotnet=MISSING  docker=MISSING  azd=MISSING  java=MISSING
+azurite=MISSING  psql=MISSING  postgres=MISSING  mongod=MISSING  redis-server=MISSING
+```
+
+`func` on PATH **in the eval path itself**, not merely in an image probe — the condition
+five `runtime-*` gates had been standing down on since they were written. The emulator
+line matches a direct `az acr run` inspection of the same image exactly, so two
+independent methods agree. Note `node=v22.23.2` rather than the 22.22.2 this folder
+records for the stock image: same Dockerfile, different build date.
+
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
 were checked past the tally. In `2026082618693091` the agent called `read_file` and
