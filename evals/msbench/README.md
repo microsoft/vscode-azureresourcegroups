@@ -180,7 +180,14 @@ folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` 
 | --- | --- | --- |
 | `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
 | `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-autopilot` | [`2026082862087944`](https://msbenchapp.azurewebsites.net/run-analysis/2026082862087944) | 7/7, `resolved: true` |
 | `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | **6/7, `resolved: false`** — a real product defect, below |
+
+With `scaffold-autopilot` green, **every scaffold stimulus has now been run**, and the
+phase's only red is the product defect below rather than anything unexercised. That run
+also happens to be the cleanest rate-limit datapoint in the folder: 98 successful
+`POST /v1/messages` calls and not one 429, which is what establishes that the throttling
+seen elsewhere is a burst limit rather than a spent budget.
 
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
