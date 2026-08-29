@@ -439,9 +439,22 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
  * Write something, read it back — the check that separates a working data layer from a
  * well-typed stub that returns `[]` and never stores anything.
  *
- * The eval container has no Docker and cannot get it, so a stack whose datastore needs a
- * database server is reported not-applicable rather than passed. A silent pass on a stack
- * we cannot exercise is a gate that has quietly stopped testing anything.
+ * A stack whose datastore needs a server is reported not-applicable when nothing is
+ * listening, rather than passed. A silent pass on a stack we cannot exercise is a gate
+ * that has quietly stopped testing anything.
+ *
+ * What changed is which question decides that. It used to be "does package.json declare
+ * `pg`?", on the reasoning that no Docker meant no database. The custom image now installs
+ * PostgreSQL and Azurite — neither needs a container — and the phase preamble starts them,
+ * so the question is now "is anything listening on the port?".
+ *
+ * Both directions are measured, in the container, by container/verify-emulators.sh:
+ *
+ *   postgres running  →  PASS, "POST then GET /api/items round-tripped"
+ *   postgres stopped  →  NOT_APPLICABLE datastoreRequiresContainer, exit 3
+ *
+ * The second line is the one that makes the first worth anything. A gate that passes
+ * because it never really talked to the database would pass identically in both runs.
  */
 export async function validateCrudRoundTrip(workspaceRoot: string): Promise<RuntimeValidationResult> {
     const session = await acquireRuntimeSession(workspaceRoot);
