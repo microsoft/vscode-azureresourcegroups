@@ -34,6 +34,7 @@ import * as path from 'node:path';
 import { discoverFrontendDirectory } from '../artifacts/frontendScaffold.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from '../artifacts/validationTypes.ts';
 import { declaresBackendContract, type NotApplicableReason } from './runtimeTarget.ts';
+import { canConnect } from './appProcess.ts';
 import { acquireRuntimeSession, probe, type HttpProbeResponse, type RuntimeSession } from './runtimeSession.ts';
 
 export interface RuntimeValidationResult extends ArtifactValidationResult {
@@ -56,6 +57,49 @@ const CONVENTIONAL_HEALTH_PATHS = ['/api/health', '/health', '/healthz', '/api/h
 
 /** Datastore clients that need a server we cannot start — the container has no Docker. */
 const CONTAINER_DATASTORE_PACKAGES = ['pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver'];
+
+/**
+ * Default ports for the clients above, so "needs a server" can be checked rather than assumed.
+ *
+ * The stand-down these feed used to fire on the *package name alone*, which was right for as
+ * long as a server was impossible: no Docker meant no database, so `pg` in the dependencies
+ * settled it. That reasoning outlived its premise. The custom image installs PostgreSQL and
+ * Azurite — neither needs a container — and the phase preamble starts them, so the honest
+ * question became "is anything listening?" rather than "is `pg` in package.json?".
+ *
+ * Getting this wrong is expensive in the invisible direction: a gate that stands down when
+ * the service is up reports `datastoreRequiresContainer` forever and looks exactly like a
+ * correctly-declared known gap, which is why `runtime-crud` sat at 0 passes without anyone
+ * asking whether the reason still held.
+ */
+const DATASTORE_DEFAULT_PORTS: Record<string, number> = {
+    pg: 5432,
+    postgres: 5432,
+    mysql: 3306,
+    mysql2: 3306,
+    mongodb: 27017,
+    mongoose: 27017,
+    redis: 6379,
+    ioredis: 6379,
+    mssql: 1433,
+    'cassandra-driver': 9042,
+};
+
+/**
+ * Whether the datastore this project needs is actually listening.
+ *
+ * A TCP connect, not a query: the credentials and database name belong to the app, and this
+ * only has to answer whether standing down is still honest. A false positive here costs a
+ * real CRUD attempt that fails loudly; a false negative costs a permanent silent skip, which
+ * is the worse direction.
+ */
+async function datastoreServerReachable(datastore: string): Promise<boolean> {
+    const port = DATASTORE_DEFAULT_PORTS[datastore];
+    if (port === undefined) {
+        return false;
+    }
+    return await canConnect(port);
+}
 
 /**
  * **The attribution rule.** Stated once here because every gate in this file needs it and
@@ -414,11 +458,12 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
 
 
     const datastore = await findContainerDatastore(target.packageDirectory);
-    if (datastore) {
+    if (datastore && !await datastoreServerReachable(datastore)) {
         return notApplicable(
             'datastoreRequiresContainer',
-            `the project persists through "${datastore}", which needs a database server. The eval container has no Docker, `
-            + 'so a round-trip cannot be exercised honestly here.',
+            `the project persists through "${datastore}", which needs a database server, and nothing is `
+            + `listening on its default port. The eval container has no Docker, so unless an emulator was `
+            + 'started in the phase preamble a round-trip cannot be exercised honestly here.',
         );
     }
 

@@ -1,7 +1,7 @@
 {
   "instance_id": "cor_functions_host",
-  "image_version": "1.0.0",
-  "description": "Copilot on Rails eval base: the stock vscbench image plus Azure Functions Core Tools, so the runtime-* gates can start a Functions app instead of standing down with functionsHostUnavailable.",
+  "image_version": "1.1.0",
+  "description": "Copilot on Rails eval base: the stock vscbench image plus Azure Functions Core Tools, Azurite and PostgreSQL, so the runtime-* gates can start a Functions app and exercise a real datastore round-trip instead of standing down.",
   "tags": ["internal"],
   "owners": ["naturins"]
 }

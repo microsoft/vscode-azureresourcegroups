@@ -92,6 +92,25 @@ promptSteps:
       - comment: the browser receives a document
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-frontend.ts
 
+      # The two that need no emulator, which is the whole reason this fixture can
+      # exercise them. It persists through `fs.readFile`/`writeFile` on a data file
+      # and serves `GET`/`POST /api/items`, so `runtime-crud` gets a real
+      # write-then-read round-trip without a database.
+      #
+      # Keeping it emulator-free is still the right shape for a *self-test*, even
+      # though the custom image now runs Azurite and PostgreSQL (measured in
+      # msbench-1.1.0: blob on 10000, a SQL round-trip on 5432). This stimulus
+      # exists to prove the gate plumbing works, so it should not also depend on the
+      # emulator plumbing working — when it goes red, the cause should be
+      # unambiguous. A stack that declares PostgreSQL exercises the emulator path,
+      # and `runtime-crud` decides between them by probing the port rather than by
+      # reading the datastore package name.
+      - comment: the two halves of the app talk to each other
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-frontend-api.ts
+
+      - comment: a record can be written and read back
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-crud.ts
+
       # Recorded, not asserted. Tells a reader what the container actually held,
       # which is the first thing worth knowing when one of the gates above is red.
       - comment: Triage; what the seed put in the workspace

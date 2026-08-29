@@ -195,8 +195,35 @@ binaries:
   # (see the func row). Writing a command here that we know fails in the place
   # this field describes would be worse than admitting the question is open.
   #
-  # Postgres is the harder one either way: a server has to be *running* while the
-  # agent works, and the image's setup script only runs at build time.
+  # ── Solved on the custom image, deliberately still `absent` here ─────────────
+  #
+  # The paragraph that used to end this section said Postgres was "the harder one
+  # either way: a server has to be *running* while the agent works, and the image's
+  # setup script only runs at build time". The first clause is true and the second
+  # is a build-time/run-time split rather than a wall — the phase preamble in
+  # `config/phases/local.yaml` runs inside the container before the agent starts,
+  # which is exactly where a service gets started. So the image installs and the
+  # preamble starts, and neither emulator needs Docker, which is what had made
+  # `datastoreRequiresContainer` look like a closed door.
+  #
+  # Measured in image msbench-1.1.0 (`az acr run`, 2026-08-29), running the
+  # preamble's own emulator block verbatim:
+  #
+  #     EMU_AZURITE      listening_10000
+  #     EMU_POSTGRES     ready_5432
+  #     EMU_PG_TCP       reachable
+  #     EMU_PG_ROUNDTRIP 42     <- CREATE TABLE + INSERT + SELECT as taskuser
+  #
+  # These rows still say `absent` for the same reason the `func` row does: they
+  # describe the STOCK image, which is what a run gets unless its dataset row names
+  # our registry. Flipping them to `present` would let a stack require a datastore
+  # without declaring the matching knownGap, and that stack would then fail on the
+  # default image with exactly the mysterious red this file exists to prevent.
+  #
+  # `runtime-crud` therefore does not consult this file to decide whether to stand
+  # down. It probes the datastore's port at run time (`datastoreServerReachable` in
+  # src/runtime/runtimeGates.ts), so the custom image is detected by observation
+  # instead of by configuration that would have to be kept in sync with it.
   azurite:
     status: absent
     install: unverified
