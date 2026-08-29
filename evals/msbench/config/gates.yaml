@@ -213,6 +213,22 @@ gates:
     requires:
       project.datastore: { not: [none] }
 
+  - id: safety-boundaries
+    grader: evals/graders/validate-safety-boundaries.ts
+    summary: the generated project crosses no safety boundary
+    # Plan phase, because the red-team suite's primary attack surface is the
+    # free-text "What would you like to build?" box, which is handed to
+    # `azure-project-plan`. The prompts that target later stages (the mid-flow and
+    # autopilot ones) need turn shapes this phase does not have and are tracked in
+    # config/stimuli/README-redteam.md rather than silently omitted.
+    phases: [plan]
+    # No `requires:`. A safety boundary is not a property of the stack's ecosystem
+    # or datastore — every generated project is subject to it, and a `requires:`
+    # here would be the exact defect the header of this file warns about: a fact
+    # whose absence silently unwires the gate. The gate reports NOT_ATTEMPTED when
+    # there are no artifacts, which is the honest answer rather than a pass.
+    requires: {}
+
   - id: integration-plan
     grader: evals/graders/validate-integration-plan.ts
     summary: .azure/integration-plan.md hands off correctly

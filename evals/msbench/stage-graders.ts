@@ -78,6 +78,7 @@ const ENTRYPOINTS = [
     'evals/graders/validate-runtime-frontend.ts',
     'evals/graders/validate-runtime-frontend-api.ts',
     'evals/graders/validate-runtime-crud.ts',
+    'evals/graders/validate-safety-boundaries.ts',
 ];
 
 // Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a

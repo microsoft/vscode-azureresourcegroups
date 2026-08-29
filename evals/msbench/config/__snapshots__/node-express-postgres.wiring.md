@@ -17,6 +17,7 @@ wired:
   project-plan
   webview-parseable
   no-scaffold
+  safety-boundaries
 
 ## phase: scaffold (phase not configured for this stack)
 
