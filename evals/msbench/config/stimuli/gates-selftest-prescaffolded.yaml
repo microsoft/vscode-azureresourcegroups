@@ -1,0 +1,103 @@
+# ⚠️  HARNESS SELF-TEST. NOT A PRODUCT SIGNAL. ⚠️
+#
+# This stimulus seeds a **finished** project — `.vscode/launch.json`,
+# `.vscode/tasks.json` and `.azure/vscode-debug-plan.md` all arrive ready-made from
+# `evals/grader-certification/reference-node-fullstack`. The gates below therefore
+# grade files the *fixture* supplied, not anything an agent produced.
+#
+# A green result here means "these graders work inside the container". It means
+# NOTHING about the product, and quoting it as evidence about the agent would be
+# the vacuous pass this whole suite exists to prevent. `gate-health` counts gate
+# outcomes across runs, so a reader who does not know this file's provenance would
+# be misled by exactly the numbers it produces.
+#
+# ── Then why run it at all ────────────────────────────────────────────────────────
+#
+# `npm run certify` already runs these same validators against this same fixture,
+# offline, on every commit, for nothing — 41 cases across the debug and runtime
+# gates. What it cannot answer is whether they still work once staged into the
+# MSBench container, where graders run off source with no install step, the
+# workspace arrives by a different route, and `func`, `node_modules` and PATH are
+# all somebody else's decision.
+#
+# That gap is not hypothetical. Every distinct failure the runtime gates hit in
+# August was a container-side problem invisible to offline certification:
+#
+#   graders never staged            Cannot find module
+#   workspace never seeded          no package.json anywhere
+#   project never installed         declares dependencies but has no node_modules
+#
+# Four gates — debug-plan, debug-config, debug-artifacts, debug-breakpoint — have
+# still never executed inside a container against a real project. This is the
+# cheapest way to find out whether they can.
+#
+# ── Why the certification fixture rather than a purpose-built one ────────────────
+#
+# So offline and in-container ask about the same bytes. A second hand-maintained
+# "known good project" is the drift this repo keeps paying for, and a self-test
+# that disagreed with certification would be indistinguishable from a real failure.
+#
+# ── Cost ──────────────────────────────────────────────────────────────────────────
+#
+# One turn, no scaffold. The two-turn local-dev runs spend ~99 of their ~115
+# upstream calls rebuilding a project before asking anything, which is why they
+# keep hitting the rate ceiling. This asks the same gates for a fraction of that.
+#
+# phase: local
+# seed: prescaffolded-reference
+
+promptSteps:
+  # A deliberately trivial ask. The agent is not the subject of this run — the
+  # graders are — so the turn exists to satisfy the harness's "a turn must produce
+  # a response" contract and to give the sentinel something true to assert. Asking
+  # for real work here would spend tokens generating output nothing grades, and
+  # would let the agent MODIFY the fixture the gates are supposed to be reading.
+  - text: |
+      List the files in this workspace and tell me what the project does. Do not
+      create, edit or delete any files.
+    assertions:
+      # Liveness sentinel — must come first. It is what separates "the graders ran
+      # in the container and found the artifacts" from "nothing happened and every
+      # check was vacuous". With a pre-seeded workspace the exec gates below would
+      # otherwise pass even on a completely dead run, which is precisely the
+      # failure mode this file could most easily become.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # Proof the seed arrived. If this is red, every gate below is answering a
+      # question about the wrong directory and none of their verdicts count.
+      - comment: the pre-scaffolded fixture reached the container
+        exec: 'test -f package.json && test -f src/server.js && test -f .vscode/launch.json && test -f .azure/vscode-debug-plan.md'
+
+      # The four gates that have never run in a container. Certified offline
+      # against this exact fixture, so a red here is a container-side problem —
+      # staging, paths, PATH, or the graders' own runtime assumptions.
+      - comment: vscode-debug-plan.md satisfies the debug plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts
+
+      - comment: launch.json and tasks.json are structurally sound
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
+
+      - comment: Generated debug artifacts match the approved plan
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
+
+      # The runtime gates, on a project with no dependencies — so `npm ci` is
+      # trivial and a red here is about starting and probing, not installing.
+      - comment: the application actually starts
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-app-starts.ts
+
+      - comment: the health endpoint answers
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-health.ts
+
+      - comment: the browser receives a document
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-frontend.ts
+
+      # Recorded, not asserted. Tells a reader what the container actually held,
+      # which is the first thing worth knowing when one of the gates above is red.
+      - comment: Triage; what the seed put in the workspace
+        exec: 'ls -la . .vscode .azure src public 2>&1 | head -50'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done'
+        assertZeroExitCode: false

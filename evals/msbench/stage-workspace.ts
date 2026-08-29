@@ -153,7 +153,69 @@ const RECIPES: Record<string, Recipe> = {
     'unapproved-plan': () => [
         { path: '.azure/project-plan.md', content: withStatus(readPlanSource(), 'Planning') },
     ],
+
+    /**
+     * A complete, runnable project — the one the graders already certify against.
+     *
+     * ⚠️ HARNESS SELF-TEST ONLY. This seed stages `.vscode/launch.json`,
+     * `.vscode/tasks.json` and `.azure/vscode-debug-plan.md` *ready-made*, so a run
+     * using it grades files the fixture supplied rather than anything an agent
+     * produced. It answers "do these gates work inside the container?" and says
+     * NOTHING about the product. A result from this seed must never be quoted as
+     * evidence about the agent — see config/stimuli/gates-selftest-prescaffolded.yaml,
+     * which carries the same warning where a reader will actually meet it.
+     *
+     * Why it is worth having anyway: `npm run certify` already runs these validators
+     * against this exact fixture offline, on every commit, for nothing. What that
+     * cannot tell you is whether the same validators work once staged into the
+     * MSBench container, where the graders run off source with no install step and
+     * the workspace arrives by a different route. Four of them — the debug gates —
+     * had never executed in a container at all.
+     *
+     * Deliberately the certification fixture rather than a new one. A second
+     * hand-maintained "known good project" is exactly the drift this repo keeps
+     * paying for, and using the certified one means offline and in-container are
+     * asking about the same bytes.
+     */
+    'prescaffolded-reference': () => readFixture(REFERENCE_FIXTURE),
 };
+
+/** Files that describe the certification harness rather than the project it contains. */
+const FIXTURE_EXCLUDED = new Set(['scenario.json']);
+
+const REFERENCE_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-fullstack');
+
+/**
+ * Read a fixture directory into seeded files.
+ *
+ * `node_modules` is skipped rather than copied: the fixture has no dependencies, and a
+ * seed that shipped one would be uploaded with every run for no reason.
+ */
+function readFixture(root: string): SeededFile[] {
+    if (!existsSync(root)) {
+        throw new Error(`Seed fixture not found at ${root}.`);
+    }
+    const files: SeededFile[] = [];
+    const walk = (directory: string): void => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+            if (entry.name === 'node_modules' || entry.name === '.git') {
+                continue;
+            }
+            const full = join(directory, entry.name);
+            if (entry.isDirectory()) {
+                walk(full);
+                continue;
+            }
+            const relative = full.slice(root.length + 1).split('\\').join('/');
+            if (FIXTURE_EXCLUDED.has(relative)) {
+                continue;
+            }
+            files.push({ path: relative, content: readFileSync(full, 'utf8') });
+        }
+    };
+    walk(root);
+    return files;
+}
 
 /** The plan document both seeds derive from, and where it came from. */
 interface PlanSource {
