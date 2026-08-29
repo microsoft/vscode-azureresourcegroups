@@ -42,6 +42,8 @@ PASSTHRU=()
 # submitted against an image that is not there, and the instance comes back
 # `missing` with no output — indistinguishable from an infrastructure outage.
 DATASET="${DATASET:-}"
+# Set by --ignore-cooldown. See the budget preflight below.
+IGNORE_COOLDOWN=0
 # Observed, not chosen: msbench-cli writes results to `<data_dir>/<run_id>/`, and
 # `--data_dir` is a passthrough flag we do not otherwise interpret. The results
 # lookup after the run has to know where they landed, so the value is recorded
@@ -59,6 +61,7 @@ while [ $# -gt 0 ]; do
         --phase=*) PHASE="${1#*=}" ;;
         --dataset) shift; [ $# -gt 0 ] || { echo "--dataset needs a value" >&2; exit 1; }; DATASET="$1" ;;
         --dataset=*) DATASET="${1#*=}" ;;
+        --ignore-cooldown) IGNORE_COOLDOWN=1 ;;
         # Recorded AND forwarded. Both spellings, both forms — the CLI accepts
         # `--data_dir` and `--data-dir`, so matching only one would reintroduce
         # the silent skip this exists to prevent.
@@ -400,6 +403,33 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
+# --- budget preflight ---------------------------------------------------------
+#
+# A run voided by RATE_LIMIT costs the same ~250k tokens as a real one and yields
+# nothing. Seven of twenty instances in the local cache are void for that reason,
+# so a third of the corpus is noise that `gate-health` has to discard.
+#
+# The throttle is cumulative rather than a rolling window, which is why "wait 15
+# minutes" is not sufficient advice: measured on 2026-08-28, a run submitted two
+# hours after the previous one still throttled after 71 calls, while the first run
+# of the day completed 102 untouched. So the marker is only cleared by a run that
+# actually succeeds — time alone does not clear it.
+THROTTLE_MARKER="${HERE}/.last-throttle"
+COOLDOWN_MINUTES="${COR_COOLDOWN_MINUTES:-45}"
+if [ "$IGNORE_COOLDOWN" -eq 0 ] && [ -f "$THROTTLE_MARKER" ]; then
+    LAST_THROTTLE="$(cat "$THROTTLE_MARKER" 2>/dev/null || echo 0)"
+    ELAPSED_MIN=$(( ( $(date +%s) - LAST_THROTTLE ) / 60 ))
+    if [ "$ELAPSED_MIN" -lt "$COOLDOWN_MINUTES" ]; then
+        die "The last run was voided by RATE_LIMIT ${ELAPSED_MIN} minute(s) ago.
+    Submitting now most likely buys another void run at full token cost. The
+    budget is cumulative, so it recovers slowly once spent.
+
+    Wait until ${COOLDOWN_MINUTES} minutes have passed, or override with
+    --ignore-cooldown if you have reason to believe it has recovered.
+    Set COR_COOLDOWN_MINUTES to change the window."
+    fi
+fi
+
 log "Submitting to MSBench (benchmark: ${BENCHMARK}, stimulus: ${STIMULUS})"
 # Echo the prompt actually being submitted, so a stimulus/config mismatch is
 # visible in the log rather than only discoverable by unzipping the results.
@@ -492,6 +522,16 @@ if [ -n "$RUN_ID" ]; then
         node "${HERE}/verify-run.ts" --run-dir "${SCRATCH}/out" --run-id "$RUN_ID"
         VERIFY_STATUS=$?
         set -e
+
+        # Remember a throttle, so the NEXT invocation can refuse to spend another
+        # ~250k tokens discovering the same thing. Recorded here rather than inside
+        # verify-run.ts because verify-run is also the offline --self-test entry
+        # point and a self-test must not write budget state.
+        if [ "$VERIFY_STATUS" -eq 75 ]; then
+            date +%s > "${THROTTLE_MARKER}"
+        else
+            rm -f "${THROTTLE_MARKER}"
+        fi
 
         if [ "$VERIFY_STATUS" -ne 0 ]; then
             rm -rf "$SCRATCH"
