@@ -178,18 +178,43 @@ const RECIPES: Record<string, Recipe> = {
      * asking about the same bytes.
      */
     'prescaffolded-reference': () => readFixture(REFERENCE_FIXTURE),
+
+    /**
+     * ⚠️ HARNESS SELF-TEST ONLY, on the same terms as the seed above.
+     *
+     * The difference is the datastore. `reference-node-fullstack` persists to a JSON file,
+     * which is what lets it certify `runtime-crud` offline with no server — and is also why
+     * it can say nothing about the path every Azure-shaped stimulus actually takes, where
+     * package.json declares `pg` and the gate has to reach a database.
+     *
+     * That path is covered at two points and joined at neither. The phase preamble starts
+     * PostgreSQL in a real MSBench run (measured in run 2026083057881445: "postgres: ready on
+     * 127.0.0.1:5432"), and the gate completes a real round-trip against an identically
+     * started PostgreSQL in the published image (measured by container/verify-emulators.sh).
+     * Both halves, never the composition — a preamble-started database and a gate in the same
+     * run, which is the only place a mismatch between them could show up.
+     *
+     * The obvious way to close that was an ordinary stack run, and run 2026083057881445 is
+     * why it does not work: the generated app failed to start (#1757), so `runtime-crud`
+     * never got near the database. Seeding an app that is known to start removes the product
+     * from a question that is not about the product.
+     */
+    'prescaffolded-postgres': () => readFixture(POSTGRES_FIXTURE),
 };
 
 /** Files that describe the certification harness rather than the project it contains. */
 const FIXTURE_EXCLUDED = new Set(['scenario.json']);
 
 const REFERENCE_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-fullstack');
+const POSTGRES_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-postgres');
 
 /**
  * Read a fixture directory into seeded files.
  *
- * `node_modules` is skipped rather than copied: the fixture has no dependencies, and a
- * seed that shipped one would be uploaded with every run for no reason.
+ * `node_modules` is skipped rather than copied: it is large, platform-specific, and
+ * `project-builds` installs from the lockfile in the container anyway. The postgres fixture
+ * is the reason that lockfile has to be checked in — `npm ci` fails outright without one,
+ * and it is the command `project-builds` runs.
  */
 function readFixture(root: string): SeededFile[] {
     if (!existsSync(root)) {

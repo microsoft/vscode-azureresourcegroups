@@ -154,35 +154,65 @@ interface GateRow {
     text: string;
 }
 
-function readGateRows(sqlitePath: string): GateRow[] {
+interface ExecRow {
+    command: string;
+    exitCode: number;
+    stdOut: string | null;
+    stdErr: string | null;
+    output: string | null;
+}
+
+function textOf(row: ExecRow): string {
+    return [row.stdOut, row.stdErr, row.output].filter(Boolean).join('\n').trim();
+}
+
+function readExecRows(sqlitePath: string): ExecRow[] {
     const db = new DatabaseSync(sqlitePath);
     try {
-        const rows = db.prepare('SELECT command, exitCode, stdOut, stdErr, output FROM exec').all() as Array<{
-            command: string;
-            exitCode: number;
-            stdOut: string | null;
-            stdErr: string | null;
-            output: string | null;
-        }>;
-
-        const byGate = new Map<string, GateRow>();
-        for (const row of rows) {
-            const matched = /validate-([a-z0-9-]+)\.ts/.exec(String(row.command));
-            if (!matched) {
-                continue;
-            }
-            // MSBench records the same exec twice for some steps. First writing wins; they carry
-            // identical text, and printing a gate twice reads as two results.
-            if (byGate.has(matched[1])) {
-                continue;
-            }
-            const text = [row.stdOut, row.stdErr, row.output].filter(Boolean).join('\n').trim();
-            byGate.set(matched[1], { gate: matched[1], exitCode: row.exitCode, text });
-        }
-        return [...byGate.values()];
+        return db.prepare('SELECT command, exitCode, stdOut, stdErr, output FROM exec').all() as unknown as ExecRow[];
     } finally {
         db.close();
     }
+}
+
+function readGateRows(rows: ExecRow[]): GateRow[] {
+    const byGate = new Map<string, GateRow>();
+    for (const row of rows) {
+        const matched = /validate-([a-z0-9-]+)\.ts/.exec(String(row.command));
+        if (!matched) {
+            continue;
+        }
+        // MSBench records the same exec twice for some steps. First writing wins; they carry
+        // identical text, and printing a gate twice reads as two results.
+        if (byGate.has(matched[1])) {
+            continue;
+        }
+        byGate.set(matched[1], { gate: matched[1], exitCode: row.exitCode, text: textOf(row) });
+    }
+    return [...byGate.values()];
+}
+
+/**
+ * The `exec:` assertions that are not graders — environment fingerprints, directory listings,
+ * emulator port probes.
+ *
+ * Worth printing, and the omission was found by using this tool on the run it was written for.
+ * A stimulus that probes whether PostgreSQL is listening *before* the CRUD gate runs is doing
+ * so precisely to separate "the gate is broken" from "the datastore was never there", and a
+ * report that hides that line throws away the disambiguation it was written to provide.
+ */
+function readTriageRows(rows: ExecRow[]): ExecRow[] {
+    const seen = new Set<string>();
+    const triage: ExecRow[] = [];
+    for (const row of rows) {
+        const command = String(row.command);
+        if (/validate-[a-z0-9-]+\.ts/.test(command) || seen.has(command)) {
+            continue;
+        }
+        seen.add(command);
+        triage.push(row);
+    }
+    return triage;
 }
 
 function describe(row: GateRow, full: boolean): string[] {
@@ -226,7 +256,8 @@ function main(): void {
             fail(`extracted ${zip} but found no session.sqlite, so no gate output can be read`);
         }
 
-        const rows = readGateRows(sqlitePath).sort((a, b) => a.gate.localeCompare(b.gate));
+        const execRows = readExecRows(sqlitePath);
+        const rows = readGateRows(execRows).sort((a, b) => a.gate.localeCompare(b.gate));
         if (rows.length === 0) {
             fail('session.sqlite has no grader rows in its exec table; the graders may never have run');
         }
@@ -240,6 +271,23 @@ function main(): void {
                 console.log(`    ${line}`);
             }
             console.log('');
+        }
+
+        const triage = readTriageRows(execRows);
+        if (triage.length > 0) {
+            console.log('triage execs (not gates):\n');
+            for (const row of triage) {
+                const command = String(row.command).replace(/\s+/g, ' ').trim();
+                console.log(`  $ ${command.length > 100 ? `${command.slice(0, 100)}…` : command}`);
+                const lines = textOf(row).split('\n').filter(Boolean);
+                for (const line of full ? lines : lines.slice(0, 8)) {
+                    console.log(`      ${line.trim()}`);
+                }
+                if (!full && lines.length > 8) {
+                    console.log(`      … ${lines.length - 8} more line(s); re-run with --full`);
+                }
+                console.log('');
+            }
         }
 
         const failed = rows.filter(r => r.exitCode !== 0);
