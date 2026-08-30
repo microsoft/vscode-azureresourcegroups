@@ -55,8 +55,25 @@ export interface RuntimeValidationResult extends ArtifactValidationResult {
 /** Health paths tried only when the project declared none of its own. */
 const CONVENTIONAL_HEALTH_PATHS = ['/api/health', '/health', '/healthz', '/api/healthz', '/api/status', '/status', '/ping'];
 
-/** Datastore clients that need a server we cannot start — the container has no Docker. */
-const CONTAINER_DATASTORE_PACKAGES = ['pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver'];
+/**
+ * Datastore clients that need a server this process did not start.
+ *
+ * The name says "container" because that is where the reason code came from, and the reason
+ * code is load-bearing: stacks declare known gaps against `datastoreRequiresContainer` by
+ * name, so renaming it would silently invalidate those declarations. What the list actually
+ * means is "persists through something that has to be listening", which is now broader than
+ * Docker — the Azure Storage clients talk to Azurite, which is a Node process.
+ *
+ * The Azure entries matter for attribution more than for coverage. Before they were here,
+ * `@azure/storage-blob` matched nothing, so a blob-backed project skipped the stand-down
+ * entirely and went straight to the round-trip. With Azurite up that happens to work; with
+ * Azurite down the app fails and the gate reports the *product* as broken, which is the one
+ * outcome this file exists to prevent.
+ */
+const CONTAINER_DATASTORE_PACKAGES = [
+    'pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver',
+    '@azure/storage-blob', '@azure/storage-queue', '@azure/data-tables',
+];
 
 /**
  * Default ports for the clients above, so "needs a server" can be checked rather than assumed.
@@ -83,6 +100,11 @@ const DATASTORE_DEFAULT_PORTS: Record<string, number> = {
     ioredis: 6379,
     mssql: 1433,
     'cassandra-driver': 9042,
+    // Azurite's defaults. Three ports rather than one because a project using only queues
+    // would otherwise be judged by whether the blob service happened to be up.
+    '@azure/storage-blob': 10000,
+    '@azure/storage-queue': 10001,
+    '@azure/data-tables': 10002,
 };
 
 /**
@@ -474,9 +496,10 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
     if (datastore && !await datastoreServerReachable(datastore)) {
         return notApplicable(
             'datastoreRequiresContainer',
-            `the project persists through "${datastore}", which needs a database server, and nothing is `
-            + `listening on its default port. The eval container has no Docker, so unless an emulator was `
-            + 'started in the phase preamble a round-trip cannot be exercised honestly here.',
+            `the project persists through "${datastore}", which needs a server, and nothing is listening on `
+            + `port ${DATASTORE_DEFAULT_PORTS[datastore]}. The phase preamble starts PostgreSQL and Azurite in `
+            + 'the custom image; on the stock image neither is installed, and a round-trip cannot be exercised '
+            + 'honestly here. Nothing in this result is evidence about the generated app.',
         );
     }
 
