@@ -465,10 +465,11 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 >
 > ```ts
 > // ❌ import { createTaskSchema } from '@shared/schemas/index';
-> // ✅ relative form — matches the rootDir config above
-> import { createTaskSchema } from '../../shared/schemas/index';
+> // ✅ relative form — count the levels from the importing FILE, not from the workspace root.
+> //    services/functions/src/functions/createTask.ts -> services/shared/schemas/index
+> import { createTaskSchema } from '../../../shared/schemas/index';
 > // ✅ or the workspace package's own name, exactly as written in services/shared/package.json
-> import { createTaskSchema } from '@task-tracker/shared/schemas';
+> import { createTaskSchema } from '@<project>/shared/schemas';
 > ```
 >
 > These are the only two supported mechanisms. Picking both leaves two competing paths to the same code, and the compile-time-only one wins silently.
