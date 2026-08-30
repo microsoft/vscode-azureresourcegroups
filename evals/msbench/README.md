@@ -1915,6 +1915,40 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 `extension-host.log`, and `customScript/output.log`. See
 [AGENT_OUTPUTS.md](https://github.com/microsoft/vscode-copilot-evaluation/blob/main/doc/references/AGENT_OUTPUTS.md).
 
+### Where a gate's own words are — and are not
+
+A grader's verdict line — the sentence naming the missing file, the reason code, the
+stack trace from the app that would not start — is captured in **exactly one place**:
+
+```
+output/vsc-output/session.sqlite   →   exec table   →   stdOut / stdErr / output
+```
+
+It is **not** in `entry.log`, which records each command and its exit code and nothing
+else. Not in `<instance>-runlog.txt`, `<instance>-fullrunlog.txt`, `eval.json`, or
+`custom_metrics.json`. Investigating run `2026083057881445` meant grepping every text
+file in the extracted results for reason codes, finding nothing, and briefly concluding
+the diagnostics were never captured. They were, one table away.
+
+```bash
+npm run analyze-run -- <run-id>          # every gate's verdict, from session.sqlite
+npm run analyze-run -- <run-id> --full   # the whole captured output per gate
+```
+
+[`analyze-run.ts`](analyze-run.ts) also exists because `run.sh` runs `verify-run.ts` and
+`check-assertions.ts` inline, on the run it just submitted — which makes them reachable
+only through a live invocation. If that shell dies, the analysis dies with it even though
+the results are sitting on disk. It extracts to a short temp path rather than under the
+repo, because the product log filenames are long enough to blow Windows' 260-character
+limit once nested under a repo path, which is exactly how `msbench-cli extract --output
+evals/msbench/.regrade/<id>` fails.
+
+One habit worth keeping while a run streams: do not pipe `run.sh` through anything that
+truncates, such as `Select-Object -First N` or `head`. Those close the pipe once
+satisfied, so the output stops arriving and a healthy run looks hung — and killing it
+orphans the CLI, which keeps going and holds `assets/.run.lock` against the next attempt.
+Redirect to a file and tail that instead.
+
 ## Re-grading a past run for free
 
 Changing a grader used to mean paying for a run to find out whether it still works.

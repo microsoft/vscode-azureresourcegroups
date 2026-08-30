@@ -895,6 +895,28 @@
             "expectedCode": "appExitedBeforeListening"
         },
         {
+            "id": "runtime-crud-not-attempted-when-app-dead",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-crud",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "'use strict';",
+            "replacement": "'use strict';\nthrow new Error('boom: the generated app crashes on boot');",
+            "expectedCode": "runtimeNotAttempted"
+        },
+        {
+            "id": "runtime-health-not-attempted-when-app-dead",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "'use strict';",
+            "replacement": "'use strict';\nthrow new Error('boom: the generated app crashes on boot');",
+            "expectedCode": "runtimeNotAttempted"
+        },
+        {
             "id": "runtime-health-returns-500",
             "tier": "offline",
             "fixture": "reference-node-fullstack",

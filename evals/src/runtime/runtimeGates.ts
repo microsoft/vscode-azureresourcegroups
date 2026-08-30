@@ -168,7 +168,10 @@ const STATIC_ROOTS = ['public', 'wwwroot', 'static', 'client', 'dist', '.'];
  */
 export async function validateAppStarts(workspaceRoot: string): Promise<RuntimeValidationResult> {
     const session = await acquireRuntimeSession(workspaceRoot);
-    const blocked = describeUnusableSession(session);
+    // The only caller passing ownsStartup. This gate exists to answer "does it start?", so a
+    // startup failure is its finding to report; the other four defer to it rather than each
+    // re-reporting the same corpse.
+    const blocked = describeUnusableSession(session, { ownsStartup: true });
     if (blocked) {
         return blocked;
     }
@@ -617,7 +620,36 @@ function requireHttpSurface(session: RuntimeSession): string | RuntimeValidation
     );
 }
 
-function describeUnusableSession(session: RuntimeSession): RuntimeValidationResult | undefined {
+/**
+ * Turn a session that never became usable into this gate's verdict.
+ *
+ * `ownsStartup` decides the one interesting case. When the app fails to start, exactly one
+ * gate should report a product failure — `runtime-app-starts`, which is the gate whose whole
+ * question is "does it start?". The other four consume a running app they never got, and a
+ * gate that never ran has no opinion about the product.
+ *
+ * Run 2026083057881445 is what the other behaviour costs. One defect (a tsconfig path alias
+ * that emits an unresolvable specifier, #1757) produced five separate red gates, each
+ * printing the same Functions worker stack trace, because every gate independently started
+ * the app and independently reported the same corpse. Five reds read as five findings; a
+ * reader triaging that has to work out by hand that four of them are echoes.
+ *
+ * This does not make anything greener. `NOT_ATTEMPTED_EXIT_CODE` is `EXIT_GRADER_ERROR`, so
+ * the assertion still fails and `runtime-app-starts` still reports the defect — the run stays
+ * exactly as red as it was. What changes is the diagnosis, which is the entire point of the
+ * verdict.
+ *
+ * Deliberately narrow. `notApplicable` is untouched, because stacks declare known gaps
+ * against those reason codes by name for all five gates at once (see the
+ * `functionsHostUnavailable` entry in react-functions-postgres.yaml), and rewriting four of
+ * them into a precondition would silently invalidate that declaration. `harnessFault` is
+ * untouched too: that one says *our* code broke, and it should be loud in every gate it
+ * breaks rather than attributed away to a gate that may have run fine.
+ */
+function describeUnusableSession(
+    session: RuntimeSession,
+    options: { ownsStartup?: boolean } = {},
+): RuntimeValidationResult | undefined {
     switch (session.kind) {
         case 'started':
             return undefined;
@@ -628,6 +660,14 @@ function describeUnusableSession(session: RuntimeSession): RuntimeValidationResu
         case 'harnessFault':
             return harnessFault(session.message, session.output);
         case 'productFailure':
+            if (!options.ownsStartup) {
+                return notAttempted(
+                    'the application starts',
+                    'the app under test never started, so this gate never got the running app it grades. '
+                    + 'runtime-app-starts owns that failure and reports it with the startup output; nothing '
+                    + 'here is a separate finding.',
+                );
+            }
             return failure(session.code, '$.runtime', session.message, session.output);
     }
 }
