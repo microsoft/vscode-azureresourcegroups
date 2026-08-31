@@ -298,6 +298,12 @@ Development → Deploy) and their status.
   <img src="images/copilot-create-project/12-azure-project-progress-tree.png" alt="Azure Project progress tree" />
 </p>
 
+**Reopening the progress view.** While a phase is running, Copilot shows a transient progress view
+(*"Copilot is working…"*) that bridges to the next surface. If you close that tab early, a
+**Show Copilot progress** item appears in the status bar (Source: **Azure Resources**) that reopens it — so
+dismissing the view never leaves you without visible progress. It disappears automatically once the flow moves
+on to its next surface.
+
 ## Autopilot mode
 
 Autopilot runs the whole pipeline **unattended** — no approval gates, no Next Steps prompts. It activates when
