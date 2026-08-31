@@ -204,11 +204,19 @@ function hashFile(file: string): string {
  * A new agent is guarded the day it lands rather than the day someone remembers to widen a
  * constant, and an over-broad scope fails closed — a nuisance, not a silent hole.
  */
-const UNTRACKED_AGENTS = new Set([
-    // No gate consumes it: `azure-deploy` appears nowhere under `evals/`, and gates.yaml
-    // declares no deploy gate. Tracking it would fail this check on a change no grader can
-    // observe, which is the over-correction the original narrow scope was avoiding.
-    "azure-deploy",
+const UNTRACKED_AGENTS = new Set<string>([
+    // Empty, and the history is the argument for keeping the mechanism anyway.
+    //
+    // This set held `azure-deploy`, excluded because it "appears nowhere under evals/ and
+    // gates.yaml declares no deploy gate", so tracking it would fail this check on a change
+    // no grader could observe. That was true when written and false a few hours later: #1754
+    // added the `iac-compiles` gate and a `deploy-scaffold` phase whose `chatMode` is
+    // `azure-deploy`, so the agent is now graded like any other.
+    //
+    // Which is the whole case for tracking by default. Under the old opt-in scope this agent
+    // would have become graded and unguarded silently, exactly as azure-project-scaffold had
+    // been. Under opt-out the mistake surfaces as a drift failure on a merge — noisy, cheap,
+    // and impossible to miss — rather than as a rule quietly deleted years later.
 ]);
 
 /** Agent folders under `resources/agents`, minus the shared folder and any documented opt-out. */

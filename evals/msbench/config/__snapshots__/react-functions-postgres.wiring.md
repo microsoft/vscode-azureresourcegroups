@@ -42,3 +42,8 @@ wired:
   runtime-frontend --require-frontend  [known gap: functionsHostUnavailable]
   runtime-frontend-api  [known gap: functionsHostUnavailable]
   runtime-crud  [known gap: functionsHostUnavailable]
+
+## phase: deploy (phase not configured for this stack)
+
+wired:
+  iac-compiles

@@ -78,7 +78,31 @@ binaries:
 
   az:
     status: present
-    evidence: asserted
+    version: '2.89.1'
+    evidence: measured
+
+  # The binary `iac-compiles` actually depends on, and it is NOT implied by the
+  # `az` row above. Bicep ships as a separate download that `az bicep install`
+  # fetches on first use into ~/.azure/bin, so an image with the Azure CLI on it
+  # can still have no compiler — which is why this row exists rather than being
+  # folded into `az`.
+  #
+  # Measured, not guessed. Run 2026082773787007 recorded `az=/usr/bin/az` and
+  # `bicep=MISSING`, with `az bicep version` reporting "Bicep CLI not found",
+  # confirming the split above is real for this image. That is also why the
+  # `deploy-scaffold` phase `script:` now runs the install command below: the
+  # agent's own validation step shells out to `az bicep build`, so without it the
+  # agent is graded on a toolchain its instructions assume and the image lacks.
+  bicep:
+    status: absent
+    install: az bicep install
+    evidence: measured
+    note: >-
+      Required by the iac-compiles gate, and installed by
+      config/phases/deploy-scaffold.yaml rather than being present in the image.
+      If that install fails the gate exits 3 as a harness fault naming the
+      missing CLI, which is red-and-explained rather than a fabricated product
+      failure — but it is still not testing what it claims to test.
 
   git:
     status: present
@@ -160,6 +184,11 @@ binaries:
     install: unverified
     evidence: measured
 
+  # Measured absent in run 2026082773787007 (`azd=MISSING`, and the agent's own
+  # `azd version` shelled out to "command not found"). The deploy agent records
+  # it as a prerequisite rather than requiring it, so its absence does not block
+  # the scaffold sub-phase — but any future stimulus that grades `azd up` needs
+  # this row to change first.
   azd:
     status: absent
     install: unverified
