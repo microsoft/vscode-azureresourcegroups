@@ -2,7 +2,7 @@
 name: azure-debug-plan
 description: Scan an Azure-centric workspace project. Classify its services and dependencies, and produce a local debugging plan covering automated emulator startup, VS Code launch/task configs, and API tests.
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, browser, edit, search, web, todo]
-model: [Claude Opus 4.6 (copilot), Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot)]
+model: [Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot)]
 target: vscode
 ---
 
