@@ -31,14 +31,12 @@
  *
  * Not by run id or by any recorded stimulus name — MSBench does not store one;
  * `metadata.json` names the container instance (`cor_functions_host`) for every
- * run alike. The stimulus is identifiable only from the assertions it carried.
+ * run alike.
  *
- * So the mapping is derived: read the stimulus YAML, take the assertion comments
- * that are *unique* to it (dropping the sentinel, the askQuestion constraint and
- * the fingerprint, which every stimulus shares), and match those against the
- * comments in the run's `eval.json`. That keeps this file correct when a
- * stimulus is edited, which a hardcoded table would not — and the comments are
- * already load-bearing identifiers, enforced by `check-stimulus-comments.ts`.
+ * The identity used is the **prompt the run actually sent**, read from
+ * `output/vsc-output/configs/final-agent-config.json`, which is the config that
+ * executed. See `promptIndex()` for why the obvious alternative — matching on
+ * assertion comments — is both unstable and, for some stimuli, impossible.
  *
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
@@ -190,38 +188,59 @@ function findEntry(buf: Buffer, predicate: (name: string) => boolean): Buffer | 
 
 // ── Stimulus identity ────────────────────────────────────────────────────────────
 
-const ORIGINAL_COMMENT = /Original comment:\s*(.*)$/;
-
-/** MSBench rewrites `exec:` comments; recover the author's text so it can be matched. */
-function normalizeComment(comment: string): string {
-    return (ORIGINAL_COMMENT.exec(comment)?.[1] ?? comment).trim();
-}
-
-/** Comments unique to one stimulus, which is what makes a run identifiable. */
-function distinctiveComments(): Map<string, Set<string>> {
-    const byStimulus = new Map<string, string[]>();
-    const seenIn = new Map<string, number>();
-
+/**
+ * Which stimulus produced a run, decided by the prompt it actually sent.
+ *
+ * ## Why not the assertion comments
+ *
+ * The first version of this matched runs to stimuli by the assertion comments that
+ * were *unique* to each one. That was wrong twice over, and both ways were measured.
+ *
+ * It is not stable: rewording a comment silently unmatches every historical run
+ * carrying the old text. That happened here — `check-stimulus-comments.ts` required
+ * "requirements webview" where three new stimuli said "requirements view", and
+ * correcting them orphaned the runs already in the cache.
+ *
+ * Worse, it cannot work at all for some stimuli. That same gate identity rule
+ * *requires* two assertions with the same query to carry the same comment, so
+ * shared wording is mandatory rather than incidental. `redteam-gate-disabled-claim`
+ * and `redteam-admin-authority-claim` end up with byte-identical asserting comment
+ * sets — the same sentinel, the same requirements-view check, the same
+ * no-premature-plan gate — and no unique comment exists to tell them apart. They
+ * were both reported as never run while passing.
+ *
+ * ## What is used instead
+ *
+ * `output/vsc-output/configs/final-agent-config.json` is the config the run actually
+ * executed, and it carries `promptSteps` verbatim. Matching its first prompt against
+ * the first prompt in each stimulus file is exact rather than heuristic, survives any
+ * amount of comment editing, and distinguishes stimuli that differ only in what they
+ * say — which, for a suite of prompts, is the thing that makes them different.
+ */
+function promptIndex(): Map<string, string> {
+    const byPrompt = new Map<string, string>();
     for (const file of readdirSync(STIMULI).filter(f => f.endsWith('.yaml'))) {
         const doc = parse(readFileSync(join(STIMULI, file), 'utf8')) as
-            { promptSteps?: { assertions?: { comment?: string }[] }[] } | null;
-        const comments = (doc?.promptSteps ?? [])
-            .flatMap(step => step.assertions ?? [])
-            .map(a => a.comment)
-            .filter((c): c is string => typeof c === 'string' && c.length > 0)
-            .map(normalizeComment);
-        const unique = [...new Set(comments)];
-        byStimulus.set(file.replace(/\.yaml$/, ''), unique);
-        for (const comment of unique) {
-            seenIn.set(comment, (seenIn.get(comment) ?? 0) + 1);
+            { promptSteps?: { text?: string }[] } | null;
+        const first = doc?.promptSteps?.[0]?.text;
+        if (typeof first !== 'string' || first.trim() === '') {
+            continue;
         }
+        byPrompt.set(normalizePrompt(first), file.replace(/\.yaml$/, ''));
     }
+    return byPrompt;
+}
 
-    const distinctive = new Map<string, Set<string>>();
-    for (const [stimulus, comments] of byStimulus) {
-        distinctive.set(stimulus, new Set(comments.filter(c => seenIn.get(c) === 1)));
-    }
-    return distinctive;
+/** Collapse whitespace so YAML block-scalar wrapping cannot change identity. */
+function normalizePrompt(text: string): string {
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+const ORIGINAL_COMMENT = /Original comment:\s*(.*)$/;
+
+/** MSBench rewrites `exec:` comments; recover the author's text for reporting. */
+function normalizeComment(comment: string): string {
+    return (ORIGINAL_COMMENT.exec(comment)?.[1] ?? comment).trim();
 }
 
 // ── Run inspection ───────────────────────────────────────────────────────────────
@@ -290,13 +309,14 @@ function runDirectories(dataDir: string | undefined): string[] {
     return candidates.filter(existsSync);
 }
 
-function inspectRun(runDir: string, runId: string, distinctive: Map<string, Set<string>>): RunResult | undefined {
+function inspectRun(runDir: string, runId: string, byPrompt: Map<string, string>): RunResult | undefined {
     const zipPath = join(runDir, 'results.zip');
     if (!existsSync(zipPath)) {
         return undefined;
     }
 
     let evalJson: Buffer | undefined;
+    let configJson: Buffer | undefined;
     let refused = false;
     try {
         const outer = readFileSync(zipPath);
@@ -305,11 +325,28 @@ function inspectRun(runDir: string, runId: string, distinctive: Map<string, Set<
             return undefined;
         }
         evalJson = findEntry(inner, name => name === 'output/eval.json');
+        configJson = findEntry(inner, name => name === 'output/vsc-output/configs/final-agent-config.json');
         refused = refusalFrom(inner);
     } catch {
         return undefined;
     }
-    if (!evalJson) {
+    if (!evalJson || !configJson) {
+        return undefined;
+    }
+
+    // The prompt the run actually sent, from the config it actually executed.
+    let stimulus: string | undefined;
+    try {
+        const config = JSON.parse(configJson.toString('utf8').replace(/^\uFEFF/, '')) as
+            { promptSteps?: { text?: string }[] };
+        const first = config.promptSteps?.[0]?.text;
+        if (typeof first === 'string') {
+            stimulus = byPrompt.get(normalizePrompt(first));
+        }
+    } catch {
+        return undefined;
+    }
+    if (!stimulus || !stimulus.startsWith('redteam-')) {
         return undefined;
     }
 
@@ -320,25 +357,6 @@ function inspectRun(runDir: string, runId: string, distinctive: Map<string, Set<
     const instance = Object.values(report)[0];
     const details = instance?.details ?? [];
     if (details.length === 0) {
-        return undefined;
-    }
-
-    const comments = new Set(details.map(d => normalizeComment(d.comment ?? '')));
-    let stimulus = '';
-    let best = 0;
-    for (const [name, unique] of distinctive) {
-        let overlap = 0;
-        for (const comment of unique) {
-            if (comments.has(comment)) {
-                overlap++;
-            }
-        }
-        if (overlap > best) {
-            best = overlap;
-            stimulus = name;
-        }
-    }
-    if (!stimulus.startsWith('redteam-')) {
         return undefined;
     }
 
@@ -523,14 +541,14 @@ function main(): void {
         process.exit(1);
     }
 
-    const distinctive = distinctiveComments();
+    const byPrompt = promptIndex();
     const runs: RunResult[] = [];
     for (const root of roots) {
         for (const entry of readdirSync(root, { withFileTypes: true })) {
             if (!entry.isDirectory()) {
                 continue;
             }
-            const result = inspectRun(join(root, entry.name), entry.name, distinctive);
+            const result = inspectRun(join(root, entry.name), entry.name, byPrompt);
             if (result) {
                 runs.push(result);
             }
