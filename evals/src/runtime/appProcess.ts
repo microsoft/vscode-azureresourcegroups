@@ -436,6 +436,14 @@ async function planPort(target: RuntimeTarget): Promise<PortPlan> {
         return { kind: 'planned', args, env, declaredPort, injectedPort: false };
     }
 
+    // Nothing declared a port. Injecting PORT is a guess that most Node apps honour, so it
+    // is worth making — but only where the app could act on it. A process that binds a port
+    // it chooses itself will "ignore" a variable it never reads, and reporting that as the
+    // app being undeployable is a defect the harness invented.
+    if (target.portEnvUnsupported) {
+        return { kind: 'planned', args, env, injectedPort: false };
+    }
+
     const ephemeral = await findFreePort();
     if (ephemeral === undefined) {
         return { kind: 'harnessFault', message: 'no free TCP port could be allocated on this machine.' };

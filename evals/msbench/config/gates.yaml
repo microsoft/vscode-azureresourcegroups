@@ -165,7 +165,20 @@ gates:
   - id: project-builds
     grader: evals/graders/validate-project-builds.ts
     summary: the generated project installs and builds
-    phases: [scaffold]
+    # Also in `local`, because the five runtime gates cannot run without it. They
+    # start the generated app, and an app whose dependencies were never installed
+    # does not start: run 2026082874210382 had all five exit 3 with
+    # "/workspace/services/api declares dependencies but has no node_modules ...
+    # Run validate-project-builds (or npm install) before the runtime gates."
+    # The graders named their own prerequisite, and nothing in the local phase
+    # satisfied it — the phase preamble installs `func` globally and never touches
+    # the workspace.
+    #
+    # Ordering is what makes this work rather than a `dependsOn` edge: gates are
+    # emitted in the order they appear in this file, so at position 6 this runs
+    # before the runtime gates at 14+ and leaves node_modules in place for them.
+    # Moving it below them would silently reintroduce the failure.
+    phases: [scaffold, local]
     # The one place `ecosystem` appears, and it is NOT the two-tier rule above —
     # it is a third case worth naming. This grader runs the real package manager,
     # so it cannot read a Python project at all: wiring it there would make it
@@ -205,6 +218,22 @@ gates:
     # that decays.
     requires:
       project.datastore: { not: [none] }
+
+  - id: safety-boundaries
+    grader: evals/graders/validate-safety-boundaries.ts
+    summary: the generated project crosses no safety boundary
+    # Plan phase, because the red-team suite's primary attack surface is the
+    # free-text "What would you like to build?" box, which is handed to
+    # `azure-project-plan`. The prompts that target later stages (the mid-flow and
+    # autopilot ones) need turn shapes this phase does not have and are tracked in
+    # config/stimuli/README-redteam.md rather than silently omitted.
+    phases: [plan]
+    # No `requires:`. A safety boundary is not a property of the stack's ecosystem
+    # or datastore — every generated project is subject to it, and a `requires:`
+    # here would be the exact defect the header of this file warns about: a fact
+    # whose absence silently unwires the gate. The gate reports NOT_ATTEMPTED when
+    # there are no artifacts, which is the honest answer rather than a pass.
+    requires: {}
 
   - id: integration-plan
     grader: evals/graders/validate-integration-plan.ts

@@ -43,6 +43,13 @@
 
 set -euo pipefail
 
+# The Azure CLI streams the remote build log through Python's stdout. On Windows
+# that stream defaults to cp1252, so a single non-ASCII character anywhere in the
+# upstream build output (apt progress uses U+2192) kills the CLI with
+# UnicodeEncodeError *after* the server-side build has already started — losing
+# the log while the build keeps running. Force UTF-8 so the log survives.
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
+
 REGISTRY="${COR_ACR_NAME:-cormsbench}"
 INSTANCE="${COR_INSTANCE_ID:-cor_functions_host}"
 SUITE="${COR_SUITE:-vscbench}"
@@ -95,17 +102,23 @@ find "${CTX}/internal" -name '*.sh' -exec sed -i 's/\r$//' {} \;
 touch "${CTX}/.podman-placeholder" "${CTX}/.repos-staging/${INSTANCE}/.keep"
 
 log "Building ${REGISTRY}.azurecr.io/${TAG} with ACR Tasks (no local Docker)"
+# `--file` is resolved against the WORKING DIRECTORY, not against the context
+# argument, which is not what the flag's placement suggests and fails with
+# "Unable to find 'Dockerfile.vscbench'" while the file plainly sits in the
+# context. Running from inside the context and passing `.` sidesteps it, and also
+# avoids handing an MSYS path to an `az` that may be a Windows executable.
+#
 # --platform is explicit because ACR Tasks will happily build for the agent
 # pool's architecture, and a linux/arm64 image pulls fine yet fails to start on
 # the CES runners with no useful error.
-az acr build \
+( cd "$CTX" && az acr build \
     --registry "$REGISTRY" \
     --image "$TAG" \
     --file Dockerfile.vscbench \
     --platform linux/amd64 \
     --build-arg "INSTANCE_ID=${INSTANCE}" \
     --build-arg "SUB_BENCHMARK_DIR=internal" \
-    "$CTX"
+    . )
 
 log "Built ${REGISTRY}.azurecr.io/${TAG}"
 log "Point a run at it with a dataset row whose container_registry is ${REGISTRY}.azurecr.io"

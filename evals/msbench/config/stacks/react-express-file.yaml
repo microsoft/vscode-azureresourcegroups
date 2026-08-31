@@ -31,21 +31,35 @@
 # not be quoted as coverage of it. It covers the debug and runtime *gates*, on a
 # shape chosen because the container can execute it.
 #
-# ## Why `phases: [plan]` when the point is the runtime gates
+# ## Why `phases: [plan]`, when the point of this stack is the runtime gates
 #
-# Because a stack cannot drive a local-dev run yet, and saying so here is cheaper
-# than someone discovering it after paying. `build-config.ts`'s `renderStimulus`
-# emits exactly one prompt step, while every local-dev stimulus needs a scaffold
-# setup turn first (`promptSteps[].chatMode: azure-project-scaffold`) so there is
-# a project on disk for the debug agent to scan. Declaring `local` here would
-# produce a run that sends this prompt to `azure-debug-plan` against an empty
-# workspace and reds every gate for a reason that has nothing to do with the
-# product.
+# Two things have to be true before this stack can drive a local-dev run, and only
+# one of them is.
 #
-# The plan phase is what this file buys today, and it is the step that matters
-# first: it is how the seed for that local-dev stimulus gets harvested from real
-# planner output rather than hand-written into the drift `harvest-seed.ts` exists
-# to prevent.
+# The first was a scaffold setup turn: `renderStimulus` used to emit exactly one
+# prompt step, while local-dev needs `chatMode: azure-project-scaffold` first so
+# there is a project on disk for the debug agent to scan. That is now solved —
+# `config/phases/local.yaml` declares it as `# turn-before:`, and the phase file
+# owns the turn shape for hand-written and generated stimuli alike.
+#
+# The second is a seed whose plan describes *this* stack, and that does not exist
+# yet. The only seeded plan today is `approved-fullstack`: React + Azure Functions
+# + PostgreSQL + Blob Storage, which is `react-functions-postgres`, not this file.
+# Declaring `local` here was tried, and the result was exactly what the mismatch
+# predicts — the scaffold turn built a Functions project, and all five runtime
+# gates reported `functionsHostUnavailable` on a stack whose entire premise is
+# that it uses no Functions at all (run 2026082867546686).
+#
+# The fix is NOT a second checked-in fixture. A hand-maintained plan per stack is
+# the drift `harvest-seed.ts` exists to prevent: edit the planner's template and
+# every stored copy still describes the old shape. The supported path is already
+# here — this stack declares the plan phase, so run it, then harvest that run's
+# real `.azure/project-plan.md` as this stack's seed. Real planner output, for
+# this stack's own prompt, with provenance and a staleness check attached.
+#
+# Until that seed exists, `knownGaps: []` below is a claim about *wiring* — all
+# ten local gates wire with nothing declared not-applicable — and not yet a claim
+# that they pass.
 
 schemaVersion: 1
 id: react-express-file

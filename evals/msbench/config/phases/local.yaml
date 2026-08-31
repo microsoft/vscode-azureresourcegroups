@@ -30,6 +30,8 @@
 # continue to declare their turns themselves.
 # turn-before-mode: azure-project-scaffold
 # turn-before: The project plan has been approved. Execute the approved `.azure/project-plan.md` and scaffold the project.
+# turn-instead: Now set up local debugging for this project so I can hit F5 in VS Code.
+# seed: approved-fullstack
 
 chatMode: azure-debug-plan
 
@@ -108,3 +110,73 @@ script: |
   # independently, so the `exec` table carries the answer even though preamble
   # output only reaches customScript/output.log.
   command -v func >/dev/null 2>&1 && func --version 2>&1 | tail -1 || echo "func: still unavailable"
+
+  # ── Start the datastore emulators ─────────────────────────────────────────
+  #
+  # The custom image installs Azurite and PostgreSQL at build time; this is where
+  # they are started, because a build-time script cannot leave a process running
+  # and a database that is not listening is no more useful than one that is
+  # absent. Both are fail-soft for the same reason the `func` install above is:
+  # `set -e` is on, and a run that dies in the preamble kills the agent session
+  # before it starts, turning a missing emulator into a total loss rather than a
+  # gate that stands down.
+  #
+  # On the stock image neither binary exists and both blocks no-op, which is what
+  # keeps this phase usable without `--dataset`.
+  #
+  # nvm is sourced first because `azurite` installs into the *active Node version's*
+  # bin (/opt/nvm/versions/node/vNN/bin) rather than a fixed system path. Whether
+  # that directory is already on PATH depends on how this preamble's shell was
+  # spawned, and if it is not, `command -v azurite` fails and the block below
+  # reports "not installed (stock image)" on an image that plainly has it — a
+  # silent false negative that would look exactly like the emulator work never
+  # shipping. Sourcing is a no-op when the PATH is already correct.
+  [ -s /opt/nvm/nvm.sh ] && . /opt/nvm/nvm.sh >/dev/null 2>&1 || true
+
+  if command -v azurite >/dev/null 2>&1; then
+    mkdir -p /tmp/azurite
+    # --skipApiVersionCheck matters and is not decoration: Azurite rejects API
+    # versions newer than the ones it knows about, so a current @azure/storage-blob
+    # SDK gets a hard error from a *correctly running* emulator. That is the same
+    # requirement `debugEnvironment.ts` asserts on generated compose files.
+    nohup azurite --silent --skipApiVersionCheck \
+      --location /tmp/azurite \
+      --blobHost 127.0.0.1 --queueHost 127.0.0.1 --tableHost 127.0.0.1 \
+      >/tmp/azurite.log 2>&1 &
+    echo "azurite: started, waiting for the blob endpoint"
+    for _ in $(seq 1 20); do
+      if (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; then break; fi
+      sleep 1
+    done
+    (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1 \
+      && echo "azurite: listening on 127.0.0.1:10000" \
+      || { echo "azurite: FAILED to listen; tail follows"; tail -20 /tmp/azurite.log 2>&1 || true; }
+  else
+    echo "azurite: not installed (stock image); blob-backed gates will stand down"
+  fi
+
+  if command -v pg_ctlcluster >/dev/null 2>&1 && [ -f /etc/cor-pg-version ]; then
+    PG_VERSION="$(cat /etc/cor-pg-version)"
+    pg_ctlcluster "$PG_VERSION" main start || echo "postgres: start reported a failure"
+    echo "postgres: waiting for the socket"
+    for _ in $(seq 1 20); do
+      if su postgres -c "pg_isready -q" >/dev/null 2>&1; then break; fi
+      sleep 1
+    done
+    if su postgres -c "pg_isready -q" >/dev/null 2>&1; then
+      # A role and database the generated apps can actually reach. Chosen to match
+      # the docker-compose defaults the scaffold agent emits (see the compose file
+      # in run 2026082875609243: POSTGRES_USER/PASSWORD/DB = taskuser/taskpassword/
+      # tasktracker), so an app configured for local compose finds the same server
+      # here without being told about the eval container at all.
+      su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='taskuser'\"" | grep -q 1 \
+        || su postgres -c "psql -c \"CREATE ROLE taskuser LOGIN PASSWORD 'taskpassword' SUPERUSER\"" || true
+      su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='tasktracker'\"" | grep -q 1 \
+        || su postgres -c "createdb -O taskuser tasktracker" || true
+      echo "postgres: ready on 127.0.0.1:5432 (role taskuser, db tasktracker)"
+    else
+      echo "postgres: FAILED to become ready; the CRUD gate will stand down as before"
+    fi
+  else
+    echo "postgres: not installed (stock image); the CRUD gate will stand down"
+  fi

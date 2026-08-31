@@ -180,7 +180,89 @@ folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` 
 | --- | --- | --- |
 | `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
 | `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-autopilot` | [`2026082862087944`](https://msbenchapp.azurewebsites.net/run-analysis/2026082862087944) | 7/7, `resolved: true` |
 | `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | **6/7, `resolved: false`** — a real product defect, below |
+
+With `scaffold-autopilot` green, **every scaffold stimulus has now been run**, and the
+phase's only red is the product defect below rather than anything unexercised. That run
+also happens to be the cleanest rate-limit datapoint in the folder: 98 successful
+`POST /v1/messages` calls and not one 429, which is what establishes that the throttling
+seen elsewhere is a burst limit rather than a spent budget.
+
+The **local-dev phase** then produced its first clean result, in the custom container
+image that carries the Functions Core Tools:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `debug-plan-approval-gate` | [`2026082863403911`](https://msbenchapp.azurewebsites.net/run-analysis/2026082863403911) | **8/8, `resolved: true`** |
+
+Four earlier attempts at this stimulus were all voided by `RATE_LIMIT`, never by the
+harness or the product. This one ran 102 `POST /v1/messages` calls untouched.
+
+Its environment fingerprint is the first to carry the emulator binaries, and it settles
+what `runtime-crud` had only ever assumed:
+
+```
+Linux x86_64   cwd=/workspace   node=v22.23.2
+func=/usr/bin/func
+pip3=MISSING  go=MISSING  dotnet=MISSING  docker=MISSING  azd=MISSING  java=MISSING
+azurite=MISSING  psql=MISSING  postgres=MISSING  mongod=MISSING  redis-server=MISSING
+```
+
+`func` on PATH **in the eval path itself**, not merely in an image probe — the condition
+five `runtime-*` gates had been standing down on since they were written. The emulator
+line matches a direct `az acr run` inspection of the same image exactly, so two
+independent methods agree. Note `node=v22.23.2` rather than the 22.22.2 this folder
+records for the stock image: same Dockerfile, different build date.
+
+### The runtime gates have run
+
+Run [`2026082875609243`](https://msbenchapp.azurewebsites.net/run-analysis/2026082875609243)
+is the first in which the five `runtime-*` gates executed against a running application.
+`react-functions-postgres` drives the local phase on the custom image, and the Functions
+host starts:
+
+```
+[runtime-app-starts] started with "npm start" in /workspace/services/functions
+[runtime-app-starts] listening on http://127.0.0.1:7071 (port announced)
+PASS: gate=runtime-app-starts — the scaffolded app starts and listens
+```
+
+| Gate | Verdict |
+| --- | --- |
+| `runtime-app-starts` | **pass** — plus one product finding, below |
+| `runtime-health` | **fail** — the endpoint exists and hangs, below |
+| `runtime-frontend` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-frontend-api` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-crud` | not applicable, `datastoreRequiresContainer` |
+
+The three not-applicables are the gates being honest rather than the harness failing.
+`runtime-crud`'s in particular was predicted from the measured container inventory before
+the run: the project persists through `pg`, which needs a server, and there is no Docker.
+
+**Finding: the app ignores `PORT`.** `runtime-app-starts` passed and reported it anyway:
+
+> the app ignored the PORT environment variable and listened on its hard-coded port 7071.
+> Azure App Service and Container Apps inject the port, so this app would not receive
+> traffic there.
+
+**Finding: `/api/health` is registered, invoked, and never answers.** The host lists it and
+begins executing it, then the probe times out:
+
+```
+Functions:
+	health: [GET] http://localhost:7071/api/health
+[…] Executing 'Functions.health' (Reason='This function was programmatically called…')
+
+[healthEndpointUnreachable] /api/health: the app is listening on http://127.0.0.1:7071 but
+the health endpoint /api/health (declared in .azure/integration-plan.md) could not be
+reached: The operation was aborted due to timeout.
+```
+
+There is no matching `Executed 'Functions.health' (Succeeded…)` line, so the invocation
+starts and does not return. The cause is **not yet established** — a plausible candidate is
+that the handler touches PostgreSQL, which this container has no server for, but that has
+not been checked and should not be repeated as fact until it is.
 
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
@@ -1832,6 +1914,40 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 `patch.diff`, `session.sqlite` (queryable with the same SQL as the assertions),
 `extension-host.log`, and `customScript/output.log`. See
 [AGENT_OUTPUTS.md](https://github.com/microsoft/vscode-copilot-evaluation/blob/main/doc/references/AGENT_OUTPUTS.md).
+
+### Where a gate's own words are — and are not
+
+A grader's verdict line — the sentence naming the missing file, the reason code, the
+stack trace from the app that would not start — is captured in **exactly one place**:
+
+```
+output/vsc-output/session.sqlite   →   exec table   →   stdOut / stdErr / output
+```
+
+It is **not** in `entry.log`, which records each command and its exit code and nothing
+else. Not in `<instance>-runlog.txt`, `<instance>-fullrunlog.txt`, `eval.json`, or
+`custom_metrics.json`. Investigating run `2026083057881445` meant grepping every text
+file in the extracted results for reason codes, finding nothing, and briefly concluding
+the diagnostics were never captured. They were, one table away.
+
+```bash
+npm run analyze-run -- <run-id>          # every gate's verdict, from session.sqlite
+npm run analyze-run -- <run-id> --full   # the whole captured output per gate
+```
+
+[`analyze-run.ts`](analyze-run.ts) also exists because `run.sh` runs `verify-run.ts` and
+`check-assertions.ts` inline, on the run it just submitted — which makes them reachable
+only through a live invocation. If that shell dies, the analysis dies with it even though
+the results are sitting on disk. It extracts to a short temp path rather than under the
+repo, because the product log filenames are long enough to blow Windows' 260-character
+limit once nested under a repo path, which is exactly how `msbench-cli extract --output
+evals/msbench/.regrade/<id>` fails.
+
+One habit worth keeping while a run streams: do not pipe `run.sh` through anything that
+truncates, such as `Select-Object -First N` or `head`. Those close the pipe once
+satisfied, so the output stops arriving and a healthy run looks hung — and killing it
+orphans the CLI, which keeps going and holds `assets/.run.lock` against the next attempt.
+Redirect to a file and tail that instead.
 
 ## Re-grading a past run for free
 

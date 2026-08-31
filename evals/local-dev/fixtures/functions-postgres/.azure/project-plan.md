@@ -48,7 +48,47 @@ api/host.json
 api/package.json
 ```
 
-## 5. Route Definitions
+## 5. Design System & UI
+
+**Component Library**: Fluent UI v9
+**Style Direction**: Calm, data-dense task console — flat surfaces with subtle elevation on cards, 4px radii, and an emphasis on scannable rows over decoration.
+**Typography**: Inter, system-ui
+
+### Color Palette
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `primary` | `#2F6FEB` | Create-task button, active nav item, task links |
+| `accent`  | `#7A5AF8` | Due-soon highlights, attachment chips |
+| `surface` | `#F7F8FA` | Page background and task card surfaces |
+| `text`    | `#1B1E23` | Task titles and body copy |
+| `muted`   | `#6B7280` | Timestamps, task counts, empty-state copy |
+| `border`  | `#E1E4E8` | Row dividers, card and input borders |
+
+### Pages
+
+| Page | Route | Purpose | Layout |
+|------|-------|---------|--------|
+| Tasks | `/` | List every task with status and due date | `header + list + action-bar` |
+| Task Detail | `/tasks/:id` | Show one task with its attachment and history | `two-column(media+meta) + action-bar` |
+| New Task | `/tasks/new` | Capture a task with an optional attachment | `form` |
+
+### Sample Content
+
+```
+Tasks — task:
+| Title                          | Due        | Attachment       | Status      |
+| Renew SSL certificate          | 2026-09-04 | renewal.pdf      | In progress |
+| Migrate staging database       | 2026-09-11 | —                | Not started |
+| Write incident postmortem      | 2026-08-29 | timeline.png     | Done        |
+| Audit blob retention policy    | 2026-09-18 | —                | Not started |
+
+Task Detail — task: Renew SSL certificate · Due: 2026-09-04 · Status: In progress · Attachment: renewal.pdf (412 KB)
+
+New Task — Title: (empty) · Due: today + 7 days · Attachment: none · Status: Not started
+```
+
+## 6. Route Definitions
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -56,14 +96,14 @@ api/package.json
 | GET | /api/tasks | List tasks |
 | POST | /api/tasks | Create a task |
 
-## 6. Azure Dependencies
+## 7. Azure Dependencies
 
 | Dependency | Service | Local Emulator |
 |---|---|---|
 | PostgreSQL | database | `postgres:16` container |
 | Blob Storage | storage | Azurite container |
 
-## 7. Acceptance Criteria
+## 8. Acceptance Criteria
 
 - `GET /api/health` returns 200.
 - A created task survives an API restart.
