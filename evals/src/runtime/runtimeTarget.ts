@@ -177,9 +177,13 @@ export interface RuntimeTarget {
     /** True when that package declares runtime dependencies. */
     declaresDependencies: boolean;
     /**
-     * True when `node_modules` is present. Reported rather than judged: the runtime gates
-     * treat a missing install as a harness fault ("run the build gate first"), while the
-     * debug probe does not care, because VS Code runs the `preLaunchTask` install itself.
+     * True when those dependencies are installed somewhere Node will find them. Reported
+     * rather than judged: the runtime gates treat a missing install as a harness fault ("run
+     * the build gate first"), while the debug probe does not care, because VS Code runs the
+     * `preLaunchTask` install itself.
+     *
+     * Not the same question as "does `<package>/node_modules` exist" — see
+     * `dependenciesAreInstalled`.
      */
     dependenciesInstalled: boolean;
 }
@@ -374,9 +378,40 @@ async function completeTarget(
             workspaceRoot,
             packageDirectory: manifest.directory,
             declaresDependencies: Object.keys(manifest.dependencies).length > 0,
-            dependenciesInstalled: existsSync(path.join(manifest.directory, 'node_modules')),
+            dependenciesInstalled: dependenciesAreInstalled(workspaceRoot, manifest),
         },
     };
+}
+
+/**
+ *   `ERR_PACKAGE_PATH_NOT_EXPORTED` under CJS resolution and would be reported as missing. The
+ *   question here is only whether an install happened; a directory answers that without
+ *   inheriting condition semantics.
+ * - **Bounded at `workspaceRoot`.** Node itself walks to the filesystem root, but this runs on
+ *   developer machines too, where an unbounded walk out of a fixture would find the repository's
+ *   own `node_modules` and report an uninstalled project as installed — the false green this
+ *   precondition exists to prevent, one directory up.
+ */
+function dependenciesAreInstalled(workspaceRoot: string, manifest: PackageManifest): boolean {
+    // `every` on no dependencies is true, which is the right answer: nothing to install.
+    return Object.keys(manifest.dependencies)
+        .every(name => isInstalledFrom(manifest.directory, workspaceRoot, name));
+}
+
+/** One dependency, resolved the way Node looks for it: `node_modules` up the chain. */
+function isInstalledFrom(fromDirectory: string, workspaceRoot: string, name: string): boolean {
+    const stopAt = path.resolve(workspaceRoot);
+    let dir = path.resolve(fromDirectory);
+    for (;;) {
+        if (existsSync(path.join(dir, 'node_modules', name))) {
+            return true;
+        }
+        const parent = path.dirname(dir);
+        if (dir === stopAt || parent === dir) {
+            return false;
+        }
+        dir = parent;
+    }
 }
 
 async function resolveFromLaunchConfiguration(
