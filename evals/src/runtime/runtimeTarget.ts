@@ -384,30 +384,6 @@ async function completeTarget(
 }
 
 /**
- * Whether this package's declared dependencies are installed somewhere Node will find them.
- *
- * Node resolves a bare specifier by walking `node_modules` up the directory chain, and npm
- * workspaces **hoist** shared dependencies to the monorepo root. So a workspace package can be
- * completely and correctly installed while its own directory has no `node_modules` at all —
- * which is precisely the layout architecture.md prescribes
- * (`"workspaces": ["services/functions", "services/web", "services/shared"]`).
- *
- * Testing only `<package>/node_modules` therefore reds a correctly-installed project. Measured,
- * at full price, on two runs of the same stack that differ in nothing else:
- *
- *   2026083152684407  `npm --prefix services/functions install`     -> local node_modules, gates ran
- *   2026083167798590  `npm install --workspace=services/functions`  -> hoisted to the root,
- *                     all five runtime gates reported "declares dependencies but has no
- *                     node_modules" while `project-builds` passed on the same tree
- *
- * Both invocations are correct npm. The gates were grading which one the agent happened to
- * pick, and reporting the difference as a harness fault — a red with nothing to say about the
- * product, from a precondition that exists specifically to avoid inventing one.
- *
- * Two deliberate choices:
- *
- * - **Presence on disk, not `require.resolve`.** Resolution applies `exports` conditions, so an
- *   ESM-only dependency (`"type": "module"` exposing only an `import` condition) throws
  *   `ERR_PACKAGE_PATH_NOT_EXPORTED` under CJS resolution and would be reported as missing. The
  *   question here is only whether an install happened; a directory answers that without
  *   inheriting condition semantics.
