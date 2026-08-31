@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:52:34.771Z",
+  "generatedAt": "2026-08-31T17:29:46.088Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -9,7 +9,10 @@
     "reference-python-api",
     "reference-dotnet-api",
     "reference-go-unsupported",
-    "api-only-no-datastore"
+    "debug-probe-verdict",
+    "unapproved-plan-refusal",
+    "api-only-no-datastore",
+    "reference-iac-bicep"
   ],
   "outcome": "passed",
   "cases": [
@@ -70,6 +73,28 @@
       "validator": "frontend-scaffold",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-builds",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-dot-directory-ignored",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
+      ],
       "passed": true,
       "durationMs": 0
     },
@@ -273,6 +298,74 @@
       "actual": [
         "missingMockClient"
       ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-frontend-at-repo-root",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-frontend-missing",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "frontendNotScaffolded",
+      "actual": [
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-no-packages",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "noPackagesFound",
+      "actual": [
+        "noPackagesFound",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-manifest",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-builds",
+      "expected": "unparseablePackageManifest",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-at-repo-root",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-product-named-folder",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
       "passed": true,
       "durationMs": 0
     },
@@ -594,6 +687,30 @@
       "durationMs": 0
     },
     {
+      "id": "runtime-crud-not-attempted-when-app-dead",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-not-attempted-when-app-dead",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "runtime-health-returns-500",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
@@ -683,6 +800,18 @@
       "expected": "frontendMakesNoApiCalls",
       "actual": [
         "frontendMakesNoApiCalls"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-app-starts-never-scaffolded",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
       ],
       "passed": true,
       "durationMs": 0
@@ -991,12 +1120,341 @@
       "durationMs": 0
     },
     {
+      "id": "golden-debug-breakpoint",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-launch-config-invalid",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "launchConfigInvalid",
+      "actual": [
+        "launchConfigInvalid"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-app-failed-to-start",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "appFailedToStart",
+      "actual": [
+        "appFailedToStart"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-never-hit",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "breakpointNotHit",
+      "actual": [
+        "breakpointNotHit"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-pattern-miss-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:patternMatchedNothing",
+      "actual": [
+        "harnessFault:patternMatchedNothing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-probe-error-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:probeError",
+      "actual": [
+        "harnessFault:probeError"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-unknown-outcome-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:unknownOutcome",
+      "actual": [
+        "harnessFault:unknownOutcome"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-schema-drift-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:schemaDrift",
+      "actual": [
+        "harnessFault:schemaDrift"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-breakpoint-missing-verdict-blames-harness",
+      "tier": "offline",
+      "fixture": "debug-probe-verdict",
+      "validator": "debug-breakpoint",
+      "expected": "harnessFault:noVerdict",
+      "actual": [
+        "harnessFault:noVerdict"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-no-scaffold",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-builds",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "noPackagesFound",
+      "actual": [
+        "noPackagesFound",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-reports-the-real-problem",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "unparseablePackageManifest",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-builds-unparseable-only-not-called-empty",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "project-builds",
+      "expected": "!noPackagesFound",
+      "actual": [
+        "unparseablePackageManifest",
+        "frontendNotScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "no-scaffold-nested-source-appears",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "scaffoldedFromUnapprovedPlan",
+      "actual": [
+        "scaffoldedFromUnapprovedPlan"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "no-scaffold-root-manifest-appears",
+      "tier": "offline",
+      "fixture": "unapproved-plan-refusal",
+      "validator": "no-scaffold",
+      "expected": "scaffoldedFromUnapprovedPlan",
+      "actual": [
+        "scaffoldedFromUnapprovedPlan"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "golden-integration-plan",
       "tier": "offline",
       "fixture": "api-only-no-datastore",
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-iac-compiles",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-no-template-is-not-a-pass",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "noIacFound",
+      "actual": [
+        "noIacFound"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-missing-manifest-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "missingScaffoldManifest",
+      "actual": [
+        "missingScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unparseable-manifest-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "unparseableScaffoldManifest",
+      "actual": [
+        "unparseableScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unparseable-manifest-not-called-missing",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!missingScaffoldManifest",
+      "actual": [
+        "unparseableScaffoldManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-suppressed-blocking-diagnostic-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "suppressedBlockingDiagnostic",
+      "actual": [
+        "suppressedBlockingDiagnostic"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-sanctioned-suppression-is-allowed",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!suppressedBlockingDiagnostic",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-build-check-synonym-is-accepted",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!missingBicepBuildCheck",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-unvalidated-status-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "iacNotValidated",
+      "actual": [
+        "iacNotValidated"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-self-reported-build-failure-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "bicepBuildSelfReportedFailure",
+      "actual": [
+        "bicepBuildSelfReportedFailure"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-absent-build-check-is-reported",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "missingBicepBuildCheck",
+      "actual": [
+        "missingBicepBuildCheck"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-terraform-is-a-coverage-gap-not-a-pass",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "terraformNotSupported",
+      "actual": [
+        "terraformNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-terraform-is-not-called-missing",
+      "tier": "offline",
+      "fixture": "reference-iac-bicep",
+      "validator": "iac-compiles",
+      "expected": "!noIacFound",
+      "actual": [
+        "terraformNotSupported"
+      ],
       "passed": true,
       "durationMs": 0
     }

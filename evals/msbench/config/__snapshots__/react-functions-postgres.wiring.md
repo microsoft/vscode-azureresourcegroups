@@ -8,7 +8,7 @@ table and re-run. This file exists so a wiring change is visible in review.
 - project: frontend=spa api=http datastore=postgres hosting=functions
 - healthPath: (none)
 - collectionRoute: (none)
-- phases configured for this stack: plan
+- phases configured for this stack: plan, local
 
 ## phase: plan
 
@@ -17,7 +17,7 @@ wired:
   project-plan
   webview-parseable
   no-scaffold
-  debug-gate
+  safety-boundaries
 
 ## phase: scaffold (phase not configured for this stack)
 
@@ -28,9 +28,11 @@ wired:
   datastore-fidelity
   integration-plan --has-frontend
 
-## phase: local (phase not configured for this stack)
+## phase: local
 
 wired:
+  debug-gate
+  project-builds --require-frontend
   debug-plan
   debug-config
   debug-artifacts
@@ -40,3 +42,8 @@ wired:
   runtime-frontend --require-frontend  [known gap: functionsHostUnavailable]
   runtime-frontend-api  [known gap: functionsHostUnavailable]
   runtime-crud  [known gap: functionsHostUnavailable]
+
+## phase: deploy (phase not configured for this stack)
+
+wired:
+  iac-compiles

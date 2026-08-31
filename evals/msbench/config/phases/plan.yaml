@@ -20,6 +20,22 @@
 # that shares a phase, which is how four copies drift apart.
 #
 # This is the default phase: a stimulus with no `# phase:` directive gets it.
+#
+# ── The approval turn ──────────────────────────────────────────────────────────────
+#
+# The product flow here is describe -> requirements -> approve -> plan, so one turn only
+# ever reaches the requirements gate. A generated stimulus therefore needs a second turn
+# that confirms them, or `.azure/project-plan.md` is never written and every plan-dependent
+# gate fails for a reason that says nothing about the agent.
+#
+# That is measured, not assumed: run 2026082711703720 passed the requirements and
+# no-scaffold gates and failed project-plan, webview-parseable and debug-gate, having
+# stopped exactly where the product asks a human to approve.
+#
+# Hand-written stimuli spell this out themselves — see plan-generation-task-app.yaml,
+# whose turn 1 is this same sentence. The directive is only read for stack-generated
+# stimuli, and is inert YAML for everyone else.
+# turn-after: Requirements submitted at .azure/requirements.json. All answers confirmed.
 
 # The agent under test. It ships inside the VSIX via contributes.chatAgents, but
 # custom modes are resolved from the workspace's .github/agents, so the script

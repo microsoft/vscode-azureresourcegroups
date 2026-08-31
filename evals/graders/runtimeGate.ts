@@ -18,7 +18,7 @@
 import type { RuntimeValidationResult } from '../src/runtime/runtimeGates.ts';
 import { RUNTIME_NOT_APPLICABLE_CLASS } from '../src/runtime/runtimeTarget.ts';
 import { releaseRuntimeSessions } from '../src/runtime/runtimeSession.ts';
-import { failAsHarnessFault, failWithIssues, runGraderAsync, skipAsNotApplicable, workspacePath } from './graderHarness.ts';
+import { failAsHarnessFault, failWithIssues, requirePrecondition, runGraderAsync, skipAsNotApplicable, workspacePath } from './graderHarness.ts';
 
 export function runRuntimeGate(
     gate: string,
@@ -42,6 +42,12 @@ export function runRuntimeGate(
         // Order matters: the validators record a not-applicable verdict and a harness fault
         // as issues *as well as* flags, so that grader certification sees them and the
         // golden fixture goes red. Here the flags win, because they carry the attribution.
+        // Before applicability and before failure: a gate that never got its input has no
+        // opinion to offer about either, and saying otherwise is the misattribution this
+        // verdict exists to stop.
+        if (result.notAttempted) {
+            requirePrecondition(gate, result.notAttempted.precondition, false, result.notAttempted.detail);
+        }
         if (result.notApplicable) {
             skipAsNotApplicable(
                 gate,

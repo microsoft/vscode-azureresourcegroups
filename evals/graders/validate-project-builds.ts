@@ -31,78 +31,19 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { type Dirent, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import * as path from 'node:path';
+import { discoverPackages, type ProjectPackage, validateProjectPackages } from '../src/artifacts/projectPackages.ts';
 import { discoverFrontendDirectory } from '../src/artifacts/frontendScaffold.ts';
-import { fail, runGraderAsync, workspacePath } from './graderHarness.ts';
-
-const IGNORED_DIRECTORIES = new Set([
-    'node_modules', 'dist', 'build', '.git', '.next', 'out', 'coverage', '.azure',
-    '.github', '.vscode', 'infra', 'migrations', 'docs', 'public', 'test', 'tests', '__tests__',
-]);
-
-/** How deep below the workspace root a package.json is still considered part of the project. */
-const MAX_DEPTH = 2;
-
-interface Package {
-    directory: string;
-    relative: string;
-    scripts: Record<string, string>;
-    /** True when this package delegates to npm workspaces, so its children run themselves. */
-    delegatesToWorkspaces: boolean;
-}
+import { fail, failAsHarnessFault, failWithIssues, runGraderAsync, workspacePath } from './graderHarness.ts';
 
 /**
- * Collect the workspace's buildable packages by walking the tree to a shallow depth.
- *
- * An allow-list of folder names ('services', 'apps', …) cannot work here: the agent picks
- * the layout from the plan, and a perfectly good API-only scaffold puts everything in
- * `api/`. Missing it made this grader report "no package.json anywhere" for a project that
- * was actually complete, so discovery walks instead of guessing names.
+ * Package discovery and the pre-build checks live in src/artifacts/projectPackages.ts,
+ * shared with grader certification so the certified path and the executed path cannot drift.
  */
-function discoverPackages(workspaceRoot: string): Package[] {
-    const packages: Package[] = [];
-
-    const walk = (directory: string, depth: number): void => {
-        const manifest = path.join(directory, 'package.json');
-        if (existsSync(manifest)) {
-            let parsed: { scripts?: Record<string, string>; workspaces?: unknown };
-            try {
-                parsed = JSON.parse(readFileSync(manifest, 'utf8')) as typeof parsed;
-            } catch {
-                fail(`${path.relative(workspaceRoot, manifest) || 'package.json'} is not valid JSON, so the project cannot be built.`);
-            }
-            packages.push({
-                directory,
-                relative: path.relative(workspaceRoot, directory) || '.',
-                scripts: parsed.scripts ?? {},
-                delegatesToWorkspaces: parsed.workspaces !== undefined,
-            });
-        }
-        if (depth >= MAX_DEPTH) {
-            return;
-        }
-        for (const entry of readdirSafe(directory)) {
-            if (entry.isDirectory() && !IGNORED_DIRECTORIES.has(entry.name) && !entry.name.startsWith('.')) {
-                walk(path.join(directory, entry.name), depth + 1);
-            }
-        }
-    };
-
-    walk(workspaceRoot, 0);
-    return packages;
-}
-
-function readdirSafe(directory: string): Dirent[] {
-    try {
-        return readdirSync(directory, { withFileTypes: true });
-    } catch {
-        return [];
-    }
-}
 
 /** Run one package script, returning the combined output when it fails. */
-function run(label: string, pkg: Package, args: string[], timeoutMs: number): string | undefined {
+function run(label: string, pkg: ProjectPackage, args: string[], timeoutMs: number): string | undefined {
     process.stderr.write(`[project-builds] ${pkg.relative}: ${label}\n`);
     const result = spawnSync('npm', args, {
         cwd: pkg.directory,
@@ -110,12 +51,25 @@ function run(label: string, pkg: Package, args: string[], timeoutMs: number): st
         timeout: timeoutMs,
         // npm resolves its own config relative to cwd; inheriting the eval's env is enough.
         env: { ...process.env, CI: '1' },
+        // On Windows `npm` is `npm.cmd`, a batch file CreateProcess cannot execute, and
+        // since CVE-2024-27980 Node refuses to spawn `.cmd` without a shell. Safe here
+        // because every argument is a hardcoded literal.
+        shell: process.platform === 'win32',
     });
+    const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+    // "npm is not runnable here" is not evidence that the project is broken, so it must not
+    // be reported as one. Without a shell that arrives as an error; with one, the shell
+    // starts fine and complains on stdout with a non-zero exit, so check both shapes.
+    const npmMissing = /'npm(\.\w+)?' is not recognized|\bnpm: (command )?not found|command not found: npm\b/i.test(output);
+    const spawnFailed = result.error && (result.error as NodeJS.ErrnoException).code !== 'ETIMEDOUT';
+    if (spawnFailed || npmMissing) {
+        failAsHarnessFault(`${pkg.relative}: ${label} could not start: ${result.error?.message ?? 'npm is not on PATH'}`);
+    }
     if (result.error) {
-        return `${label} could not start: ${result.error.message}`;
+        // A timeout is the project's problem, not ours.
+        return `${label} did not finish within ${Math.round(timeoutMs / 60_000)} minutes`;
     }
     if (result.status !== 0) {
-        const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
         // npm dumps its entire config reference after a usage error, so a tail-only
         // excerpt shows help text instead of the cause. Drop the reference block, then
         // keep both ends: npm reports usage errors first, builds report them last.
@@ -136,17 +90,17 @@ void runGraderAsync('scaffolded project installs and builds', async () => {
     const withTests = flags.includes('--with-tests');
 
     const workspaceRoot = workspacePath('.');
-    const packages = discoverPackages(workspaceRoot);
-    if (packages.length === 0) {
-        fail('The scaffold produced no package.json anywhere in the workspace, so there is no project to build.');
-    }
 
+    // Everything decidable without installing anything: is there a project here at all, are
+    // its manifests readable, and does it contain the frontend the plan promised.
+    const preBuild = await validateProjectPackages(workspaceRoot, { requireFrontend });
+    if (!preBuild.valid) {
+        failWithIssues('the scaffolded project cannot be built:', preBuild.issues);
+    }
+    const { packages } = discoverPackages(workspaceRoot);
     if (requireFrontend) {
         const frontend = await discoverFrontendDirectory(workspaceRoot);
-        if (!frontend) {
-            fail('The plan promised a frontend, but no frontend package was scaffolded.');
-        }
-        process.stderr.write(`[project-builds] frontend: ${path.relative(workspaceRoot, frontend) || '.'}\n`);
+        process.stderr.write(`[project-builds] frontend: ${frontend ? path.relative(workspaceRoot, frontend) || '.' : '<none>'}\n`);
     }
 
     // An npm-workspaces root installs every child from its own lockfile, and a child install

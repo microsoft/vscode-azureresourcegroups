@@ -122,5 +122,5 @@ promptSteps:
       # names the files it found, and this listing shows the workspace they came
       # from — which is how a seeding bug is told apart from a gate bypass.
       - comment: Environment fingerprint for triage
-        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure 2>&1 | head -40'
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure 2>&1 | head -40'
         assertZeroExitCode: false

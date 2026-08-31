@@ -98,6 +98,9 @@ const ENTRYPOINTS = [
     { script: 'evals/msbench/stage-graders.ts', args: [] as string[], stagesPackages: true },
     { script: 'evals/msbench/build-config.ts', args: ['photo-app-requirements'] },
     { script: 'evals/msbench/verify-run.ts', args: ['--self-test'] },
+    // Doubles as this suite's harvest coverage: the self-test needs no credentials and
+    // touches no real seed, so the one place it can run is exactly here.
+    { script: 'evals/msbench/harvest-seed.ts', args: ['--self-test'] },
 ];
 
 const failures: string[] = [];

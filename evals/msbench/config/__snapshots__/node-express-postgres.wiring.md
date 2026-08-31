@@ -17,7 +17,7 @@ wired:
   project-plan
   webview-parseable
   no-scaffold
-  debug-gate
+  safety-boundaries
 
 ## phase: scaffold (phase not configured for this stack)
 
@@ -33,6 +33,8 @@ not wired:
 ## phase: local (phase not configured for this stack)
 
 wired:
+  debug-gate
+  project-builds
   debug-plan
   debug-config
   debug-artifacts
@@ -44,3 +46,8 @@ wired:
 not wired:
   runtime-frontend — project.frontend is none, not spa
   runtime-frontend-api — project.frontend is none, not spa
+
+## phase: deploy (phase not configured for this stack)
+
+wired:
+  iac-compiles

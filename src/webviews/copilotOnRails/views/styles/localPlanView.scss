@@ -443,6 +443,29 @@
             white-space: normal;
         }
 
+        .installLink {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+
+            svg {
+                flex: 0 0 auto;
+                font-size: 13px;
+                width: 1em;
+                height: 1em;
+            }
+        }
+
+        .installLinkEmpty {
+            color: var(--vscode-descriptionForeground);
+        }
+
         .supportWarning {
             display: inline-flex;
             align-items: center;

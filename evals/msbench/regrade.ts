@@ -84,17 +84,15 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, normalize, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
+import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, venvBinDir, type Instance } from './extraction.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
-
-/** Default extraction cache. Gitignored; reused across iterations so re-grading is a local operation. */
-const CACHE_ROOT = join(HERE, '.regrade');
 
 /**
  * `stage-graders.ts` copies the grader tree into the container preserving
@@ -152,15 +150,6 @@ interface StoredEval {
     details: { comment: string; query: string; passed: boolean; error: string | null }[];
 }
 
-interface Instance {
-    /** Directory name minus the `-output` suffix, e.g. `vscbench.eval.x86_64.say_hello`. */
-    name: string;
-    vscOutput: string;
-    sqlitePath: string;
-    configPath: string;
-    evalJsonPath: string;
-}
-
 interface Options {
     runId?: string;
     extractedDir?: string;
@@ -172,7 +161,12 @@ interface Options {
     json: boolean;
 }
 
-class RegradeError extends Error { }
+/**
+ * A regrade-specific tool fault. Extends the shared error so the top-level handler can
+ * treat a failure raised inside `extraction.ts` exactly like one raised here — both are
+ * the tool failing rather than a product verdict, and both print a message, not a stack.
+ */
+class RegradeError extends MsBenchToolError { }
 
 /**
  * Diagnostics go to stderr whenever `--json` is on, so stdout stays a single
@@ -211,7 +205,7 @@ Options:
   -h, --help           Show this help.
 
 Requires \`msbench-cli\` on PATH unless --extracted is used:
-  export PATH="$HOME/.msbench-venv/bin:$PATH"`;
+  export PATH="$HOME/.msbench-venv/${venvBinDir()}:$PATH"`;
 
 function parseArgs(argv: string[]): Options {
     const options: Options = { refresh: false, keepWorkspace: false, json: false };
@@ -250,107 +244,6 @@ function parseArgs(argv: string[]): Options {
         throw new RegradeError(`Give a run id or --extracted <dir>.\n\n${USAGE}`);
     }
     return options;
-}
-
-// ---------------------------------------------------------------------------
-// Extraction
-// ---------------------------------------------------------------------------
-
-/**
- * `extract` is free — it only downloads a stored results blob and never touches a
- * model — but it is not instant, so an existing extraction is reused by default.
- */
-function resolveExtraction(options: Options): string {
-    if (options.extractedDir) {
-        const dir = resolve(options.extractedDir);
-        if (!existsSync(dir)) {
-            throw new RegradeError(`--extracted ${dir} does not exist`);
-        }
-        return dir;
-    }
-
-    // parseArgs guarantees one of runId / extractedDir, and the branch above took
-    // the extractedDir case — narrow it here rather than asserting non-null.
-    const { runId, instance: wanted } = options;
-    if (!runId) {
-        throw new RegradeError('No run id to extract');
-    }
-
-    const dir = resolve(options.extractDir ?? join(CACHE_ROOT, runId));
-    // Only reuse a cache that actually holds what was asked for: a cache built by
-    // an earlier `--instance A` must not silently satisfy a later `--instance B`.
-    const cached = findInstances(dir).instances;
-    const satisfiesRequest = cached.length > 0 &&
-        (!wanted || cached.some(candidate => matchesInstance(candidate.name, wanted)));
-
-    if (!options.refresh && satisfiesRequest) {
-        log(`Reusing extraction at ${dir} (--refresh to re-download)`);
-        return dir;
-    }
-
-    mkdirSync(dirname(dir), { recursive: true });
-    const args = ['extract', '--run_id', runId, '--output', dir];
-    if (wanted) {
-        args.push('--instance', wanted);
-    }
-
-    log(`$ msbench-cli ${args.join(' ')}`);
-    const result = spawnSync('msbench-cli', args, { stdio: 'inherit' });
-    if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
-        throw new RegradeError(
-            'msbench-cli is not on PATH. Run:\n' +
-            '  export PATH="$HOME/.msbench-venv/bin:$PATH"\n' +
-            'Invoking it by absolute path breaks its plugin discovery, so it has to be on PATH.'
-        );
-    }
-    if (result.status !== 0) {
-        throw new RegradeError(
-            `msbench-cli extract exited ${result.status}. If this is an auth failure, run \`az login\` — ` +
-            'extraction reads a stored blob and needs an Azure identity.'
-        );
-    }
-    return dir;
-}
-
-/** `say_hello` should select `vscbench.eval.x86_64.say_hello`, but not by accident. */
-function matchesInstance(name: string, requested: string): boolean {
-    return name === requested || name.endsWith(`.${requested}`) || name.includes(requested);
-}
-
-/**
- * An MSBench extraction holds one `<instance>-output/output/vsc-output` tree per
- * instance. A directory with no `session.sqlite` is *reported* rather than
- * quietly skipped: that is an instance whose output blob never arrived —
- * infrastructure failing rather than a verdict — and dropping it silently would
- * let a partial extraction report a clean bill of health.
- */
-function findInstances(root: string): { instances: Instance[]; incomplete: string[] } {
-    if (!existsSync(root)) {
-        return { instances: [], incomplete: [] };
-    }
-    const instances: Instance[] = [];
-    const incomplete: string[] = [];
-
-    for (const entry of readdirSync(root, { withFileTypes: true })) {
-        if (!entry.isDirectory() || !entry.name.endsWith('-output')) {
-            continue;
-        }
-        const vscOutput = join(root, entry.name, 'output', 'vsc-output');
-        const sqlitePath = join(vscOutput, 'session.sqlite');
-        const name = entry.name.replace(/-output$/, '');
-        if (!existsSync(sqlitePath)) {
-            incomplete.push(name);
-            continue;
-        }
-        instances.push({
-            name,
-            vscOutput,
-            sqlitePath,
-            configPath: join(vscOutput, 'configs', 'final-agent-config.json'),
-            evalJsonPath: join(vscOutput, 'eval.json'),
-        });
-    }
-    return { instances: instances.sort((a, b) => a.name.localeCompare(b.name)), incomplete };
 }
 
 /**
@@ -984,7 +877,7 @@ async function regradeInstance(instance: Instance, options: Options): Promise<In
 async function main(): Promise<void> {
     const options = parseArgs(process.argv.slice(2));
     jsonMode = options.json;
-    const root = resolveExtraction(options);
+    const root = resolveExtraction(options, log);
 
     const { instances: discovered, incomplete } = findInstances(root);
     if (discovered.length === 0) {
@@ -1059,9 +952,13 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-    // Everything that gets here — a RegradeError, but also a JSON parse, sqlite or
-    // filesystem failure — is the tool failing rather than a product verdict, so it
-    // must exit 3. Node's default of 1 would read as "a verdict changed".
-    console.error(error instanceof RegradeError ? error.message : error instanceof Error ? (error.stack ?? error.message) : String(error));
+    // Everything that gets here — a RegradeError, an extraction failure, but also a JSON
+    // parse, sqlite or filesystem failure — is the tool failing rather than a product
+    // verdict, so it must exit 3. Node's default of 1 would read as "a verdict changed".
+    //
+    // The check is against the shared base class rather than `RegradeError`, so a failure
+    // raised inside `extraction.ts` still prints its (deliberately actionable) message
+    // instead of a stack trace.
+    console.error(error instanceof MsBenchToolError ? error.message : error instanceof Error ? (error.stack ?? error.message) : String(error));
     process.exit(EXIT_GRADER_ERROR);
 });

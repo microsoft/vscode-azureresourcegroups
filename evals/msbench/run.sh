@@ -17,6 +17,11 @@
 #                            # run a stack instead: the prompt and the gate
 #                            # wiring are derived from config/stacks/<id>.yaml
 #                            # rather than hand-written. See config/gates.yaml.
+#   BENCHMARK=corbench.cor_functions_host \
+#     ./run.sh --dataset evals/msbench/container/dataset.jsonl
+#                            # run inside our own container image, which carries
+#                            # the Azure Functions Core Tools. Paths resolve from
+#                            # the repo root. See container/README.md.
 #
 set -euo pipefail
 
@@ -26,6 +31,19 @@ STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
 PASSTHRU=()
+# The benchmark dataset naming the container image to run in. Empty means "use
+# whatever MSBench's published data says for $BENCHMARK", which is the stock
+# image. Env-overridable for the same reason BENCHMARK and STIMULUS are: the CI
+# workflow can only reach this script through the environment.
+#
+# Handled explicitly rather than left to the passthrough catch-all so the path
+# can be resolved and CHECKED. A dataset that does not exist is the worst input
+# this script takes: msbench-cli falls back to the default registry, the run is
+# submitted against an image that is not there, and the instance comes back
+# `missing` with no output — indistinguishable from an infrastructure outage.
+DATASET="${DATASET:-}"
+# Set by --ignore-cooldown. See the budget preflight below.
+IGNORE_COOLDOWN=0
 # Observed, not chosen: msbench-cli writes results to `<data_dir>/<run_id>/`, and
 # `--data_dir` is a passthrough flag we do not otherwise interpret. The results
 # lookup after the run has to know where they landed, so the value is recorded
@@ -41,6 +59,9 @@ while [ $# -gt 0 ]; do
         --stack=*) STACK="${1#*=}" ;;
         --phase) shift; [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 1; }; PHASE="$1" ;;
         --phase=*) PHASE="${1#*=}" ;;
+        --dataset) shift; [ $# -gt 0 ] || { echo "--dataset needs a value" >&2; exit 1; }; DATASET="$1" ;;
+        --dataset=*) DATASET="${1#*=}" ;;
+        --ignore-cooldown) IGNORE_COOLDOWN=1 ;;
         # Recorded AND forwarded. Both spellings, both forms — the CLI accepts
         # `--data_dir` and `--data-dir`, so matching only one would reintroduce
         # the silent skip this exists to prevent.
@@ -122,6 +143,26 @@ MSBENCH_VSCODE_SPEC="msbench-agent-vscode>=0.0.22"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# --- resolve the dataset ------------------------------------------------------
+#
+# Relative paths resolve against the repo root, not the caller's cwd, so the same
+# value works from a shell, from CI, and from an editor task. The existence check
+# is the point of doing this here rather than passing the flag straight through:
+# see the note at the top of the file for why a missing dataset is worse than a
+# missing flag.
+if [ -n "$DATASET" ]; then
+    case "$DATASET" in
+        /*|[A-Za-z]:[\\/]*) ;;
+        *) DATASET="${REPO_ROOT}/${DATASET}" ;;
+    esac
+    [ -f "$DATASET" ] || die "No dataset at ${DATASET}.
+    A dataset names the container image to run in. If it is missing, msbench-cli
+    falls back to the default registry and the instance returns \`missing\` with no
+    output, which reads as an infrastructure failure rather than a typo."
+    PASSTHRU+=(--dataset "$DATASET")
+    log "Dataset: ${DATASET}"
+fi
 
 # --- build + stage the extension ---------------------------------------------
 #
@@ -251,7 +292,18 @@ node "${HERE}/stage-graders.ts"
 # also *clears* assets/workspace/ — otherwise a previous run's plan would leak
 # into a stimulus whose whole premise is that no plan exists.
 log "Staging workspace seed"
-node "${HERE}/stage-workspace.ts" "$STIMULUS"
+
+# A stack-generated stimulus has no header to carry `# seed:`, and passing $STIMULUS
+# here would seed from a stimulus the run never uses — which is exactly what happened:
+# a `--stack ... --phase local` run seeded from the default `photo-app-requirements`,
+# got `none`, and handed the scaffold agent a turn telling it to execute an
+# `.azure/project-plan.md` that was not there. Every gate then redded on an empty
+# workspace, for a reason with nothing to do with the product.
+if [ -n "$STACK" ]; then
+    node "${HERE}/stage-workspace.ts" --phase "${PHASE:-plan}"
+else
+    node "${HERE}/stage-workspace.ts" "$STIMULUS"
+fi
 
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.
@@ -284,22 +336,29 @@ fi
 command -v az >/dev/null || die "Azure CLI not found. Install it, then run: az login"
 az account show >/dev/null 2>&1 || die "Not logged in to Azure. Run: az login"
 
-# msbench-cli needs 3.10+; macOS still ships 3.9 as python3.
+# msbench-cli needs 3.10+; macOS still ships 3.9 as python3, and on Windows
+# python3 is usually the WindowsApps stub, so plain python is the real one.
 PYTHON=""
-for candidate in python3.12 python3.11 python3.10 python3; do
+for candidate in python3.12 python3.11 python3.10 python3 python; do
     if command -v "$candidate" >/dev/null 2>&1 && \
        "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)' 2>/dev/null; then
         PYTHON="$candidate"; break
     fi
 done
-[ -n "$PYTHON" ] || die "Need Python 3.10+ for msbench-cli. Try: brew install python@3.12"
+[ -n "$PYTHON" ] || die "Need Python 3.10+ for msbench-cli. macOS: brew install python@3.12"
+
+# Windows venvs put executables in Scripts/ with an .exe suffix, not bin/.
+VENV_BIN="bin"; VENV_EXE=""
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) VENV_BIN="Scripts"; VENV_EXE=".exe" ;;
+esac
 
 # --- msbench-cli -------------------------------------------------------------
 
-if [ ! -x "${VENV}/bin/msbench-cli" ]; then
+if [ ! -x "${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" ]; then
     log "Installing msbench-cli into ${VENV} (using $($PYTHON --version))"
     "$PYTHON" -m venv "$VENV"
-    "${VENV}/bin/python" -m pip install --quiet --upgrade pip
+    "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet --upgrade pip
 
     # Token goes in the index URL rather than via keyring, which otherwise drops
     # into an interactive prompt and hangs a non-tty shell.
@@ -308,24 +367,24 @@ if [ ! -x "${VENV}/bin/msbench-cli" ]; then
         || die "Could not get a DevOps token. Request the 'MSBench User' role at https://aka.ms/msbench/access"
 
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
         || die "msbench-cli install failed. Confirm feed access at https://aka.ms/msbench/access"
     unset ADO_TOKEN
 fi
-log "msbench-cli $("${VENV}/bin/msbench-cli" version 2>/dev/null | tail -1)"
+log "msbench-cli $("${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" version 2>/dev/null | tail -1)"
 
 # Special agents are discovered as console scripts on PATH, not as imports, so
-# calling ${VENV}/bin/msbench-cli directly reports every plugin as "not
-# installed". This is the equivalent of activating the venv.
-export PATH="${VENV}/bin:${PATH}"
+# calling the msbench-cli in ${VENV}/${VENV_BIN} directly reports every plugin
+# as "not installed". This is the equivalent of activating the venv.
+export PATH="${VENV}/${VENV_BIN}:${PATH}"
 
 # msbench-cli depends on this, but a plugin missing from PATH and one missing
 # from site-packages produce the same error, so verify the real thing.
-if ! "${VENV}/bin/python" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
+if ! "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
     log "Installing the vscode special agent plugin"
     ADO_TOKEN="$(az account get-access-token --resource "$ADO_RESOURCE" --query accessToken -o tsv)"
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
+        "${VENV}/${VENV_BIN}/python${VENV_EXE}" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
         || die "Could not install msbench-agent-vscode"
     unset ADO_TOKEN
 fi
@@ -336,6 +395,20 @@ fi
 # before uploading it. Two overlapping runs therefore race, and the loser
 # silently submits the winner's stimulus -- a run that looks entirely normal but
 # grades the wrong prompt. Serialise instead.
+#
+# Ctrl-C, or killing this script, does NOT cancel the run. Submission hands the
+# work to a server-side queue and everything after it is just a progress
+# monitor, so a killed run.sh leaves the run executing remotely -- and CES
+# dispatches one run at a time per user, so it also blocks every later
+# submission. That looks like an infrastructure stall rather than a local
+# mistake: the next run sits at "waiting to dispatch to GitHub Actions" for
+# hours with no indication of what it is waiting for. Observed 2026-08-27, when
+# a killed run held the queue for 2h11m. To abandon a run, cancel it for real:
+#
+#     msbench-cli status --run_id <id>   # "in progress" means still running
+#     msbench-cli cancel --run_id <id>
+#
+# then remove this lock if the killed run.sh did not run its EXIT trap.
 LOCK="${ASSETS}/.run.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
     die "Another run.sh is using ${ASSETS} (lock: ${LOCK}).
@@ -343,6 +416,33 @@ if ! mkdir "$LOCK" 2>/dev/null; then
     or remove the lock if no run.sh is alive."
 fi
 trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
+
+# --- budget preflight ---------------------------------------------------------
+#
+# A run voided by RATE_LIMIT costs the same ~250k tokens as a real one and yields
+# nothing. Seven of twenty instances in the local cache are void for that reason,
+# so a third of the corpus is noise that `gate-health` has to discard.
+#
+# The throttle is cumulative rather than a rolling window, which is why "wait 15
+# minutes" is not sufficient advice: measured on 2026-08-28, a run submitted two
+# hours after the previous one still throttled after 71 calls, while the first run
+# of the day completed 102 untouched. So the marker is only cleared by a run that
+# actually succeeds — time alone does not clear it.
+THROTTLE_MARKER="${HERE}/.last-throttle"
+COOLDOWN_MINUTES="${COR_COOLDOWN_MINUTES:-45}"
+if [ "$IGNORE_COOLDOWN" -eq 0 ] && [ -f "$THROTTLE_MARKER" ]; then
+    LAST_THROTTLE="$(cat "$THROTTLE_MARKER" 2>/dev/null || echo 0)"
+    ELAPSED_MIN=$(( ( $(date +%s) - LAST_THROTTLE ) / 60 ))
+    if [ "$ELAPSED_MIN" -lt "$COOLDOWN_MINUTES" ]; then
+        die "The last run was voided by RATE_LIMIT ${ELAPSED_MIN} minute(s) ago.
+    Submitting now most likely buys another void run at full token cost. The
+    budget is cumulative, so it recovers slowly once spent.
+
+    Wait until ${COOLDOWN_MINUTES} minutes have passed, or override with
+    --ignore-cooldown if you have reason to believe it has recovered.
+    Set COR_COOLDOWN_MINUTES to change the window."
+    fi
+fi
 
 log "Submitting to MSBench (benchmark: ${BENCHMARK}, stimulus: ${STIMULUS})"
 # Echo the prompt actually being submitted, so a stimulus/config mismatch is
@@ -361,7 +461,7 @@ RUN_LOG="$(mktemp -t msbench-run.XXXXXX)"
 trap 'rm -f "$RUN_LOG"; rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 set +e
-"${VENV}/bin/msbench-cli" run \
+"${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" run \
     --agent vscode \
     --model . \
     --benchmark "$BENCHMARK" \
@@ -380,15 +480,28 @@ set -e
 # verdict; exit 75 means "not a result, retry later" and 65 means "measured the
 # wrong thing", both distinct from the 1 that means a genuine red run.
 RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
+if [ -z "$RUN_ID" ] && [ "$CLI_STATUS" -eq 0 ]; then
+    # The CLI reported success without printing a run id, so there is nothing to
+    # fetch and nothing to verify. Same ruling as the missing-results branch
+    # below: unknown is reported as failure, because an exit code cannot say
+    # "we could not tell" and the reader will take 0 as "it passed".
+    echo "ERROR: msbench-cli exited 0 but printed no run_id, so no results could be" >&2
+    echo "located and this run is UNVERIFIED. Reported as a failure rather than a pass." >&2
+    exit 70
+fi
 if [ -n "$RUN_ID" ]; then
     # msbench-cli writes to `<data_dir>/<run_id>/results.zip`. The default data_dir
-    # is platform-specific (macOS Application Support, Linux XDG), and `--data_dir`
-    # overrides it outright — note the default already ends in `runs`, so a custom
-    # value does NOT get a `runs` component appended.
+    # is platform-specific — msbench uses AppDirs("msbench", "Microsoft"), so it is
+    # Application Support on macOS, XDG on Linux, and LOCALAPPDATA\Microsoft on
+    # Windows — and `--data_dir` overrides it outright — note the default already
+    # ends in `runs`, so a custom value does NOT get a `runs` component appended.
     RESULTS_CANDIDATES=(
         "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip"
         "${HOME}/.local/share/msbench/runs/${RUN_ID}/results.zip"
     )
+    if [ -n "${LOCALAPPDATA:-}" ]; then
+        RESULTS_CANDIDATES+=("$(cygpath -u "$LOCALAPPDATA" 2>/dev/null || echo "$LOCALAPPDATA")/Microsoft/msbench/runs/${RUN_ID}/results.zip")
+    fi
     [ -n "$DATA_DIR" ] && RESULTS_CANDIDATES=("${DATA_DIR}/${RUN_ID}/results.zip" "${RESULTS_CANDIDATES[@]}")
 
     RESULTS_ZIP=""
@@ -397,16 +510,23 @@ if [ -n "$RUN_ID" ]; then
     done
 
     if [ -z "$RESULTS_ZIP" ]; then
-        # Loud, because the alternative is worse than a failed run. verify-run.ts is
-        # what distinguishes a genuine result from a throttled one or one answered by
-        # the wrong model. If it silently does not run, the CLI's own exit code is
-        # reported as the verdict and an unverified run reads exactly like a verified
-        # one — the vacuous-check failure this suite exists to catch, applied to the
-        # verifier itself. That is precisely what `--data_dir` used to cause in CI.
-        echo "WARNING: run ${RUN_ID} completed but results.zip was not found, so" >&2
-        echo "verify-run.ts did NOT run. This result is UNVERIFIED: a throttled run" >&2
-        echo "or one answered by a different model would look identical to a good one." >&2
+        # Loud AND fatal. verify-run.ts is what distinguishes a genuine result from
+        # a throttled one or one answered by the wrong model, and check-assertions.ts
+        # is what says whether the assertions held. Neither can run without the
+        # results, so at this point the run's verdict is simply unknown.
+        #
+        # Unknown is reported as failure, not as success. "We could not tell" and
+        # "it passed" are the same thing to anyone reading an exit code, and the
+        # whole reason this block exists is that the second reading is
+        # unrecoverable — nobody investigates green. Exit 70 (EX_SOFTWARE) rather
+        # than 1, so an unverifiable run is distinguishable from a genuinely red
+        # one; a harness problem and a product regression need different people.
+        echo "ERROR: run ${RUN_ID} completed but results.zip was not found, so neither" >&2
+        echo "verify-run.ts nor check-assertions.ts could run. This run is UNVERIFIED:" >&2
+        echo "a throttled run, a wrong-model run, and a run whose assertions failed all" >&2
+        echo "look identical from here. Reported as a failure rather than a pass." >&2
         printf '  looked in: %s\n' "${RESULTS_CANDIDATES[@]}" >&2
+        exit 70
     else
         SCRATCH="$(mktemp -d)"
         unzip -oq "$RESULTS_ZIP" -d "$SCRATCH" 2>/dev/null || true
@@ -417,9 +537,39 @@ if [ -n "$RUN_ID" ]; then
         VERIFY_STATUS=$?
         set -e
 
-        rm -rf "$SCRATCH"
+        # Remember a throttle, so the NEXT invocation can refuse to spend another
+        # ~250k tokens discovering the same thing. Recorded here rather than inside
+        # verify-run.ts because verify-run is also the offline --self-test entry
+        # point and a self-test must not write budget state.
+        if [ "$VERIFY_STATUS" -eq 75 ]; then
+            date +%s > "${THROTTLE_MARKER}"
+        else
+            rm -f "${THROTTLE_MARKER}"
+        fi
+
         if [ "$VERIFY_STATUS" -ne 0 ]; then
+            rm -rf "$SCRATCH"
             exit "$VERIFY_STATUS"
+        fi
+
+        # Only reached when the run IS a result. verify-run.ts answers "is this
+        # real" — throttled (75), wrong model (65) — and deliberately not "did it
+        # pass", because a detector for false reds that also hides true reds is
+        # worthless. So nothing was asking whether the assertions held.
+        #
+        # Run 2026082668713928 is what that cost: 4 assertions passed, 2 failed,
+        # and msbench-cli exited 0, run.sh exited 0, and the GitHub job reported
+        # success. A red run reporting green is the worst direction for this to
+        # point, because nothing downstream contradicts it and nobody
+        # investigates green.
+        set +e
+        node "${HERE}/check-assertions.ts" "${SCRATCH}/out"
+        ASSERTIONS_STATUS=$?
+        set -e
+
+        rm -rf "$SCRATCH"
+        if [ "$ASSERTIONS_STATUS" -ne 0 ]; then
+            exit "$ASSERTIONS_STATUS"
         fi
     fi
 fi

@@ -34,6 +34,17 @@
  * reconstruct with a `cp` in a `script:` block. It is named here so that the fork in the
  * road does not have to be rediscovered by whoever next asks "why is this a shell copy?".
  *
+ * That claim has since been TESTED, and it held. `container/` builds an image in a
+ * registry we own, pointed at by a `container_registry` column in our own
+ * `dataset.jsonl`, and run 2026082777513216 ran the vscode agent inside it. No PR into
+ * the eval repo, no approval from another team — the only prerequisite was granting the
+ * CES service principal `AcrPull` on our registry, which we could do ourselves.
+ *
+ * So the fork in the road is now open, not hypothetical. What is still missing before
+ * this module can be deleted is the *workspace* half: baking the starting workspace into
+ * the image means it stops being a `cp` here and starts being a property of the instance.
+ * See `container/README.md`.
+ *
  * ── Why a checked-in fixture, when that was explicitly rejected once ────────────────
  *
  * The seed is the checked-in fixture at `evals/local-dev/fixtures/functions-postgres/`,
@@ -59,10 +70,19 @@
  * accepting a known cost to get the eight merged graders in front of real agent output
  * at all, not claiming the objection has gone away.
  *
- * What we give up by not harvesting is also concrete: `harvest-seed.mjs` had a `--check`
- * mode that reported seed freshness and exited 1 when the seed was stale, hashed against
- * `resources/agents/**`. The checked-in fixture has no equivalent, so nothing detects the
- * drift automatically. See `config/stimuli/README.md`.
+ * What that leaves is a seed whose freshness nothing can vouch for, and
+ * `harvest-seed.ts` is what closes it. `harvest-seed.mjs` had a `--check` mode that
+ * reported seed freshness and exited 1 when stale, hashed against the planner's assets;
+ * for a while nothing replaced it. Now:
+ *
+ *   node harvest-seed.ts <run-id>   promotes a real plan-phase run's document into
+ *                                   `seeds/project-plan.md` with its provenance
+ *   node harvest-seed.ts --check    compares the captured `agentAssetsHash` against
+ *                                   `agent-assets.lock.json`, for free
+ *
+ * So the fixture below is the *floor*, not the only option: when a harvested plan is
+ * present it wins, and when it is absent the fixture keeps the suite runnable on a
+ * machine that has never talked to MSBench. See `config/stimuli/README.md`.
  *
  * ── Seed names ─────────────────────────────────────────────────────────────────────
  *
@@ -76,15 +96,18 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { HARVESTED_PLAN, readProvenance } from './seed-store.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STIMULI = join(HERE, 'config', 'stimuli');
 const DEST = join(HERE, 'assets', 'workspace');
 
 /**
- * The one fixture every seed is derived from: a real, complete fullstack plan (React
- * frontend, Azure Functions backend, PostgreSQL) already used by
- * `evals/local-dev/eval.yaml` for the same purpose.
+ * The fallback fixture: a real, complete fullstack plan (React frontend, Azure Functions
+ * backend, PostgreSQL) already used by `evals/local-dev/eval.yaml` for the same purpose.
+ *
+ * Used only when nothing has been harvested. `readPlanSource` prefers
+ * `seeds/project-plan.md`, which carries provenance and can be checked for staleness.
  */
 const PLAN_FIXTURE = join(HERE, '..', 'local-dev', 'fixtures', 'functions-postgres', '.azure', 'project-plan.md');
 
@@ -124,46 +147,158 @@ const RECIPES: Record<string, Recipe> = {
     none: () => [],
 
     'approved-fullstack': () => [
-        { path: '.azure/project-plan.md', content: readPlanFixture() },
+        { path: '.azure/project-plan.md', content: withStatus(readPlanSource(), 'Approved') },
     ],
 
     'unapproved-plan': () => [
-        { path: '.azure/project-plan.md', content: withStatus(readPlanFixture(), 'Planning') },
+        { path: '.azure/project-plan.md', content: withStatus(readPlanSource(), 'Planning') },
     ],
+
+    /**
+     * A complete, runnable project — the one the graders already certify against.
+     *
+     * ⚠️ HARNESS SELF-TEST ONLY. This seed stages `.vscode/launch.json`,
+     * `.vscode/tasks.json` and `.azure/vscode-debug-plan.md` *ready-made*, so a run
+     * using it grades files the fixture supplied rather than anything an agent
+     * produced. It answers "do these gates work inside the container?" and says
+     * NOTHING about the product. A result from this seed must never be quoted as
+     * evidence about the agent — see config/stimuli/gates-selftest-prescaffolded.yaml,
+     * which carries the same warning where a reader will actually meet it.
+     *
+     * Why it is worth having anyway: `npm run certify` already runs these validators
+     * against this exact fixture offline, on every commit, for nothing. What that
+     * cannot tell you is whether the same validators work once staged into the
+     * MSBench container, where the graders run off source with no install step and
+     * the workspace arrives by a different route. Four of them — the debug gates —
+     * had never executed in a container at all.
+     *
+     * Deliberately the certification fixture rather than a new one. A second
+     * hand-maintained "known good project" is exactly the drift this repo keeps
+     * paying for, and using the certified one means offline and in-container are
+     * asking about the same bytes.
+     */
+    'prescaffolded-reference': () => readFixture(REFERENCE_FIXTURE),
+
+    /**
+     * ⚠️ HARNESS SELF-TEST ONLY, on the same terms as the seed above.
+     *
+     * The difference is the datastore. `reference-node-fullstack` persists to a JSON file,
+     * which is what lets it certify `runtime-crud` offline with no server — and is also why
+     * it can say nothing about the path every Azure-shaped stimulus actually takes, where
+     * package.json declares `pg` and the gate has to reach a database.
+     *
+     * That path is covered at two points and joined at neither. The phase preamble starts
+     * PostgreSQL in a real MSBench run (measured in run 2026083057881445: "postgres: ready on
+     * 127.0.0.1:5432"), and the gate completes a real round-trip against an identically
+     * started PostgreSQL in the published image (measured by container/verify-emulators.sh).
+     * Both halves, never the composition — a preamble-started database and a gate in the same
+     * run, which is the only place a mismatch between them could show up.
+     *
+     * The obvious way to close that was an ordinary stack run, and run 2026083057881445 is
+     * why it does not work: the generated app failed to start (#1757), so `runtime-crud`
+     * never got near the database. Seeding an app that is known to start removes the product
+     * from a question that is not about the product.
+     */
+    'prescaffolded-postgres': () => readFixture(POSTGRES_FIXTURE),
 };
 
-function readPlanFixture(): string {
+/** Files that describe the certification harness rather than the project it contains. */
+const FIXTURE_EXCLUDED = new Set(['scenario.json']);
+
+const REFERENCE_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-fullstack');
+const POSTGRES_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-postgres');
+
+/**
+ * Read a fixture directory into seeded files.
+ *
+ * `node_modules` is skipped rather than copied: it is large, platform-specific, and
+ * `project-builds` installs from the lockfile in the container anyway. The postgres fixture
+ * is the reason that lockfile has to be checked in — `npm ci` fails outright without one,
+ * and it is the command `project-builds` runs.
+ */
+function readFixture(root: string): SeededFile[] {
+    if (!existsSync(root)) {
+        throw new Error(`Seed fixture not found at ${root}.`);
+    }
+    const files: SeededFile[] = [];
+    const walk = (directory: string): void => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+            if (entry.name === 'node_modules' || entry.name === '.git') {
+                continue;
+            }
+            const full = join(directory, entry.name);
+            if (entry.isDirectory()) {
+                walk(full);
+                continue;
+            }
+            const relative = full.slice(root.length + 1).split('\\').join('/');
+            if (FIXTURE_EXCLUDED.has(relative)) {
+                continue;
+            }
+            files.push({ path: relative, content: readFileSync(full, 'utf8') });
+        }
+    };
+    walk(root);
+    return files;
+}
+
+/** The plan document both seeds derive from, and where it came from. */
+interface PlanSource {
+    readonly path: string;
+    readonly content: string;
+    readonly harvested: boolean;
+}
+
+/**
+ * Prefer a harvested plan, fall back to the checked-in fixture.
+ *
+ * The fallback is what keeps this runnable on a machine that has never authenticated to
+ * MSBench — including CI before anyone has harvested — so the preference is a quality
+ * upgrade rather than a new requirement.
+ */
+function readPlanSource(): PlanSource {
+    if (existsSync(HARVESTED_PLAN)) {
+        return { path: HARVESTED_PLAN, content: readFileSync(HARVESTED_PLAN, 'utf8'), harvested: true };
+    }
     if (!existsSync(PLAN_FIXTURE)) {
         throw new Error(
-            `The plan fixture is missing: ${PLAN_FIXTURE}\n` +
-            `Seeded stimuli derive every plan from it, so this is a hard error rather than an empty seed.`
+            `No plan to seed from. Neither exists:\n` +
+            `  harvested: ${HARVESTED_PLAN}\n` +
+            `  fixture:   ${PLAN_FIXTURE}\n` +
+            `Seeded stimuli derive every plan from one of them, so this is a hard error rather\n` +
+            `than an empty seed.`
         );
     }
-    return readFileSync(PLAN_FIXTURE, 'utf8');
+    return { path: PLAN_FIXTURE, content: readFileSync(PLAN_FIXTURE, 'utf8'), harvested: false };
 }
 
 /**
  * Rewrite the plan's status line, asserting that there was exactly one to rewrite.
  *
- * The assertion is the whole reason this is a function. A silent no-op here — the fixture
+ * The assertion is the whole reason this is a function. A silent no-op here — the source
  * renamed the field, or reformatted the line — would produce an *approved* plan under the
  * name `unapproved-plan`, which turns `scaffold-unapproved-plan` into a second copy of
  * `scaffold-fullstack`. It would still read green, and the approval gate it exists to
  * test would simply stop being tested. Failing loudly on a developer machine costs
  * nothing; the alternative costs a paid run and reports a false pass.
+ *
+ * Both recipes go through it, including the approved one whose status is usually already
+ * correct. That is deliberate: a harvested plan's status is whatever the agent left
+ * behind, so normalising both directions is what keeps the pair's sole difference the
+ * approval status — the property that makes the pair falsifiable at all.
  */
-function withStatus(plan: string, status: string): string {
+function withStatus(source: PlanSource, status: string): string {
     const statusLine = /^\*\*Status\*\*:\s*(.+)$/m;
-    const matches = plan.match(new RegExp(statusLine, 'gm')) ?? [];
+    const matches = source.content.match(new RegExp(statusLine, 'gm')) ?? [];
     if (matches.length !== 1) {
         throw new Error(
-            `Expected exactly one '**Status**: ...' line in ${PLAN_FIXTURE}, found ${matches.length}.\n` +
-            `The unapproved seed is produced by rewriting that line, and a silent no-op would make\n` +
+            `Expected exactly one '**Status**: ...' line in ${source.path}, found ${matches.length}.\n` +
+            `The seed recipes are produced by rewriting that line, and a silent no-op would make\n` +
             `stimuli/scaffold-unapproved-plan.yaml a duplicate of scaffold-fullstack.yaml that still\n` +
             `reports green while testing nothing.`
         );
     }
-    return plan.replace(statusLine, `**Status**: ${status}`);
+    return source.content.replace(statusLine, `**Status**: ${status}`);
 }
 
 /**
@@ -215,9 +350,31 @@ export function stageWorkspace(seed: string): SeededFile[] {
 }
 
 function main(): void {
+    // Two callers, because two things can select a workspace. A hand-written stimulus
+    // names its own seed; a stack-generated stimulus has no header to carry one, and the
+    // phase file is what already owns the rest of its shape (`# turn-before:`), so it
+    // owns the seed too. Splitting that would let a generated run scaffold against a
+    // different starting workspace than the hand-written run of the same phase, which is
+    // precisely the drift the phase file exists to prevent.
+    const phaseFlag = process.argv.indexOf('--phase');
+    if (phaseFlag !== -1) {
+        const phase = process.argv[phaseFlag + 1];
+        if (!phase) {
+            console.error('usage: stage-workspace.ts --phase <phase>');
+            process.exit(1);
+        }
+        const phasePath = join(HERE, 'config', 'phases', `${phase}.yaml`);
+        if (!existsSync(phasePath)) {
+            console.error(`Unknown phase '${phase}': ${phasePath} does not exist.`);
+            process.exit(1);
+        }
+        stageAndReport(seedFor(readFileSync(phasePath, 'utf8')), `phase '${phase}'`);
+        return;
+    }
+
     const stimulus = process.argv[2];
     if (!stimulus) {
-        console.error('usage: stage-workspace.ts <stimulus>');
+        console.error('usage: stage-workspace.ts <stimulus> | --phase <phase>');
         process.exit(1);
     }
     const stimulusPath = join(STIMULI, `${stimulus}.yaml`);
@@ -229,7 +386,10 @@ function main(): void {
         process.exit(1);
     }
 
-    const seed = seedFor(readFileSync(stimulusPath, 'utf8'));
+    stageAndReport(seedFor(readFileSync(stimulusPath, 'utf8')), `stimulus '${stimulus}'`);
+}
+
+function stageAndReport(seed: string, describedBy: string): void {
     let files: SeededFile[];
     try {
         files = stageWorkspace(seed);
@@ -239,13 +399,33 @@ function main(): void {
     }
 
     if (files.length === 0) {
-        console.log(`Seed '${seed}' for stimulus '${stimulus}': empty workspace (assets/workspace/ cleared)`);
+        console.log(`Seed '${seed}' for ${describedBy}: empty workspace (assets/workspace/ cleared)`);
         return;
     }
-    console.log(`Staged seed '${seed}' for stimulus '${stimulus}' to assets/workspace/`);
+    console.log(`Staged seed '${seed}' for ${describedBy} to assets/workspace/`);
     for (const file of files) {
         console.log(`  ${file.path}`);
     }
+    describePlanSource();
+}
+
+/**
+ * Say where the plan came from, every time.
+ *
+ * A run seeded from a stale harvest and a run seeded from the fixture fail in the same
+ * confusing way — an agent grading against a plan nobody would emit — and the only cheap
+ * way to tell them apart afterwards is to have printed it at the time.
+ */
+function describePlanSource(): void {
+    const source = readPlanSource();
+    if (!source.harvested) {
+        console.log('  plan source: checked-in fixture (nothing harvested; freshness unknown)');
+        return;
+    }
+    const provenance = readProvenance();
+    console.log(provenance
+        ? `  plan source: harvested from run ${provenance.runId} at ${provenance.harvestedAt}`
+        : `  plan source: ${HARVESTED_PLAN} (no provenance recorded)`);
 }
 
 // Only when run directly. build-config.ts imports `seedPaths`/`seedFor` from here,

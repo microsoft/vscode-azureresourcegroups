@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { buildChatOpenOptions, ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
@@ -15,10 +14,11 @@ import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../.
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 type NextStepAction = 'iterate' | 'apiTests' | 'deploy';
 
-export class LocalDevNextStepsViewController extends WebviewController<LocalDevNextStepsViewConfiguration> {
+export class LocalDevNextStepsViewController extends CopilotOnRailsWebviewController<LocalDevNextStepsViewConfiguration> {
     constructor(initialConfig: LocalDevNextStepsViewConfiguration) {
         super(
             ext.context,

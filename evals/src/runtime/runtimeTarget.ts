@@ -155,6 +155,22 @@ export interface RuntimeTarget {
     apiKind?: 'none' | 'http';
     /** The stack's declared collection endpoint, replacing a regex over frontend source. */
     collectionRoute?: string;
+    /**
+     * True when the process picks its own port and does not read `PORT`.
+     *
+     * Set for Azure Functions, where `func start` binds 7071 and takes `--port`, never the
+     * environment variable. Without it a Functions app is treated like any other Node
+     * project: nothing declares a port, so the harness injects `PORT` speculatively, `func`
+     * ignores it, and the app is reported as having "ignored the PORT environment variable"
+     * and being undeployable — about a variable it does not read. Measured on run
+     * 2026082875609243, which was the first run ever to reach this path, because until
+     * `func` existed in the container a Functions project stopped at `functionsHostUnavailable`.
+     *
+     * The same mistake is recorded a few lines below for scripts that assign the port
+     * internally: claiming a remap the app cannot honour produces a finding that accuses
+     * the product of a defect the harness invented.
+     */
+    portEnvUnsupported?: boolean;
     workspaceRoot: string;
     /** Directory of the `package.json` the app belongs to. */
     packageDirectory: string;
@@ -232,11 +248,21 @@ export interface StackProjection {
 /**
  * Where the projection is staged. `/agent/assets/stack.json` is the container path;
  * the env var exists so a grader run by hand can be pointed at one.
+ *
+ * An explicit setting is **authoritative**, not merely first. It used to be prepended to
+ * the defaults, which meant it could select a projection but never deselect one — so a
+ * caller that legitimately has no stack still inherited whichever `assets/stack.json` the
+ * last `--stack` build happened to leave behind. Grader certification is exactly that
+ * caller: it grades fixtures whose routes it already knows, and a projection from an
+ * unrelated stack silently rewrote them, turning two `runtime-crud` cases red with a 404
+ * against a route the fixture never had.
  */
 function stackProjectionCandidates(): string[] {
     const configured = process.env.COR_STACK_PROJECTION;
+    if (configured) {
+        return [configured];
+    }
     return [
-        ...(configured ? [configured] : []),
         '/agent/assets/stack.json',
         path.resolve(import.meta.dirname, '..', '..', 'msbench', 'assets', 'stack.json'),
     ];
@@ -296,15 +322,19 @@ export async function resolveRuntimeTarget(workspaceRoot: string): Promise<Runti
     if (functions) {
         return functions;
     }
+    // Whether this is a Functions project, asked once and reused below. `detectFunctionsProject`
+    // returns undefined in two different situations — not a Functions project, and a Functions
+    // project whose host is available — and only the second needs the port flag.
+    const isFunctions = await usesFunctionsHost(workspaceRoot, packages);
 
     const fromLaunch = await resolveFromLaunchConfiguration(workspaceRoot, packages, stack);
     if (fromLaunch) {
-        return fromLaunch;
+        return withFunctionsPortPolicy(fromLaunch, isFunctions);
     }
 
     const fromScript = resolveFromStartScript(workspaceRoot, packages, stack);
     if (fromScript) {
-        return fromScript;
+        return withFunctionsPortPolicy(await fromScript, isFunctions);
     }
 
     // Neither rung answered. This is a harness fault by policy *for the runtime gates* —
@@ -555,9 +585,7 @@ async function detectFunctionsProject(
     workspaceRoot: string,
     packages: PackageManifest[],
 ): Promise<RuntimeTargetResolution | undefined> {
-    const usesFunctions = packages.some(value => '@azure/functions' in value.dependencies)
-        || (await findFiles(workspaceRoot, name => name === 'host.json', MAX_PACKAGE_DEPTH)).length > 0;
-    if (!usesFunctions || findExecutable('func')) {
+    if (!await usesFunctionsHost(workspaceRoot, packages) || findExecutable('func')) {
         return undefined;
     }
     return {
@@ -567,6 +595,30 @@ async function detectFunctionsProject(
             + 'so the app cannot be started. Install it in the run preamble with '
             + '`npm install -g azure-functions-core-tools@4 --unsafe-perm true`.',
     };
+}
+
+/** Whether this workspace is an Azure Functions app, independent of whether `func` is present. */
+async function usesFunctionsHost(workspaceRoot: string, packages: PackageManifest[]): Promise<boolean> {
+    return packages.some(value => '@azure/functions' in value.dependencies)
+        || (await findFiles(workspaceRoot, name => name === 'host.json', MAX_PACKAGE_DEPTH)).length > 0;
+}
+
+/**
+ * Mark a resolved Functions target as not taking `PORT`.
+ *
+ * Applied after discovery rather than inside it because a Functions project reaches the
+ * normal rungs: its launch configuration is `request: attach` and gets filtered out, so
+ * resolution falls through to the `start` script, which is `func start`. Everything about
+ * that is correct except the port, and that is the one thing worth saying here.
+ */
+function withFunctionsPortPolicy(
+    resolution: RuntimeTargetResolution,
+    isFunctions: boolean,
+): RuntimeTargetResolution {
+    if (!isFunctions || resolution.kind !== 'resolved') {
+        return resolution;
+    }
+    return { ...resolution, target: { ...resolution.target, portEnvUnsupported: true } };
 }
 
 async function describeMissingNodeProject(workspaceRoot: string): Promise<RuntimeTargetResolution> {
@@ -587,8 +639,14 @@ async function describeMissingNodeProject(workspaceRoot: string): Promise<Runtim
     // No manifest of any kind. Whether that is the agent shipping nothing or the grader
     // looking in the wrong place turns on whether the agent was ever here, so report the
     // evidence and let the caller decide.
-    const staged = await exists(path.join(workspaceRoot, '.azure', 'project-plan.md'))
-        || await exists(path.join(workspaceRoot, '.azure', 'requirements.json'));
+    // Any of the flow's artifacts is evidence an earlier phase ran here, and the later ones
+    // are the stronger evidence: `integration-plan.md` is written by the scaffold agent
+    // itself, so its presence with no application is precisely "scaffold ran and produced
+    // nothing". Checking only for the two planning artifacts missed that, and a workspace
+    // the scaffold phase had demonstrably worked in was read as the wrong directory.
+    const staged = (await Promise.all([
+        'project-plan.md', 'requirements.json', 'integration-plan.md', 'vscode-debug-plan.md',
+    ].map(name => exists(path.join(workspaceRoot, '.azure', name))))).some(Boolean);
     return {
         kind: 'noApplication',
         workspaceLooksStaged: staged,

@@ -87,7 +87,13 @@ schemaVersion: 1
 
 # The closed set of phase names. A gate naming anything else is a typo, and a
 # typo here silently unwires a gate — the failure that reads as a clean run.
-phases: [plan, scaffold, local]
+#
+# `deploy` names the deploy agent's *scaffold* sub-phase, which generates IaC and
+# is contracted to provision nothing ("validation is syntax-only (`bicep build`),
+# never `az deployment sub create`" — subagent-validate.md). The provisioning half
+# of deploy is deliberately not a phase here: it costs real money per run, so it is
+# not something the suite can gate on.
+phases: [plan, scaffold, local, deploy]
 
 gates:
   # --- plan phase ---------------------------------------------------------
@@ -129,7 +135,21 @@ gates:
   - id: debug-gate
     grader: evals/graders/validate-debug-gate.ts
     summary: the approval gate at the end of planning behaved
-    phases: [plan]
+    # `local`, not `plan`, and the summary's "planning" means *debug* planning. The
+    # grader reads `.azure/vscode-debug-plan.md`, which the local-dev phase produces
+    # and the plan phase cannot — so wired here it graded an artifact that does not
+    # exist yet and failed every time.
+    #
+    # It went unnoticed because the only stimulus that runs it,
+    # config/stimuli/debug-plan-approval-gate.yaml, is a local-dev stimulus that
+    # hardcodes the `exec:` and never consulted this row. Run 2026082713357491 — the
+    # first stack-generated stimulus, which derives its assertions from this table
+    # rather than hardcoding them — is what surfaced it, with
+    # `/workspace/.azure/vscode-debug-plan.md does not exist`.
+    #
+    # The header warns that a wrong phase name "silently unwires a gate". This is the
+    # other direction of the same fault: silently wiring one that can never pass.
+    phases: [local]
     requires: {}
 
   # --- scaffold phase -----------------------------------------------------
@@ -145,7 +165,20 @@ gates:
   - id: project-builds
     grader: evals/graders/validate-project-builds.ts
     summary: the generated project installs and builds
-    phases: [scaffold]
+    # Also in `local`, because the five runtime gates cannot run without it. They
+    # start the generated app, and an app whose dependencies were never installed
+    # does not start: run 2026082874210382 had all five exit 3 with
+    # "/workspace/services/api declares dependencies but has no node_modules ...
+    # Run validate-project-builds (or npm install) before the runtime gates."
+    # The graders named their own prerequisite, and nothing in the local phase
+    # satisfied it — the phase preamble installs `func` globally and never touches
+    # the workspace.
+    #
+    # Ordering is what makes this work rather than a `dependsOn` edge: gates are
+    # emitted in the order they appear in this file, so at position 6 this runs
+    # before the runtime gates at 14+ and leaves node_modules in place for them.
+    # Moving it below them would silently reintroduce the failure.
+    phases: [scaffold, local]
     # The one place `ecosystem` appears, and it is NOT the two-tier rule above —
     # it is a third case worth naming. This grader runs the real package manager,
     # so it cannot read a Python project at all: wiring it there would make it
@@ -186,6 +219,22 @@ gates:
     requires:
       project.datastore: { not: [none] }
 
+  - id: safety-boundaries
+    grader: evals/graders/validate-safety-boundaries.ts
+    summary: the generated project crosses no safety boundary
+    # Plan phase, because the red-team suite's primary attack surface is the
+    # free-text "What would you like to build?" box, which is handed to
+    # `azure-project-plan`. The prompts that target later stages (the mid-flow and
+    # autopilot ones) need turn shapes this phase does not have and are tracked in
+    # config/stimuli/README-redteam.md rather than silently omitted.
+    phases: [plan]
+    # No `requires:`. A safety boundary is not a property of the stack's ecosystem
+    # or datastore — every generated project is subject to it, and a `requires:`
+    # here would be the exact defect the header of this file warns about: a fact
+    # whose absence silently unwires the gate. The gate reports NOT_ATTEMPTED when
+    # there are no artifacts, which is the honest answer rather than a pass.
+    requires: {}
+
   - id: integration-plan
     grader: evals/graders/validate-integration-plan.ts
     summary: .azure/integration-plan.md hands off correctly
@@ -208,6 +257,31 @@ gates:
         when: { project.datastore: [none] }
 
   # --- local-dev phase ----------------------------------------------------
+  # --- deploy phase -------------------------------------------------------
+  - id: iac-compiles
+    grader: evals/graders/validate-iac-compiles.ts
+    summary: the generated infrastructure compiles, and the agent reported that honestly
+    phases: [deploy]
+    # No requirement, and the reason is the same one service-fidelity gives: every
+    # project this suite runs has a real "does your infrastructure compile?"
+    # question. Absent IaC is resolved at runtime against what the stimulus asked
+    # for — a finding when the agent was told to generate it, not-applicable when
+    # it was not — and a `requires:` would collapse both into silence here.
+    #
+    # Not requiring `ecosystem` either: bicep is language-agnostic, so unlike
+    # project-builds this grader can read a Python or Go project's infra folder
+    # exactly as well as a Node one.
+    requires: {}
+    # No `args:` derived from the stack, deliberately.
+    #
+    # The two flags this grader accepts are not facts a stack knows.
+    # `--require-artifacts` asks whether the agent was entered under the contract
+    # that produces a template and scaffold-manifest.json, which is a property of
+    # the phase and belongs in the stimulus that selects it.
+    # `--strict-types` is not a stack fact either — it asserts the pinned bicep's
+    # type index is at least as current as the API versions under test, which is a
+    # property of the container, not the project. Left off; see iacCompiles.ts for
+    # the run that showed blocking BCP081 penalises agents for being up to date.
   - id: debug-plan
     grader: evals/graders/validate-debug-plan.ts
     summary: .azure/vscode-debug-plan.md satisfies the debug-plan contract

@@ -102,10 +102,39 @@ and Node.
 
 ### Access
 
-You need the **`MSBench User`** role, requested at <https://aka.ms/msbench/access>
-(manager approval; syncs within the hour). That is the *only* access prerequisite —
-it grants the artifact feed, ACR, and Kusto in one go. Nothing else needs
-provisioning, and no other team needs to be involved.
+You need a role on the MSBench entitlement, requested at <https://aka.ms/msbench/access>
+(manager approval; syncs within the hour). Running the suite needs nothing else, and no
+other team needs to be involved.
+
+**The entitlement has more than one role, and they are not interchangeable.** MSBench's
+own docs name different ones for different jobs:
+
+| Doc | Role | Grants |
+| --- | --- | --- |
+| `doc/CONTRIBUTING.md`, "For Evaluation Runners" | `MSBench-CLI pip reader` | the pip feed `run.sh` installs from |
+| `doc/benchmarks/PUBLISHING_DOCKER_IMAGES.md` | `MSBench User` | pushing benchmark images to ACR |
+
+This file used to say the role "grants the artifact feed, ACR, and Kusto in one go".
+The feed half is confirmed — that is how `msbench-cli` installs. The ACR half is
+**measured false** for the identity that has been running this suite:
+
+```
+az acr login --name codeexecservice
+→ Access to registry 'codeexecservice.azurecr.io' was denied. Response code: 401
+```
+
+`codeexecservice.azurecr.io` is where `benchmarks/build_and_push.py` publishes, and it
+is not visible in any subscription that account can see. So running the suite and
+*publishing an image for it* are two different grants, and only the first is in place.
+
+**That turned out not to block the custom-image route.** MSBench supports a
+per-instance `container_registry`, so an image can live in a registry we own and
+never touch the shared ACR — no `MSBench User` role, no local Docker daemon.
+`container/` builds exactly that, and run `2026082777513216` measured
+`func 4.14.0` inside it. The one prerequisite is granting the CES service
+principal `AcrPull` on your own registry; without it every instance returns
+`missing` with no output, because the CES job dies at its `Login to ACR` step.
+See [`container/README.md`](container/README.md).
 
 `run.sh` mints the feed token with `az account get-access-token` rather than using
 `keyring`, which otherwise drops into an interactive prompt and hangs.
@@ -151,7 +180,89 @@ folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` 
 | --- | --- | --- |
 | `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
 | `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-autopilot` | [`2026082862087944`](https://msbenchapp.azurewebsites.net/run-analysis/2026082862087944) | 7/7, `resolved: true` |
 | `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | **6/7, `resolved: false`** — a real product defect, below |
+
+With `scaffold-autopilot` green, **every scaffold stimulus has now been run**, and the
+phase's only red is the product defect below rather than anything unexercised. That run
+also happens to be the cleanest rate-limit datapoint in the folder: 98 successful
+`POST /v1/messages` calls and not one 429, which is what establishes that the throttling
+seen elsewhere is a burst limit rather than a spent budget.
+
+The **local-dev phase** then produced its first clean result, in the custom container
+image that carries the Functions Core Tools:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `debug-plan-approval-gate` | [`2026082863403911`](https://msbenchapp.azurewebsites.net/run-analysis/2026082863403911) | **8/8, `resolved: true`** |
+
+Four earlier attempts at this stimulus were all voided by `RATE_LIMIT`, never by the
+harness or the product. This one ran 102 `POST /v1/messages` calls untouched.
+
+Its environment fingerprint is the first to carry the emulator binaries, and it settles
+what `runtime-crud` had only ever assumed:
+
+```
+Linux x86_64   cwd=/workspace   node=v22.23.2
+func=/usr/bin/func
+pip3=MISSING  go=MISSING  dotnet=MISSING  docker=MISSING  azd=MISSING  java=MISSING
+azurite=MISSING  psql=MISSING  postgres=MISSING  mongod=MISSING  redis-server=MISSING
+```
+
+`func` on PATH **in the eval path itself**, not merely in an image probe — the condition
+five `runtime-*` gates had been standing down on since they were written. The emulator
+line matches a direct `az acr run` inspection of the same image exactly, so two
+independent methods agree. Note `node=v22.23.2` rather than the 22.22.2 this folder
+records for the stock image: same Dockerfile, different build date.
+
+### The runtime gates have run
+
+Run [`2026082875609243`](https://msbenchapp.azurewebsites.net/run-analysis/2026082875609243)
+is the first in which the five `runtime-*` gates executed against a running application.
+`react-functions-postgres` drives the local phase on the custom image, and the Functions
+host starts:
+
+```
+[runtime-app-starts] started with "npm start" in /workspace/services/functions
+[runtime-app-starts] listening on http://127.0.0.1:7071 (port announced)
+PASS: gate=runtime-app-starts — the scaffolded app starts and listens
+```
+
+| Gate | Verdict |
+| --- | --- |
+| `runtime-app-starts` | **pass** — plus one product finding, below |
+| `runtime-health` | **fail** — the endpoint exists and hangs, below |
+| `runtime-frontend` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-frontend-api` | not applicable, `frontendDevServerUnsupported` |
+| `runtime-crud` | not applicable, `datastoreRequiresContainer` |
+
+The three not-applicables are the gates being honest rather than the harness failing.
+`runtime-crud`'s in particular was predicted from the measured container inventory before
+the run: the project persists through `pg`, which needs a server, and there is no Docker.
+
+**Finding: the app ignores `PORT`.** `runtime-app-starts` passed and reported it anyway:
+
+> the app ignored the PORT environment variable and listened on its hard-coded port 7071.
+> Azure App Service and Container Apps inject the port, so this app would not receive
+> traffic there.
+
+**Finding: `/api/health` is registered, invoked, and never answers.** The host lists it and
+begins executing it, then the probe times out:
+
+```
+Functions:
+	health: [GET] http://localhost:7071/api/health
+[…] Executing 'Functions.health' (Reason='This function was programmatically called…')
+
+[healthEndpointUnreachable] /api/health: the app is listening on http://127.0.0.1:7071 but
+the health endpoint /api/health (declared in .azure/integration-plan.md) could not be
+reached: The operation was aborted due to timeout.
+```
+
+There is no matching `Executed 'Functions.health' (Succeeded…)` line, so the invocation
+starts and does not return. The cause is **not yet established** — a plausible candidate is
+that the handler touches PostgreSQL, which this container has no server for, but that has
+not been checked and should not be repeated as fact until it is.
 
 A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
 `validate-no-scaffold` is negative, and a run that died early scores the same. So both
@@ -669,31 +780,91 @@ property wanted here: a seed that silently failed to copy leaves the agent stari
 empty workspace, where it correctly refuses to scaffold and every assertion goes red as
 though the product were broken — after the run has been paid for.
 
-#### The seed is a checked-in fixture, and that was once rejected
+#### The seed is harvested when possible, and a checked-in fixture otherwise
 
-Both plan seeds derive from `evals/local-dev/fixtures/functions-postgres/`, the same
-fixture `evals/local-dev/eval.yaml` uses. This is the option a previous design
-deliberately avoided: `harvest-seed.mjs` (commit `cc75a4e1`, not on `feat/CoR`) promoted
-a finished MSBench run into the scaffold workspace precisely because *"checking one in
-makes that document a second source of truth: edit the planner's template and the stored
-copy still describes the old shape, so the scaffold graders keep passing against a plan
-no agent would emit."*
+[`harvest-seed.ts`](harvest-seed.ts) promotes a real plan-phase run's
+`.azure/project-plan.md` into `seeds/project-plan.md`, and `stage-workspace.ts` prefers
+it. When nothing has been harvested it falls back to
+`evals/local-dev/fixtures/functions-postgres/`, the same fixture
+`evals/local-dev/eval.yaml` uses — so the suite still runs on a machine that has never
+authenticated to MSBench.
 
-That objection is not answered here; it is **bounded**, by the second of the two
-properties that script relied on: *"It is an input, not an expected answer. No scaffold
-grader reads the plan — they assert against `resources/agents/**`. A wrong plan
+```
+npm run seed:harvest -- <plan-run-id>   # from evals/
+npm run seed:check                      # 0 fresh / 1 stale / 2 never harvested
+```
+
+The fallback is the option a previous design deliberately avoided: `harvest-seed.mjs`
+(commit `cc75a4e1`, not on `feat/CoR`) promoted a finished MSBench run into the scaffold
+workspace precisely because *"checking one in makes that document a second source of
+truth: edit the planner's template and the stored copy still describes the old shape, so
+the scaffold graders keep passing against a plan no agent would emit."*
+
+That objection is not answered by the fallback; it is **bounded**, by the second of the
+two properties that script relied on: *"It is an input, not an expected answer. No
+scaffold grader reads the plan — they assert against `resources/agents/**`. A wrong plan
 therefore makes scaffold trials fail loudly; it cannot make them pass wrongly."*
 
 The drift is therefore **fail-safe, not fail-open**. A stale plan makes real runs go red
 for a bad reason — expensive and confusing — but cannot make a broken scaffolder look
-green, which is the failure that would actually matter. What is given up is the drift
-control: `harvest-seed.mjs` had a `--check` mode that reported seed freshness and exited
-1 when stale. Nothing here replaces it. See
-[`config/stimuli/README.md`](config/stimuli/README.md).
+green, which is the failure that would actually matter.
+
+What used to be missing was the drift *control*: `harvest-seed.mjs` had a `--check` mode
+that reported seed freshness and exited 1 when stale, and for a while nothing replaced
+it. `npm run seed:check` does. Harvesting records `agent-assets.lock.json`'s
+`agentAssetsHash` in `seeds/provenance.json`, and the check compares it against the lock
+today — no run, no model, no network, because the question "is this plan still
+representative?" is really "have the planner's instructions changed since it was
+captured?". Its exit 2 (never harvested) is deliberately neither pass nor fail, for the
+reason [#1747](https://github.com/microsoft/vscode-azureresourcegroups/pull/1747) settled
+for gates that never ran. See [`config/stimuli/README.md`](config/stimuli/README.md).
+
+Harvesting is free: `msbench-cli extract` downloads a stored blob and never touches a
+model, and the run's `files` table holds the **full text** of everything the agent wrote.
+[`extraction.ts`](extraction.ts) is shared with [`regrade.ts`](regrade.ts), which rebuilds
+a whole workspace the same way.
+
+##### Verifying it
+
+Two halves, because only one of them can run without credentials.
+
+**Credential-free, and the half CI runs.** `npm run seed:self-test` asserts everything
+between the `files` table and the seed on disk against synthetic extractions: that the
+last write of a plan wins rather than the first, that a plan with no `**Status**:` line is
+rejected at harvest rather than at staging, that the three freshness states stay distinct,
+and — the four that matter most — that an empty `files` table, a run that wrote no plan,
+two candidate plans, and a malformed plan each fail with their *own* message. Those would
+otherwise all arrive as the same confusing red run.
+
+It runs in PR CI as a `check-clean-machine.ts` entrypoint, which also proves the harvester
+imports no packages, so it works on the bare host `run.sh` promises.
+
+**The real link, which needs `msbench-cli` on PATH and `az login`.** Point it at a plan
+run that actually produced a plan — `plan-generation-task-app` did, and its id is in
+[Verified result](#verified-result):
+
+```bash
+cd evals
+npm run seed:harvest -- 2026082614813342   # free: downloads a stored blob
+npm run seed:check                          # 0 fresh
+node msbench/stage-workspace.ts scaffold-fullstack
+```
+
+The last command prints which source it used, and staging a harvested plan is the actual
+proof: `.azure/project-plan.md` in `assets/workspace/` should be the planner's own
+document with `**Status**: Approved`. **Until someone runs that, the link is unproven** —
+`seed:check` reports exit 2 and the suite is still seeding from the fixture.
+
+No `npm ci` is needed for any of it. `harvest-seed.ts` imports only Node builtins, which
+is what the clean-machine entrypoint above exists to keep true.
+
+Both recipes rewrite the single `**Status**:` line, including the approved one. That
+matters more for a harvested plan than for the fixture, whose status was already
+`Approved`: an agent leaves whatever status it likes behind, so normalising both
+directions is what keeps the pair's sole difference the approval status.
 
 The seed names (`approved-fullstack`, `unapproved-plan`) are that script's own target
-names, reused so that switching to harvested seeds later is a no-op at the stimulus
-level.
+names, reused so that switching to harvested seeds is a no-op at the stimulus level.
 
 #### The `files` table is not a filesystem listing
 
@@ -1065,7 +1236,7 @@ measured.** That file records what the container has in three states (`present`,
 from documentation, never observed. The fingerprint now sweeps the same binaries:
 
 ```
-for b in node npm python3 pip3 func go dotnet docker azd java; do
+for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do
   printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"
 done
 ```
@@ -1137,6 +1308,101 @@ automatically so an assertion only sees its own turn — which is what makes the
 multi-turn stimuli straightforward. `llm_responses.response` is user-facing prose
 only, excluding tool output and thinking blocks, so substring assertions don't
 false-match text the agent merely read.
+
+## Chaining phases in one run, and the hand-off we cannot test
+
+A run that carries a project from requirements through to local debugging has to move
+between *phases*, and `chatMode` is set per config — one mode per run. So a chain needs
+the mode to change **within** a run. There were two candidate mechanisms, and one of them
+is already refuted.
+
+### The product's own hand-off cannot drive it
+
+In production the *agent* moves the flow along: the scaffold agent calls
+`start_project_integrate`, the frontend preview's **Approve UI** button fires the same
+command. It is tempting to let that drive a chain — it would be the most faithful test
+available, because the product would be doing exactly what it does for a user.
+
+It cannot, and the reason is a deliberate design decision rather than an accident.
+`launchAgentChat` in
+[`src/commands/copilotOnRails/openChatWithAgent.ts`](../../src/commands/copilotOnRails/openChatWithAgent.ts)
+does this on **every** hand-off — integrate, local dev, debug generate, deploy:
+
+```ts
+// Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
+// files on disk, not chat history, so a clean session keeps each agent focused on its phase.
+await vscode.commands.executeCommand('workbench.action.chat.newChat');
+await vscode.commands.executeCommand('workbench.action.chat.open', { mode: agentName, query, ... });
+```
+
+`promptSteps` feeds **one** chat session, and the assertion tables are populated from it.
+A hand-off that opens a new session moves the work somewhere the harness is not watching:
+the driven agent goes quiet and the run reads as one that died after turn 0. Those two
+commands are also fire-and-forget — `projectSession.ts` records that they *"return no
+session handle"* and that stable VS Code exposes no event for a chat session being closed
+or cleared, so there is nothing to follow either.
+
+**This was settled by reading the product rather than by running anything.** It is worth
+saying because the alternative — build the chain, watch it fail, guess why — costs a full
+product run and answers ambiguously.
+
+### So it is a *phase chain*, not an end-to-end test
+
+The remaining mechanism is `promptSteps[].chatMode`, where the **harness** performs the
+transition. That is a faithful test of the agents and a **simulation of the hand-off**.
+
+Do not call it end-to-end. A misleading name is its own defect — it is what stops the next
+person looking — and "E2E: green" would be read as covering the hand-off, which it does
+not. What such a chain does and does not establish:
+
+| | Covered |
+| --- | --- |
+| Each phase's agent behaves correctly given the previous phase's output | yes |
+| Phase N's real artifacts are phase N+1's input, with no seeding | yes |
+| The hand-off tool was **called**, with the right arguments | yes |
+| The hand-off **succeeded** — `newChat` fired, the new session got the right mode, the reload guard held | **no** |
+
+### The hand-off gap, and the one thing that would still catch it
+
+The hand-off's own failure modes are untestable in MSBench as configured, for the reason
+above. That is a real coverage gap and it is recorded here rather than papered over, so
+nobody spends a day rediscovering that `newChat` is fire-and-forget.
+
+One thing softens it, and it is worth being precise about how much. After a real hand-off
+the receiving agent does work that lands on disk, so a **downstream artifact's absence is
+detectable** even though the transition itself is not observable. That turns "untestable"
+into "we would notice if it broke" — a materially weaker claim than testing it, but not
+nothing.
+
+Be careful about *which* artifact, though. `azure-project-integrate` is contracted to
+**read** `.azure/integration-plan.md`, not to write one — the scaffold agent wrote it as a
+hand-off brief. So the presence of that file proves the scaffold phase ran, not that the
+integrate phase did. Any absence-based check has to name an artifact the *receiving* agent
+produces, or it silently tests the wrong phase.
+
+### `chain-mechanism-probe`
+
+`promptSteps[].chatMode` is schema-declared and **runner-unverified**, and so is what it
+does to the conversation. [`config/stimuli/chain-mechanism-probe.yaml`](config/stimuli/chain-mechanism-probe.yaml)
+is the cheap run that settles both, sized like `debug-probe-smoke`: two turns, trivial
+prompts, no artifacts.
+
+1. **Does the override change which agent answers?** Turn 1 overrides to
+   `azure-debug-plan` and is asked to name its own mode.
+2. **Does turn 1 inherit turn 0's conversation?** Turn 0 emits a marker token; turn 1 is
+   asserted not to reproduce it, *and* to say `NO-PRIOR-CONTEXT` explicitly.
+
+The second question matters more, and it decides two things at once. **Fidelity** — the
+product starts a fresh session per phase, so if the runner merely relabels the mode inside
+one conversation, every phase inherits its predecessor's transcript, which the product
+never does. And **cost** — that is the superlinear curve already measured here, where one
+extra turn multiplied total tokens by 6.3x because each step re-sends a growing
+transcript. Across four phases it is the difference between fitting inside
+`agentSeconds: 4500` and not.
+
+Both halves of question 2 are needed. An absence alone is ambiguous: an agent told to
+reply with one word may simply not have quoted the earlier message even though it could
+see it. The explicit denial is what turns silence into evidence.
 
 ## Multi-turn stimuli
 
@@ -1462,6 +1728,40 @@ buffering, and fail soft on one bad artifact — sits with the MSBench KustoInge
 
 ## Is this run a result?
 
+**Two different questions, deliberately answered by two different scripts.** *Is this a
+result* and *did it pass* are not the same, and conflating them cost a run.
+
+| Question | Script | Exit codes |
+| --- | --- | --- |
+| Is this a result at all? | [`verify-run.ts`](verify-run.ts) | `0` yes · `75` throttled · `65` wrong model |
+| Did the assertions pass? | [`check-assertions.ts`](check-assertions.ts) | `0` all passed · `1` genuine red · `70` unverifiable |
+
+`verify-run.ts` deliberately does **not** answer the second, and its header says why: *"a
+genuinely red run must keep reporting as a red run, because a detector for false reds is
+worthless if it also hides true ones."* That is right, and it left a hole — nothing was
+asking whether the assertions held.
+
+Run `2026082668713928` is what the hole cost. Four assertions passed, two failed, and:
+
+```
+msbench-cli exit   0
+run.sh exit        0
+GitHub eval job    success
+```
+
+`verify-run.ts` was correct: the run *was* a result. It was simply a failing one, and
+nothing downstream contradicted the green. **A red run reporting green is the worst
+direction for this to point**, because nobody investigates green — the same asymmetry
+that decided the `NOT_APPLICABLE` exit-code ruling.
+
+`run.sh` now runs both, in order, and an **unverifiable** run is reported as a failure
+rather than a pass. That applies to three cases which are indistinguishable from the
+outside: results that cannot be located, a CLI that exits 0 without printing a `run_id`,
+and an `eval.json` that cannot be read. All exit **70**, distinct from the `1` that means
+a genuine product failure, because a harness problem and a regression need different
+people. "We could not tell" and "it passed" are the same thing to whatever reads an exit
+code, so they must not share one.
+
 A finished run is not automatically a *result*. Two things can make the results table
 mean something other than what it looks like, and neither is visible in the table:
 
@@ -1477,7 +1777,7 @@ read the table, and it owns the verdict:
 | Exit | Meaning |
 | --- | --- |
 | `0` | The run is a result. Read the table. |
-| `75` | `EX_TEMPFAIL` — throttled. Not a result at all; retry in ~15 minutes. |
+| `75` | `EX_TEMPFAIL` — throttled. Not a result at all; retry promptly (see below). |
 | `65` | `EX_DATAERR` — the run measured something other than what was requested. |
 
 Both are deliberately distinct from `1`, which still means a genuine red run. **A
@@ -1615,6 +1915,40 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 `extension-host.log`, and `customScript/output.log`. See
 [AGENT_OUTPUTS.md](https://github.com/microsoft/vscode-copilot-evaluation/blob/main/doc/references/AGENT_OUTPUTS.md).
 
+### Where a gate's own words are — and are not
+
+A grader's verdict line — the sentence naming the missing file, the reason code, the
+stack trace from the app that would not start — is captured in **exactly one place**:
+
+```
+output/vsc-output/session.sqlite   →   exec table   →   stdOut / stdErr / output
+```
+
+It is **not** in `entry.log`, which records each command and its exit code and nothing
+else. Not in `<instance>-runlog.txt`, `<instance>-fullrunlog.txt`, `eval.json`, or
+`custom_metrics.json`. Investigating run `2026083057881445` meant grepping every text
+file in the extracted results for reason codes, finding nothing, and briefly concluding
+the diagnostics were never captured. They were, one table away.
+
+```bash
+npm run analyze-run -- <run-id>          # every gate's verdict, from session.sqlite
+npm run analyze-run -- <run-id> --full   # the whole captured output per gate
+```
+
+[`analyze-run.ts`](analyze-run.ts) also exists because `run.sh` runs `verify-run.ts` and
+`check-assertions.ts` inline, on the run it just submitted — which makes them reachable
+only through a live invocation. If that shell dies, the analysis dies with it even though
+the results are sitting on disk. It extracts to a short temp path rather than under the
+repo, because the product log filenames are long enough to blow Windows' 260-character
+limit once nested under a repo path, which is exactly how `msbench-cli extract --output
+evals/msbench/.regrade/<id>` fails.
+
+One habit worth keeping while a run streams: do not pipe `run.sh` through anything that
+truncates, such as `Select-Object -First N` or `head`. Those close the pipe once
+satisfied, so the output stops arriving and a healthy run looks hung — and killing it
+orphans the CLI, which keeps going and holds `assets/.run.lock` against the next attempt.
+Redirect to a file and tail that instead.
+
 ## Re-grading a past run for free
 
 Changing a grader used to mean paying for a run to find out whether it still works.
@@ -1622,7 +1956,7 @@ Changing a grader used to mean paying for a run to find out whether it still wor
 graders against a run that already happened, for **zero tokens**.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"     # Windows: .msbench-venv/Scripts
 cd evals && npm run regrade -- 2026082582510393
 ```
 
@@ -1735,7 +2069,7 @@ Two traps, both of which cost real time:
 reads past runs and asks, per gate, whether that gate has ever actually done its job.
 
 ```bash
-export PATH="$HOME/.msbench-venv/bin:$PATH"
+export PATH="$HOME/.msbench-venv/bin:$PATH"        # Windows: .msbench-venv/Scripts
 cd evals && npm run gate-health                    # every run in the local cache
 npm run gate-health -- 2026082579322454 …          # specific runs, extracted on demand
 ```
@@ -2278,9 +2612,23 @@ with a clear message:
   throttling. A **completely empty `exec` table** is another tell: the graders never ran
   at all, rather than running and failing.
 
-  Observed budget: **three runs inside 14 minutes succeeded and the fourth was
-  throttled**, at ~250k tokens each. So this is a rolling token allowance rather than a
-  minimum gap between runs; spacing runs ~15 minutes apart is the practical rule.
+  Not a token budget, despite the initial reading. Three runs inside 14 minutes
+  succeeded and the fourth was throttled, which looked like a rolling allowance at
+  ~250k tokens per run — but measuring the proxy log of a throttled run
+  (`2026082811285762`) contradicts that: the 429 arrived after only **2 requests in
+  the preceding 10 seconds**, on a run that logged 20 responses in total, and the same
+  surface returned 200 again **335 ms later**. Nothing that small can exhaust a
+  client-side budget.
+
+  Successful calls before the throttle across four consecutive runs were 3, 11, 15 and
+  44, with no relation to how long the harness had been idle beforehand — waiting 16,
+  25 and 45 minutes each produced a throttle anyway. The limit is shared backend
+  congestion, so attempts are independent draws.
+
+  Practical rule: **retry promptly and expect several attempts**, rather than spacing
+  runs out. What makes a self-healing blip fatal is on our side — the agent hard-stops
+  on the first 429 instead of retrying, so a hiccup that clears in 335 ms costs a whole
+  run. Fixing that retry behaviour would matter more than any spacing policy.
 
 - **Two `run.sh` invocations at once submit each other's stimulus.** `assets/` is shared
   mutable state — every invocation rewrites `user-overrides.yaml` before uploading it —
@@ -2309,6 +2657,26 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
+- **Name the field that answers your question before you read one.** Every status
+  surface here has a neighbouring field that looks like the answer and isn't, and
+  reading the neighbour has now cost four separate investigations in two days:
+
+  | Question | Field that answers it | Adjacent field that does not |
+  | --- | --- | --- |
+  | Did the assertions pass? | `eval.json` → `<instance>.resolved`, `<instance>.details[].passed` | the GitHub job status, `msbench-cli` exit code |
+  | Did the CI job fail, or was it cancelled? | the API's `conclusion` | `gh pr checks`, which renders both as `fail` |
+  | Did that command succeed? | `$?` of the command | `$?` after a pipe (that's the *last* stage — use `${PIPESTATUS[0]}`) |
+
+  The trap in `eval.json` is worth spelling out because it caught the person
+  diagnosing it: `resolved` is nested **per instance**, so reading it at the top
+  level returns `undefined`. A check written one way round then reports "not
+  resolved" for the right answer by the wrong route; written the other way round
+  it finds no `passed: false` at the top level and reports a **pass**. Shape:
+
+  ```json
+  { "say_hello": { "resolved": false, "details": [ { "comment": "...", "passed": false } ] } }
+  ```
+
 - **A trailing `echo` after `&&` reports success unconditionally.** `cmd && check; echo
   "done"` prints `done` whether or not `cmd` ran, because `;` is not `&&` — and if
   anything earlier in the chain fails, everything after the `&&` is skipped while the

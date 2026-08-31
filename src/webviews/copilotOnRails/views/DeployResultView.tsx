@@ -19,6 +19,7 @@ import { useCallback, useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/deployResultView.scss';
 import {
+    type DeployResultCleanupResource,
     type DeployResultData,
     type DeployResultEndpoint,
     type DeployResultHealthStatus,
@@ -83,10 +84,62 @@ const Section = ({ heading, children }: SectionProps): JSX.Element => (
     </section>
 );
 
+type CleanupResourceListProps = {
+    resources: DeployResultCleanupResource[];
+    /** All resources in one list share a classification, so the badge label is fixed per list. */
+    badgeLabel: string;
+    copiedKey: string | null;
+    copiedLabel: string;
+    copyButtonAriaLabel: string;
+    onCopy: (text: string, key: string) => void;
+};
+
+/**
+ * Renders one inventory bucket. A delete command is only shown when the parser produced one, which
+ * it does exclusively for resources confirmed to belong to this deployment — the review bucket
+ * therefore renders as an identify-only list.
+ */
+const CleanupResourceList = ({ resources, badgeLabel, copiedKey, copiedLabel, copyButtonAriaLabel, onCopy }: CleanupResourceListProps): JSX.Element => (
+    <ul className='cleanupResourceList'>
+        {resources.map((resource) => {
+            const key = resource.id ?? `${resource.type}-${resource.name}`;
+            return (
+                <li key={key} className='cleanupResourceItem'>
+                    <div className='cleanupResourceHeader'>
+                        <span className={`cleanupBadge ${resource.classification}`}>{badgeLabel}</span>
+                        <span className='cleanupResourceName mono'>{resource.name}</span>
+                        <span className='cleanupResourceType'>{resource.type}</span>
+                        {resource.resourceGroup && (
+                            <span className='cleanupResourceGroup'>{resource.resourceGroup}</span>
+                        )}
+                    </div>
+                    {resource.deleteCommand && (
+                        <div className='commandRow'>
+                            <code className='commandText'>{resource.deleteCommand}</code>
+                            <Tooltip
+                                content={copiedKey === key ? copiedLabel : copyButtonAriaLabel}
+                                relationship='label'
+                            >
+                                <Button
+                                    appearance='subtle'
+                                    aria-label={copyButtonAriaLabel}
+                                    icon={<CopyRegular />}
+                                    onClick={() => onCopy(resource.deleteCommand, key)}
+                                />
+                            </Tooltip>
+                        </div>
+                    )}
+                </li>
+            );
+        })}
+    </ul>
+);
+
 export const DeployResultView = (): JSX.Element => {
     const { strings } = useConfiguration<DeployResultViewConfiguration>();
     const [result, setResult] = useState<DeployResultData | null>(null);
     const [copied, setCopied] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
@@ -94,6 +147,7 @@ export const DeployResultView = (): JSX.Element => {
             if (event.data?.command === 'setDeployResultData') {
                 setResult(event.data.data as DeployResultData);
                 setCopied(false);
+                setCopiedKey(null);
             }
         };
         window.addEventListener('message', handler);
@@ -111,6 +165,16 @@ export const DeployResultView = (): JSX.Element => {
         return () => window.clearTimeout(timer);
     }, [copied]);
 
+    // Same transient reset for the per-resource cleanup copy buttons, keyed by
+    // the item that was copied so only that button shows "Copied".
+    useEffect(() => {
+        if (copiedKey === null) {
+            return;
+        }
+        const timer = window.setTimeout(() => setCopiedKey(null), 2000);
+        return () => window.clearTimeout(timer);
+    }, [copiedKey]);
+
     const openExternal = useCallback((url: string) => {
         vscodeApi.postMessage({ command: 'openExternal', url });
     }, [vscodeApi]);
@@ -118,6 +182,11 @@ export const DeployResultView = (): JSX.Element => {
     const copyText = useCallback((text: string) => {
         vscodeApi.postMessage({ command: 'copyText', text });
         setCopied(true);
+    }, [vscodeApi]);
+
+    const copyItemText = useCallback((text: string, key: string) => {
+        vscodeApi.postMessage({ command: 'copyText', text });
+        setCopiedKey(key);
     }, [vscodeApi]);
 
     if (!result) {
@@ -346,6 +415,44 @@ export const DeployResultView = (): JSX.Element => {
                             </li>
                         ))}
                     </ul>
+                </Section>
+            )}
+
+            {result.inventoryUnverified && (
+                <Section heading={strings.unverifiedInventoryHeading}>
+                    <p className='sectionHint'>
+                        {result.inventoryUnverifiedReason === 'forbidden'
+                            ? strings.unverifiedInventoryForbidden
+                            : strings.unverifiedInventoryTransient}
+                    </p>
+                </Section>
+            )}
+
+            {result.resourcesToCleanup.length > 0 && (
+                <Section heading={strings.cleanupResourcesHeading}>
+                    <p className='sectionHint'>{strings.cleanupResourcesHint}</p>
+                    <CleanupResourceList
+                        resources={result.resourcesToCleanup}
+                        badgeLabel={strings.failedBadge}
+                        copiedKey={copiedKey}
+                        copiedLabel={strings.copiedLabel}
+                        copyButtonAriaLabel={strings.copyButtonAriaLabel}
+                        onCopy={copyItemText}
+                    />
+                </Section>
+            )}
+
+            {result.resourcesToReview.length > 0 && (
+                <Section heading={strings.reviewResourcesHeading}>
+                    <p className='sectionHint'>{strings.reviewResourcesHint}</p>
+                    <CleanupResourceList
+                        resources={result.resourcesToReview}
+                        badgeLabel={strings.orphanedBadge}
+                        copiedKey={copiedKey}
+                        copiedLabel={strings.copiedLabel}
+                        copyButtonAriaLabel={strings.copyButtonAriaLabel}
+                        onCopy={copyItemText}
+                    />
                 </Section>
             )}
 

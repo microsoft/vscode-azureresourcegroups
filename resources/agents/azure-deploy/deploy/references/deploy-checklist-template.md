@@ -27,6 +27,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Append 2 lines to `deploy-audit.log`: `{timestamp} | {command} | started` then `{timestamp} | {command} | succeeded/failed`
 
 ## After IaC deployment (Step 6)
+- ⛔ Call `capture_deployment_inventory` (`phase: "capture"`) after the deployment command returns — records created resources via a before/after `resources.list()` diff and flags orphans
 - Verify 5 tags: `az group show -n {rgName} --query tags`
 - ⛔ Do NOT set startup command or app settings via CLI — they are already in Bicep from scaffold. If `az webapp show` doesn't reflect them yet, wait 30s and re-check (ARM propagation delay). Do NOT run `az webapp config` imperatively.
   Required: app-onboard-skill, app-onboard-session-id, created-at, environment, deployed-by
@@ -72,13 +73,14 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - ⛔ **Never weaken a security control to unblock** — do NOT flip `require_secure_transport`/TLS, HTTPS-only, KV purge protection, or auth OFF to make a failing deploy pass. A DB TLS handshake failure = fix the client SSL config (prereq `W-MYSQL-SSL`) or ask the user; never downgrade the server.
 - Count ALL attempts in deploy-result.json.healingAttempts[]
   After 3: STOP and ask user ("Yes / I have a suggestion / Stop")
-- NEVER run `az group delete` — track in orphanedResourceGroups[]
+- NEVER run `az group delete` — track in orphanedResourceGroups[] (run `capture_deployment_inventory` after the healing attempt so the abandoned RG's resources are recorded deterministically)
 - ⛔ **RG deletion timeout:** If you ran `az group delete --no-wait`, wait max 2 minutes then `ask_user`: "Resource group deletion is slow. Wait longer / Proceed without cleanup / Cancel." Do NOT poll indefinitely.
 - Region/SKU/service changes require re-approval gate
 
 ## Before handoff (Step 8)
 - ⛔ Read [`deploy-schemas.ts`](deploy-schemas.ts) for exact DeployResult field names
-- Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list`. Read back to verify.
+- ⛔ Run a final `capture_deployment_inventory` (`phase: "capture"`) — then populate `createdResources[]` and `orphanedResourceGroups[]` from its returned output (do NOT hand-author them)
+- Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list`, createdResources + orphanedResourceGroups from the inventory. Read back to verify.
 - ⛔ `deployment-summary.md` — generate from `deploy-result.json` fields (Status, Health, Portal Links, Cleanup). NOT a separate data source.
 - ⛔ `context.json` — add "deploy" to completedPhases, set currentPhase to null, update lastModifiedUtc. VERIFY by reading back.
 - SCM re-disabled (App Service) or image param set (Container Apps)
@@ -86,7 +88,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 
 ## Artifact verification (Step 8 — MANDATORY)
 ⛔ Before returning to orchestrator, verify ALL artifacts exist by reading each one back:
-1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`. Missing/renamed fields → rewrite with real values NOW
+1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`, `createdResources[]`, `orphanedResourceGroups[]`. `createdResources[]`/`orphanedResourceGroups[]` come from a final `capture_deployment_inventory` (`phase: "capture"`) — if empty or missing, run it NOW and write its output. Missing/renamed fields → rewrite with real values NOW
 2. `deploy-audit.log` — MUST exist with ≥2 entries (started + result for at least 1 command). Missing → reconstruct from memory
 3. `deployment-summary.md` — MUST contain Status, Health, Portal Links sections. Missing → generate from deploy-result.json
 4. `context.json` — MUST have `"deploy"` in `completedPhases`, `currentPhase: null`, updated `lastModifiedUtc`

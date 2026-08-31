@@ -388,7 +388,7 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
             // and the symptom looks like a broken gate rather than a stale process.
             // So it is also killed on the way out under any signal.
             let squatter: ReturnType<typeof spawn> | undefined;
-            let killSquatter = (): void => { };
+            let killSquatter = (): void => { /* no-op */ };
             if (testCase.squatPort !== undefined) {
                 squatter = spawn(process.execPath, [
                     '-e',

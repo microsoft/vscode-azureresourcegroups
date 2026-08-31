@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -16,6 +15,7 @@ import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../.
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -31,6 +31,16 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         locationsSignedOutHint: vscode.l10n.t('Sign in to Azure to pick a different region.'),
         locationsFailedHint: vscode.l10n.t('Couldn\u2019t load Azure regions \u2014 showing the planned region only.'),
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
+        prerequisitesHeading: vscode.l10n.t('Prerequisites'),
+        prerequisiteToolHeader: vscode.l10n.t('Tool'),
+        prerequisiteInstalledHeader: vscode.l10n.t('Installed'),
+        prerequisiteVersionHeader: vscode.l10n.t('Version'),
+        prerequisiteInstallHeader: vscode.l10n.t('Install'),
+        prerequisiteInstalledLabel: vscode.l10n.t('Installed'),
+        prerequisiteUnknownLabel: vscode.l10n.t('Unknown'),
+        prerequisiteInstallLinkLabel: vscode.l10n.t('Install'),
+        prerequisiteRefreshTooltip: vscode.l10n.t('Re-check prerequisites'),
+        prerequisiteRefreshingTooltip: vscode.l10n.t('Checking prerequisites\u2026'),
         costEstimateHeading: vscode.l10n.t('Cost Estimate'),
         costEstimateTotalLabel: vscode.l10n.t('Estimated monthly total'),
         costServiceHeader: vscode.l10n.t('Service'),
@@ -70,9 +80,11 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
     };
 }
 
-export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
+export class DeploymentPlanViewController extends CopilotOnRailsWebviewController<DeploymentPlanViewConfiguration> {
     private planData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
+    private _isRefreshingPrereqs = false;
+    private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
     constructor(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri) {
         const strings = getDeploymentPlanViewStrings();
@@ -101,6 +113,9 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                 }
                 case 'openSourceFile':
                     openSourceFileOrWarn(this.sourceFileUri);
+                    break;
+                case 'refreshPrerequisites':
+                    void this.refreshPrerequisites();
                     break;
             }
         });
@@ -173,6 +188,50 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         }
         void this.postDeploymentPlanData();
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+        this.clearPrereqsRefresh();
+    }
+
+    private clearPrereqsRefresh(): void {
+        if (this._refreshPrereqsTimer) {
+            clearTimeout(this._refreshPrereqsTimer);
+            this._refreshPrereqsTimer = undefined;
+        }
+        if (this._isRefreshingPrereqs) {
+            this._isRefreshingPrereqs = false;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
+        }
+    }
+
+    /**
+     * Asks the deploy agent to re-run only the prerequisite probes (`azd version` / `az version`) and
+     * re-record them through `record_deploy_prerequisites`; the recorded result re-renders this view via
+     * {@link updateDeploymentPlanData}, which clears the spinner. A safety timer clears it even if the
+     * agent never reports back.
+     */
+    private async refreshPrerequisites(): Promise<void> {
+        await callWithTelemetryAndErrorHandling(corId('refreshDeployPrerequisites'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshDeployPrerequisites' }, async (context: CopilotOnRailsContext) => {
+                const refreshOutcomeKey = 'refreshOutcome';
+                await ensureAgentInstructions(context, azureDeployAgent);
+
+                this._isRefreshingPrereqs = true;
+                void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
+                    mode: azureDeployAgent,
+                    query: 'Re-check the deployment prerequisites only. Re-run `azd version` and `az version`, then call the `record_deploy_prerequisites` tool with the results.',
+                }));
+
+                setCorProp(context, refreshOutcomeKey, 'submitted');
+                if (this._refreshPrereqsTimer) {
+                    clearTimeout(this._refreshPrereqsTimer);
+                }
+                this._refreshPrereqsTimer = setTimeout(() => {
+                    this._refreshPrereqsTimer = undefined;
+                    this.clearPrereqsRefresh();
+                }, 15_000);
+            });
+        });
     }
 
     private async postDeploymentPlanData(): Promise<void> {

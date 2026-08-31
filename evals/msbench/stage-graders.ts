@@ -32,7 +32,7 @@
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findImportSpecifiers } from './importScanner.ts';
@@ -42,9 +42,23 @@ const REPO_ROOT = resolve(HERE, '..', '..');
 const DEST = join(HERE, 'assets', 'graders');
 
 /**
- * The graders an `exec:` assertion may invoke. All three are staged even though only
- * the requirements validator is wired up today, because the marginal cost is a few
- * kilobytes and it keeps the multi-turn stimuli a config change rather than a code one.
+ * The graders an `exec:` assertion may invoke. Every grader is staged even though only
+ * some are wired up today, because the marginal cost is a few kilobytes and it keeps
+ * adding a stimulus a config change rather than a code one.
+ *
+ * A grader missing from this list stages nothing and fails only in the container, as a
+ * MODULE_NOT_FOUND against an `exec:` path — a paid run spent discovering a typo. The
+ * `gates` check cross-references this list against every `exec:` in config/stimuli/, so
+ * the omission is caught here instead.
+ *
+ * That failure is not hypothetical, and the shape it took is worth recording: the
+ * stack-only graders were absent from this list, so any run that wired them died with
+ * `Cannot find module` inside the container. It stayed invisible because they wire *only*
+ * under a stack projection, and every stack declared `phases: [plan]`, which wires none
+ * of them. The first stack run in the local phase failed all ten of its gates on it.
+ *
+ * `checkGraderCoverage()` below now derives the requirement from gates.yaml rather than
+ * trusting this list to be maintained by hand.
  */
 const ENTRYPOINTS = [
     'evals/graders/validate-requirements.ts',
@@ -54,6 +68,9 @@ const ENTRYPOINTS = [
     'evals/graders/validate-frontend-scaffold.ts',
     'evals/graders/validate-no-scaffold.ts',
     'evals/graders/validate-project-builds.ts',
+    'evals/graders/validate-service-fidelity.ts',
+    'evals/graders/validate-datastore-fidelity.ts',
+    'evals/graders/validate-iac-compiles.ts',
     'evals/graders/validate-debug-plan.ts',
     'evals/graders/validate-debug-config.ts',
     'evals/graders/validate-debug-gate.ts',
@@ -63,7 +80,15 @@ const ENTRYPOINTS = [
     // the grader share; the import-graph walk stages that automatically, which is
     // what keeps the two from drifting.
     'evals/graders/validate-debug-breakpoint.ts',
+    'evals/graders/validate-runtime-app-starts.ts',
+    'evals/graders/validate-runtime-health.ts',
+    'evals/graders/validate-runtime-frontend.ts',
+    'evals/graders/validate-runtime-frontend-api.ts',
+    'evals/graders/validate-runtime-crud.ts',
+    'evals/graders/validate-safety-boundaries.ts',
 ];
+
+export { ENTRYPOINTS };
 
 // Import specifiers are found by a small tokenizer in `importScanner.ts`, not by a
 // regex over raw source. The regex that used to live here did not know what a comment
@@ -180,7 +205,53 @@ function toPosix(p: string): string {
     return p.split(/[\\/]/).join(posix.sep);
 }
 
+/**
+ * Every grader named in `config/gates.yaml` must be staged, or the gate that names it
+ * dies in the container with `Cannot find module` — a red that says nothing about the
+ * product and costs a whole run to discover.
+ *
+ * This is derived rather than reviewed because reviewing it did not work. Seven graders
+ * were wired in the gate table and absent from `ENTRYPOINTS` for as long as they have
+ * existed, and nothing caught it: all seven wire only under a stack projection, every
+ * stack declared `phases: [plan]`, and the plan phase wires none of them. The first
+ * stack run in the local phase failed all ten of its gates on it.
+ *
+ * Read as text rather than parsed. This file is a clean-machine entrypoint, and the
+ * header of `check-clean-machine.ts` records what happened the last time someone added
+ * a YAML import to this family. `grader:` lines have a fixed shape, so a line scan is
+ * enough and cannot pull in a dependency.
+ */
+function checkGraderCoverage(): void {
+    const gatesPath = join(HERE, 'config', 'gates.yaml');
+    if (!existsSync(gatesPath)) {
+        return;
+    }
+    const declared = new Set<string>();
+    for (const line of readFileSync(gatesPath, 'utf8').split('\n')) {
+        const match = /^\s*grader:\s*(\S+)\s*$/.exec(line);
+        if (match) {
+            declared.add(match[1]);
+        }
+    }
+
+    const staged = new Set(ENTRYPOINTS);
+    const missing = [...declared].filter(grader => !staged.has(grader)).sort();
+    if (missing.length > 0) {
+        console.error('config/gates.yaml names graders that stage-graders.ts does not stage:');
+        for (const grader of missing) {
+            console.error(`  ${grader}`);
+        }
+        console.error('');
+        console.error('A gate whose grader is not staged cannot run: the container reports');
+        console.error('`Cannot find module`, and the gate reds for a reason that has nothing to');
+        console.error('do with the product. Add it to ENTRYPOINTS above.');
+        process.exit(1);
+    }
+}
+
 function main(): void {
+    checkGraderCoverage();
+
     const files = new Set<string>();
     const packages = new Set<string>();
     for (const entrypoint of ENTRYPOINTS) {
@@ -212,4 +283,17 @@ function main(): void {
     }
 }
 
-main();
+// Guarded so `check-stimulus-comments.ts` can import ENTRYPOINTS to verify every
+// `exec:` in a stimulus is staged, without that import triggering a staging run.
+//
+// Both sides are realpath'd. Node resolves the main entry through realpath before forming
+// `import.meta.url`, while `run.sh` passes a path built from bash's `pwd`, which is logical
+// and keeps symlinks. Comparing the two raw strings meant that reaching the repo through any
+// symlinked path segment made this test false: `main()` would not run, the script would exit
+// 0 having printed nothing, and `run.sh` would carry on and stage the container from a stale
+// grader tree — the exact MODULE_NOT_FOUND-in-container failure `checkGradersStaged` was
+// added to prevent, arriving by a different route.
+const invokedPath = process.argv[1];
+if (invokedPath && realpathSync(resolve(invokedPath)) === realpathSync(fileURLToPath(import.meta.url))) {
+    main();
+}

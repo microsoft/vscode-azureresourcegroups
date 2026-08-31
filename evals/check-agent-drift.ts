@@ -23,7 +23,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { listEvalAssetFiles, readSupportedModels } from "./src/agent-definition.ts";
+import { listEvalAssetFiles, readSupportedModels, SHARED_FOLDER } from "./src/agent-definition.ts";
 
 const scriptDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptDir, "..");
@@ -184,13 +184,62 @@ function hashFile(file: string): string {
 /**
  * The tracked assets, as repo-relative paths under `resources/agents`.
  *
- * Scoped to what the evals actually load (see listEvalAssetFiles) rather than the
- * whole agents tree, so a change to an agent this suite never runs can't fail it.
+ * **Tracked by default; skipping an agent requires a documented decision.** This used to be
+ * scoped to the plan agent alone, on the reasoning that a change to an agent this suite never
+ * runs should not fail it. That was true when the plan eval was the only eval. The suite has
+ * since grown gates fed by three more agents — `frontend-scaffold`, `project-builds`,
+ * `service-fidelity` and `datastore-fidelity` come from `azure-project-scaffold`,
+ * `integration-plan` from `azure-project-integrate`, and the four `debug-*` gates from
+ * `azure-debug-plan` / `azure-debug-generate` (see `evals/local-dev/eval.yaml`, which loads
+ * exactly those three) — and the scope never followed.
+ *
+ * The cost of that was measured, not theoretical. PR #1758 changed
+ * `azure-project-scaffold/instructions.md` to add the checkpoint that catches #1757, and this
+ * guard reported only `shared-references/architecture.md` as changed, because that is the one
+ * directory of the two that happened to be in scope. The rule the fix depends on could have
+ * been deleted afterwards and drift would have stayed green — which is the exact failure this
+ * file exists to prevent, one directory over.
+ *
+ * So the default is inverted: every agent is tracked unless it is named below with a reason.
+ * A new agent is guarded the day it lands rather than the day someone remembers to widen a
+ * constant, and an over-broad scope fails closed — a nuisance, not a silent hole.
  */
-const SCOPE = `${PLAN}.agent.md, ${PLAN}/**, shared-references/**`;
+const UNTRACKED_AGENTS = new Set<string>([
+    // Empty, and the history is the argument for keeping the mechanism anyway.
+    //
+    // This set held `azure-deploy`, excluded because it "appears nowhere under evals/ and
+    // gates.yaml declares no deploy gate", so tracking it would fail this check on a change
+    // no grader could observe. That was true when written and false a few hours later: #1754
+    // added the `iac-compiles` gate and a `deploy-scaffold` phase whose `chatMode` is
+    // `azure-deploy`, so the agent is now graded like any other.
+    //
+    // Which is the whole case for tracking by default. Under the old opt-in scope this agent
+    // would have become graded and unguarded silently, exactly as azure-project-scaffold had
+    // been. Under opt-out the mistake surfaces as a drift failure on a merge — noisy, cheap,
+    // and impossible to miss — rather than as a rule quietly deleted years later.
+]);
+
+/** Agent folders under `resources/agents`, minus the shared folder and any documented opt-out. */
+function trackedAgents(): string[] {
+    return fs.readdirSync(agentsRoot, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .filter(name => name !== SHARED_FOLDER && !UNTRACKED_AGENTS.has(name))
+        .sort();
+}
+
+const SCOPE = `${trackedAgents().map(a => `${a}.agent.md, ${a}/**`).join(", ")}, ${SHARED_FOLDER}/**`;
 
 function trackedFiles(): string[] {
-    return listEvalAssetFiles(repoRoot, PLAN);
+    // listEvalAssetFiles returns the agent's own files plus shared-references, so the union
+    // across agents repeats the shared folder; the Set collapses it.
+    const files = new Set<string>();
+    for (const agent of trackedAgents()) {
+        for (const file of listEvalAssetFiles(repoRoot, agent)) {
+            files.add(file);
+        }
+    }
+    return [...files].sort();
 }
 
 function agentAssetFiles(): Record<string, string> {

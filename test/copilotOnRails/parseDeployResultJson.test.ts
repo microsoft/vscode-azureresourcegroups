@@ -194,6 +194,13 @@ suite('parseDeployResultJson', () => {
                 status: 'failed',
                 error: 'Deployment quota exceeded',
             }],
+            createdResources: [{
+                id: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                name: 'func-x',
+                type: 'Microsoft.Web/sites',
+                provisioningState: 'Failed',
+                classification: 'failed',
+            }],
             orphanedResourceGroups: [{ name: 'rg-old', region: 'eastus', healingAttempt: 1, reason: 'region fallback' }],
             healingAttempts: [{
                 attempt: 1,
@@ -222,8 +229,124 @@ suite('parseDeployResultJson', () => {
             }]);
         });
 
-        test('derives resources from resourceResults, keeping status and error', () => {
+        test('uses the deterministic created-resources inventory when present', () => {
             const result = parseDeployResultJson(schemaShaped);
+
+            assert.deepStrictEqual(result.resources, [{
+                type: 'Sites',
+                name: 'func-x',
+                status: 'failed · Failed',
+            }]);
+        });
+
+        test('builds a per-resource cleanup list from failed inventory entries', () => {
+            const result = parseDeployResultJson(schemaShaped);
+
+            assert.deepStrictEqual(result.resourcesToCleanup, [{
+                type: 'Sites',
+                name: 'func-x',
+                id: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                resourceGroup: 'rg-1',
+                classification: 'failed',
+                deleteCommand: 'az resource delete --ids "/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x"',
+            }]);
+        });
+
+        test('separates unattributed resources into a review list with no delete command', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                createdResources: [
+                    {
+                        id: '/subscriptions/s/resourceGroups/rg-1/providers/Microsoft.Web/sites/keep-me',
+                        name: 'keep-me',
+                        type: 'Microsoft.Web/sites',
+                        classification: 'expected',
+                    },
+                    {
+                        id: '/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi',
+                        name: 'stray-mi',
+                        type: 'Microsoft.ManagedIdentity/userAssignedIdentities',
+                        classification: 'orphaned',
+                    },
+                ],
+            }));
+
+            // `expected` is the working deployment; `orphaned` is unattributed, so it is offered
+            // for review rather than paired with a copyable delete command.
+            assert.deepStrictEqual(result.resourcesToCleanup, []);
+            assert.deepStrictEqual(result.resourcesToReview, [{
+                type: 'User Assigned Identities',
+                name: 'stray-mi',
+                id: '/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi',
+                resourceGroup: 'rg-stray',
+                classification: 'orphaned',
+                deleteCommand: '',
+            }]);
+        });
+
+        test('falls back to a name/group/type delete command when the inventory omits the ID', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                createdResources: [{
+                    name: 'failed-mi',
+                    type: 'Microsoft.ManagedIdentity/userAssignedIdentities',
+                    resourceGroup: 'rg-1',
+                    classification: 'failed',
+                }],
+            }));
+
+            assert.deepStrictEqual(result.resourcesToCleanup, [{
+                type: 'User Assigned Identities',
+                name: 'failed-mi',
+                id: undefined,
+                resourceGroup: 'rg-1',
+                classification: 'failed',
+                deleteCommand: 'az resource delete --name "failed-mi" --resource-group "rg-1" --resource-type "Microsoft.ManagedIdentity/userAssignedIdentities"',
+            }]);
+        });
+
+        test('escapes artifact-supplied values in the generated delete command', () => {
+            // The artifact is agent-authored, and the command is presented for the user to run.
+            const result = parseDeployResultJson(JSON.stringify({
+                createdResources: [{
+                    name: 'evil"; rm -rf $HOME; #',
+                    type: 'Microsoft.Web/sites',
+                    resourceGroup: 'rg-1',
+                    classification: 'failed',
+                }],
+            }));
+
+            assert.strictEqual(
+                result.resourcesToCleanup[0].deleteCommand,
+                'az resource delete --name "evil\\"; rm -rf \\$HOME; #" --resource-group "rg-1" --resource-type "Microsoft.Web/sites"',
+            );
+        });
+
+        test('suppresses both lists when the inventory could not be verified', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                inventoryUnverified: true,
+                inventoryUnverifiedReason: 'forbidden',
+                createdResources: [{
+                    id: '/subscriptions/s/resourceGroups/rg-1/providers/Microsoft.Web/sites/app',
+                    name: 'app',
+                    type: 'Microsoft.Web/sites',
+                    classification: 'unverified',
+                }],
+            }));
+
+            assert.strictEqual(result.inventoryUnverified, true);
+            assert.strictEqual(result.inventoryUnverifiedReason, 'forbidden');
+            assert.deepStrictEqual(result.resourcesToCleanup, []);
+            assert.deepStrictEqual(result.resourcesToReview, []);
+        });
+
+        test('falls back to resourceResults, keeping status and error', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                resourceResults: [{
+                    resourceId: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                    type: 'Microsoft.Web/sites',
+                    status: 'failed',
+                    error: 'Deployment quota exceeded',
+                }],
+            }));
 
             assert.deepStrictEqual(result.resources, [{
                 type: 'Sites',

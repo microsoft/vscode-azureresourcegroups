@@ -48,10 +48,17 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { SENTINEL_COMMENT, SENTINEL_QUERY, TURN_SUFFIX } from './assertionIdentity.ts';
+import { ENTRYPOINTS } from './stage-graders.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STIMULI = join(HERE, 'config', 'stimuli');
 const STACKS = join(HERE, 'config', 'stacks');
+
+/**
+ * The container path graders are staged under, capturing the repo-relative path back out.
+ * Kept in sync with DEST in stage-graders.ts and the `script:` that unpacks it.
+ */
+const STAGED_GRADER = /\/agent\/assets\/graders\/(\S+\.ts)/g;
 
 interface Assertion {
     comment?: string;
@@ -109,6 +116,27 @@ function checkGeneratorSource(failures: string[]): number {
     return literals.length;
 }
 
+/**
+ * Every grader an `exec:` invokes must be a staging entrypoint.
+ *
+ * `stage-graders.ts` walks the import graph from a hardcoded list, so a grader absent
+ * from that list is copied nowhere and the `exec:` path does not exist in the container.
+ * MSBench collapses that into a plain assertion failure, which reads exactly like the
+ * agent doing badly — a paid run spent discovering a missing line. The two files are
+ * cross-referenced here because this is the cheapest place the mismatch is visible.
+ */
+function checkGradersStaged(execs: Set<string>, failures: string[]): void {
+    const staged = new Set(ENTRYPOINTS);
+    for (const grader of [...execs].sort()) {
+        if (!staged.has(grader)) {
+            failures.push(
+                `${grader} is invoked by an \`exec:\` assertion but is not staged.\n` +
+                `  fix      add '${grader}' to ENTRYPOINTS in msbench/stage-graders.ts`
+            );
+        }
+    }
+}
+
 function main(): void {
     const files = readdirSync(STIMULI).filter(name => name.endsWith('.yaml')).sort();
     const stacks = readdirSync(STACKS).filter(name => name.endsWith('.yaml'));
@@ -116,6 +144,9 @@ function main(): void {
     /** normalised query/exec -> every comment seen for it. */
     const gates = new Map<string, Occurrence[]>();
     const failures: string[] = [];
+    const stagingFailures: string[] = [];
+    /** repo-relative grader paths reached by an `exec:` assertion. */
+    const execGraders = new Set<string>();
 
     for (const file of files) {
         for (const assertion of assertionsOf(parse(readFileSync(join(STIMULI, file), 'utf8')))) {
@@ -124,6 +155,12 @@ function main(): void {
                 continue;
             }
             const comment = assertion.comment ?? '';
+
+            if (assertion.exec) {
+                for (const match of assertion.exec.matchAll(STAGED_GRADER)) {
+                    execGraders.add(match[1]);
+                }
+            }
 
             if (assertion.query && SENTINEL_QUERY.test(assertion.query.trim()) && comment !== SENTINEL_COMMENT) {
                 failures.push(
@@ -137,6 +174,20 @@ function main(): void {
             const key = normalise(body);
             gates.set(key, [...(gates.get(key) ?? []), { file, comment }]);
         }
+    }
+
+    checkGradersStaged(execGraders, stagingFailures);
+    if (stagingFailures.length) {
+        console.error(
+            `${stagingFailures.length} grader(s) invoked but not staged.\n\n` +
+            stagingFailures.join('\n\n') + '\n\n' +
+            `A grader missing from ENTRYPOINTS is staged nowhere, so the \`exec:\` path is\n` +
+            `absent in the container and the assertion fails as MODULE_NOT_FOUND. MSBench\n` +
+            `reports that identically to the agent producing a bad artifact, so the gate reads\n` +
+            `as a product finding rather than a harness fault — and the cost of noticing is a\n` +
+            `full paid run.`
+        );
+        process.exit(1);
     }
 
     for (const [key, occurrences] of gates) {
@@ -170,7 +221,8 @@ function main(): void {
         `✔ gate identity consistent: ${gates.size} distinct assertions across ${files.length} stimuli, ` +
         `${shared} of them shared by more than one stimulus.\n` +
         `✔ build-config.ts hardcodes no assertion comment, so the ${stacks.length} generated ` +
-        `stack stimuli cannot fork a gate the hand-written ones share.`
+        `stack stimuli cannot fork a gate the hand-written ones share.\n` +
+        `✔ all ${execGraders.size} grader(s) reached by an \`exec:\` are staged by stage-graders.ts.`
     );
 }
 

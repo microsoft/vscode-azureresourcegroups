@@ -30,6 +30,16 @@ export type DeploymentPlanViewStrings = {
     /** Shown beside a read-only region when the live region list couldn't be loaded. */
     locationsFailedHint: string;
     azureResourcesHeading: string;
+    prerequisitesHeading: string;
+    prerequisiteToolHeader: string;
+    prerequisiteInstalledHeader: string;
+    prerequisiteVersionHeader: string;
+    prerequisiteInstallHeader: string;
+    prerequisiteInstalledLabel: string;
+    prerequisiteUnknownLabel: string;
+    prerequisiteInstallLinkLabel: string;
+    prerequisiteRefreshTooltip: string;
+    prerequisiteRefreshingTooltip: string;
     costEstimateHeading: string;
     costEstimateTotalLabel: string;
     costServiceHeader: string;
@@ -129,6 +139,16 @@ export type DeployResultViewStrings = {
     warningsHeading: string;
     orphanedHeading: string;
     orphanedHint: string;
+
+    cleanupResourcesHeading: string;
+    cleanupResourcesHint: string;
+    reviewResourcesHeading: string;
+    reviewResourcesHint: string;
+    unverifiedInventoryHeading: string;
+    unverifiedInventoryForbidden: string;
+    unverifiedInventoryTransient: string;
+    failedBadge: string;
+    orphanedBadge: string;
 
     cleanupHeading: string;
     cleanupHint: string;

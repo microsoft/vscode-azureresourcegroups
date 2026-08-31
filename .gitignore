@@ -106,3 +106,8 @@ evals/msbench/assets/.run.lock/
 # from stored MSBench results and reused across iterations so re-grading stays a
 # local operation; safe to delete at any time.
 evals/msbench/.regrade/
+
+# Written by evals/msbench/run.sh when a run is voided by RATE_LIMIT, and cleared
+# by the next run that is not. Read by the budget preflight so a depleted budget
+# costs one run rather than several.
+evals/msbench/.last-throttle

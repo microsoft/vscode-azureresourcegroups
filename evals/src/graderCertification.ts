@@ -10,14 +10,18 @@ import { NON_VISUAL_APP_TYPES } from './artifacts/plannedProject.ts';
 import type { PlanGateState } from './artifacts/planEvaluation.ts';
 import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
 import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
+import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdict.ts';
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
+import { selfTestIacCompiles, validateScaffoldedIac } from './artifacts/iacCompiles.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
 import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
 import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
+import { validateProjectPackages } from './artifacts/projectPackages.ts';
 import { validateRequirementsArtifact } from './artifacts/requirements.ts';
+import { validateScaffoldAbsence } from './artifacts/scaffoldAbsence.ts';
 import { validateServiceFidelity } from './artifacts/serviceFidelity.ts';
 import {
     validateAppStarts,
@@ -60,7 +64,7 @@ interface CertificationMutation {
     fixture: string;
     validator: string;
     file?: string;
-    operation: 'replace' | 'append' | 'delete' | 'scenario-status';
+    operation: 'replace' | 'append' | 'delete' | 'relocate' | 'scenario-status';
     search?: string;
     replacement?: string;
     expectedCode: string;
@@ -91,6 +95,13 @@ const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const manifestPath = path.join(repoRoot, 'evals', 'grader-certification', 'manifest.json');
 
 async function main(): Promise<void> {
+    // Certification grades fixtures whose routes it already knows, so a stack projection
+    // is never right here — and `evals/msbench/assets/stack.json` survives on any machine
+    // where someone has run a `--stack` build, gitignored and invisible to git. Pointing
+    // the lookup at a path that cannot exist opts out of the whole cascade rung, rather
+    // than trusting the file to be absent.
+    process.env.COR_STACK_PROJECTION = path.join(os.tmpdir(), 'cor-certification-no-stack-projection.json');
+
     if (process.argv.includes('--aca')) {
         throw new Error('ACA certification is not available in the planning-only subset. Add scaffold/build/runtime graders first.');
     }
@@ -109,12 +120,24 @@ async function main(): Promise<void> {
     for (const fixture of manifest.fixtures) {
         cases.push(...await certifyFixture(manifest, fixture, only));
     }
+
+    // The half of `iac-compiles` no fixture can reach. Certification may not assume a Bicep
+    // CLI, so the rules that turn compiler output into a verdict — which warnings block, and
+    // the two spellings of the manifest's self-report — are pinned by pure cases instead.
+    // Run here rather than as its own command so `certify` remains the single answer to "are
+    // the graders sound?", matching how check-stacks.ts hosts the declared-gap join.
+    let selfTestFailures = 0;
+    if (!only || only.has('iac-compiles')) {
+        console.error('\nIaC compile-classification self-test');
+        selfTestFailures = selfTestIacCompiles(line => console.error(line));
+    }
+
     const report: CertificationReport = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
         mode: 'offline',
         fixtures: manifest.fixtures.map(value => value.id),
-        outcome: cases.every(value => value.passed) ? 'passed' : 'failed',
+        outcome: cases.every(value => value.passed) && selfTestFailures === 0 ? 'passed' : 'failed',
         cases,
     };
     await fs.mkdir(outputDirectory, { recursive: true });
@@ -123,6 +146,9 @@ async function main(): Promise<void> {
         fs.writeFile(path.join(outputDirectory, 'report.md'), renderMarkdown(report)),
     ]);
     console.log(`${report.outcome.toUpperCase()}: ${cases.filter(value => value.passed).length}/${cases.length} grader certification cases passed${only ? ` (filtered to ${[...only].join(', ')})` : ''}.`);
+    if (selfTestFailures > 0) {
+        console.log(`${selfTestFailures} IaC compile-classification self-test case(s) failed.`);
+    }
     if (report.outcome !== 'passed') {
         process.exitCode = 1;
     }
@@ -252,6 +278,24 @@ const OFFLINE_VALIDATORS: Record<
         await readArtifact(workspace, '.vscode/tasks.json'),
     ),
     'debug-artifacts': async workspace => validateDebugArtifacts(workspace),
+    // Only the offline half of the build grader — is there a project, are its manifests
+    // readable, does it contain the frontend the plan promised. The `npm ci` half needs a
+    // network and minutes, so it cannot join this tier; these are the decisions that have
+    // actually regressed, and they cost nothing to pin.
+    'project-builds': async (workspace, scenario) =>
+        validateProjectPackages(workspace, { requireFrontend: (scenario.tags.frontend ?? 'none') !== 'none' }),
+    // Only the offline half of the IaC gate — is there a template, and does the scaffold
+    // manifest's account of its own validation hold together. Compiling needs the Bicep CLI,
+    // which certification may not assume, so the parsing and blocking rules that decide a
+    // compile's verdict are covered by `selfTestIacCompiles` instead.
+    'iac-compiles': async workspace => validateScaffoldedIac(workspace),
+    // Certified with the default adjudication — `patternMatchedNothing` blamed on the harness.
+    // That default is the whole safety property, so it is what the manifest pins.
+    'debug-breakpoint': async workspace => validateDebugBreakpointVerdict(workspace),
+    // `scenario.json` is the certification harness's own file, not agent output. See the
+    // option's docs in scaffoldAbsence.ts for why this is declared here rather than widened
+    // into the contract every stimulus runs against.
+    'no-scaffold': async workspace => validateScaffoldAbsence(workspace, { seededEntries: ['scenario.json'] }),
 
     // The runtime gates. Unlike everything above, these start the application and probe it
     // over HTTP, so certifying them costs a real process launch per fixture copy — which is
@@ -361,6 +405,21 @@ async function withMutatedFixture<T>(
                 // declared three services and the scaffold has two" is not expressible by
                 // removing a single file.
                 await fs.rm(filePath, { recursive: true });
+            } else if (mutation.operation === 'relocate') {
+                // Moves a directory without touching its contents, so a case can vary *where*
+                // a project lives while holding *what it contains* fixed.
+                //
+                // This exists because layout was the one variable certification could not
+                // express, and a real bug used that gap: every frontend fixture is laid out as
+                // `services/web`, so all six frontend-scaffold cases passed while directory
+                // discovery could not find a plan-compliant root-level `web/` at all. Content
+                // mutation cannot catch a defect in locating the content.
+                if (!mutation.replacement) {
+                    throw new Error(`Mutation ${mutation.id} is a relocate and needs a destination in "replacement".`);
+                }
+                const destination = path.join(workspace, mutation.replacement);
+                await fs.mkdir(path.dirname(destination), { recursive: true });
+                await fs.rename(filePath, destination);
             } else {
                 const content = await fs.readFile(filePath, 'utf8');
                 if (mutation.operation === 'replace') {
@@ -383,6 +442,29 @@ function issueCodes(result: ArtifactValidationResult): string[] {
     return result.issues.map(value => value.code);
 }
 
+/**
+ * How an `expectedCode` is compared against what a validator actually reported.
+ *
+ * - `passed` means the validator raised nothing at all.
+ * - `!someCode` means that code must be absent, whatever else was reported.
+ * - anything else means that code must be present.
+ *
+ * The negative form exists because `includes` alone cannot falsify the removal of a spurious
+ * issue: a validator that reports the right code *plus* a wrong one looks identical to one
+ * that reports only the right code. `noPackagesFound` was exactly that — it fired alongside
+ * `unparseablePackageManifest` and told the reader the workspace had no package.json when it
+ * demonstrably had one — and no mutation could have caught it.
+ */
+function matchesExpectation(expected: string, actual: string[]): boolean {
+    if (expected === 'passed') {
+        return actual.length === 0;
+    }
+    if (expected.startsWith('!')) {
+        return !actual.includes(expected.slice(1));
+    }
+    return actual.includes(expected);
+}
+
 function createCase(
     id: string,
     tier: 'offline' | 'aca',
@@ -398,7 +480,7 @@ function createCase(
         validator,
         expected,
         actual,
-        passed: expected === 'passed' ? actual.length === 0 : actual.includes(expected),
+        passed: matchesExpectation(expected, actual),
         durationMs: 0,
     };
 }

@@ -33,11 +33,26 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
 8. Once `deploy-result.json` is finalized, call `open_deploy_result_view` to show the user the Deployment Results view, then present the chat handoff.
 
+## Prerequisite status in the deployment plan
+
+The Deployment plan view shows the two CLIs this stage depends on. Record their status through **our** MCP tool - never by editing `prepare-plan.json` (that is the vendored pipeline's artifact).
+
+At the scaffold approval gate - as soon as `prepare-plan.json` is written and before (or right alongside) `open_deploy_plan_view` - you **MUST**:
+
+1. Probe each CLI with its version command in the user's own default shell:
+   - **Azure Developer CLI (azd)** - `azd version`
+   - **Azure CLI (az)** - `az version`
+2. Call `record_deploy_prerequisites` with one entry per tool: `installed: true` when the command returned a version, otherwise `installed: false`. Include the detected `version` when you have it.
+3. Do **not** pass or record install links or display names - the view resolves those deterministically from its own catalog.
+
+Example call: `record_deploy_prerequisites({ tools: [{ id: "azd", installed: true, version: "1.9.2" }, { id: "az", installed: false }] })`
+
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
 - **Do not generate `.azure/deployment-plan.md` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model. Its own `prepare-plan.json` belongs in the active session directory, never in `.azure/`.
 - **Do call `open_deploy_plan_view` at the scaffold approval gate**, right after `prepare-plan.json` is written. The view renders that session artifact so the user can review services, SKUs, region, and cost visually; the chat approval gate still owns the actual Yes/Edit plan/Cancel decision.
+- **Do call `capture_deployment_inventory` with `phase: "baseline"` before the first deployment command and with `phase: "capture"` after deployment completes or fails.** Persist its `createdResources` and `orphanedResourceGroups` output into `deploy-result.json`; never infer the cleanup inventory from chat history.
 - **Do call `open_deploy_result_view` once the deploy phase is finished**, after `deploy-result.json` has been finalized with a terminal `status` (`succeeded` or `failed`). Call it exactly once, on success and on failure alike, and still present the full chat handoff afterwards. See [`handoff-protocol.md`](.github/agents/azure-deploy/references/handoff-protocol.md).
 - **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
 - **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.

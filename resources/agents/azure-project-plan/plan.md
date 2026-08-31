@@ -107,7 +107,7 @@ The Debug group must include a row for every detected project type's VS Code deb
 
 For each tool, record which planned service(s) need it in the `Service(s)` column (use `*` for global toolchain shared by all services, or list each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
 
-After identifying the required tools, run the detection pass to fill the `Installed` column (✅ / ❓) and detected `Version`. In the `Install` column, record a reference URL the user could use to install the tool.
+After identifying the required tools, run the detection pass to fill the `Installed` column (✅ / ❓) and detected `Version`. Produce the columns `Tool`, `Service(s)`, `Installed`, and `Version` — **do not** add or emit any install links or URLs.
 
 Every row resolves to just two states, following the status rules in [prerequisites.md](../shared-references/prerequisites.md): installed (✅) when a scan positively finds the tool, or unknown (❓) when it can't be confirmed. Never mark a tool ❌, because absence can't be proven in a sandboxed agent environment where version managers or shells may have limited access in locating an installed tool. Never leave the `Installed` column as a placeholder or `—`; every row must resolve to ✅ or ❓ from an actual scan. Inform the user to double-check all ❓ tools are installed before proceeding.
 

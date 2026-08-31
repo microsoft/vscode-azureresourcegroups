@@ -322,6 +322,13 @@ function msbenchRunRoots(): string[] {
         process.env.MSBENCH_DATA_DIR ? join(process.env.MSBENCH_DATA_DIR, 'runs') : undefined,
         join(homedir(), 'Library', 'Application Support', 'msbench', 'runs'),
         join(homedir(), '.local', 'share', 'msbench', 'runs'),
+        // Windows. MSBench builds this path with AppDirs("msbench", "Microsoft"), which
+        // puts the *author* directory in the middle and resolves to LOCALAPPDATA, not
+        // APPDATA — so the plain `APPDATA/msbench` guess below never matches a real
+        // cache. `run.sh` already looks in the right place when it goes hunting for
+        // results.zip; this list did not, so `gate-health` reported "no local MSBench run
+        // cache found" on a machine holding a dozen runs.
+        process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'Microsoft', 'msbench', 'runs') : undefined,
         process.env.APPDATA ? join(process.env.APPDATA, 'msbench', 'runs') : undefined,
     ].filter((path): path is string => path !== undefined);
 }
@@ -365,7 +372,7 @@ function extractRun(runId: string, refresh: boolean): string | undefined {
     if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new GateHealthError(
             'msbench-cli is not on PATH. Run:\n' +
-            '  export PATH="$HOME/.msbench-venv/bin:$PATH"\n' +
+            `  export PATH="$HOME/.msbench-venv/${process.platform === 'win32' ? 'Scripts' : 'bin'}:$PATH"\n` +
             'Invoking it by absolute path breaks its plugin discovery, so it has to be on PATH.'
         );
     }
@@ -1268,7 +1275,7 @@ function printStaleDeclarations(rows: GateRow[], gaps: { declared: Map<string, D
 
     // Imported lazily for the same reason as the declarations themselves: a
     // config problem must degrade this section, never the whole audit.
-    let stale: DeclaredGap[] = [];
+    let stale: DeclaredGap[];
     try {
         stale = staleDeclarationsSync(gaps.declared, observed);
     } catch {
