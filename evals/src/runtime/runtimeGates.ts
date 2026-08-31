@@ -34,6 +34,7 @@ import * as path from 'node:path';
 import { discoverFrontendDirectory } from '../artifacts/frontendScaffold.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from '../artifacts/validationTypes.ts';
 import { declaresBackendContract, type NotApplicableReason } from './runtimeTarget.ts';
+import { canConnect } from './appProcess.ts';
 import { acquireRuntimeSession, probe, type HttpProbeResponse, type RuntimeSession } from './runtimeSession.ts';
 
 export interface RuntimeValidationResult extends ArtifactValidationResult {
@@ -54,8 +55,73 @@ export interface RuntimeValidationResult extends ArtifactValidationResult {
 /** Health paths tried only when the project declared none of its own. */
 const CONVENTIONAL_HEALTH_PATHS = ['/api/health', '/health', '/healthz', '/api/healthz', '/api/status', '/status', '/ping'];
 
-/** Datastore clients that need a server we cannot start — the container has no Docker. */
-const CONTAINER_DATASTORE_PACKAGES = ['pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver'];
+/**
+ * Datastore clients that need a server this process did not start.
+ *
+ * The name says "container" because that is where the reason code came from, and the reason
+ * code is load-bearing: stacks declare known gaps against `datastoreRequiresContainer` by
+ * name, so renaming it would silently invalidate those declarations. What the list actually
+ * means is "persists through something that has to be listening", which is now broader than
+ * Docker — the Azure Storage clients talk to Azurite, which is a Node process.
+ *
+ * The Azure entries matter for attribution more than for coverage. Before they were here,
+ * `@azure/storage-blob` matched nothing, so a blob-backed project skipped the stand-down
+ * entirely and went straight to the round-trip. With Azurite up that happens to work; with
+ * Azurite down the app fails and the gate reports the *product* as broken, which is the one
+ * outcome this file exists to prevent.
+ */
+const CONTAINER_DATASTORE_PACKAGES = [
+    'pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver',
+    '@azure/storage-blob', '@azure/storage-queue', '@azure/data-tables',
+];
+
+/**
+ * Default ports for the clients above, so "needs a server" can be checked rather than assumed.
+ *
+ * The stand-down these feed used to fire on the *package name alone*, which was right for as
+ * long as a server was impossible: no Docker meant no database, so `pg` in the dependencies
+ * settled it. That reasoning outlived its premise. The custom image installs PostgreSQL and
+ * Azurite — neither needs a container — and the phase preamble starts them, so the honest
+ * question became "is anything listening?" rather than "is `pg` in package.json?".
+ *
+ * Getting this wrong is expensive in the invisible direction: a gate that stands down when
+ * the service is up reports `datastoreRequiresContainer` forever and looks exactly like a
+ * correctly-declared known gap, which is why `runtime-crud` sat at 0 passes without anyone
+ * asking whether the reason still held.
+ */
+const DATASTORE_DEFAULT_PORTS: Record<string, number> = {
+    pg: 5432,
+    postgres: 5432,
+    mysql: 3306,
+    mysql2: 3306,
+    mongodb: 27017,
+    mongoose: 27017,
+    redis: 6379,
+    ioredis: 6379,
+    mssql: 1433,
+    'cassandra-driver': 9042,
+    // Azurite's defaults. Three ports rather than one because a project using only queues
+    // would otherwise be judged by whether the blob service happened to be up.
+    '@azure/storage-blob': 10000,
+    '@azure/storage-queue': 10001,
+    '@azure/data-tables': 10002,
+};
+
+/**
+ * Whether the datastore this project needs is actually listening.
+ *
+ * A TCP connect, not a query: the credentials and database name belong to the app, and this
+ * only has to answer whether standing down is still honest. A false positive here costs a
+ * real CRUD attempt that fails loudly; a false negative costs a permanent silent skip, which
+ * is the worse direction.
+ */
+async function datastoreServerReachable(datastore: string): Promise<boolean> {
+    const port = DATASTORE_DEFAULT_PORTS[datastore];
+    if (port === undefined) {
+        return false;
+    }
+    return await canConnect(port);
+}
 
 /**
  * **The attribution rule.** Stated once here because every gate in this file needs it and
@@ -102,7 +168,10 @@ const STATIC_ROOTS = ['public', 'wwwroot', 'static', 'client', 'dist', '.'];
  */
 export async function validateAppStarts(workspaceRoot: string): Promise<RuntimeValidationResult> {
     const session = await acquireRuntimeSession(workspaceRoot);
-    const blocked = describeUnusableSession(session);
+    // The only caller passing ownsStartup. This gate exists to answer "does it start?", so a
+    // startup failure is its finding to report; the other four defer to it rather than each
+    // re-reporting the same corpse.
+    const blocked = describeUnusableSession(session, { ownsStartup: true });
     if (blocked) {
         return blocked;
     }
@@ -395,9 +464,22 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
  * Write something, read it back — the check that separates a working data layer from a
  * well-typed stub that returns `[]` and never stores anything.
  *
- * The eval container has no Docker and cannot get it, so a stack whose datastore needs a
- * database server is reported not-applicable rather than passed. A silent pass on a stack
- * we cannot exercise is a gate that has quietly stopped testing anything.
+ * A stack whose datastore needs a server is reported not-applicable when nothing is
+ * listening, rather than passed. A silent pass on a stack we cannot exercise is a gate
+ * that has quietly stopped testing anything.
+ *
+ * What changed is which question decides that. It used to be "does package.json declare
+ * `pg`?", on the reasoning that no Docker meant no database. The custom image now installs
+ * PostgreSQL and Azurite — neither needs a container — and the phase preamble starts them,
+ * so the question is now "is anything listening on the port?".
+ *
+ * Both directions are measured, in the container, by container/verify-emulators.sh:
+ *
+ *   postgres running  →  PASS, "POST then GET /api/items round-tripped"
+ *   postgres stopped  →  NOT_APPLICABLE datastoreRequiresContainer, exit 3
+ *
+ * The second line is the one that makes the first worth anything. A gate that passes
+ * because it never really talked to the database would pass identically in both runs.
  */
 export async function validateCrudRoundTrip(workspaceRoot: string): Promise<RuntimeValidationResult> {
     const session = await acquireRuntimeSession(workspaceRoot);
@@ -414,11 +496,13 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
 
 
     const datastore = await findContainerDatastore(target.packageDirectory);
-    if (datastore) {
+    if (datastore && !await datastoreServerReachable(datastore)) {
         return notApplicable(
             'datastoreRequiresContainer',
-            `the project persists through "${datastore}", which needs a database server. The eval container has no Docker, `
-            + 'so a round-trip cannot be exercised honestly here.',
+            `the project persists through "${datastore}", which needs a server, and nothing is listening on `
+            + `port ${DATASTORE_DEFAULT_PORTS[datastore]}. The phase preamble starts PostgreSQL and Azurite in `
+            + 'the custom image; on the stock image neither is installed, and a round-trip cannot be exercised '
+            + 'honestly here. Nothing in this result is evidence about the generated app.',
         );
     }
 
@@ -536,7 +620,36 @@ function requireHttpSurface(session: RuntimeSession): string | RuntimeValidation
     );
 }
 
-function describeUnusableSession(session: RuntimeSession): RuntimeValidationResult | undefined {
+/**
+ * Turn a session that never became usable into this gate's verdict.
+ *
+ * `ownsStartup` decides the one interesting case. When the app fails to start, exactly one
+ * gate should report a product failure — `runtime-app-starts`, which is the gate whose whole
+ * question is "does it start?". The other four consume a running app they never got, and a
+ * gate that never ran has no opinion about the product.
+ *
+ * Run 2026083057881445 is what the other behaviour costs. One defect (a tsconfig path alias
+ * that emits an unresolvable specifier, #1757) produced five separate red gates, each
+ * printing the same Functions worker stack trace, because every gate independently started
+ * the app and independently reported the same corpse. Five reds read as five findings; a
+ * reader triaging that has to work out by hand that four of them are echoes.
+ *
+ * This does not make anything greener. `NOT_ATTEMPTED_EXIT_CODE` is `EXIT_GRADER_ERROR`, so
+ * the assertion still fails and `runtime-app-starts` still reports the defect — the run stays
+ * exactly as red as it was. What changes is the diagnosis, which is the entire point of the
+ * verdict.
+ *
+ * Deliberately narrow. `notApplicable` is untouched, because stacks declare known gaps
+ * against those reason codes by name for all five gates at once (see the
+ * `functionsHostUnavailable` entry in react-functions-postgres.yaml), and rewriting four of
+ * them into a precondition would silently invalidate that declaration. `harnessFault` is
+ * untouched too: that one says *our* code broke, and it should be loud in every gate it
+ * breaks rather than attributed away to a gate that may have run fine.
+ */
+function describeUnusableSession(
+    session: RuntimeSession,
+    options: { ownsStartup?: boolean } = {},
+): RuntimeValidationResult | undefined {
     switch (session.kind) {
         case 'started':
             return undefined;
@@ -547,6 +660,14 @@ function describeUnusableSession(session: RuntimeSession): RuntimeValidationResu
         case 'harnessFault':
             return harnessFault(session.message, session.output);
         case 'productFailure':
+            if (!options.ownsStartup) {
+                return notAttempted(
+                    'the application starts',
+                    'the app under test never started, so this gate never got the running app it grades. '
+                    + 'runtime-app-starts owns that failure and reports it with the startup output; nothing '
+                    + 'here is a separate finding.',
+                );
+            }
             return failure(session.code, '$.runtime', session.message, session.output);
     }
 }

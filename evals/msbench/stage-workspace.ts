@@ -153,7 +153,94 @@ const RECIPES: Record<string, Recipe> = {
     'unapproved-plan': () => [
         { path: '.azure/project-plan.md', content: withStatus(readPlanSource(), 'Planning') },
     ],
+
+    /**
+     * A complete, runnable project — the one the graders already certify against.
+     *
+     * ⚠️ HARNESS SELF-TEST ONLY. This seed stages `.vscode/launch.json`,
+     * `.vscode/tasks.json` and `.azure/vscode-debug-plan.md` *ready-made*, so a run
+     * using it grades files the fixture supplied rather than anything an agent
+     * produced. It answers "do these gates work inside the container?" and says
+     * NOTHING about the product. A result from this seed must never be quoted as
+     * evidence about the agent — see config/stimuli/gates-selftest-prescaffolded.yaml,
+     * which carries the same warning where a reader will actually meet it.
+     *
+     * Why it is worth having anyway: `npm run certify` already runs these validators
+     * against this exact fixture offline, on every commit, for nothing. What that
+     * cannot tell you is whether the same validators work once staged into the
+     * MSBench container, where the graders run off source with no install step and
+     * the workspace arrives by a different route. Four of them — the debug gates —
+     * had never executed in a container at all.
+     *
+     * Deliberately the certification fixture rather than a new one. A second
+     * hand-maintained "known good project" is exactly the drift this repo keeps
+     * paying for, and using the certified one means offline and in-container are
+     * asking about the same bytes.
+     */
+    'prescaffolded-reference': () => readFixture(REFERENCE_FIXTURE),
+
+    /**
+     * ⚠️ HARNESS SELF-TEST ONLY, on the same terms as the seed above.
+     *
+     * The difference is the datastore. `reference-node-fullstack` persists to a JSON file,
+     * which is what lets it certify `runtime-crud` offline with no server — and is also why
+     * it can say nothing about the path every Azure-shaped stimulus actually takes, where
+     * package.json declares `pg` and the gate has to reach a database.
+     *
+     * That path is covered at two points and joined at neither. The phase preamble starts
+     * PostgreSQL in a real MSBench run (measured in run 2026083057881445: "postgres: ready on
+     * 127.0.0.1:5432"), and the gate completes a real round-trip against an identically
+     * started PostgreSQL in the published image (measured by container/verify-emulators.sh).
+     * Both halves, never the composition — a preamble-started database and a gate in the same
+     * run, which is the only place a mismatch between them could show up.
+     *
+     * The obvious way to close that was an ordinary stack run, and run 2026083057881445 is
+     * why it does not work: the generated app failed to start (#1757), so `runtime-crud`
+     * never got near the database. Seeding an app that is known to start removes the product
+     * from a question that is not about the product.
+     */
+    'prescaffolded-postgres': () => readFixture(POSTGRES_FIXTURE),
 };
+
+/** Files that describe the certification harness rather than the project it contains. */
+const FIXTURE_EXCLUDED = new Set(['scenario.json']);
+
+const REFERENCE_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-fullstack');
+const POSTGRES_FIXTURE = join(HERE, '..', 'grader-certification', 'reference-node-postgres');
+
+/**
+ * Read a fixture directory into seeded files.
+ *
+ * `node_modules` is skipped rather than copied: it is large, platform-specific, and
+ * `project-builds` installs from the lockfile in the container anyway. The postgres fixture
+ * is the reason that lockfile has to be checked in — `npm ci` fails outright without one,
+ * and it is the command `project-builds` runs.
+ */
+function readFixture(root: string): SeededFile[] {
+    if (!existsSync(root)) {
+        throw new Error(`Seed fixture not found at ${root}.`);
+    }
+    const files: SeededFile[] = [];
+    const walk = (directory: string): void => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+            if (entry.name === 'node_modules' || entry.name === '.git') {
+                continue;
+            }
+            const full = join(directory, entry.name);
+            if (entry.isDirectory()) {
+                walk(full);
+                continue;
+            }
+            const relative = full.slice(root.length + 1).split('\\').join('/');
+            if (FIXTURE_EXCLUDED.has(relative)) {
+                continue;
+            }
+            files.push({ path: relative, content: readFileSync(full, 'utf8') });
+        }
+    };
+    walk(root);
+    return files;
+}
 
 /** The plan document both seeds derive from, and where it came from. */
 interface PlanSource {
@@ -263,9 +350,31 @@ export function stageWorkspace(seed: string): SeededFile[] {
 }
 
 function main(): void {
+    // Two callers, because two things can select a workspace. A hand-written stimulus
+    // names its own seed; a stack-generated stimulus has no header to carry one, and the
+    // phase file is what already owns the rest of its shape (`# turn-before:`), so it
+    // owns the seed too. Splitting that would let a generated run scaffold against a
+    // different starting workspace than the hand-written run of the same phase, which is
+    // precisely the drift the phase file exists to prevent.
+    const phaseFlag = process.argv.indexOf('--phase');
+    if (phaseFlag !== -1) {
+        const phase = process.argv[phaseFlag + 1];
+        if (!phase) {
+            console.error('usage: stage-workspace.ts --phase <phase>');
+            process.exit(1);
+        }
+        const phasePath = join(HERE, 'config', 'phases', `${phase}.yaml`);
+        if (!existsSync(phasePath)) {
+            console.error(`Unknown phase '${phase}': ${phasePath} does not exist.`);
+            process.exit(1);
+        }
+        stageAndReport(seedFor(readFileSync(phasePath, 'utf8')), `phase '${phase}'`);
+        return;
+    }
+
     const stimulus = process.argv[2];
     if (!stimulus) {
-        console.error('usage: stage-workspace.ts <stimulus>');
+        console.error('usage: stage-workspace.ts <stimulus> | --phase <phase>');
         process.exit(1);
     }
     const stimulusPath = join(STIMULI, `${stimulus}.yaml`);
@@ -277,7 +386,10 @@ function main(): void {
         process.exit(1);
     }
 
-    const seed = seedFor(readFileSync(stimulusPath, 'utf8'));
+    stageAndReport(seedFor(readFileSync(stimulusPath, 'utf8')), `stimulus '${stimulus}'`);
+}
+
+function stageAndReport(seed: string, describedBy: string): void {
     let files: SeededFile[];
     try {
         files = stageWorkspace(seed);
@@ -287,10 +399,10 @@ function main(): void {
     }
 
     if (files.length === 0) {
-        console.log(`Seed '${seed}' for stimulus '${stimulus}': empty workspace (assets/workspace/ cleared)`);
+        console.log(`Seed '${seed}' for ${describedBy}: empty workspace (assets/workspace/ cleared)`);
         return;
     }
-    console.log(`Staged seed '${seed}' for stimulus '${stimulus}' to assets/workspace/`);
+    console.log(`Staged seed '${seed}' for ${describedBy} to assets/workspace/`);
     for (const file of files) {
         console.log(`  ${file.path}`);
     }

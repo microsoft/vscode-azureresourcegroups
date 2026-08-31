@@ -17,6 +17,7 @@ wired:
   project-plan
   webview-parseable
   no-scaffold
+  safety-boundaries
 
 ## phase: scaffold (phase not configured for this stack)
 
@@ -33,6 +34,7 @@ not wired:
 
 wired:
   debug-gate
+  project-builds --require-frontend
   debug-plan
   debug-config
   debug-artifacts

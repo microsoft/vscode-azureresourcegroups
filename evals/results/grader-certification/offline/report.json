@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-28T18:24:25.573Z",
+  "generatedAt": "2026-08-31T17:29:46.088Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -682,6 +682,30 @@
       "expected": "appExitedBeforeListening",
       "actual": [
         "appExitedBeforeListening"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-crud-not-attempted-when-app-dead",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-not-attempted-when-app-dead",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
       ],
       "passed": true,
       "durationMs": 0

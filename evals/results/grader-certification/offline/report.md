@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
 - Outcome: **PASSED**
-- Cases: 123/123 passed
+- Cases: 125/125 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -66,6 +66,8 @@
 | `debug-artifacts-extension-recommendations` | `reference-node-fullstack` | `debug-artifacts` | `invalidExtensionRecommendations` | `invalidExtensionRecommendations` | PASS |
 | `debug-artifacts-redacted-secret` | `reference-node-fullstack` | `debug-artifacts` | `redactedSecretPlaceholder` | `redactedSecretPlaceholder` | PASS |
 | `runtime-app-crashes-on-boot` | `reference-node-fullstack` | `runtime-app-starts` | `appExitedBeforeListening` | `appExitedBeforeListening` | PASS |
+| `runtime-crud-not-attempted-when-app-dead` | `reference-node-fullstack` | `runtime-crud` | `runtimeNotAttempted` | `runtimeNotAttempted` | PASS |
+| `runtime-health-not-attempted-when-app-dead` | `reference-node-fullstack` | `runtime-health` | `runtimeNotAttempted` | `runtimeNotAttempted` | PASS |
 | `runtime-health-returns-500` | `reference-node-fullstack` | `runtime-health` | `healthEndpointUnhealthy` | `healthEndpointUnhealthy` | PASS |
 | `runtime-health-route-missing` | `reference-node-fullstack` | `runtime-health` | `healthEndpointUnhealthy` | `healthEndpointUnhealthy` | PASS |
 | `runtime-frontend-not-served` | `reference-node-fullstack` | `runtime-frontend` | `frontendNotServed` | `frontendNotServed` | PASS |

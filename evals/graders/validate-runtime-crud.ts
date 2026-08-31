@@ -10,10 +10,15 @@
  * that validates its input, returns 201 and stores nothing type-checks, builds, starts,
  * serves a health endpoint and satisfies every other gate in this repository.
  *
- * The eval container has no Docker and cannot practically get it, so a project whose
- * datastore needs a database server reports not-applicable rather than passing. A silent
- * pass on a stack that cannot be exercised is a gate that has quietly stopped testing
- * anything, which is worse than not having the gate.
+ * A project whose datastore needs a database server reports not-applicable rather than
+ * passing when nothing is listening on that datastore's port. A silent pass on a stack
+ * that cannot be exercised is a gate that has quietly stopped testing anything, which is
+ * worse than not having the gate.
+ *
+ * That stand-down used to fire on the datastore package name alone, because no Docker
+ * meant no database. The custom image installs PostgreSQL and Azurite, neither of which
+ * needs a container, and the phase preamble starts them — so the gate now probes the port
+ * and only stands down when nothing answers.
  */
 
 import { validateCrudRoundTrip } from '../src/runtime/runtimeGates.ts';
