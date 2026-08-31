@@ -128,7 +128,7 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
 - A Copilot plan with access to the supported models (the flow defaults to
-  `Claude Opus 4.6 (copilot)`, `Claude Opus 4.7 (copilot)`, or `Claude Sonnet 4.6 (copilot)`).
+  `Claude Opus 4.7 (copilot)` or `Claude Sonnet 4.6 (copilot)`).
 - **An empty folder.** The flow needs a clean workspace to build in. If the open folder already contains
   files, you'll be asked to **Browse…** to an empty folder; VS Code reopens there and resumes automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
