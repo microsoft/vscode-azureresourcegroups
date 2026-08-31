@@ -68,7 +68,50 @@ export async function validateDebugArtifacts(workspace: string): Promise<Artifac
         planText,
     }, issues);
 
+    validateComposeCommandConformance(plan, tasksText, issues);
+
     return createValidationResult(issues);
+}
+
+/**
+ * When the plan's Orchestrator selected a container runtime, every generated Compose
+ * task must drive that same engine. A `podman` plan whose "Start Emulators" task still
+ * runs `docker compose up -d` would fail on a machine that only has Podman — exactly the
+ * regression the runtime-parameterization is meant to prevent. Skipped when the plan
+ * records no runtime (old single-column plans), so it never false-fails legacy fixtures.
+ */
+function validateComposeCommandConformance(
+    plan: ParsedDebugPlan,
+    tasksText: string | undefined,
+    issues: ArtifactValidationIssue[],
+): void {
+    const expected = plan.containerRuntime;
+    if (!expected || tasksText === undefined) {
+        return;
+    }
+    let tasks: ReturnType<typeof readTasksDocument>['tasks'];
+    try {
+        tasks = readTasksDocument(tasksText).tasks;
+    } catch {
+        // A malformed tasks.json is already reported by the structural validator.
+        return;
+    }
+    const composeUse = /\b(docker|podman)[ -]compose\b/;
+    for (const task of tasks) {
+        const command = (task as { command?: unknown }).command;
+        if (typeof command !== 'string') {
+            continue;
+        }
+        const match = composeUse.exec(command.toLowerCase());
+        if (match && match[1] !== expected) {
+            const label = typeof task.label === 'string' ? task.label : '(unlabeled task)';
+            issues.push(issue(
+                'composeCommandRuntimeMismatch',
+                '$.tasks',
+                `Task "${label}" runs "${match[0]}" but the plan selected the ${expected} runtime — the generated Compose command must use "${expected} compose".`,
+            ));
+        }
+    }
 }
 
 function readTaskLabels(tasksText: string | undefined): Set<string> {

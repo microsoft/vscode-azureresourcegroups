@@ -106,3 +106,4 @@ healthcheck:
 - Port 5432 is the standard PostgreSQL port.
 - Default credentials (`postgres`/`postgres`) are intentionally simple for local dev and are declared in the workspace-root `.env`. Never use in production.
 - Data is persisted to `./.postgres/`.
+- **Container runtime:** Certified for both **Docker** and **Podman** — the service block, healthcheck, and `./.postgres` bind mount are unchanged for either engine. The `condition: service_healthy` gate that migrations depend on is honored by both `docker compose` and `podman compose`.

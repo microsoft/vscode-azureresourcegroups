@@ -29,6 +29,9 @@ import { createValidationResult } from './validationTypes.ts';
 /** Marks the compound row in the Debug Configurations table. */
 export const COMPOUND_PROJECT_TYPE = '*Compound Config*';
 
+/** The two container runtimes the debug plan can select for running emulator containers. */
+export type ContainerRuntime = 'docker' | 'podman';
+
 const requiredSections = [
     'prerequisites',
     'debug configurations',
@@ -50,6 +53,8 @@ export interface LocalDebugPlanExpectations {
     expectNoEmulators?: boolean;
     /** Require the Debug Configuration Checklist to be present and free of stubs. */
     requireChecklist?: boolean;
+    /** Container runtime the Orchestrator table must record (e.g. `podman` when the scenario asked for Podman). */
+    expectedRuntime?: ContainerRuntime;
 }
 
 export interface DebugConfigRow {
@@ -68,6 +73,10 @@ export interface ParsedDebugPlan {
     migrations: PlanChecklistRow[];
     apiTestCollections: PlanChecklistRow[];
     convenienceScripts: ConvenienceScriptRow[];
+    /** Container runtime recorded in the Orchestrator table, or undefined for an old plan that omits it. */
+    containerRuntime?: ContainerRuntime;
+    /** Normalized Compose command (`docker compose` / `podman compose`) the generation phase should emit. */
+    composeCommand?: string;
 }
 
 export interface PlanChecklistRow {
@@ -104,6 +113,7 @@ export function validateLocalDebugPlanArtifact(
     validatePrerequisites(data, issues);
     const debugConfigs = validateDebugConfigurations(data, expectations, issues);
     validateEmulators(data, expectations, issues);
+    validateOrchestrator(data, expectations, issues);
     validateArchitectureDiagram(data, issues);
     validateChecklist(data, debugConfigs, expectations, issues);
 
@@ -116,6 +126,7 @@ export function validateLocalDebugPlanArtifact(
  */
 export function parseDebugPlan(content: string): ParsedDebugPlan {
     const data = parseLocalDebugPlanMarkdown(content);
+    const orchestrator = readOrchestrator(data);
     return {
         data,
         debugConfigs: readDebugConfigRows(data),
@@ -123,6 +134,8 @@ export function parseDebugPlan(content: string): ParsedDebugPlan {
         migrations: readChecklistRows(data, 'migrations'),
         apiTestCollections: readChecklistRows(data, 'api test collections'),
         convenienceScripts: readConvenienceScriptRows(data),
+        containerRuntime: orchestrator.runtime,
+        composeCommand: orchestrator.composeCommand,
     };
 }
 
@@ -335,6 +348,98 @@ function validateEmulators(
             issues.push(issue('missingEmulator', '$.emulators', `Expected an emulator matching "${expected}", found: ${rows.length ? text.replace(/\n/g, '; ') : '(none)'}.`));
         }
     }
+}
+
+function validateOrchestrator(
+    data: LocalPlanData,
+    expectations: LocalDebugPlanExpectations,
+    issues: ArtifactValidationIssue[],
+): void {
+    const cells = readOrchestratorCells(data);
+    const { runtime } = readOrchestrator(data);
+
+    // Internal consistency: if the table names a runtime AND a Compose command, they must
+    // name the same engine (a `Docker` row whose command says `podman compose` would
+    // generate the wrong tasks). Read the two cells independently — resolving them first
+    // would hide the very disagreement this check exists to catch. Only enforced when both
+    // cells identify an engine, so old single-column plans pass.
+    if (cells) {
+        const runtimeColEngine = detectRuntime(cells.runtimeCell);
+        const commandEngine = detectRuntime(cells.commandCell);
+        if (runtimeColEngine && commandEngine && runtimeColEngine !== commandEngine) {
+            issues.push(issue(
+                'orchestratorRuntimeMismatch',
+                '$.orchestrator',
+                `Orchestrator records container runtime "${runtimeColEngine}" but its Compose command names "${commandEngine}". They must name the same engine.`,
+            ));
+        }
+    }
+
+    if (expectations.expectedRuntime && runtime !== expectations.expectedRuntime) {
+        issues.push(issue(
+            'unexpectedRuntime',
+            '$.orchestrator',
+            `Expected the Orchestrator to record container runtime "${expectations.expectedRuntime}", found "${runtime ?? 'none'}".`,
+        ));
+    }
+}
+
+/** The raw Orchestrator cells for the first populated row, lowercased where it aids matching. */
+function readOrchestratorCells(
+    data: LocalPlanData,
+): { runtimeCell: string; commandCell: string; orchestratorCell: string } | undefined {
+    const table = findTable(data, 'orchestrator');
+    if (!table || table.rows.length === 0) {
+        return undefined;
+    }
+    const commandIdx = findColumnIndex(table.headers, 'compose command');
+    const runtimeIdx = findColumnIndex(table.headers, 'container runtime');
+    const orchestratorIdx = findColumnIndex(table.headers, 'orchestrator');
+    const row = table.rows.find(candidate => candidate.some(value => value.trim().length > 0)) ?? table.rows[0];
+    return {
+        runtimeCell: cell(row, runtimeIdx),
+        commandCell: cell(row, commandIdx).replace(/`/g, '').replace(/\s+/g, ' ').trim(),
+        orchestratorCell: cell(row, orchestratorIdx),
+    };
+}
+
+/**
+ * Resolves the container runtime and Compose command from the plan's Orchestrator table.
+ *
+ * Understands both the current shape (Orchestrator | Container Runtime | Compose Command |
+ * Description) and the older single-column (Orchestrator | Description) shape, inferring the
+ * engine from the Container Runtime column first, then the Compose command, then the
+ * Orchestrator label. Returns `{}` when no engine can be identified, so callers skip runtime
+ * checks on plans that predate the field rather than failing them.
+ */
+function readOrchestrator(data: LocalPlanData): { runtime?: ContainerRuntime; composeCommand?: string } {
+    const cells = readOrchestratorCells(data);
+    if (!cells) {
+        return {};
+    }
+    const runtime = detectRuntime(cells.runtimeCell)
+        ?? detectRuntime(cells.commandCell)
+        ?? detectRuntime(cells.orchestratorCell);
+    if (!runtime) {
+        return {};
+    }
+    // Prefer an explicit Compose command; otherwise synthesize it from the runtime.
+    const composeCommand = /\bcompose\b/.test(cells.commandCell.toLowerCase())
+        ? cells.commandCell.toLowerCase()
+        : `${runtime} compose`;
+    return { runtime, composeCommand };
+}
+
+/** Identifies the container engine named in a cell, if any. */
+function detectRuntime(text: string): ContainerRuntime | undefined {
+    const value = text.toLowerCase();
+    if (/\bpodman\b/.test(value)) {
+        return 'podman';
+    }
+    if (/\bdocker\b/.test(value)) {
+        return 'docker';
+    }
+    return undefined;
 }
 
 function validateArchitectureDiagram(data: LocalPlanData, issues: ArtifactValidationIssue[]): void {

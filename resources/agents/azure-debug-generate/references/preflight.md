@@ -2,6 +2,34 @@
 
 Verify the plan exists and environment is ready before proceeding onwards to generating files.
 
+## Container Runtime Readiness Check
+
+Read the container runtime from the plan's Orchestrator table (**Docker** or **Podman**) and confirm the engine is actually running before you generate or validate anything. A CLI on PATH is not the same as a running engine.
+
+- **Docker** — confirm the daemon is reachable (`docker info`). If it errors, tell the user to start Docker Desktop / the Docker service and wait, then retry.
+- **Podman** — confirm the engine is reachable (`podman info`). On **Windows and macOS** this needs a running **Podman machine**:
+
+  ```bash
+  podman machine list --format '{{.Name}} {{.Running}}'
+  ```
+
+  - If a machine exists but is **stopped**, ask the user before starting it (starting a VM is a stateful, resource-consuming action):
+
+    ```
+    ask_user(
+      question: "Your Podman machine \"podman-machine-default\" is stopped. Start it so the emulators can run?",
+      choices: [
+        "Yes, start the Podman machine",
+        "No, I'll start it myself"
+      ]
+    )
+    ```
+
+    On approval, run `podman machine start` and wait for it to report ready.
+  - If **no machine exists**, do NOT silently `podman machine init` — tell the user to run `podman machine init && podman machine start` (a one-time, multi-minute setup) and re-run once it is ready.
+
+Never switch the plan's runtime silently. If the selected engine cannot be made ready, stop and surface the blocker rather than falling back to the other engine on your own.
+
 ## Stale Data Directory Check
 
 Before generating any files, check for leftover emulator data directories from a previous run (e.g. `.postgres/`, `.azurite/`, `.cosmos/`, `.servicebus/`). These directories can cause container startup failures — for example, PostgreSQL's `initdb` will refuse to initialize if `/var/lib/postgresql/data` (mounted from `.postgres/`) already contains files from an incompatible or partially-initialized cluster.

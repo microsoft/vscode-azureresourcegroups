@@ -17,7 +17,7 @@ Those inputs are then used to identify which tools the user should have installe
 
 These catalogs are not meant to be exhaustive, but illustrative - map any stack/runtime or Azure dependency to the tool that builds or runs it, and assign it to the set that fits.
 
-When the calling agent writes its output table, it should also record **which planned service(s)** require each tool (e.g. `api`, `worker`), using `*` for global toolchain shared by all services (or listing each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
+When the calling agent writes its output table, it should also record **which planned service(s)** require each tool (e.g. `api`, `worker`), using `*` for global toolchain shared by all services (or listing each service explicitly). For a container runtime or Compose provider (Docker or Podman, plus Docker Compose or Podman Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
 
 ### Run Tools
 
@@ -36,18 +36,20 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 ### Debug Tools
 
-Tooling needed to debug the project locally, not just to run it through the terminal. Three independent kinds of entries belong here and all must be evaluated every time: container tooling (Docker, Docker Compose) for any Azure-dependency emulators; a Chromium-based browser (Chrome or Edge) for any frontend project type that debugs in a browser; and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
+Tooling needed to debug the project locally, not just to run it through the terminal. Three independent kinds of entries belong here and all must be evaluated every time: container tooling (a container runtime — **Docker or Podman** — plus its Compose provider) for any Azure-dependency emulators; a Chromium-based browser (Chrome or Edge) for any frontend project type that debugs in a browser; and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
 
 This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
 
-Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via Docker and Docker Compose, not as extensions.
+Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via the chosen container runtime (Docker or Podman) and its Compose provider, not as extensions.
 
 | Tool / Extension | Category | Trigger When | Detect with |
 |------------------|----------|----------------------|-------------|
-| Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
-| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` |
+| Docker _or_ Podman | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` **or** `podman --version` |
+| Docker Compose _or_ Podman Compose | Compose provider | Orchestrating emulators | `docker compose version` **or** `podman compose version` |
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
+
+**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose. **Docker is the default** when both are ready or neither can be confirmed; only select Podman when it is the sole runtime detected as ready, or when the user asks for it. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
 
 For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
 
@@ -126,6 +128,55 @@ Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 ```
 
 When the inventory produces any `❓` CLI results, tell the user those tools couldn't be confirmed and to run a recheck. The recheck retries detection through the host default shell and can confirm version-manager-provided runtimes the initial sandboxed scan couldn't see; a tool confirmed there flips to `✅`.
+
+---
+
+### Container runtime detection
+
+Only when the project has Azure dependencies that run as local emulators. The emulators run in containers, so the plan needs exactly one container runtime and its Compose provider. **Docker and Podman are interchangeable here** — detect both, then record the one the plan will use.
+
+Follow the same two states as every other prerequisite: **installed (`✅`)** when a probe positively confirms the runtime is present *and ready*, **unknown (`❓`)** otherwise. Never `❌`.
+
+**Step 1 — detect each engine's CLI and Compose provider.** Use the same first-success, two-stage shell approach as CLI tool detection (a version-manager or sandboxed shell can hide an installed tool):
+
+```bash
+# Docker
+command -v docker >/dev/null 2>&1 && echo "docker:" && docker --version 2>&1
+command -v docker >/dev/null 2>&1 && echo "docker compose:" && docker compose version 2>&1
+
+# Podman
+command -v podman >/dev/null 2>&1 && echo "podman:" && podman --version 2>&1
+command -v podman >/dev/null 2>&1 && echo "podman compose:" && podman compose version 2>&1
+```
+
+```powershell
+# Windows
+Get-Command docker -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+Get-Command podman -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+```
+
+> **`podman compose` needs an external Compose provider.** `podman compose` is a thin wrapper that shells out to `docker-compose` or `podman-compose`; installing the `podman` CLI alone does not guarantee Compose works. Treat Podman's Compose provider as `✅` only when `podman compose version` returns a version.
+
+**Step 2 — confirm the engine is ready, not just installed.** A CLI on PATH is not the same as a running engine.
+
+- **Linux:** the runtime is usually ready once the CLI resolves; a quick `docker info` / `podman info` confirms the daemon/socket is reachable.
+- **Windows and macOS:** both engines run containers inside a Linux VM. Docker Desktop must be running; Podman needs a **Podman machine** that exists and is started. Probe it without mutating anything:
+
+  ```bash
+  # Is a Podman machine defined and running? (never init/start it here — see the plan phase)
+  podman machine list --format '{{.Name}} {{.Running}}' 2>&1
+  ```
+
+  If no machine exists, or the machine is stopped, record Podman as `❓` and note in the plan that the user must run `podman machine init` / `podman machine start` before F5. **Do not create or start a Podman machine during detection** — that is a slow, stateful action the user should approve (handled in the generation preflight).
+
+**Step 3 — choose the runtime and record it.**
+
+1. If an existing `docker-compose.yml`/`compose.yaml` and project tooling already imply a runtime, keep it.
+2. If exactly one engine is `✅` (installed **and** ready), select it.
+3. If **both** are ready, select **Docker** (the default) unless the user asked for Podman.
+4. If **neither** can be confirmed, default the plan to **Docker**, record the container runtime + Compose provider as `❓`, and surface the action-required callout so the user installs/starts one before approving.
+
+Emit prerequisite rows for the **selected** runtime only (Docker + Docker Compose, or Podman + Podman Compose), and record the same choice — plus its Compose command (`docker compose` or `podman compose`) — in the plan's Orchestrator table so the generation phase emits matching task commands.
 
 ---
 

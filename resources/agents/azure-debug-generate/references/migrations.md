@@ -1,6 +1,8 @@
 # Database Migrations — Generation
 
-Generate docker-compose migration services from the plan's Migrations table. The plan records WHAT migration tool is in use and which service needs it. This reference covers HOW to generate the docker-compose configuration.
+Generate compose migration services from the plan's Migrations table. The plan records WHAT migration tool is in use and which service needs it. This reference covers HOW to generate the compose configuration.
+
+> The migration service is ordinary compose content and is **identical for Docker or Podman**. Any task or command that drives it (`docker compose up db-migrate`) uses the plan's Orchestrator **Compose Command** — substitute `podman compose` when the plan selected Podman.
 
 ---
 

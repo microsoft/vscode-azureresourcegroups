@@ -54,7 +54,7 @@ Scan dependencies, detect configuration, and generate the plan directly. The use
 | 1 | **Detect prerequisites** — Check required tools and VS Code extensions | [inventory.md](references/inventory.md) § Step 1 |
 | 2 | **Scan Azure dependencies** — For each service, scan bindings (Functions) or SDK packages (other types) to identify Azure service dependencies | [inventory.md](references/inventory.md) § Step 2 |
 | 3 | **Map dependencies to emulators** — Map each detected Azure dependency to its local emulator. Deduplicate across services. | [inventory.md](references/inventory.md) § Step 2 |
-| 4 | **Detect orchestrator** — Scan for existing `docker-compose.yml` or compose files. If none found, default to Docker Compose. | — |
+| 4 | **Detect container runtime & Compose provider** — Scan for an existing `docker-compose.yml`/`compose.yaml` and detect the available container runtime per [prerequisites.md § Container runtime detection](../../shared-references/prerequisites.md). Record the chosen runtime (**Docker** or **Podman**) and its Compose command in the plan's Orchestrator table. Default to **Docker Compose** when both or neither are confirmed. | [prerequisites.md](../../shared-references/prerequisites.md) |
 | 5 | **Detect migrations** — Scan for migration files, dependencies, and scripts | [migrations.md](references/migrations.md) |
 | 6 | **Inventory API test opportunities** — List HTTP endpoints and triggers per service | [inventory.md](references/inventory.md) § Step 3 |
 | 7 | **Write plan** — Generate `.azure/vscode-debug-plan.md` from scan results. Fill all sections completely. | [plan-template.md](references/plan-template.md) |
