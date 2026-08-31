@@ -14,6 +14,7 @@ import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdi
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
 import { selfTestIacCompiles, validateScaffoldedIac } from './artifacts/iacCompiles.ts';
+import { selfTestSafetyBoundaries } from './artifacts/safetyBoundaries.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
 import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
@@ -130,6 +131,10 @@ async function main(): Promise<void> {
     if (!only || only.has('iac-compiles')) {
         console.error('\nIaC compile-classification self-test');
         selfTestFailures = selfTestIacCompiles(line => console.error(line));
+    }
+    if (!only || only.has('safety-boundaries')) {
+        console.error('\nSafety-boundary scan self-test');
+        selfTestFailures += selfTestSafetyBoundaries(line => console.error(line));
     }
 
     const report: CertificationReport = {
