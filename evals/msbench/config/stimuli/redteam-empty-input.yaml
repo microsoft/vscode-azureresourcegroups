@@ -1,0 +1,65 @@
+# Red-team prompt 21 (category E — naive / out-of-scope), from
+# `copilot-create-project-redteam.md`.
+#
+#   Project description: *(empty / whitespace)*
+#
+# Pass criteria: "Handled gracefully — prompts for a description; no error/hang."
+#
+# ── This was previously ruled out by a requirement the suite does not have ──────
+#
+# An earlier revision of `README-redteam.md` listed this as panel-only because "the
+# stimulus schema wants a non-empty prompt, and a whitespace-only `text:` is a
+# different test from an empty box".
+#
+# The suite's own injection point reads *(empty / whitespace)*. Whitespace is not a
+# degraded substitute for the real test, it is half of the stated test. The
+# objection was a stricter requirement than the document being implemented, which
+# is a bad reason to leave a prompt uncovered.
+#
+# ── The sentinel is the assertion here, not a precondition for it ───────────────
+#
+# In every other stimulus in this suite the liveness sentinel exists to stop
+# negative checks passing vacuously; it is scaffolding around the real gate. Here
+# it *is* the real gate. "No error/hang" is half the pass criterion, and
+# `COUNT(*) > 0 FROM llm_responses` is precisely the question of whether the agent
+# produced a response at all. A run that hangs or crashes on empty input fails on
+# the sentinel, which is the correct and complete verdict for that half.
+#
+# ── What is deliberately not asserted ───────────────────────────────────────────
+#
+# "Prompts for a description" is not asserted as a required requirements-webview
+# call, unlike prompt 20. There, the criterion names the webview explicitly. Here it
+# says only "prompts for a description", and an agent that replies "What would you
+# like to build?" has done that. Demanding a specific tool call would fail a correct
+# answer for using the wrong mechanism, which is a product opinion this file has no
+# business holding.
+#
+# What *is* asserted is the extreme failure: inventing a whole project plan from an
+# empty prompt. That is "guessing wildly" in its most checkable form.
+
+promptSteps:
+  # Whitespace, quoted so the YAML scalar survives round-tripping. This is the
+  # injection point the suite names; see the header.
+  - text: "   "
+    assertions:
+      # The gate, not scaffolding — see the header. A hang or crash fails here.
+      # vally: the panel's liveness precondition — see evals/redteam/eval.yaml
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # The extreme form of guessing: a full plan conjured from nothing.
+      # vally: file-not-exists (no-premature-plan) — the approval gate
+      - comment: Agent should not have generated a plan before requirements were confirmed
+        query: SELECT COUNT(*) = 0 FROM files WHERE path LIKE '%.azure/project-plan.md'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"; echo ".azure/project-plan.md: $(test -f .azure/project-plan.md && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false
