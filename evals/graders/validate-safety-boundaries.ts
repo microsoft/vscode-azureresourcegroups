@@ -27,19 +27,46 @@
  * certification so the certified path and the executed path cannot drift.
  */
 
-import { rationaleFor, scanForSafetyViolations, type SafetyViolationCode } from '../src/artifacts/safetyBoundaries.ts';
-import { fail, requirePrecondition, runGrader, workspacePath } from './graderHarness.ts';
+import { rationaleFor, SAFETY_VIOLATION_CODES, scanForSafetyViolations, type SafetyViolationCode } from '../src/artifacts/safetyBoundaries.ts';
+import { fail, failAsHarnessFault, requirePrecondition, runGrader, workspacePath } from './graderHarness.ts';
 
-/** `--expect <code>` narrows the gate to one boundary, for a stimulus that probes one. */
+/**
+ * `--expect <code>` narrows the gate to one boundary, for a stimulus that probes one.
+ *
+ * **An unrecognised code is a harness fault, not a narrower filter.** Casting the argument
+ * and trusting it meant a typo produced an empty filter, which matched no violation, which
+ * exited 0 — a green safety gate on a stimulus that never checked anything. The precondition
+ * below does not catch it either: the workspace is full of files, so `filesScanned > 0` holds
+ * and the gate looks like it did its job. That is the exact false green this file's header
+ * calls the most dangerous one, arriving through the argument parser.
+ *
+ * Three stimuli hand-type these strings today (`redteam-exfiltration-endpoint.yaml`,
+ * `redteam-insecure-defaults.yaml` twice), and nothing else would ever tell them they were
+ * wrong. Exit 3 rather than 1, because a misspelled flag says our wiring is broken and says
+ * nothing whatsoever about the generated project.
+ */
 function expectedCodes(argv: string[]): SafetyViolationCode[] {
     const codes: SafetyViolationCode[] = [];
     for (let index = 0; index < argv.length; index++) {
-        if (argv[index] === '--expect') {
-            const value = argv[index + 1];
-            if (value) {
-                codes.push(value as SafetyViolationCode);
-            }
+        if (argv[index] !== '--expect') {
+            continue;
         }
+        const value = argv[index + 1];
+        if (!value || value.startsWith('--')) {
+            failAsHarnessFault(
+                '--expect was given without a boundary code. It narrows the gate to one '
+                + `boundary, so an empty value would silently check nothing. Known codes: ${SAFETY_VIOLATION_CODES.join(', ')}.`,
+            );
+        }
+        if (!(SAFETY_VIOLATION_CODES as readonly string[]).includes(value)) {
+            failAsHarnessFault(
+                `--expect ${value} names no safety boundary this grader knows about.\n`
+                + `  Known codes: ${SAFETY_VIOLATION_CODES.join(', ')}.\n`
+                + '  Reported as a grader error rather than a pass: an unknown code filters every '
+                + 'violation away, so the gate would have gone green without checking anything.',
+            );
+        }
+        codes.push(value as SafetyViolationCode);
     }
     return codes;
 }

@@ -33,6 +33,7 @@
  * Usage:
  *   node analyze-run.ts 2026083057881445
  *   node analyze-run.ts 2026083057881445 --full     # whole captured output, not just verdicts
+ *   node analyze-run.ts 2026083057881445 --data-dir /tmp/runs   # a run submitted with --data_dir
  *
  * Exit codes are deliberately NOT the run's verdict — `check-assertions.ts` owns that. This
  * exits 0 when it could read the run and 1 when it could not, so "the report printed" and "the
@@ -45,7 +46,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-const USAGE = 'usage: node analyze-run.ts <run-id> [--full]';
+const USAGE = 'usage: node analyze-run.ts <run-id> [--full] [--data-dir <path>]';
 
 /** Verdict lines every grader emits, from graders/graderHarness.ts. */
 const VERDICT = /^(PASS|FAIL|SKIP|NOT_APPLICABLE|NOT_ATTEMPTED|GRADER ERROR):?\s/;
@@ -58,25 +59,45 @@ function fail(message: string): never {
 }
 
 /**
- * Where msbench-cli writes results. It uses AppDirs("msbench", "Microsoft"), so this is
- * platform-specific and the Windows arm is the one that matters here. Kept in the same order
- * run.sh checks them, so the two cannot disagree about where a run lives.
+ * Where msbench-cli writes results.
+ *
+ * `--data_dir` overrides the platform default outright, and results then land at
+ * `<data_dir>/<run_id>/results.zip` — with no `runs` component, because the default already
+ * ends in one. A reader that knows only the defaults finds nothing for any run submitted
+ * that way, and that is precisely the case this tool exists for: a run submitted from CI, or
+ * by someone else, is the run you cannot recover by re-running `run.sh`. The README records
+ * the same lesson under "`--data_dir` moves where results land, and anything that reads them
+ * must follow".
+ *
+ * Order and semantics are copied from `run.sh`'s own lookup so the two cannot disagree about
+ * where a run lives: explicit data dir first, then the AppDirs("msbench", "Microsoft")
+ * platform arms. `MSBENCH_DATA_DIR` is accepted too, because that is the spelling
+ * `gate-health.ts` reads.
  */
-function resultsZipFor(runId: string): string {
+function resultsZipFor(runId: string, dataDir: string | undefined): string {
     const candidates: string[] = [];
     const home = os.homedir();
-    if (process.env.LOCALAPPDATA) {
-        candidates.push(path.join(process.env.LOCALAPPDATA, 'Microsoft', 'msbench', 'runs', runId, 'results.zip'));
+    if (dataDir) {
+        candidates.push(path.join(dataDir, runId, 'results.zip'));
     }
     candidates.push(path.join(home, 'Library', 'Application Support', 'msbench', 'runs', runId, 'results.zip'));
     candidates.push(path.join(home, '.local', 'share', 'msbench', 'runs', runId, 'results.zip'));
+    if (process.env.LOCALAPPDATA) {
+        candidates.push(path.join(process.env.LOCALAPPDATA, 'Microsoft', 'msbench', 'runs', runId, 'results.zip'));
+    }
 
     for (const candidate of candidates) {
         if (fs.existsSync(candidate)) {
             return candidate;
         }
     }
-    fail(`no results.zip for run ${runId}. Looked in:\n  ${candidates.join('\n  ')}`);
+    fail(
+        `no results.zip for run ${runId}. Looked in:\n  ${candidates.join('\n  ')}`
+        + (dataDir
+            ? ''
+            : '\n\nIf the run was submitted with --data_dir, results are not in any of these.'
+            + '\nPass the same path here with --data-dir, or set MSBENCH_DATA_DIR.'),
+    );
 }
 
 /**
@@ -149,7 +170,8 @@ function findFilesEndingWith(root: string, suffix: string): string[] {
 }
 
 interface GateRow {
-    gate: string;
+    /** Grader name plus whatever arguments distinguish this invocation from another. */
+    label: string;
     exitCode: number;
     text: string;
 }
@@ -175,21 +197,41 @@ function readExecRows(sqlitePath: string): ExecRow[] {
     }
 }
 
+/**
+ * One row per distinct grader *invocation*.
+ *
+ * Keyed on the whole command rather than the grader filename, because the same grader
+ * legitimately runs more than once in a turn with different arguments:
+ * `redteam-insecure-defaults.yaml` invokes `validate-safety-boundaries.ts` twice, once with
+ * `--expect publicAnonymousAccess` and once with `--expect subscriptionOwnerGrant`. Under a
+ * filename key the second verdict was dropped — not just from the listing but from the
+ * pass/fail tally at the bottom — and a report that silently omits a verdict is worse than
+ * no report, because it reads as complete.
+ *
+ * Identical commands still collapse: MSBench records the same exec twice for some steps, they
+ * carry identical text, and printing a gate twice reads as two results.
+ */
 function readGateRows(rows: ExecRow[]): GateRow[] {
-    const byGate = new Map<string, GateRow>();
+    const byInvocation = new Map<string, GateRow>();
     for (const row of rows) {
-        const matched = /validate-([a-z0-9-]+)\.ts/.exec(String(row.command));
+        const command = String(row.command).replace(/\s+/g, ' ').trim();
+        const matched = /validate-([a-z0-9-]+)\.ts(.*)$/.exec(command);
         if (!matched) {
             continue;
         }
-        // MSBench records the same exec twice for some steps. First writing wins; they carry
-        // identical text, and printing a gate twice reads as two results.
-        if (byGate.has(matched[1])) {
+        if (byInvocation.has(command)) {
             continue;
         }
-        byGate.set(matched[1], { gate: matched[1], exitCode: row.exitCode, text: textOf(row) });
+        // The arguments are the only thing telling two invocations of one grader apart, so
+        // they belong in the label; without them both rows would print under the same name.
+        const args = matched[2].trim();
+        byInvocation.set(command, {
+            label: args ? `${matched[1]} ${args}` : matched[1],
+            exitCode: row.exitCode,
+            text: textOf(row),
+        });
     }
-    return [...byGate.values()];
+    return [...byInvocation.values()];
 }
 
 /**
@@ -229,19 +271,68 @@ function describe(row: GateRow, full: boolean): string[] {
     return ['(no verdict line; re-run with --full)'];
 }
 
+interface Options {
+    readonly runId: string;
+    readonly full: boolean;
+    readonly dataDir?: string;
+}
+
+/**
+ * Parsed rather than sniffed with `includes`/`find`.
+ *
+ * `--data-dir` takes a value, and a positional scan that only skipped things starting with
+ * `-` would happily read `C:\msbench-runs` as the run id on Windows. Both spellings are
+ * accepted because `run.sh` accepts both, and an unknown option is refused rather than
+ * ignored — a silently-dropped flag is how the caller ends up reading the wrong run.
+ */
+function parseOptions(argv: string[]): Options {
+    let runId: string | undefined;
+    let full = false;
+    let dataDir = process.env.MSBENCH_DATA_DIR || undefined;
+
+    for (let index = 0; index < argv.length; index++) {
+        const arg = argv[index];
+        if (arg === '--full') {
+            full = true;
+            continue;
+        }
+        const inline = /^--data[-_]dir=(.+)$/.exec(arg);
+        if (inline) {
+            dataDir = inline[1];
+            continue;
+        }
+        if (arg === '--data-dir' || arg === '--data_dir') {
+            const value = argv[++index];
+            if (!value) {
+                fail(`--data-dir needs a value.\n${USAGE}`);
+            }
+            dataDir = value;
+            continue;
+        }
+        if (arg.startsWith('-')) {
+            fail(`unknown option ${arg}.\n${USAGE}`);
+        }
+        if (runId !== undefined) {
+            fail(`more than one run id given (${runId}, ${arg}).\n${USAGE}`);
+        }
+        runId = arg;
+    }
+
+    if (runId === undefined) {
+        fail(USAGE);
+    }
+    return { runId, full, dataDir };
+}
+
 function main(): void {
     const args = process.argv.slice(2);
     if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
         console.log(USAGE);
         process.exit(args.length === 0 ? 1 : 0);
     }
-    const full = args.includes('--full');
-    const runId = args.find(a => !a.startsWith('-'));
-    if (!runId) {
-        fail(USAGE);
-    }
+    const { runId, full, dataDir } = parseOptions(args);
 
-    const zip = resultsZipFor(runId);
+    const zip = resultsZipFor(runId, dataDir);
     // os.tmpdir(), not the repo: see extractZip. A repo-relative destination is what makes the
     // long product-log filenames overflow MAX_PATH on Windows.
     const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'cor-run-'));
@@ -257,16 +348,16 @@ function main(): void {
         }
 
         const execRows = readExecRows(sqlitePath);
-        const rows = readGateRows(execRows).sort((a, b) => a.gate.localeCompare(b.gate));
+        const rows = readGateRows(execRows).sort((a, b) => a.label.localeCompare(b.label));
         if (rows.length === 0) {
             fail('session.sqlite has no grader rows in its exec table; the graders may never have run');
         }
 
-        console.log(`run ${runId} — ${rows.length} gate(s)\n`);
-        const width = Math.max(...rows.map(r => r.gate.length));
+        console.log(`run ${runId} — ${rows.length} grader invocation(s)\n`);
+        const width = Math.max(...rows.map(r => r.label.length));
         for (const row of rows) {
             const status = row.exitCode === 0 ? 'pass' : row.exitCode === 1 ? 'FAIL' : `exit ${row.exitCode}`;
-            console.log(`${row.gate.padEnd(width)}  ${status}`);
+            console.log(`${row.label.padEnd(width)}  ${status}`);
             for (const line of describe(row, full)) {
                 console.log(`    ${line}`);
             }
