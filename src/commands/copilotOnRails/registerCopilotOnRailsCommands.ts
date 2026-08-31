@@ -15,6 +15,7 @@ import { openDeployResultViewFromWorkspace } from '../../webviews/copilotOnRails
 import { openFrontendPreviewView } from '../../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalDevNextStepsView } from '../../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
 import { openLocalPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openLocalPlanView';
+import { reopenLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { openRequirementsViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openRequirementsView';
 import { openScaffoldNextStepsView } from '../../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openScaffoldPlanView';
@@ -46,6 +47,7 @@ export const copilotOnRailsCommandIds = {
     openDeployResultView: corId('openDeployResultView'),
 
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
+    showProgressView: corId('showProgressView'),
     refreshProjectTree: `${azureProjectId}.refresh`,
     inspectDiagnostics: corId('inspectDiagnostics'),
     reportIssue: corId('reportIssue'),
@@ -141,6 +143,7 @@ export function registerCopilotOnRailsCommands(): void {
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDeployResultView, openDeployResultViewFromWorkspace);
 
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
+    registerCommand(copilotOnRailsCommandIds.showProgressView, () => reopenLoadingView());
     registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
     registerCommand(copilotOnRailsCommandIds.reportIssue, reportIssue);
