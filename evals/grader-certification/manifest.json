@@ -2,6 +2,15 @@
     "schemaVersion": 2,
     "fixtures": [
         {
+            "id": "stage-scaffold",
+            "path": "evals/grader-certification/stage-scaffold",
+            "description": "A scaffold exactly as the agent emits one, harvested from run 2026083170541011 by evals/msbench/harvest-stage.ts: npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend that runs its own Vite dev server. The other fixtures are idealised single packages that serve their own frontend, which is a shape the agent never produces — so a gate could certify green here and score near zero in production, and nothing connected the two numbers. This is an INPUT, never an expected answer; re-harvest with `--check` to detect drift.",
+            "offlineValidators": [
+                "frontend-scaffold",
+                "integration-plan"
+            ]
+        },
+        {
             "id": "sample-agent-output",
             "path": "evals/grader-certification/sample-agent-output",
             "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts those phases are contracted to produce.",

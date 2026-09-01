@@ -18,6 +18,8 @@
         "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
         "analyze-run": "node --disable-warning=ExperimentalWarning msbench/analyze-run.ts",
         "seed:harvest": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts",
+        "stage:harvest": "node --disable-warning=ExperimentalWarning msbench/harvest-stage.ts",
+        "stage:check": "node --disable-warning=ExperimentalWarning msbench/harvest-stage.ts --check",
         "seed:check": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --check",
         "seed:self-test": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --self-test",
         "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
