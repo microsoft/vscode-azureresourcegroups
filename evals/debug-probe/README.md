@@ -150,18 +150,27 @@ A gate that cannot fail is not a gate, so both directions are proven.
 
 ```bash
 node certify.ts --offline     # 11 cases, no VS Code, ~2s — safe for CI
-node certify.ts --live        # 5 cases, real VS Code + real js-debug
+node certify.ts --live        # 7 cases, real VS Code + real js-debug
 node certify.ts               # both
 ```
 
 Useful flags: `--only=<case-id>`, `--verbose`, `--vscode=/path/to/code`.
+
+**On Windows `code` is a `.cmd`**, which `spawnSync` cannot execute, so the live
+tier resolves `Code.exe` instead — from whatever `code.cmd` is on PATH, then the
+usual install locations. Before that it died with `spawnSync code ENOENT` before
+a single case ran and reported it as seven identical *"probe did NOT activate"*
+failures, which reads as a broken probe rather than a runner that never started
+one. The live tier had therefore never been run on Windows at all. Resolution
+happens only when the live tier is actually selected, so `--offline` still needs
+no VS Code.
 
 **Offline** synthesises verdict files and asserts the grader's exit code for
 each, including the ones that must never blame the product: a missing verdict, a
 malformed verdict, an unknown outcome, and a schema-version mismatch. This
 certifies the part that assigns blame, so it runs anywhere.
 
-**Live** stages the known-good fixture plus four mutations and runs real VS Code
+**Live** stages the known-good fixture plus six mutations and runs real VS Code
 against each. The load-bearing one is `mutation-breakpoint-unreachable`, which
 puts the breakpoint on the `POST` 400 branch while triggering `GET /api/health`:
 it must go red, and red for the right reason.
