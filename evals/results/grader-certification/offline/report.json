@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T17:29:46.088Z",
+  "generatedAt": "2026-09-01T03:52:25.615Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -419,6 +419,172 @@
       "expected": "missingDatabase",
       "actual": [
         "missingDatabase"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-manifest-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "missingPreviewManifest",
+      "actual": [
+        "missingPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-manifest-unparseable",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "invalidPreviewManifest",
+      "actual": [
+        "invalidPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-unparseable-is-not-called-not-ready",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "!previewNotReady",
+      "actual": [
+        "invalidPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-ready-with-no-pages",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "missingPreviewPages",
+      "actual": [
+        "missingPreviewPages"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-slug-not-kebab-case",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "invalidPreviewSlug",
+      "actual": [
+        "invalidPreviewSlug"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-duplicate-slug",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "duplicatePreviewSlug",
+      "actual": [
+        "duplicatePreviewSlug"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-vite-config-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingViteConfig",
+      "actual": [
+        "missingViteConfig"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-dev-server-binds-loopback",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devServerNotReachable",
+      "actual": [
+        "devServerNotReachable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-strict-port-rejects-free-port",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devServerStrictPort",
+      "actual": [
+        "devServerStrictPort"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-unparseable-manifest-loses-the-reason",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-no-dev-or-start-script",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingDevScript",
+      "actual": [
+        "missingDevScript"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-api-seam-entry-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingApiSeamEntry",
+      "actual": [
+        "missingApiSeamEntry"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-preview-state-switcher-deletion-undetected",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-absent-manifest-loses-the-reason",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
       ],
       "passed": true,
       "durationMs": 0

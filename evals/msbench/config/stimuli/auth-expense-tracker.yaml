@@ -1,0 +1,70 @@
+# Stimulus `auth-expense-tracker`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# No stimulus in this suite has ever asked for a user to log in. The word
+# "accounts" appears once across all five plan prompts, in `no-datastore-converter`,
+# and there it appears in the negative ("no accounts"). So the entire identity
+# and secrets path is unreached: Entra ID, and behind it Key Vault, and behind
+# that the two Key Vault conformance rules — KV-NO-PURGE (a subscription policy
+# rejects `enablePurgeProtection: false`, so it must be omitted entirely) and
+# KV-DEPLOYER-ROLE (without the Secrets Officer role assignment, the deploy
+# phase's `az keyvault secret set` fails 403).
+#
+# Both rules were written against real deployment failures. Neither can fire
+# until a plan produces a Key Vault, and nothing here has ever needed one.
+#
+# The assertion below is real, and it was nearly not written. The shared `auth`
+# question is *mandatory* in every valid artifact — `requirements.ts` raises
+# `missingAuth` without it — and `azure-project-plan/requirements.md:134` fixes
+# its option set: `No auth`, `Mock auth middleware`, `Microsoft Entra ID`,
+# `Microsoft Entra External ID`, `Auth0`, `Clerk`. Entra ID's own description is
+# "Workforce identity — sign in with org or Microsoft accounts", which is this
+# prompt restated. So the correct answer here is contracted, not a matter of
+# taste, and it is gradeable at the plan phase.
+#
+# Every scenario.json in this repo answers `auth` with "No auth". The documented
+# default is `Mock auth middleware` when there is user data, else `No auth` — so
+# a planner that ignores the prompt lands on a wrong-but-plausible value rather
+# than an empty one, which is exactly the failure a schema check cannot see.
+#
+# Substring "Entra" rather than a full label: workforce (Entra ID) versus
+# external (Entra External ID) is a defensible judgement call for some prompts,
+# and pinning one would fail correct plans for being differently correct.
+
+promptSteps:
+  - text: |
+      We need an internal expense tracker. Staff submit expenses with a receipt
+      photo, their manager approves or rejects them, and finance exports the
+      approved ones at month end. Everyone here already has a work Microsoft
+      account, so they should just sign in with that rather than making a new
+      password.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Also runs the full schema validation, so no separate flagless exec is needed.
+      - comment: requirements.json should select Entra ID for work-account sign-in
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-auth-includes=Entra
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # Recorded, not asserted. Auth itself is now asserted above; this shows how
+      # secrets and Key Vault are represented, which is not yet contracted.
+      - comment: Triage; how did the planner represent sign-in and secrets?
+        exec: 'grep -io "entra\|azure ad\|active directory\|oauth\|auth\|sign.in\|identity\|key vault\|keyvault" .azure/requirements.json 2>/dev/null | sort | uniq -c | head -20'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false
