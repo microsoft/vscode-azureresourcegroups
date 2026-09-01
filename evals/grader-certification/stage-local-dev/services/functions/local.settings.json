@@ -1,0 +1,15 @@
+{
+    "IsEncrypted": false,
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "node",
+        "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+        "DATABASE_URL": "postgresql://taskuser:taskpassword@127.0.0.1:5432/tasktracker",
+        "AZURE_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
+        "NODE_ENV": "development",
+        "languageWorkers__node__arguments": "--inspect=9229"
+    },
+    "Host": {
+        "CORS": "*"
+    }
+}

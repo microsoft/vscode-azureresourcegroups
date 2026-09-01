@@ -2,6 +2,15 @@
     "schemaVersion": 2,
     "fixtures": [
         {
+            "id": "stage-local-dev",
+            "path": "evals/grader-certification/stage-local-dev",
+            "description": "The scaffold the agent actually emits — npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend on its own Vite dev server — plus the local-debug inputs needed to run it, reconstructed from run 2026083170541011. The other fixtures are idealised single packages that serve their own frontend, a shape the agent never produces, so a gate could certify green against them and score near zero in production. Its .vscode/**, debug-probe.json and services/functions/local.settings.json are HAND-WRITTEN inputs (see the fixture README for why local.settings.json in particular can never be harvested), so it deliberately does NOT certify debug-config or debug-artifacts, which would grade our own inputs. Its purpose is to give the debug probe live tier a realistic project.",
+            "offlineValidators": [
+                "frontend-scaffold",
+                "integration-plan"
+            ]
+        },
+        {
             "id": "sample-agent-output",
             "path": "evals/grader-certification/sample-agent-output",
             "description": "Workspace as the planning and scaffold agents leave it — the artifacts those phases are contracted to produce.",

@@ -138,6 +138,44 @@ installExtensions:
   - id: ms-azuretools.cor-debug-probe
     mode: vsix
     path: /agent/assets/extensions/cor-debug-probe.vsix
+  # The Azure Functions extension, from the marketplace rather than a VSIX because
+  # we do not build it — this is the shipping one a developer would have.
+  #
+  # It is here for exactly one reason: it provides the `func` TASK TYPE. A generated
+  # Functions project's launch configuration declares
+  # `preLaunchTask: "func: host start"` with `"type": "func"`, and without the
+  # provider that task cannot run, nothing opens the inspector port, and
+  # `debug-breakpoint` reported `appFailedToStart` — exit 1, blaming the product for
+  # a project it generated correctly.
+  #
+  # Measured, on grader-certification/stage-local-dev, with the extension installed
+  # into an isolated extensions dir:
+  #
+  #     preLaunchTask "func: host start" resolves in this environment   <- was: cannot resolve
+  #
+  # The agent's own `.azure/vscode-debug-plan.md` lists this extension as a
+  # prerequisite, so installing it makes the eval environment match the environment
+  # the plan is written for rather than granting the product a favour.
+  #
+  # ── Ordering is load-bearing, and this entry MUST stay last ──────────────────
+  #
+  # `ms-azuretools.vscode-azurefunctions` DEPENDS ON
+  # `ms-azuretools.vscode-azureresourcegroups` — the extension under test — and
+  # installing it pulls that dependency from the marketplace. Installed the wrong way
+  # round, the marketplace build would replace the VSIX we are evaluating and every
+  # run would silently grade a shipped release instead of the change under test.
+  #
+  # Verified rather than assumed: with the dependency already present, VS Code leaves
+  # it alone. Installing 0.12.0 first and then this extension leaves 0.12.0 on disk,
+  # not the marketplace version. Our VSIX is the first entry above, so it is always
+  # in place before this runs. Do not reorder these.
+  #
+  # `func` itself is a separate dependency and is NOT provided by this: it is a CLI,
+  # installed by the phase preamble and present in the custom image (msbench-1.1.0).
+  # Both are needed, and on the stock image the gate still declines rather than
+  # inventing a verdict.
+  - id: ms-azuretools.vscode-azurefunctions
+    mode: marketplace
 
 # The Vally executor approves every permission request. Without this the
 # webview-opening tools block on a confirmation nothing can answer.

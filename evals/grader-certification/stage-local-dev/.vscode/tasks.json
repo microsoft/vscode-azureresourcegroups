@@ -1,0 +1,56 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "func",
+            "label": "func: host start",
+            "command": "host start",
+            "options": {
+                "cwd": "${workspaceFolder}/services/functions"
+            },
+            "problemMatcher": "$func-node-watch",
+            "isBackground": true,
+            "dependsOn": "api: build"
+        },
+        {
+            "type": "shell",
+            "label": "api: build",
+            "command": "npm run build",
+            "options": {
+                "cwd": "${workspaceFolder}/services/functions"
+            },
+            "dependsOn": "install",
+            "problemMatcher": "$tsc"
+        },
+        {
+            "type": "shell",
+            "label": "web: dev server",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}/services/web"
+            },
+            "dependsOn": "install",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE",
+                    "endsPattern": "ready in"
+                }
+            }
+        },
+        {
+            "type": "shell",
+            "label": "install",
+            "command": "npm install",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
