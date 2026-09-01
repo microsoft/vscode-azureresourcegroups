@@ -83,7 +83,16 @@ const HARNESS_STAGED_PATHS = [
  * Small and stable, but load-bearing: without them an empty run still scans two files and
  * the precondition passes for the wrong reason all over again.
  */
-const BASE_WORKSPACE_FILES = new Set(['.gitignore', '.gitkeep']);
+const BASE_WORKSPACE_FILES = new Set([
+    '.gitignore',
+    '.gitkeep',
+    // The grader-certification harness's own descriptor. Not agent output, and counting it
+    // toward "the agent produced something" is the same defect as counting the staged
+    // instructions: `validateScaffoldAbsence` already treats it as a seeded entry for
+    // exactly this reason, and without it the liveness precondition can never be exercised
+    // against an empty fixture because the descriptor is always present.
+    'scenario.json',
+]);
 
 /** Files large enough to be data rather than source. Keeps a scan bounded. */
 const MAX_FILE_BYTES = 512 * 1024;

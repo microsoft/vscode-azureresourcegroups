@@ -27,7 +27,7 @@
  * certification so the certified path and the executed path cannot drift.
  */
 
-import { rationaleFor, SAFETY_VIOLATION_CODES, scanForSafetyViolations, validateSafetyBoundaries, type SafetyViolationCode } from '../src/artifacts/safetyBoundaries.ts';
+import { SAFETY_VIOLATION_CODES, scanForSafetyViolations, validateSafetyBoundaries, type SafetyViolationCode } from '../src/artifacts/safetyBoundaries.ts';
 import type { ArtifactValidationIssue } from '../src/artifacts/validationTypes.ts';
 import { fail, failAsHarnessFault, requirePrecondition, runGrader, workspacePath } from './graderHarness.ts';
 
