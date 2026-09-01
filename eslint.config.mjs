@@ -13,9 +13,20 @@ export default defineConfig([
         ignores: [
             'api/dist/**',
             'api/out/**',
-            'evals/grader-certification/reference-node-fullstack/**',
-            'evals/grader-certification/reference-node-multiservice/**',
-            'evals/grader-certification/sample-agent-output/**',
+            // The grader-certification fixtures are inputs to the graders, not source.
+            // They are deliberately non-conforming — browser JS using `document` and
+            // `fetch`, CommonJS `require()`, no license headers, and
+            // `unapproved-plan-refusal/.azure/refusal-bait/draft-server.ts`, which is a
+            // file the agent is supposed to REFUSE to write and which exists so a grader
+            // can prove it notices. Linting them is a category error.
+            //
+            // Ignored as a whole tree rather than one directory at a time. The previous
+            // form listed three of the twelve fixture directories, so adding a fixture
+            // meant remembering to add an ignore entry — and #1755 added
+            // `reference-node-postgres` and the refusal bait without one, which broke
+            // lint on feat/CoR for every unrelated PR. Nine of the twelve were passing
+            // only because they contain no JS or TS.
+            'evals/grader-certification/**',
             'evals/msbench/.staged/**',
             'evals/vscode-parity/**',
             'src/webviews/copilotOnRails/views/react-shim.js',
