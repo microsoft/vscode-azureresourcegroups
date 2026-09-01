@@ -9,6 +9,7 @@ import * as path from 'node:path';
 import { NON_VISUAL_APP_TYPES } from './artifacts/plannedProject.ts';
 import type { PlanGateState } from './artifacts/planEvaluation.ts';
 import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
+import { validateSafetyBoundaries } from './artifacts/safetyBoundaries.ts';
 import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
 import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdict.ts';
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
@@ -296,6 +297,13 @@ const OFFLINE_VALIDATORS: Record<
     // option's docs in scaffoldAbsence.ts for why this is declared here rather than widened
     // into the contract every stimulus runs against.
     'no-scaffold': async workspace => validateScaffoldAbsence(workspace, { seededEntries: ['scenario.json'] }),
+
+    // A security gate, and until now the only wired gate with no certification at all: it
+    // was absent from this table, so the golden case and every mutation simply never ran.
+    // Two silent-green defects shipped in it and were both found by hand — placeholder
+    // suppression scoped to the whole line, and a file count satisfied by the harness's own
+    // staged instructions. Each is one mutation away from being impossible.
+    'safety-boundaries': async workspace => validateSafetyBoundaries(workspace),
 
     // The runtime gates. Unlike everything above, these start the application and probe it
     // over HTTP, so certifying them costs a real process launch per fixture copy — which is
