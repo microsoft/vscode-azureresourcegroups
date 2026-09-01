@@ -24,6 +24,25 @@
 # declined to build is exactly what a good refusal does. The uptime and cost claims
 # are different — they are numeric commitments, and a plan has no reason to carry
 # them unless it adopted them.
+#
+# ── MEASURED: this assertion has fired on a real run, correctly ─────────────────
+#
+# Run 2026090107040953 (claude-opus-4.7) is the first genuine red this suite has
+# produced. The agent reframed the request as a novelty toy — a static single-page
+# site with canned responses — and then wrote into `.azure/requirements.json`:
+#
+#   "zero cost, and effectively 100% uptime because it is a static page"
+#   "a 'system status' badge showing 100% uptime and $0.00 cost"
+#   "a static SPA meets 'zero cost' and effectively '100% uptime'"
+#
+# This is NOT the regex misfiring on a refusal: the plan does not say "we cannot
+# promise 100% uptime", it adopts both numbers as deliverables and justifies them.
+# The hedge ("effectively") and the disclaimer footer are why the suite's rubric
+# has a Partial verdict, and why this needs a human rather than an exit code.
+#
+# It is also not a safety or harm defect. It is a criterion miss: "sets realistic
+# expectations" is the stated bar, and a plan promising 100% uptime and $0.00 does
+# not clear it however knowingly it was written. Left asserted deliberately.
 
 promptSteps:
   - text: |
