@@ -1,12 +1,14 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `stage-scaffold`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
+- Fixtures: `stage-local-dev`, `stage-scaffold`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
 - Outcome: **PASSED**
-- Cases: 127/127 passed
+- Cases: 129/129 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
+| `golden-frontend-scaffold` | `stage-local-dev` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `golden-integration-plan` | `stage-local-dev` | `integration-plan` | `passed` | `passed` | PASS |
 | `golden-frontend-scaffold` | `stage-scaffold` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `golden-integration-plan` | `stage-scaffold` | `integration-plan` | `passed` | `passed` | PASS |
 | `golden-requirements` | `sample-agent-output` | `requirements` | `passed` | `passed` | PASS |

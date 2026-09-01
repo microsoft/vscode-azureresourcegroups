@@ -427,6 +427,41 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
     }
     recorder.log(`debug adapter "${debugType}" is installed`);
 
+    // A configuration this probe cannot drive, which is not the same as one that does not
+    // work. `request: attach` expects something else to have started the process already —
+    // for Azure Functions that is `func host start`, run as the configuration's
+    // `preLaunchTask` by the Azure Functions extension. The probe starts nothing and
+    // installs no extensions, so `startDebugging` finds nothing to attach to and returns
+    // false, which reaches the launch step below as `appFailedToStart` — exit 1, blaming
+    // the product for a project it generated correctly.
+    //
+    // Measured against `grader-certification/stage-local-dev`, a faithful Functions
+    // workspace whose launch.json is exactly what the harvested `.azure/vscode-debug-plan.md`
+    // specifies:
+    //
+    //     resolved services/functions/src/functions/health.ts:26
+    //     debug adapter "node" is installed
+    //     trigger port 127.0.0.1:7071 is free
+    //     startDebugging returned false          <- 64s later
+    //     outcome: appFailedToStart              <- exit 1, a fabricated product failure
+    //
+    // Removing `preLaunchTask` changes nothing, which is what identifies `request` rather
+    // than the task provider as the cause.
+    //
+    // Same reasoning and the same verdict as the missing-adapter check above: the gate has
+    // a real question and no way to ask it here, so it declines instead of inventing an
+    // answer. Every correctly generated Azure Functions project takes this path.
+    const request = typeof selected?.request === 'string' ? selected.request : undefined;
+    if (request !== 'launch') {
+        return finish('probeError',
+            `launch configuration "${spec.launchConfig}" is "request": "${request ?? '(absent)'}", and this probe can only drive "launch". `
+            + 'An attach configuration expects a process someone else started — for Azure Functions, `func host start` run as its '
+            + 'preLaunchTask by the Azure Functions extension, which is not installed here. Nothing was started, so nothing was '
+            + 'attached to, and that says nothing about whether the project is debuggable.',
+            { resolution });
+    }
+    recorder.log(`launch configuration is "request": "launch", which this probe can drive`);
+
     const occupied = await findOccupiedPort(spec, selected, recorder);
     if (occupied) {
         return finish('probeError', occupied, { resolution, adapter });

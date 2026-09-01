@@ -150,18 +150,27 @@ A gate that cannot fail is not a gate, so both directions are proven.
 
 ```bash
 node certify.ts --offline     # 11 cases, no VS Code, ~2s — safe for CI
-node certify.ts --live        # 5 cases, real VS Code + real js-debug
+node certify.ts --live        # 8 cases, real VS Code + real js-debug
 node certify.ts               # both
 ```
 
 Useful flags: `--only=<case-id>`, `--verbose`, `--vscode=/path/to/code`.
+
+**On Windows `code` is a `.cmd`**, which `spawnSync` cannot execute, so the live
+tier resolves `Code.exe` instead — from whatever `code.cmd` is on PATH, then the
+usual install locations. Before that it died with `spawnSync code ENOENT` before
+a single case ran and reported it as seven identical *"probe did NOT activate"*
+failures, which reads as a broken probe rather than a runner that never started
+one. The live tier had therefore never been run on Windows at all. Resolution
+happens only when the live tier is actually selected, so `--offline` still needs
+no VS Code.
 
 **Offline** synthesises verdict files and asserts the grader's exit code for
 each, including the ones that must never blame the product: a missing verdict, a
 malformed verdict, an unknown outcome, and a schema-version mismatch. This
 certifies the part that assigns blame, so it runs anywhere.
 
-**Live** stages the known-good fixture plus four mutations and runs real VS Code
+**Live** stages the known-good fixture plus seven mutations and runs real VS Code
 against each. The load-bearing one is `mutation-breakpoint-unreachable`, which
 puts the breakpoint on the `POST` 400 branch while triggering `GET /api/health`:
 it must go red, and red for the right reason.
@@ -315,7 +324,27 @@ Node family, via the built-in js-debug. That is a real constraint, not a
 preference, and wiring it unconditionally produces exactly the failure this gate
 was built to prevent.
 
-Two directions, both verified rather than reasoned about:
+Three directions, all verified rather than reasoned about:
+
+**A launch configuration this probe cannot drive is not a project that does not
+work.** An Azure Functions project's launch configuration is `request: attach`
+with `preLaunchTask: "func: host start"` — correct, standard, and exactly what
+the agent's own `.azure/vscode-debug-plan.md` specifies. The probe starts nothing
+and installs no extensions, so there is no process to attach to,
+`startDebugging` returns false, and the verdict *was* `appFailedToStart`: **exit
+1, blaming the product for a project it generated correctly.** Measured on
+[`grader-certification/stage-local-dev`](../grader-certification/stage-local-dev):
+the probe resolved the breakpoint at `health.ts:26`, confirmed the `node` adapter,
+confirmed port 7071 free, then sat for 64 seconds and reported a product failure.
+Removing `preLaunchTask` changed nothing, which is what identifies `request`
+rather than the task provider as the cause. The probe now refuses anything that
+is not `request: launch` and returns `probeError` (exit 3). Certified by
+`mutation-attach-config-is-declined`.
+
+**Every correctly generated Azure Functions project takes that path**, so this
+gate cannot currently answer for the Functions stack at all. That is a
+`knownGap`, not a red — and it is the reason the gate's wiring needs the
+attention noted below rather than more runs.
 
 **A launch configuration naming an adapter we do not install used to produce a
 fabricated red.** `debugpy`, `go` and `coreclr` are not in this container. With
@@ -338,3 +367,4 @@ is the "gate that cannot pass" shape displaced into the exit-3 column.
 So the gate should be wired where the stimulus writes a probe spec **and** the
 stack is one the harness can drive. Everywhere else it is an environment gap: it
 has a real question and no way to ask it, which is a `knownGap`, not a red.
+

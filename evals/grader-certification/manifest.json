@@ -2,6 +2,15 @@
     "schemaVersion": 2,
     "fixtures": [
         {
+            "id": "stage-local-dev",
+            "path": "evals/grader-certification/stage-local-dev",
+            "description": "stage-scaffold plus the local-debug inputs a debugged workspace needs: .vscode/launch.json, .vscode/tasks.json and debug-probe.json. Those three are HAND-WRITTEN, derived from the config names and ports the harvested .azure/vscode-debug-plan.md specifies — they are inputs that make the tree debuggable, not agent output. It therefore deliberately does NOT certify debug-config or debug-artifacts: those grade .vscode/** against the plan, and certifying them here would grade our own fixture and call it a product verdict. What it is for is the live tier of evals/debug-probe/certify.ts, which needs a realistic project to point the probe at.",
+            "offlineValidators": [
+                "frontend-scaffold",
+                "integration-plan"
+            ]
+        },
+        {
             "id": "stage-scaffold",
             "path": "evals/grader-certification/stage-scaffold",
             "description": "A scaffold exactly as the agent emits one, harvested from run 2026083170541011 by evals/msbench/harvest-stage.ts: npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend that runs its own Vite dev server. The other fixtures are idealised single packages that serve their own frontend, which is a shape the agent never produces — so a gate could certify green here and score near zero in production, and nothing connected the two numbers. This is an INPUT, never an expected answer; re-harvest with `--check` to detect drift.",
