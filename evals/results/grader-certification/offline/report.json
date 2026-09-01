@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T17:29:46.088Z",
+  "generatedAt": "2026-09-01T23:29:09.984Z",
   "mode": "offline",
   "fixtures": [
+    "stage-local-dev",
     "sample-agent-output",
     "reference-node-fullstack",
     "reference-node-multiservice",
@@ -16,6 +17,26 @@
   ],
   "outcome": "passed",
   "cases": [
+    {
+      "id": "golden-frontend-scaffold",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-integration-plan",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
     {
       "id": "golden-requirements",
       "tier": "offline",
