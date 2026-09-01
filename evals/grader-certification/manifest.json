@@ -2,9 +2,18 @@
     "schemaVersion": 2,
     "fixtures": [
         {
+            "id": "stage-local-dev",
+            "path": "evals/grader-certification/stage-local-dev",
+            "description": "The scaffold the agent actually emits — npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend on its own Vite dev server — plus the local-debug inputs needed to run it, reconstructed from run 2026083170541011. The other fixtures are idealised single packages that serve their own frontend, a shape the agent never produces, so a gate could certify green against them and score near zero in production. Its .vscode/**, debug-probe.json and services/functions/local.settings.json are HAND-WRITTEN inputs (see the fixture README for why local.settings.json in particular can never be harvested), so it deliberately does NOT certify debug-config or debug-artifacts, which would grade our own inputs. Its purpose is to give the debug probe live tier a realistic project.",
+            "offlineValidators": [
+                "frontend-scaffold",
+                "integration-plan"
+            ]
+        },
+        {
             "id": "sample-agent-output",
             "path": "evals/grader-certification/sample-agent-output",
-            "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts those phases are contracted to produce.",
+            "description": "Workspace as the planning and scaffold agents leave it — the artifacts those phases are contracted to produce.",
             "offlineValidators": [
                 "requirements",
                 "project-plan",
@@ -42,7 +51,7 @@
         {
             "id": "reference-python-api",
             "path": "evals/grader-certification/reference-python-api",
-            "description": "The same contract on a Python stack \u2014 psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
+            "description": "The same contract on a Python stack — psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
             "offlineValidators": [
                 "service-fidelity",
                 "datastore-fidelity"
@@ -51,7 +60,7 @@
         {
             "id": "reference-dotnet-api",
             "path": "evals/grader-certification/reference-dotnet-api",
-            "description": "The same contract on a .NET stack \u2014 Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
+            "description": "The same contract on a .NET stack — Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
             "offlineValidators": [
                 "service-fidelity",
                 "datastore-fidelity"
@@ -101,7 +110,7 @@
         {
             "id": "reference-iac-bicep",
             "path": "evals/grader-certification/reference-iac-bicep",
-            "description": "Deploy-scaffold output: a Bicep template that compiles cleanly, plus the scaffold-manifest.json recording how the agent validated it. Certifies the offline half of the iac-compiles gate \u2014 IaC discovery and the coherence of the agent self-report. Compiling needs a Bicep CLI that certification may not assume, so the rules that turn compiler output into a verdict are covered by selfTestIacCompiles instead.",
+            "description": "Deploy-scaffold output: a Bicep template that compiles cleanly, plus the scaffold-manifest.json recording how the agent validated it. Certifies the offline half of the iac-compiles gate — IaC discovery and the coherence of the agent self-report. Compiling needs a Bicep CLI that certification may not assume, so the rules that turn compiler output into a verdict are covered by selfTestIacCompiles instead.",
             "offlineValidators": [
                 "iac-compiles"
             ]
@@ -279,7 +288,7 @@
             "file": ".azure/integration-plan.md",
             "operation": "replace",
             "search": "## API Routes",
-            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key \u2014 send `X-API-Key: <API_KEY>`. Missing key \u2192 `401 UNAUTHORIZED`.\n\n## API Routes",
+            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key — send `X-API-Key: <API_KEY>`. Missing key → `401 UNAUTHORIZED`.\n\n## API Routes",
             "expectedCode": "passed"
         },
         {
@@ -511,7 +520,7 @@
             "file": ".azure/integration-plan.md",
             "operation": "replace",
             "search": "## Database\n",
-            "replacement": "## Database \u2014 migrations to create (**NO seed data**)\n",
+            "replacement": "## Database — migrations to create (**NO seed data**)\n",
             "expectedCode": "passed"
         },
         {
@@ -565,8 +574,8 @@
             "validator": "debug-plan",
             "file": ".azure/vscode-debug-plan.md",
             "operation": "replace",
-            "search": "\u2705 Persistence \u2014 Created project remained visible after restarting the service, confirming the local JSON store is written through.",
-            "replacement": "\u2705 Persistence \u2014 TBD",
+            "search": "✅ Persistence — Created project remained visible after restarting the service, confirming the local JSON store is written through.",
+            "replacement": "✅ Persistence — TBD",
             "expectedCode": "checklistStub"
         },
         {
@@ -715,7 +724,7 @@
             "validator": "service-fidelity",
             "file": ".azure/project-plan.md",
             "operation": "replace",
-            "search": "## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "search": "## 4. Worker — Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
             "replacement": "",
             "expectedCode": "unplannedServiceScaffolded"
         },
@@ -746,8 +755,8 @@
             "validator": "service-fidelity",
             "file": ".azure/project-plan.md",
             "operation": "replace",
-            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
-            "replacement": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
+            "search": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
+            "replacement": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
             "expectedCode": "serviceLanguageMismatch"
         },
         {
@@ -768,7 +777,7 @@
             "validator": "service-fidelity",
             "file": ".azure/project-plan.md",
             "operation": "replace",
-            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend \u2014 Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "search": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend — Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker — Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
             "replacement": "",
             "expectedCode": "planDeclaresNoServices"
         },
@@ -1017,7 +1026,7 @@
             "validator": "integration-plan",
             "file": ".azure/integration-plan.md",
             "operation": "replace",
-            "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection \u2192 table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
+            "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection → table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
             "replacement": "",
             "expectedCode": "missingDatabase"
         },
@@ -1031,7 +1040,7 @@
             "expectedCode": "runtimeNotAttempted"
         },
         {
-            "comment": "No template at all. The gate must report having nothing to look at rather than a clean pass \u2014 a bicep gate that goes green on a project with no bicep is indistinguishable from no gate at all.",
+            "comment": "No template at all. The gate must report having nothing to look at rather than a clean pass — a bicep gate that goes green on a project with no bicep is indistinguishable from no gate at all.",
             "id": "iac-compiles-no-template-is-not-a-pass",
             "tier": "offline",
             "fixture": "reference-iac-bicep",
@@ -1051,7 +1060,7 @@
             "expectedCode": "missingScaffoldManifest"
         },
         {
-            "comment": "A manifest that exists and does not parse. Reported as unparseable rather than missing \u2014 the file is plainly there, and saying otherwise sends the reader looking for the wrong problem.",
+            "comment": "A manifest that exists and does not parse. Reported as unparseable rather than missing — the file is plainly there, and saying otherwise sends the reader looking for the wrong problem.",
             "id": "iac-compiles-unparseable-manifest-is-reported",
             "tier": "offline",
             "fixture": "reference-iac-bicep",
@@ -1063,7 +1072,7 @@
             "expectedCode": "unparseableScaffoldManifest"
         },
         {
-            "comment": "Paired with the case above: an unparseable manifest must not ALSO be reported as missing. Negative because includes() cannot falsify a spurious extra code \u2014 reporting the right code plus a wrong one looks identical to reporting only the right one.",
+            "comment": "Paired with the case above: an unparseable manifest must not ALSO be reported as missing. Negative because includes() cannot falsify a spurious extra code — reporting the right code plus a wrong one looks identical to reporting only the right one.",
             "id": "iac-compiles-unparseable-manifest-not-called-missing",
             "tier": "offline",
             "fixture": "reference-iac-bicep",
@@ -1099,7 +1108,7 @@
             "expectedCode": "!suppressedBlockingDiagnostic"
         },
         {
-            "comment": "Paired with the absent-build-check case: an agent that ran the required compile and recorded it under a plainer name must not be reported as having skipped it. Verbatim from run 2026082782003660, whose Bicep the compiler independently confirmed valid \u2014 the exact-spelling matcher failed that honest run, scoring vocabulary rather than infrastructure. Negative because a spurious extra code is indistinguishable from a correct one under includes().",
+            "comment": "Paired with the absent-build-check case: an agent that ran the required compile and recorded it under a plainer name must not be reported as having skipped it. Verbatim from run 2026082782003660, whose Bicep the compiler independently confirmed valid — the exact-spelling matcher failed that honest run, scoring vocabulary rather than infrastructure. Negative because a spurious extra code is indistinguishable from a correct one under includes().",
             "id": "iac-compiles-build-check-synonym-is-accepted",
             "tier": "offline",
             "fixture": "reference-iac-bicep",

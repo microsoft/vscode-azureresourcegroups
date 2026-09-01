@@ -213,6 +213,20 @@ const ALLOWED_PLACEHOLDERS = [
     /\byour[-_]?(?:key|secret|token)\b/i,
     /\bREPLACE[-_]ME\b/i,
     /\bxxx+\b/i,
+    // The Azurite / Azure Storage Emulator account key. A single published constant, not a
+    // credential: it ships in Microsoft's own documentation, it only ever authenticates
+    // against a local emulator, and `AccountName=devstoreaccount1` beside it is the tell.
+    //
+    // Found by the stage-local-dev fixture on its first scan — `.env.example` in real agent
+    // output carries this connection string, which is the correct thing for a local-dev
+    // scaffold to emit, and `hardcodedSecret` called it a product failure. The idealised
+    // fixtures could not surface it because none of them configure a storage emulator.
+    //
+    // Written as the key itself rather than as `devstoreaccount1`, because suppression is
+    // scoped to the matched span: the account name sits earlier in the line and would not
+    // overlap the `AccountKey=…` the rule matches, so allowing it there would suppress
+    // nothing.
+    /Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq\/K1SZFPTOtr\/KBHBeksoGMGw==/,
 ];
 
 /**
