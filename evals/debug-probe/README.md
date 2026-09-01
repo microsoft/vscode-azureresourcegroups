@@ -359,10 +359,40 @@ outcome: hit
 Certified by `mutation-attach-with-resolvable-task-is-driven`, which exists so
 that mistake cannot be made again silently.
 
-**So the Functions stack is answerable here** — it needs
-`ms-azuretools.vscode-azurefunctions` installed in the probe environment and
-`func` on PATH, which the custom image (`msbench-1.1.0`) already carries. Until
-the extension is installed the gate declines rather than inventing a verdict.
+**So the Functions stack is answerable here.** It needs two things, and the
+custom image (`msbench-1.1.0`) already carries one:
+
+| Needed | Provides | Status |
+| --- | --- | --- |
+| `ms-azuretools.vscode-azurefunctions` | the `func` **task type**, so `preLaunchTask` resolves | added to [`msbench/config/base.yaml`](../msbench/config/base.yaml) |
+| `func` on PATH | the Functions host itself | already in the custom image |
+
+Measured on `stage-local-dev` with the extension installed into an isolated
+extensions dir — the preflight goes from declining to passing:
+
+```
+preLaunchTask "func: host start" resolves in this environment
+trigger port 127.0.0.1:7071 is free
+```
+
+**A breakpoint hit in a Functions project is not yet proven**, and the remaining
+distance is honest to state: the task chain is
+`func: host start` → `api: build` → `install`, so the project must install and
+compile inside the probe budget, and this fixture's breakpoint sits on
+`status = 'healthy'`, which only executes when PostgreSQL *and* Azurite answer.
+Locally neither runs, so the branch is unreachable; the custom image starts both
+in the phase preamble. That makes the remaining proof a container run rather than
+a local experiment.
+
+**The extension's dependency is on the extension under test, and the install
+order protects it.** `vscode-azurefunctions` depends on
+`vscode-azureresourcegroups` — us — and installing it pulls that from the
+marketplace. The wrong order would silently replace the VSIX being evaluated with
+a shipped release, and every run would grade the wrong build. Verified rather
+than assumed: with the dependency already installed, VS Code leaves it alone
+(installing `0.12.0` first, then the Functions extension, leaves `0.12.0` on
+disk). Our VSIX is the first `installExtensions` entry, so it is always in place
+first.
 
 **A launch configuration naming an adapter we do not install used to produce a
 fabricated red.** `debugpy`, `go` and `coreclr` are not in this container. With
