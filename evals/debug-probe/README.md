@@ -150,7 +150,7 @@ A gate that cannot fail is not a gate, so both directions are proven.
 
 ```bash
 node certify.ts --offline     # 11 cases, no VS Code, ~2s — safe for CI
-node certify.ts --live        # 8 cases, real VS Code + real js-debug
+node certify.ts --live        # 9 cases, real VS Code + real js-debug
 node certify.ts               # both
 ```
 
@@ -170,7 +170,7 @@ each, including the ones that must never blame the product: a missing verdict, a
 malformed verdict, an unknown outcome, and a schema-version mismatch. This
 certifies the part that assigns blame, so it runs anywhere.
 
-**Live** stages the known-good fixture plus seven mutations and runs real VS Code
+**Live** stages the known-good fixture plus eight mutations and runs real VS Code
 against each. The load-bearing one is `mutation-breakpoint-unreachable`, which
 puts the breakpoint on the `POST` 400 branch while triggering `GET /api/health`:
 it must go red, and red for the right reason.
@@ -324,27 +324,45 @@ Node family, via the built-in js-debug. That is a real constraint, not a
 preference, and wiring it unconditionally produces exactly the failure this gate
 was built to prevent.
 
-Three directions, all verified rather than reasoned about:
+Four directions, all verified rather than reasoned about:
 
-**A launch configuration this probe cannot drive is not a project that does not
-work.** An Azure Functions project's launch configuration is `request: attach`
-with `preLaunchTask: "func: host start"` — correct, standard, and exactly what
-the agent's own `.azure/vscode-debug-plan.md` specifies. The probe starts nothing
-and installs no extensions, so there is no process to attach to,
-`startDebugging` returns false, and the verdict *was* `appFailedToStart`: **exit
-1, blaming the product for a project it generated correctly.** Measured on
-[`grader-certification/stage-local-dev`](../grader-certification/stage-local-dev):
-the probe resolved the breakpoint at `health.ts:26`, confirmed the `node` adapter,
-confirmed port 7071 free, then sat for 64 seconds and reported a product failure.
-Removing `preLaunchTask` changed nothing, which is what identifies `request`
-rather than the task provider as the cause. The probe now refuses anything that
-is not `request: launch` and returns `probeError` (exit 3). Certified by
-`mutation-attach-config-is-declined`.
+**A `preLaunchTask` this environment cannot resolve is not a project that does not
+work.** An Azure Functions project declares `preLaunchTask: "func: host start"`
+with `"type": "func"`, and that provider comes from the Azure Functions
+extension — which the agent's own `.azure/vscode-debug-plan.md` lists as a
+prerequisite, and which is not installed here. With no provider the task never
+runs, nothing opens the inspector port, `startDebugging` returns false, and the
+verdict *was* `appFailedToStart`: **exit 1, blaming the product for a project it
+generated correctly.** Measured on
+[`grader-certification/stage-local-dev`](../grader-certification/stage-local-dev),
+where it took 64 seconds to say so. The probe now fetches the available tasks
+before launching and returns `probeError` (exit 3) naming the task and listing
+what does resolve — in about one second. Certified by
+`mutation-prelaunch-task-unresolvable`.
 
-**Every correctly generated Azure Functions project takes that path**, so this
-gate cannot currently answer for the Functions stack at all. That is a
-`knownGap`, not a red — and it is the reason the gate's wiring needs the
-attention noted below rather than more runs.
+**Attach configurations are driveable, and the check is deliberately about the
+task rather than about `request`.** The first version of this preflight declined
+every `request: attach` configuration, which would have written off the whole
+Functions stack on a false premise. It is false: VS Code runs the `isBackground`
+preLaunchTask, waits for its problem matcher to report ready, and attaches.
+Verified end to end against an attach configuration whose task starts
+`node --inspect=9229` from a `type: shell` task:
+
+```
+preLaunchTask "serve" resolves in this environment
+startDebugging returned true
+trigger connected after 1 attempt(s)
+stopped: reason=breakpoint session=Remote Process [0] « Attach Under Background Task
+outcome: hit
+```
+
+Certified by `mutation-attach-with-resolvable-task-is-driven`, which exists so
+that mistake cannot be made again silently.
+
+**So the Functions stack is answerable here** — it needs
+`ms-azuretools.vscode-azurefunctions` installed in the probe environment and
+`func` on PATH, which the custom image (`msbench-1.1.0`) already carries. Until
+the extension is installed the gate declines rather than inventing a verdict.
 
 **A launch configuration naming an adapter we do not install used to produce a
 fabricated red.** `debugpy`, `go` and `coreclr` are not in this container. With
@@ -367,4 +385,5 @@ is the "gate that cannot pass" shape displaced into the exit-3 column.
 So the gate should be wired where the stimulus writes a probe spec **and** the
 stack is one the harness can drive. Everywhere else it is an environment gap: it
 has a real question and no way to ask it, which is a `knownGap`, not a red.
+
 

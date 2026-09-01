@@ -320,35 +320,72 @@ const LIVE_CASES: LiveCase[] = [
         expectedExit: EXIT_GRADER_ERROR,
     },
     {
-        id: 'mutation-attach-config-is-declined',
-        // The Azure Functions shape, and the reason this check exists at all.
+        id: 'mutation-attach-with-resolvable-task-is-driven',
+        // The POSITIVE control for attach, and the reason the preflight below is about the
+        // task rather than about `request`.
         //
-        // A Functions project's launch configuration is `request: attach` with
-        // `preLaunchTask: "func: host start"` — correct, standard, and exactly what the
-        // agent's own `.azure/vscode-debug-plan.md` specifies. The probe starts nothing and
-        // installs no extensions, so there is no process to attach to, `startDebugging`
-        // returns false, and before the preflight the verdict was `appFailedToStart`:
-        // exit 1, blaming the product for a project it generated correctly.
-        //
-        // Measured on grader-certification/stage-local-dev, a faithful Functions workspace:
-        // the probe resolved the breakpoint at health.ts:26, confirmed the `node` adapter,
-        // confirmed port 7071 free, then sat for 64 seconds and reported a product failure.
-        // Removing `preLaunchTask` changed nothing, which is what identifies `request`
-        // rather than the task provider as the cause.
-        description: 'an attach configuration is one this probe cannot drive, not one the product got wrong',
+        // An attach configuration is perfectly driveable: VS Code runs the `isBackground`
+        // preLaunchTask, waits for its problem matcher to report ready, and attaches. The
+        // first version of this preflight declined every attach config, which would have
+        // written off the entire Azure Functions stack on a false premise. This case exists
+        // so that mistake cannot be made again silently.
+        description: 'an attach configuration whose preLaunchTask starts the app is driven to a real breakpoint',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 90_000 },
+        expectedOutcome: 'hit',
+        expectedExit: EXIT_PASS,
+        mutate: workspace => {
+            const launchPath = join(workspace, '.vscode', 'launch.json');
+            const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as {
+                configurations: Record<string, unknown>[];
+            };
+            const config = launch.configurations[0];
+            delete config.program;
+            delete config.runtimeArgs;
+            delete config.env;
+            config.request = 'attach';
+            config.port = 9229;
+            config.preLaunchTask = 'serve';
+            writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
+
+            // The `func: host start` shape, expressed with a task type that needs no
+            // extension: a background task that opens the inspector and announces itself.
+            const tasksPath = join(workspace, '.vscode', 'tasks.json');
+            const tasks = JSON.parse(readFileSync(tasksPath, 'utf8')) as { tasks: unknown[] };
+            tasks.tasks.push({
+                label: 'serve',
+                type: 'shell',
+                command: 'node --inspect=9229 src/server.js',
+                options: { cwd: '${workspaceFolder}', env: { PORT: '7071' } },
+                isBackground: true,
+                problemMatcher: {
+                    owner: 'serve',
+                    pattern: { regexp: '^$' },
+                    background: { activeOnStart: true, beginsPattern: '.', endsPattern: 'listening' },
+                },
+            });
+            writeFileSync(tasksPath, `${JSON.stringify(tasks, null, 4)}\n`, 'utf8');
+        },
+    },
+    {
+        id: 'mutation-prelaunch-task-unresolvable',
+        // The Azure Functions shape. A Functions project declares
+        // `preLaunchTask: "func: host start"` with `"type": "func"`, and that provider comes
+        // from the Azure Functions extension — which the agent's own vscode-debug-plan.md
+        // lists as a prerequisite and which is not installed here. With no provider nothing
+        // starts, `startDebugging` returns false, and the verdict WAS `appFailedToStart`:
+        // exit 1, blaming the product for a project it generated correctly. Measured on
+        // grader-certification/stage-local-dev, where it took 64 seconds to say so; the
+        // preflight now says it in about one.
+        description: 'a preLaunchTask this environment cannot resolve is an environment gap, not a product failure',
         spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
         expectedOutcome: 'probeError',
         expectedExit: EXIT_GRADER_ERROR,
         mutate: workspace => {
             const launchPath = join(workspace, '.vscode', 'launch.json');
             const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as {
-                configurations: { request?: string; program?: string; port?: number }[];
+                configurations: { preLaunchTask?: string }[];
             };
-            // The shape the Azure Functions extension generates: attach to the inspector
-            // port that `func host start` opens, rather than launching anything.
-            delete launch.configurations[0].program;
-            launch.configurations[0].request = 'attach';
-            launch.configurations[0].port = 9229;
+            launch.configurations[0].preLaunchTask = 'func: host start';
             writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
         },
     },
