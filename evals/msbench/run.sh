@@ -86,6 +86,11 @@ PROBE_DEST="${ASSETS}/extensions/cor-debug-probe.vsix"
 # evals/debug-probe certifies with, so green here and green locally mean the same.
 FIXTURE_SRC="${REPO_ROOT}/evals/grader-certification/reference-node-fullstack"
 FIXTURE_DEST="${ASSETS}/fixtures/reference-node-fullstack"
+# The realistic Functions project, for the stimulus that asks whether the gate can
+# answer for the stack the agent actually generates rather than for a fixture built
+# to be answerable. See config/stimuli/functions-breakpoint-control.yaml.
+LOCALDEV_SRC="${REPO_ROOT}/evals/grader-certification/stage-local-dev"
+LOCALDEV_DEST="${ASSETS}/fixtures/stage-local-dev"
 
 # Borrowed purely for its container image; user-overrides.yaml replaces its
 # prompt and assertions wholesale. Swapping this for a heavier instance is how
@@ -259,6 +264,12 @@ cp -R "$FIXTURE_SRC" "$FIXTURE_DEST"
 # verdict nobody produced there, which is the most misleading artifact possible.
 rm -rf "${FIXTURE_DEST}/.eval" "${FIXTURE_DEST}/node_modules" "${FIXTURE_DEST}/debug-probe.json"
 [ -f "${FIXTURE_DEST}/.vscode/launch.json" ] || die "Debug fixture has no .vscode/launch.json at ${FIXTURE_DEST}"
+
+# The Functions fixture, staged the same way and for the same reason.
+rm -rf "$LOCALDEV_DEST"
+cp -R "$LOCALDEV_SRC" "$LOCALDEV_DEST"
+rm -rf "${LOCALDEV_DEST}/.eval" "${LOCALDEV_DEST}/node_modules"
+[ -f "${LOCALDEV_DEST}/.vscode/launch.json" ] || die "stage-local-dev has no .vscode/launch.json at ${LOCALDEV_DEST}"
 
 # --- stage the graders and build the config ----------------------------------
 #
