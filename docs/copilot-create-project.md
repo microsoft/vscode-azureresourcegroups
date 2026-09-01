@@ -252,10 +252,12 @@ plan markdown.
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
 The generated `docker-compose.yml` is identical for either engine; only the command that drives it changes.
-The plan **prefers Podman whenever it's installed and ready** (even if Docker is also available), and falls back to
-Docker otherwise — or when neither is detected. On Windows/macOS, Podman needs a running **Podman machine** — if it
-isn't started, generation asks before starting it. You can switch engines by editing the plan's *Container Runtime* /
-*Compose Command* before approving.
+The plan **prefers the Podman engine whenever it's installed and ready** (even if Docker is also available), and falls
+back to Docker otherwise — or when neither is detected. Podman is used two ways: **native** (the `podman` CLI, driven by
+`podman compose`) or **Docker-compatibility mode** (the Podman engine behind Docker's socket, still driven by
+`docker compose`) — recorded as *Podman (Docker-compatible)*. On Windows/macOS, Podman needs a running **Podman
+machine** — if it isn't started, generation asks before starting it. You can switch engines by editing the plan's
+*Container Runtime* / *Compose Command* before approving.
 
 <p align="center">
   <img src="images/copilot-create-project/08-debug-plan-view.png" alt="Debug plan view" />
@@ -504,6 +506,7 @@ before submitting.
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
 | F5 / *Start Emulators* fails with a connection or "cannot connect to the container runtime" error. | The container engine the plan selected isn't running. | For **Docker**, start Docker Desktop / the Docker service. For **Podman** on Windows/macOS, ensure a **Podman machine** exists and is started (`podman machine init` once, then `podman machine start`). Generation's preflight asks before starting a stopped machine but won't create one for you. |
 | Emulators start under Docker but not after switching the plan to **Podman**. | `podman compose` needs an external Compose provider, or the emulator isn't Podman‑certified. | Confirm `podman compose version` returns a version (it wraps `docker-compose`/`podman-compose`). Azurite and PostgreSQL are certified; other emulators generate best‑effort under Podman and emit a `⚠️ LIMITED SUPPORT` warning. |
+| The plan says *Podman (Docker-compatible)* but `docker compose` can't reach an engine. | Podman's Docker-compatible socket isn't up. | Enable **Docker compatibility** in Podman Desktop and make sure the **Podman machine** is started (`podman machine start`). `docker info` should then report the Podman server. The generated tasks keep using `docker compose` — that's the command that talks to the compatible socket. |
 
 ## Clean up resources after a failed deploy
 

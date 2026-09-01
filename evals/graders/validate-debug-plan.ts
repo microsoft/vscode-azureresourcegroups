@@ -16,6 +16,8 @@
  *        --assert-no-emulators
  *        --assert-checklist
  *        --assert-runtime=<docker|podman>
+ *        --assert-docker-compat        (require Podman Docker-compatibility mode)
+ *        --assert-no-docker-compat     (require NOT Docker-compatibility mode)
  */
 
 import type { ContainerRuntime, LocalDebugPlanExpectations } from '../src/artifacts/localDebugPlan.ts';
@@ -33,6 +35,7 @@ runGrader('vscode-debug-plan.md satisfies the debug plan contract', () => {
         expectNoEmulators: args.includes('--assert-no-emulators'),
         requireChecklist: args.includes('--assert-checklist'),
         expectedRuntime: runtimeOf(args, '--assert-runtime'),
+        expectedDockerCompatible: dockerCompatOf(args),
     };
 
     const result = validateLocalDebugPlanArtifact(content, expectations);
@@ -75,4 +78,20 @@ function runtimeOf(args: string[], flag: string): ContainerRuntime | undefined {
         throw new Error(`Invalid ${flag}=${raw}: expected "docker" or "podman"`);
     }
     return raw;
+}
+
+function dockerCompatOf(args: string[]): boolean | undefined {
+    const wants = args.includes('--assert-docker-compat');
+    const wantsNot = args.includes('--assert-no-docker-compat');
+    if (wants && wantsNot) {
+        // Contradictory flags are a miswired eval spec — exit 3, blame the harness.
+        throw new Error('Cannot pass both --assert-docker-compat and --assert-no-docker-compat');
+    }
+    if (wants) {
+        return true;
+    }
+    if (wantsNot) {
+        return false;
+    }
+    return undefined;
 }

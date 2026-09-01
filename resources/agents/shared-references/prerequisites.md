@@ -49,7 +49,7 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 
-**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose. **Prefer Podman whenever it's ready** — select Podman if it is installed and ready (even when Docker is also ready), unless the user explicitly asked for Docker; fall back to Docker when Podman isn't ready, and default to Docker only when neither can be confirmed. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
+**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose (or Podman via Docker's socket — see below). **Prefer the Podman engine whenever it's ready** — select native Podman if the `podman` CLI is ready (even when Docker is also ready), or Podman-in-Docker-compatibility mode when the `docker` CLI is backed by Podman, unless the user explicitly asked for Docker; fall back to Docker when Podman isn't ready, and default to Docker only when neither can be confirmed. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
 
 For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
 
@@ -169,14 +169,34 @@ Get-Command podman -ErrorAction SilentlyContinue | Select-Object -ExpandProperty
 
   If no machine exists, or the machine is stopped, record Podman as `❓` and note in the plan that the user must run `podman machine init` / `podman machine start` before F5. **Do not create or start a Podman machine during detection** — that is a slow, stateful action the user should approve (handled in the generation preflight).
 
+**Step 2b — detect Podman running behind Docker's socket (Docker-compatibility mode).** Podman Desktop can expose a **Docker-compatible socket** so plain `docker` / `docker compose` commands actually drive the **Podman** engine. When you detected a working `docker` CLI in Step 1, check which engine actually answers before labeling it Docker:
+
+```bash
+# The Docker CLI reports its backing server engine here.
+docker info --format '{{.ServerVersion}}' 2>&1        # a Podman backend shows e.g. "5.x.y" with Podman in the full `docker info`
+docker version --format '{{.Server.Version}}' 2>&1
+```
+
+If the Docker CLI's server identifies as **Podman** (the full `docker info` / `docker version` names Podman, or `podman` is the only engine installed yet `docker` resolves), the machine is running **Podman in Docker-compatibility mode**: the engine is Podman but the Compose command stays `docker compose`. Record this as its own runtime (see Step 3, option for Docker-compat).
+
 **Step 3 — choose the runtime and record it.**
 
 1. If an existing `docker-compose.yml`/`compose.yaml` and project tooling already imply a runtime, keep it (don't override a deliberate existing setup).
-2. **Prefer Podman whenever it's ready.** If Podman is `✅` (installed **and** ready — engine reachable, machine running on Win/mac, Compose provider present), select **Podman** — even if Docker is also ready — unless the user explicitly asked for Docker.
-3. Otherwise, if Docker is `✅`, select **Docker**.
+2. **Prefer the Podman engine whenever it's ready.**
+   - If **native Podman** is `✅` (the `podman` CLI is ready — engine reachable, machine running on Win/mac, `podman compose` provider present), select **Podman** with the `podman compose` command — even if Docker is also ready — unless the user explicitly asked for Docker.
+   - Else if the `docker` CLI is ready **but backed by Podman** (Step 2b), select **Podman (Docker-compatible)**: the engine is Podman, but the Compose command stays **`docker compose`**. Prefer this over plain Docker too, since the engine is still Podman.
+3. Otherwise, if Docker is `✅` (backed by the real Docker engine), select **Docker** with `docker compose`.
 4. If **neither** can be confirmed, default the plan to **Docker**, record the container runtime + Compose provider as `❓`, and surface the action-required callout so the user installs/starts one before approving.
 
-This preference is the same in autopilot: autopilot selects Podman when it's ready and falls back to Docker, with no chat prompt.
+Record the choice in the plan's Orchestrator table so the generation phase emits the matching Compose command:
+
+| Selection | Container Runtime cell | Compose Command cell |
+|-----------|------------------------|----------------------|
+| Native Podman | `Podman` | `podman compose` |
+| Podman via Docker socket | `Podman (Docker-compatible)` | `docker compose` |
+| Docker | `Docker` | `docker compose` |
+
+This preference is the same in autopilot: autopilot selects the Podman engine (native, else Docker-compatible) when it's ready and falls back to Docker, with no chat prompt.
 
 Emit prerequisite rows for the **selected** runtime only (Docker + Docker Compose, or Podman + Podman Compose), and record the same choice — plus its Compose command (`docker compose` or `podman compose`) — in the plan's Orchestrator table so the generation phase emits matching task commands.
 

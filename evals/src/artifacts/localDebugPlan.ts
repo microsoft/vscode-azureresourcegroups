@@ -29,7 +29,12 @@ import { createValidationResult } from './validationTypes.ts';
 /** Marks the compound row in the Debug Configurations table. */
 export const COMPOUND_PROJECT_TYPE = '*Compound Config*';
 
-/** The two container runtimes the debug plan can select for running emulator containers. */
+/**
+ * The container **engine** the debug plan selects for running emulator containers. This is the
+ * engine that actually runs the containers — Podman's Docker-compatibility mode is still the
+ * `podman` engine (it just accepts `docker compose` commands via a Docker-compatible socket),
+ * so it is `'podman'` here with the separate `dockerCompatible` flag set.
+ */
 export type ContainerRuntime = 'docker' | 'podman';
 
 const requiredSections = [
@@ -55,6 +60,8 @@ export interface LocalDebugPlanExpectations {
     requireChecklist?: boolean;
     /** Container runtime the Orchestrator table must record (e.g. `podman` when the scenario asked for Podman). */
     expectedRuntime?: ContainerRuntime;
+    /** When set, the plan must (true) or must not (false) record Podman Docker-compatibility mode. */
+    expectedDockerCompatible?: boolean;
 }
 
 export interface DebugConfigRow {
@@ -73,8 +80,14 @@ export interface ParsedDebugPlan {
     migrations: PlanChecklistRow[];
     apiTestCollections: PlanChecklistRow[];
     convenienceScripts: ConvenienceScriptRow[];
-    /** Container runtime recorded in the Orchestrator table, or undefined for an old plan that omits it. */
+    /** Container **engine** recorded in the Orchestrator table, or undefined for an old plan that omits it. */
     containerRuntime?: ContainerRuntime;
+    /**
+     * True when the plan runs the Podman engine through its **Docker-compatibility** socket, so the
+     * engine is `podman` but the Compose command is `docker compose`. When set, the generated tasks
+     * legitimately use `docker compose` even though the engine is Podman.
+     */
+    dockerCompatible?: boolean;
     /** Normalized Compose command (`docker compose` / `podman compose`) the generation phase should emit. */
     composeCommand?: string;
 }
@@ -126,7 +139,7 @@ export function validateLocalDebugPlanArtifact(
  */
 export function parseDebugPlan(content: string): ParsedDebugPlan {
     const data = parseLocalDebugPlanMarkdown(content);
-    const orchestrator = readOrchestrator(data);
+    const orchestrator = readOrchestratorInfo(data);
     return {
         data,
         debugConfigs: readDebugConfigRows(data),
@@ -134,7 +147,8 @@ export function parseDebugPlan(content: string): ParsedDebugPlan {
         migrations: readChecklistRows(data, 'migrations'),
         apiTestCollections: readChecklistRows(data, 'api test collections'),
         convenienceScripts: readConvenienceScriptRows(data),
-        containerRuntime: orchestrator.runtime,
+        containerRuntime: orchestrator.engine,
+        dockerCompatible: orchestrator.dockerCompatible,
         composeCommand: orchestrator.composeCommand,
     };
 }
@@ -355,36 +369,45 @@ function validateOrchestrator(
     expectations: LocalDebugPlanExpectations,
     issues: ArtifactValidationIssue[],
 ): void {
-    const cells = readOrchestratorCells(data);
-    const { runtime } = readOrchestrator(data);
+    const info = readOrchestratorInfo(data);
 
-    // Internal consistency: if the table names a runtime AND a Compose command, they must
-    // name the same engine (a `Docker` row whose command says `podman compose` would
-    // generate the wrong tasks). Read the two cells independently — resolving them first
-    // would hide the very disagreement this check exists to catch. Only enforced when both
-    // cells identify an engine, so old single-column plans pass.
-    if (cells) {
-        const runtimeColEngine = detectRuntime(cells.runtimeCell);
-        const commandEngine = detectRuntime(cells.commandCell);
-        if (runtimeColEngine && commandEngine && runtimeColEngine !== commandEngine) {
+    // Internal consistency: the Compose command must drive the engine the plan will actually use.
+    // Normally that means the runtime column and the command name the same engine — but Podman's
+    // **Docker-compatibility** mode intentionally pairs the `podman` engine with `docker compose`
+    // (via a Docker-compatible socket), so in that case the command is expected to be `docker`.
+    // Only enforced when both the runtime column and the command identify an engine, so old
+    // single-column plans pass.
+    if (info.engine && info.commandEngine) {
+        const expectedCommandEngine: ContainerRuntime = info.dockerCompatible ? 'docker' : info.engine;
+        if (info.commandEngine !== expectedCommandEngine) {
             issues.push(issue(
                 'orchestratorRuntimeMismatch',
                 '$.orchestrator',
-                `Orchestrator records container runtime "${runtimeColEngine}" but its Compose command names "${commandEngine}". They must name the same engine.`,
+                info.dockerCompatible
+                    ? `Orchestrator records Podman in Docker-compatibility mode, so its Compose command must be "docker compose", but it names "${info.commandEngine} compose".`
+                    : `Orchestrator records container runtime "${info.engine}" but its Compose command names "${info.commandEngine}". They must name the same engine.`,
             ));
         }
     }
 
-    if (expectations.expectedRuntime && runtime !== expectations.expectedRuntime) {
+    if (expectations.expectedRuntime && info.engine !== expectations.expectedRuntime) {
         issues.push(issue(
             'unexpectedRuntime',
             '$.orchestrator',
-            `Expected the Orchestrator to record container runtime "${expectations.expectedRuntime}", found "${runtime ?? 'none'}".`,
+            `Expected the Orchestrator to record container runtime "${expectations.expectedRuntime}", found "${info.engine ?? 'none'}".`,
+        ));
+    }
+
+    if (expectations.expectedDockerCompatible !== undefined && !!info.dockerCompatible !== expectations.expectedDockerCompatible) {
+        issues.push(issue(
+            'unexpectedDockerCompatible',
+            '$.orchestrator',
+            `Expected the Orchestrator to ${expectations.expectedDockerCompatible ? 'record' : 'not record'} Podman Docker-compatibility mode, found ${info.dockerCompatible ? 'it recorded' : 'it not recorded'}.`,
         ));
     }
 }
 
-/** The raw Orchestrator cells for the first populated row, lowercased where it aids matching. */
+/** The raw Orchestrator cells for the first populated row. */
 function readOrchestratorCells(
     data: LocalPlanData,
 ): { runtimeCell: string; commandCell: string; orchestratorCell: string } | undefined {
@@ -403,31 +426,56 @@ function readOrchestratorCells(
     };
 }
 
+interface OrchestratorInfo {
+    /** The actual container engine, or undefined for a plan that predates the field. */
+    engine?: ContainerRuntime;
+    /** True when the plan runs Podman via its Docker-compatibility socket (engine `podman`, command `docker compose`). */
+    dockerCompatible: boolean;
+    /** The engine named by the Compose command cell, if any. */
+    commandEngine?: ContainerRuntime;
+    /** Normalized Compose command the generation phase should emit. */
+    composeCommand?: string;
+}
+
 /**
- * Resolves the container runtime and Compose command from the plan's Orchestrator table.
+ * Resolves the container engine, Docker-compatibility flag, and Compose command from the plan's
+ * Orchestrator table.
  *
- * Understands both the current shape (Orchestrator | Container Runtime | Compose Command |
- * Description) and the older single-column (Orchestrator | Description) shape, inferring the
- * engine from the Container Runtime column first, then the Compose command, then the
- * Orchestrator label. Returns `{}` when no engine can be identified, so callers skip runtime
- * checks on plans that predate the field rather than failing them.
+ * Understands the current shape (Orchestrator | Container Runtime | Compose Command | Description),
+ * the older single-column (Orchestrator | Description) shape, and Podman's Docker-compatibility
+ * mode (a `Podman (Docker-compatible)` runtime paired with a `docker compose` command). Returns an
+ * empty engine when none can be identified, so callers skip runtime checks on plans that predate
+ * the field rather than failing them.
  */
-function readOrchestrator(data: LocalPlanData): { runtime?: ContainerRuntime; composeCommand?: string } {
+function readOrchestratorInfo(data: LocalPlanData): OrchestratorInfo {
     const cells = readOrchestratorCells(data);
     if (!cells) {
-        return {};
+        return { dockerCompatible: false };
     }
-    const runtime = detectRuntime(cells.runtimeCell)
-        ?? detectRuntime(cells.commandCell)
-        ?? detectRuntime(cells.orchestratorCell);
-    if (!runtime) {
-        return {};
+
+    const dockerCompatible = isDockerCompatible(cells.runtimeCell) || isDockerCompatible(cells.orchestratorCell);
+    const engine: ContainerRuntime | undefined = dockerCompatible
+        ? 'podman'
+        : detectRuntime(cells.runtimeCell) ?? detectRuntime(cells.commandCell) ?? detectRuntime(cells.orchestratorCell);
+    const commandEngine = detectRuntime(cells.commandCell);
+
+    if (!engine) {
+        return { dockerCompatible: false };
     }
-    // Prefer an explicit Compose command; otherwise synthesize it from the runtime.
+
+    // The command the engine actually drives: `docker compose` under Docker-compat, else the engine's own.
+    const expectedCommandEngine: ContainerRuntime = dockerCompatible ? 'docker' : engine;
     const composeCommand = /\bcompose\b/.test(cells.commandCell.toLowerCase())
         ? cells.commandCell.toLowerCase()
-        : `${runtime} compose`;
-    return { runtime, composeCommand };
+        : `${expectedCommandEngine} compose`;
+
+    return { engine, dockerCompatible, commandEngine, composeCommand };
+}
+
+/** True when a cell names Podman running in Docker-compatibility mode (engine podman, command docker). */
+function isDockerCompatible(text: string): boolean {
+    const value = text.toLowerCase();
+    return /\bpodman\b/.test(value) && /docker[- ]?compat/.test(value);
 }
 
 /** Identifies the container engine named in a cell, if any. */

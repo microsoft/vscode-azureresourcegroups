@@ -4,9 +4,10 @@ Verify the plan exists and environment is ready before proceeding onwards to gen
 
 ## Container Runtime Readiness Check
 
-Read the container runtime from the plan's Orchestrator table (**Docker** or **Podman**) and confirm the engine is actually running before you generate or validate anything. A CLI on PATH is not the same as a running engine.
+Read the container runtime from the plan's Orchestrator table (**Docker**, **Podman**, or **Podman (Docker-compatible)**) and confirm the engine is actually running before you generate or validate anything. A CLI on PATH is not the same as a running engine.
 
 - **Docker** — confirm the daemon is reachable (`docker info`). If it errors, tell the user to start Docker Desktop / the Docker service and wait, then retry.
+- **Podman (Docker-compatible)** — the plan runs the Podman engine through its Docker-compatible socket, and the generated tasks use `docker compose`. Confirm the socket answers with `docker info` (it will report the Podman server). If `docker info` errors, the Docker-compatible socket isn't up: tell the user to enable Docker compatibility in Podman Desktop and ensure the **Podman machine** is started (same machine check as below), then retry.
 - **Podman** — confirm the engine is reachable (`podman info`). On **Windows and macOS** this needs a running **Podman machine**:
 
   ```bash

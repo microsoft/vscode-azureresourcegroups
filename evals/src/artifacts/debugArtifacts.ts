@@ -75,20 +75,23 @@ export async function validateDebugArtifacts(workspace: string): Promise<Artifac
 
 /**
  * When the plan's Orchestrator selected a container runtime, every generated Compose
- * task must drive that same engine. A `podman` plan whose "Start Emulators" task still
- * runs `docker compose up -d` would fail on a machine that only has Podman — exactly the
- * regression the runtime-parameterization is meant to prevent. Skipped when the plan
- * records no runtime (old single-column plans), so it never false-fails legacy fixtures.
+ * task must drive that runtime's Compose command. A `podman` plan whose "Start Emulators"
+ * task still runs `docker compose up -d` would fail on a machine that only has Podman — exactly
+ * the regression the runtime-parameterization is meant to prevent. Podman's Docker-compatibility
+ * mode is the deliberate exception: the engine is Podman but the command is `docker compose`, so
+ * `docker` is the expected command there. Skipped when the plan records no runtime (old
+ * single-column plans), so it never false-fails legacy fixtures.
  */
 function validateComposeCommandConformance(
     plan: ParsedDebugPlan,
     tasksText: string | undefined,
     issues: ArtifactValidationIssue[],
 ): void {
-    const expected = plan.containerRuntime;
-    if (!expected || tasksText === undefined) {
+    if (!plan.containerRuntime || tasksText === undefined) {
         return;
     }
+    // Under Docker-compatibility mode the Podman engine is driven by `docker compose`.
+    const expected: 'docker' | 'podman' = plan.dockerCompatible ? 'docker' : plan.containerRuntime;
     let tasks: ReturnType<typeof readTasksDocument>['tasks'];
     try {
         tasks = readTasksDocument(tasksText).tasks;
@@ -105,10 +108,13 @@ function validateComposeCommandConformance(
         const match = composeUse.exec(command.toLowerCase());
         if (match && match[1] !== expected) {
             const label = typeof task.label === 'string' ? task.label : '(unlabeled task)';
+            const reason = plan.dockerCompatible
+                ? `the plan runs Podman in Docker-compatibility mode, so the generated Compose command must use "docker compose"`
+                : `the plan selected the ${expected} runtime — the generated Compose command must use "${expected} compose"`;
             issues.push(issue(
                 'composeCommandRuntimeMismatch',
                 '$.tasks',
-                `Task "${label}" runs "${match[0]}" but the plan selected the ${expected} runtime — the generated Compose command must use "${expected} compose".`,
+                `Task "${label}" runs "${match[0]}" but ${reason}.`,
             ));
         }
     }
