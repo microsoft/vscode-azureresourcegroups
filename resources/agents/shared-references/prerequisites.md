@@ -49,7 +49,7 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 
-**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose. **Docker is the default** when both are ready or neither can be confirmed; only select Podman when it is the sole runtime detected as ready, or when the user asks for it. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
+**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose. **Prefer Podman whenever it's ready** — select Podman if it is installed and ready (even when Docker is also ready), unless the user explicitly asked for Docker; fall back to Docker when Podman isn't ready, and default to Docker only when neither can be confirmed. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
 
 For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
 
@@ -171,10 +171,12 @@ Get-Command podman -ErrorAction SilentlyContinue | Select-Object -ExpandProperty
 
 **Step 3 — choose the runtime and record it.**
 
-1. If an existing `docker-compose.yml`/`compose.yaml` and project tooling already imply a runtime, keep it.
-2. If exactly one engine is `✅` (installed **and** ready), select it.
-3. If **both** are ready, select **Docker** (the default) unless the user asked for Podman.
+1. If an existing `docker-compose.yml`/`compose.yaml` and project tooling already imply a runtime, keep it (don't override a deliberate existing setup).
+2. **Prefer Podman whenever it's ready.** If Podman is `✅` (installed **and** ready — engine reachable, machine running on Win/mac, Compose provider present), select **Podman** — even if Docker is also ready — unless the user explicitly asked for Docker.
+3. Otherwise, if Docker is `✅`, select **Docker**.
 4. If **neither** can be confirmed, default the plan to **Docker**, record the container runtime + Compose provider as `❓`, and surface the action-required callout so the user installs/starts one before approving.
+
+This preference is the same in autopilot: autopilot selects Podman when it's ready and falls back to Docker, with no chat prompt.
 
 Emit prerequisite rows for the **selected** runtime only (Docker + Docker Compose, or Podman + Podman Compose), and record the same choice — plus its Compose command (`docker compose` or `podman compose`) — in the plan's Orchestrator table so the generation phase emits matching task commands.
 

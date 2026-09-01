@@ -103,17 +103,17 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 <!-- Records the container runtime and Compose provider used to run the emulator containers. -->
 <!-- Container Runtime is Docker or Podman; Compose Command is the CLI the generation phase writes into every emulator task (`docker compose` or `podman compose`). -->
 <!-- Detected from the workspace (e.g. an existing docker-compose.yml) and the container-runtime detection pass in prerequisites.md. -->
-<!-- If no runtime is detected, default to Docker Compose (Docker). The generated compose file is identical for either engine. -->
+<!-- Prefer Podman when it's detected as ready (even if Docker is too); otherwise Docker. If no runtime is detected, default to Docker Compose (Docker). The generated compose file is identical for either engine. -->
 <!-- ✏️ User can edit: Container Runtime / Compose Command (to switch engines, e.g. Docker → Podman) -->
 
 | Orchestrator | Container Runtime | Compose Command | Description |
 |-------------|-------------------|-----------------|-------------|
 | {Docker Compose / Podman Compose} | {Docker / Podman} | {`docker compose` / `podman compose`} | {description} |
 
-<!-- Example (Docker, the default): -->
-<!-- | Docker Compose | Docker | `docker compose` | Uses Docker Compose to orchestrate emulators and dependent services during local development | -->
-<!-- Example (Podman): -->
+<!-- Example (Podman, preferred when ready): -->
 <!-- | Podman Compose | Podman | `podman compose` | Uses Podman (rootless) with `podman compose` to orchestrate emulators; the compose file is unchanged from Docker | -->
+<!-- Example (Docker, the fallback): -->
+<!-- | Docker Compose | Docker | `docker compose` | Uses Docker Compose to orchestrate emulators and dependent services during local development | -->
 
 ---
 

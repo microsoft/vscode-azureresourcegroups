@@ -249,13 +249,13 @@ API tests — then opens the **Debug Next Steps** view. Like the plan preview, t
 section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
 plan markdown.
 
-The emulators run in containers, so the plan records a **container runtime** — **Docker** (the default) or
-**Podman** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
+The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
+**Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
 The generated `docker-compose.yml` is identical for either engine; only the command that drives it changes.
-The plan selects Podman when it is the container runtime detected as ready (or when you ask for it), and Docker
-otherwise. On Windows/macOS, Podman needs a running **Podman machine** — if it isn't started, generation asks
-before starting it. You can switch engines by editing the plan's *Container Runtime* / *Compose Command* before
-approving.
+The plan **prefers Podman whenever it's installed and ready** (even if Docker is also available), and falls back to
+Docker otherwise — or when neither is detected. On Windows/macOS, Podman needs a running **Podman machine** — if it
+isn't started, generation asks before starting it. You can switch engines by editing the plan's *Container Runtime* /
+*Compose Command* before approving.
 
 <p align="center">
   <img src="images/copilot-create-project/08-debug-plan-view.png" alt="Debug plan view" />
