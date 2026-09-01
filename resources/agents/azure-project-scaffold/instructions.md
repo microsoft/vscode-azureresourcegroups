@@ -203,7 +203,36 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 > 4. **Cross-workspace imports (CRITICAL)**: Run `tsc --noEmit` in every workspace importing shared. If `TS2307: Cannot find module` → exports broken. **Fix before proceeding.**
 > 5. **rootDir and main field (CRITICAL)**: After `tsc`, **list actual dist/ contents**, verify `main` glob matches compiled handlers. If `rootDir: ".."`, output nests deeper. Fix `main`.
 > 6. **Dependency split (deploy-readiness, Rule 13)**: Every package imported by runtime code lives in `dependencies`; build-only tooling (`typescript`, `@types/*`, test runners, bundlers) lives in `devDependencies`. A production install (`npm install --omit=dev`) must satisfy every `import` in `dist/` — this is what lets the deploy ship the prebuilt artifact without an Oryx rebuild.
-> ⚠️ **Pitfalls**: (1) Shared packages without build → `ERR_MODULE_NOT_FOUND`. (2) Wildcard exports fail TS resolution. (3) `rootDir: "."` blocks cross-workspace imports — use `".."` and update `main`.
+> 7. **Emitted specifiers resolve (CRITICAL — after build, not `--noEmit`)**: `tsc` does **not** rewrite module specifiers on emit. Any non-relative import that only resolved through a tsconfig `paths` alias is still in `dist/` verbatim and dies at runtime with `Cannot find module`, even though checkpoints 1–6 all pass. **Do NOT use `paths` aliases for cross-workspace imports** — import the shared package by its `package.json` `name`, or use the relative `../shared/...` form. After building, verify every non-relative specifier in `dist/` actually resolves from that workspace (run from the workspace that emitted `dist/`):
+>
+> ```bash
+> node --input-type=module -e "
+> import fs from 'node:fs';
+> import path from 'node:path';
+> import {builtinModules, createRequire} from 'node:module';
+> const bad=[];
+> (function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){
+>   const p=path.join(d,e.name);
+>   if(e.isDirectory()) walk(p);
+>   else if(e.name.endsWith('.js')) for(const m of fs.readFileSync(p,'utf8').matchAll(/(?:require\(|from\s*)['\x22]([^'\x22]+)['\x22]/g)){
+>     const s=m[1];
+>     if(s.startsWith('.')||s.startsWith('node:')||builtinModules.includes(s)) continue;
+>     let ok=false;
+>     try { createRequire(path.resolve(p)).resolve(s); ok=true; } catch {}
+>     if(ok===false){ try { import.meta.resolve(s); ok=true; } catch {} }
+>     if(ok===false) bad.push(p+' -> '+s);
+>   }}})('dist');
+> if(bad.length){ console.error('unresolvable specifiers in emitted output:'); bad.forEach(b=>console.error('  '+b)); process.exit(1); }
+> console.log('all emitted specifiers resolve');
+> "
+> ```
+>
+> Three details in it are load-bearing — do not "simplify" them away:
+> - **`path.resolve(p)`** — the walk builds paths relative to `dist/`, and `createRequire()` rejects a relative path with `ERR_INVALID_ARG_VALUE`. Swallowed by the `catch`, that reports **every** bare specifier as unresolvable, including real dependencies like `@azure/functions` — a check that reds on a healthy project gets ignored.
+> - **The second `import.meta.resolve` attempt** — `createRequire().resolve()` resolves under the `require` condition only. A `"type": "module"` shared package whose `exports` declare `import` and not `require` resolves fine at runtime but not that way, so a single CJS attempt would red the very fix this checkpoint recommends. A specifier is only reported when **both** conditions fail, which still catches a genuinely unexported subpath.
+> - **`['\x22]` rather than a literal `"`** — keeps the body free of double quotes so `node -e "…"` parses in PowerShell as well as bash (see the cross-platform cardinal rules above).
+>
+> ⚠️ **Pitfalls**: (1) Shared packages without build → `ERR_MODULE_NOT_FOUND`. (2) Wildcard exports fail TS resolution. (3) `rootDir: "."` blocks cross-workspace imports — use `".."` and update `main`. (4) tsconfig `paths` aliases (e.g. `@shared/*`) resolve at compile time only — `tsc --noEmit` passes and the emitted `dist/` still says `Cannot find module` at runtime.
 
 ---
 

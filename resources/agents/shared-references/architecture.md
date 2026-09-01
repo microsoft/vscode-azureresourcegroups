@@ -453,6 +453,27 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 }
 ```
 
+> ⛔ **Import the shared code by relative path (`../shared/...`) or by the shared package's `name` — NEVER through a tsconfig `paths` alias.**
+>
+> `tsc` resolves `paths` at compile time and emits the module specifier **unchanged**. `paths` has no runtime counterpart (no `tsconfig-paths`, no bundler, no `imports` map in these projects), so the alias survives into `dist/` and Node cannot resolve it. The build is green, `tsc --noEmit` is green, and `func start` dies on load.
+>
+> ```jsonc
+> // ❌ compiles, fails at runtime — tsc emits require('@shared/schemas/index') unchanged
+> // → Worker was unable to load entry point: Cannot find module '@shared/schemas/index'
+> { "compilerOptions": { "paths": { "@shared/*": ["shared/src/*"] } } }
+> ```
+>
+> ```ts
+> // ❌ import { createTaskSchema } from '@shared/schemas/index';
+> // ✅ relative form — count the levels from the importing FILE, not from the workspace root.
+> //    services/functions/src/functions/createTask.ts -> services/shared/schemas/index
+> import { createTaskSchema } from '../../../shared/schemas/index';
+> // ✅ or the workspace package's own name, exactly as written in services/shared/package.json
+> import { createTaskSchema } from '@<project>/shared/schemas';
+> ```
+>
+> These are the only two supported mechanisms. Picking both leaves two competing paths to the same code, and the compile-time-only one wins silently.
+
 > ⚠️ **Build output nesting — `main` MUST match actual dist/ output (Rule 14)**
 >
 > When `rootDir` is parent dir, `tsc` mirrors full structure under `dist/`. `main` in `package.json` MUST be computed from actual output — never hardcoded.
