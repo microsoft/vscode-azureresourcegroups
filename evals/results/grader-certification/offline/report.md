@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
 - Outcome: **PASSED**
-- Cases: 139/139 passed
+- Cases: 140/140 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -66,6 +66,7 @@
 | `golden-runtime-frontend-api` | `reference-node-fullstack` | `runtime-frontend-api` | `passed` | `passed` | PASS |
 | `golden-runtime-crud` | `reference-node-fullstack` | `runtime-crud` | `passed` | `passed` | PASS |
 | `debug-plan-table-concatenated` | `reference-node-fullstack` | `debug-plan` | `tableRowConcatenated` | `tableRowConcatenated, invalidGenerateMarker` | PASS |
+| `debug-plan-checklist-entries-quoted` | `reference-node-fullstack` | `debug-plan` | `checklistMissingEntry` | `checklistMissingEntry` | PASS |
 | `debug-plan-checklist-stub` | `reference-node-fullstack` | `debug-plan` | `checklistStub` | `checklistStub` | PASS |
 | `debug-plan-diagram-dropped` | `reference-node-fullstack` | `debug-plan` | `missingSection` | `missingSection` | PASS |
 | `debug-plan-status-regressed` | `reference-node-fullstack` | `debug-plan` | `unexpectedStatus` | `unexpectedStatus` | PASS |

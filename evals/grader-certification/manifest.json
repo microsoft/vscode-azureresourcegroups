@@ -559,6 +559,17 @@
             "expectedCode": "tableRowConcatenated"
         },
         {
+            "id": "debug-plan-checklist-entries-quoted",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "✅ Golden App (debug)",
+            "replacement": "> ✅ Golden App (debug)",
+            "expectedCode": "checklistMissingEntry"
+        },
+        {
             "id": "debug-plan-checklist-stub",
             "tier": "offline",
             "fixture": "reference-node-fullstack",
