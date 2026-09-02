@@ -1,0 +1,58 @@
+# Stimulus `private-internal-hr-tool`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# The scaffold approval gate offers four options — `Yes / Edit plan / Private
+# access / Cancel` (approval-gates.md). Three of them are reachable by prompts
+# this suite already has. `Private access` is not: no stimulus has ever given
+# the planner a reason to consider it, so a documented branch of the product's
+# own approval gate has never been exercised by anything.
+#
+# The wider gap is public-endpoint-by-default. Every app this suite has planned
+# is meant to be reachable from the internet, so private endpoints, VNet
+# integration and `publicNetworkAccess` have no prompt behind them — and
+# `blocked-patterns.md` treats weakening exactly those controls as a HARD BLOCK,
+# a rule that presumes a scenario where they were set in the first place.
+#
+# Schema-only assertion, for the same reason as `cost-constrained-blog`:
+# networking is decided in the prepare and scaffold phases, and no phase in this
+# suite writes an artifact at the plan step that could carry a private-access
+# claim. The triage records whether the requirement survives the plan phase at
+# all, which is the prerequisite for grading it later.
+
+promptSteps:
+  - text: |
+      We need a small HR tool for tracking employee onboarding checklists.
+      This holds personal data about staff, so it must not be reachable from
+      the public internet — only people on our corporate network should be able
+      to get to it at all.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Wording is pinned to photo-app-requirements.yaml: same exec means same
+      # gate, and the comment is that gate's only identifier in stored results.
+      - comment: requirements.json satisfies the requirements contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # Recorded, not asserted. A hard networking constraint stated in the prompt
+      # either survives into the artifact or is silently dropped; this shows which.
+      - comment: Triage; did the private-network constraint survive into the artifact?
+        exec: 'grep -io "private\|vnet\|virtual network\|internal\|public.network\|endpoint\|firewall" .azure/requirements.json 2>/dev/null | sort | uniq -c | head -20'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

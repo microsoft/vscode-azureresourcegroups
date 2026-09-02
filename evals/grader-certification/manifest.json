@@ -1167,6 +1167,164 @@
             "operation": "relocate",
             "replacement": "infra/main.tf",
             "expectedCode": "!noIacFound"
+        },
+        {
+            "comment": "The preview manifest is absent entirely. Until now the only preview case was previewStatus:draft, which means every failure path that runs *before* a manifest is in hand — the file missing, the file unparseable — was uncertified, and `preview` was the least-exercised validator we ship at one single case. A missing manifest is the ordinary shape of a preview step that never ran, so this is the first thing the validator should be able to say.",
+            "id": "preview-manifest-absent",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "delete",
+            "expectedCode": "missingPreviewManifest"
+        },
+        {
+            "comment": "The manifest exists but is not JSON. Distinct from the case above because the remedy is different: a missing file means the preview step did not run, a corrupt one means it ran and produced garbage. Collapsing the two would send the reader to look for a step that plainly executed.",
+            "id": "preview-manifest-unparseable",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\",",
+            "replacement": "\"previewStatus\": \"ready\",,",
+            "expectedCode": "invalidPreviewManifest"
+        },
+        {
+            "comment": "Paired with the case above, and the reason the pair exists: previewStatus is read *out of* the manifest, so a manifest that does not parse cannot also be meaningfully 'not ready'. Reporting previewNotReady here would name a status field inside a file the validator was never able to read. Negative because includes() cannot falsify a spurious extra code.",
+            "id": "preview-unparseable-is-not-called-not-ready",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\",",
+            "replacement": "\"previewStatus\": \"ready\",,",
+            "expectedCode": "!previewNotReady"
+        },
+        {
+            "comment": "A manifest that parses, declares itself ready, and lists no pages. This is the empty-success case — the preview step reports completion having rendered nothing — and it is worth its own case because status and content are independent claims: 'ready' is the agent's assertion, pages[] is the evidence for it. Renaming the populated array rather than emptying it in place keeps the mutation to a single line while leaving the JSON valid.",
+            "id": "preview-ready-with-no-pages",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"pages\": [",
+            "replacement": "\"pages\": [], \"ignoredPages\": [",
+            "expectedCode": "missingPreviewPages"
+        },
+        {
+            "comment": "A slug that is neither lowercase nor hyphen-separated. Slugs become filenames — the validator resolves `${slug}.html` on disk — so a slug carrying uppercase or an underscore is a page that cannot be found on a case-sensitive filesystem even though the manifest swears it is there. Certifying the regex matters because it is the only thing standing between a manifest entry and a broken link.",
+            "id": "preview-slug-not-kebab-case",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"slug\": \"project-tracker\",",
+            "replacement": "\"slug\": \"Project_Tracker\",",
+            "expectedCode": "invalidPreviewSlug"
+        },
+        {
+            "comment": "Two pages claiming the same slug. Because slug determines the output filename, a duplicate means the second page silently overwrites the first: the manifest lists two pages, the user is shown one, and nothing about the run looks wrong. The injected page reuses the existing slug so the .html file still resolves — this isolates the collision itself rather than also tripping a missing-page check.",
+            "id": "preview-duplicate-slug",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"pages\": [",
+            "replacement": "\"pages\": [ { \"slug\": \"project-tracker\", \"title\": \"Duplicate\" },",
+            "expectedCode": "duplicatePreviewSlug"
+        },
+        {
+            "comment": "A Vite frontend with no vite.config file at all. The config carries every setting that makes the dev server embeddable in the preview webview, so its absence is not a style problem — it is the difference between a preview that renders and a blank panel.",
+            "id": "frontend-scaffold-vite-config-absent",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/vite.config.ts",
+            "operation": "delete",
+            "expectedCode": "missingViteConfig"
+        },
+        {
+            "comment": "The dev server binds loopback instead of all interfaces. This is the canonical 'works on my machine' preview failure: the server starts, the terminal looks healthy, and nothing outside the container - webview or forwarded port - can reach it. Note the check's polarity: the issue fires when `host: true` is ABSENT, so the mutation must remove the good value rather than add a bad one.",
+            "id": "frontend-scaffold-dev-server-binds-loopback",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/vite.config.ts",
+            "operation": "replace",
+            "search": "host: true,",
+            "replacement": "host: false,",
+            "expectedCode": "devServerNotReachable"
+        },
+        {
+            "comment": "strictPort: true makes the dev server exit when its preferred port is taken rather than picking a free one. In a preview that starts servers it does not control the port is routinely taken, so this turns an ordinary collision into a hard failure. Same inverted polarity as the case above.",
+            "id": "frontend-scaffold-strict-port-rejects-free-port",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/vite.config.ts",
+            "operation": "replace",
+            "search": "strictPort: false,",
+            "replacement": "strictPort: true,",
+            "expectedCode": "devServerStrictPort"
+        },
+        {
+            "comment": "Characterization, not aspiration: this records what the validator does today, which is not what its issue codes suggest. A corrupt package.json makes the directory fail discovery, so the run reports frontendNotFound and `invalidFrontendPackageJson` never fires - discovery reads the manifest to decide whether a directory is a frontend at all, and loses the reason on the way. The reported message is therefore false about the workspace: services/web plainly exists with a full source tree. This is the same defect class the noPackagesFound / unparseablePackageManifest pair was written to catch. Pinned here so that fixing it is a visible, deliberate change rather than a silent one.",
+            "id": "frontend-scaffold-unparseable-manifest-loses-the-reason",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/package.json",
+            "operation": "replace",
+            "search": "\"private\": true,",
+            "replacement": "\"private\": true,,",
+            "expectedCode": "frontendNotFound"
+        },
+        {
+            "comment": "No way to start the frontend. The validator accepts either `dev` or `start`, so the mutation renames the only one present to a third name rather than deleting it - that keeps the scripts block populated and proves the check is looking for the specific contract rather than merely noticing an empty object.",
+            "id": "frontend-scaffold-no-dev-or-start-script",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/package.json",
+            "operation": "replace",
+            "search": "\"dev\": \"vite\",",
+            "replacement": "\"serve\": \"vite\",",
+            "expectedCode": "missingDevScript"
+        },
+        {
+            "comment": "The api seam directory survives but loses its entry point. This is deliberately narrower than the missingApiSeam case: the seam is still there, so the failure is that integration no longer has a single documented file to swap. Deleting one file rather than the directory is what isolates the two.",
+            "id": "frontend-scaffold-api-seam-entry-absent",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/index.ts",
+            "operation": "delete",
+            "expectedCode": "missingApiSeamEntry"
+        },
+        {
+            "comment": "Deleting the preview-state switcher outright produces no issue at all, and that is the finding. The check asks whether any file under src/api mentions PreviewDataState or previewState, so mockClient.ts referring to the module is enough to satisfy it after the module itself is gone. A mention is not an implementation: an agent can delete the switcher and keep a stray import or comment and still pass. Expecting `passed` pins the current weakness, so that strengthening the check to look for the export rather than the string turns this case red and forces a deliberate rewrite instead of leaving the gap unrecorded.",
+            "id": "frontend-scaffold-preview-state-switcher-deletion-undetected",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/previewState.ts",
+            "operation": "delete",
+            "expectedCode": "passed"
+        },
+        {
+            "comment": "The companion to the unparseable-manifest case, and the reason both are worth keeping: a frontend directory with its entire source tree intact but no package.json also reports frontendNotFound rather than missingFrontendPackageJson. Between the two, `missingFrontendPackageJson` and `invalidFrontendPackageJson` are unreachable on the discovery path - they can only fire when a caller passes an explicit frontendDirectory. Certifying the real precedence is worth more than asserting a code that never arrives.",
+            "id": "frontend-scaffold-absent-manifest-loses-the-reason",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/package.json",
+            "operation": "delete",
+            "expectedCode": "frontendNotFound"
         }
     ]
 }
