@@ -106,6 +106,18 @@ const DEST = join(HERE, 'assets', 'workspace');
  * The fallback fixture: a real, complete fullstack plan (React frontend, Azure Functions
  * backend, PostgreSQL) already used by `evals/local-dev/eval.yaml` for the same purpose.
  *
+ * "Real" is now literal rather than aspirational: it is the `azure-project-plan` agent's
+ * own output, captured at the approval gate of an end-to-end VS Code run, with only the
+ * `**Status**:` line normalised. The fixture it replaced was hand-written and had drifted
+ * far enough to fail `validate-project-plan` outright (no `## 9. Next Steps`, no
+ * per-service sections, Prerequisites as bullets rather than the `### Run`/`### Debug`
+ * tables) — so the seed was withholding exactly the fields the scaffold phase consumes.
+ * See that fixture's README.md for the capture details and the before/after.
+ *
+ * It is still NOT a harvested seed: `seeds/` records an MSBench `runId` + `instance` and
+ * can be staleness-checked, and a local run has no run id to record. So this remains the
+ * floor, freshness still unvouched-for, and a harvest still wins.
+ *
  * Used only when nothing has been harvested. `readPlanSource` prefers
  * `seeds/project-plan.md`, which carries provenance and can be checked for staleness.
  */
