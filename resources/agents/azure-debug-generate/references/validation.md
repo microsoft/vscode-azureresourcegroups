@@ -6,6 +6,8 @@ Verify that the generated VS Code debug configuration actually works. This phase
 
 > **Compose command comes from the plan.** Every `docker compose …` invocation below is a stand-in for the plan's Orchestrator **Compose Command** — use `docker compose` by default, or `podman compose` when the plan selected Podman. The commands (`up -d`, `ps`, `logs`, `down`) are identical across both engines.
 
+> ⛔ **Do NOT switch the container runtime to make validation pass.** If an emulator fails to start, a port doesn't reach the host, a volume/permission error occurs, or a health check never passes on the plan's selected engine, **STOP and surface it to the user** (per [preflight.md § Container Runtime Readiness Check](preflight.md)) — offer the fix first, and only switch engines if the user explicitly chooses to. Silently rewriting the Orchestrator/tasks to the other engine and re-validating is a failure even if the app then works.
+
 ---
 
 ## Validation Algorithm

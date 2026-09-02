@@ -87,7 +87,7 @@ Use these implementations when building scripts from the plan:
 |---------------|-----------------|-------|
 | Start emulators | `docker compose up -d` | Idempotent — safe to re-run |
 | Stop emulators | `docker compose down` | Stops and removes containers |
-| Clean emulator data | Stop containers and remove data directories | `{data-dirs}` = `./.{name}` directories derived from `docker-compose.yml` `volumes:` mounts. Use platform-appropriate removal. |
+| Clean emulator data | Stop containers with volumes, then remove bind-mount data directories | Run `docker compose down -v` (`-v` also drops **named volumes** like Postgres's `postgres_data`), then remove `{data-dirs}` = `./.{name}` **bind-mount** directories derived from `docker-compose.yml` `volumes:` mounts. Use platform-appropriate removal. |
 | Run migrations | `{migration tool CLI command}` | See [migrations.md](../migrations.md) for how to determine the command |
 
 ---

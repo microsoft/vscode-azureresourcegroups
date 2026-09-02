@@ -271,19 +271,17 @@ Always merge these keys into the workspace `.vscode/settings.json` on **every** 
 
 ### Emulator Data Directory Exclusions
 
-When emulators are configured via docker-compose, add their data directories to both `files.exclude` and `search.exclude` in **`.vscode/settings.json`** to reduce workspace noise:
+When emulators are configured with **workspace bind mounts** (e.g. Azurite's `./.azurite:/data`), add their data directories to both `files.exclude` and `search.exclude` in **`.vscode/settings.json`** to reduce workspace noise:
 
 ```json
 {
   "files.exclude": {
-    "**/.azurite": true,
-    "**/.postgres": true
+    "**/.azurite": true
   },
   "search.exclude": {
-    "**/.azurite": true,
-    "**/.postgres": true
+    "**/.azurite": true
   }
 }
 ```
 
-> Derive directory names from the actual `volumes:` mounts in `docker-compose.yml` — do not hardcode. Each emulator's data directory pattern is defined in `emulators/{name}.md`.
+> Derive directory names from the actual **bind-mount** `volumes:` entries in `docker-compose.yml` (a `./.name:/path` host mount) — do not hardcode. **Named volumes** (e.g. Postgres's `postgres_data`) live inside the container engine, not the workspace, so they need no exclusion. Each emulator's data pattern is defined in `emulators/{name}.md`.

@@ -29,20 +29,25 @@ Read the container runtime from the plan's Orchestrator table (**Docker**, **Pod
     On approval, run `podman machine start` and wait for it to report ready.
   - If **no machine exists**, do NOT silently `podman machine init` — tell the user to run `podman machine init && podman machine start` (a one-time, multi-minute setup) and re-run once it is ready.
 
-Never switch the plan's runtime silently. If the selected engine cannot be made ready, stop and surface the blocker rather than falling back to the other engine on your own.
+> ⛔ **NEVER switch the plan's container runtime on your own — not at readiness, not during generation, not during validation.** The runtime in the Orchestrator table was chosen (and, when the user asked for a specific engine, chosen *by them*). If the selected engine fails at **any** point — the engine won't start, a container won't come up, ports don't forward to the host, a volume/permission error, a health check never passes — **STOP and surface the blocker to the user with `ask_user`**, describing the failure and the options (fix the engine, or explicitly switch to the other engine). Do **not** silently rewrite the Orchestrator row, the `Start Emulators` task, or the convenience scripts to a different engine and continue. Silently falling back — e.g. from a user-requested Podman to Docker because Podman had a networking or bind-mount issue — is a **failure of this agent**, even if the resulting app works: the user asked for Podman and must decide, not discover after the fact that Docker ran everything.
+>
+> When you do surface a runtime blocker, prefer offering the **fix** first (many Podman-on-Windows issues are config, not dead ends — e.g. use the WSL machine provider for host port forwarding; database emulators must use a named volume, not a workspace bind mount, so `initdb` can `chown` its data dir). Only switch engines if the user explicitly chooses to.
 
 ## Stale Data Directory Check
 
-Before generating any files, check for leftover emulator data directories from a previous run (e.g. `.postgres/`, `.azurite/`, `.cosmos/`, `.servicebus/`). These directories can cause container startup failures — for example, PostgreSQL's `initdb` will refuse to initialize if `/var/lib/postgresql/data` (mounted from `.postgres/`) already contains files from an incompatible or partially-initialized cluster.
+Before generating any files, check for leftover emulator state from a previous run — both **workspace data directories** (bind-mounted emulators such as Azurite's `.azurite/`, `.cosmos/`, `.servicebus/`) and **named volumes** (database emulators such as Postgres's `postgres_data`; see [emulators/postgres.md](emulators/postgres.md)). Stale state can cause container startup failures — for example, PostgreSQL's `initdb` will refuse to initialize if the data directory (the `postgres_data` volume) already contains files from an incompatible or partially-initialized cluster.
 
-If any stale directories are found:
+- **Bind-mounted data directories:** list them with `ls`/`Get-ChildItem` in the workspace.
+- **Named volumes:** list them with `docker compose ls` / `docker volume ls` (or the `podman` equivalents) — a project-scoped `*_postgres_data` volume from a prior run is the database equivalent of a stale directory.
 
-1. **List all found directories** with their sizes.
+If any stale state is found:
+
+1. **List all found directories and named volumes** with their sizes.
 2. **Ask the user how to proceed** using `ask_user`:
 
 ```
 ask_user(
-  question: "The following emulator data directories were found from a previous run:\n\n- .postgres/ (45 MB)\n- .azurite/ (12 MB)\n\nThese can cause container startup failures. How would you like to handle this?",
+  question: "Leftover emulator state was found from a previous run:\n\n- .azurite/ (12 MB, workspace directory)\n- postgres_data (45 MB, named volume)\n\nThese can cause container startup failures. How would you like to handle this?",
   choices: [
     "Delete them and start fresh (recommended)",
     "Keep them — I want to preserve the existing data"
@@ -50,9 +55,9 @@ ask_user(
 )
 ```
 
-3. **If the user chooses to delete** — Remove the directories before proceeding with generation. Use platform-appropriate removal (e.g., `rm -rf` on macOS/Linux, `Remove-Item -Recurse -Force` on Windows).
+3. **If the user chooses to delete** — Remove bind-mounted directories with platform-appropriate removal (`rm -rf` on macOS/Linux, `Remove-Item -Recurse -Force` on Windows), and remove named volumes with `docker compose down -v` / `podman compose down -v` (or `docker volume rm <project>_postgres_data`), before proceeding with generation.
 4. **If the user wants to keep them** — Proceed, but warn that containers may fail to start. If they do fail, offer to clean up at that point.
-5. **Never delete data directories silently** — Always confirm with the user first.
+5. **Never delete data directories or volumes silently** — Always confirm with the user first.
 
 ---
 
