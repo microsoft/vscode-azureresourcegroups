@@ -94,7 +94,7 @@ function showReopenAffordance(): void {
         statusBarItem.text = `$(loading~spin) ${vscode.l10n.t('Show Copilot progress')}`;
         statusBarItem.tooltip = vscode.l10n.t('Reopen the Copilot progress view you closed');
         reopenStatusBarItem = statusBarItem;
-        ext.context.subscriptions.push(statusBarItem, vscode.Disposable.from(() => {
+        ext.context.subscriptions.push(statusBarItem, new vscode.Disposable(() => {
             if (reopenStatusBarItem === statusBarItem) {
                 reopenStatusBarItem = undefined;
             }
