@@ -14,6 +14,7 @@ import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdi
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
 import { selfTestIacCompiles, validateScaffoldedIac } from './artifacts/iacCompiles.ts';
+import { selfTestSafetyBoundaries } from './artifacts/safetyBoundaries.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validateDebugLaunchConfiguration } from './artifacts/launchConfig.ts';
 import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
@@ -129,7 +130,11 @@ async function main(): Promise<void> {
     let selfTestFailures = 0;
     if (!only || only.has('iac-compiles')) {
         console.error('\nIaC compile-classification self-test');
-        selfTestFailures = selfTestIacCompiles(line => console.error(line));
+        selfTestFailures += selfTestIacCompiles(line => console.error(line));
+    }
+    if (!only || only.has('safety-boundaries')) {
+        console.error('\nSafety-boundary scan self-test');
+        selfTestFailures += selfTestSafetyBoundaries(line => console.error(line));
     }
 
     const report: CertificationReport = {
@@ -147,7 +152,7 @@ async function main(): Promise<void> {
     ]);
     console.log(`${report.outcome.toUpperCase()}: ${cases.filter(value => value.passed).length}/${cases.length} grader certification cases passed${only ? ` (filtered to ${[...only].join(', ')})` : ''}.`);
     if (selfTestFailures > 0) {
-        console.log(`${selfTestFailures} IaC compile-classification self-test case(s) failed.`);
+        console.log(`${selfTestFailures} grader self-test case(s) failed; see the per-suite output above for which.`);
     }
     if (report.outcome !== 'passed') {
         process.exitCode = 1;

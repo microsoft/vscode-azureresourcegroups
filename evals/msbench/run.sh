@@ -17,6 +17,13 @@
 #                            # run a stack instead: the prompt and the gate
 #                            # wiring are derived from config/stacks/<id>.yaml
 #                            # rather than hand-written. See config/gates.yaml.
+#   ./run.sh --model claude-opus-4.7
+#                            # retarget the run without editing config/base.yaml.
+#                            # The suite requires every supported model, and this
+#                            # is the only way to sweep one without mutating the
+#                            # shared default. NOTE: the model is half the CES
+#                            # queueing key, so overridden runs queue separately
+#                            # from default-model ones.
 #   BENCHMARK=corbench.cor_functions_host \
 #     ./run.sh --dataset evals/msbench/container/dataset.jsonl
 #                            # run inside our own container image, which carries
@@ -30,6 +37,7 @@ BUILD_ONLY=0
 STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
+MODEL=""
 PASSTHRU=()
 # The benchmark dataset naming the container image to run in. Empty means "use
 # whatever MSBench's published data says for $BENCHMARK", which is the stock
@@ -55,6 +63,12 @@ while [ $# -gt 0 ]; do
         --build-only) BUILD_ONLY=1 ;;
         --stimulus) shift; [ $# -gt 0 ] || { echo "--stimulus needs a value" >&2; exit 1; }; STIMULUS="$1" ;;
         --stimulus=*) STIMULUS="${1#*=}" ;;
+        # Intercepted, NOT passed through. `msbench-cli run` is already invoked
+        # with `--model .`, which is what makes the vscode plugin read the model
+        # out of the staged user-overrides.yaml; forwarding a second --model
+        # would fight that. This one goes to build-config.ts instead.
+        --model) shift; [ $# -gt 0 ] || { echo "--model needs a value" >&2; exit 1; }; MODEL="$1" ;;
+        --model=*) MODEL="${1#*=}" ;;
         --stack) shift; [ $# -gt 0 ] || { echo "--stack needs a value" >&2; exit 1; }; STACK="$1" ;;
         --stack=*) STACK="${1#*=}" ;;
         --phase) shift; [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 1; }; PHASE="$1" ;;
@@ -319,11 +333,11 @@ if [ -n "$STACK" ]; then
     # the top so a stimulus run on a bare host still costs nothing.
     ( cd "${HERE}/.." && [ -d node_modules ] || npm install )
     log "Building config for stack '${STACK}' (phase '${PHASE:-plan}')"
-    node "${HERE}/build-config.ts" --stack "$STACK" ${PHASE:+--phase "$PHASE"}
+    node "${HERE}/build-config.ts" --stack "$STACK" ${PHASE:+--phase "$PHASE"} ${MODEL:+--model "$MODEL"}
 else
     [ -z "$PHASE" ] || die "--phase applies only with --stack; a stimulus selects its phase with its own '# phase:' directive"
     log "Building config for stimulus '${STIMULUS}'"
-    node "${HERE}/build-config.ts" "$STIMULUS"
+    node "${HERE}/build-config.ts" "$STIMULUS" ${MODEL:+--model "$MODEL"}
 fi
 
 if [ "$BUILD_ONLY" -eq 1 ]; then
