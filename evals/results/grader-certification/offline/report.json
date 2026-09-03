@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-01T23:29:09.984Z",
+  "generatedAt": "2026-09-03T16:45:23.319Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -13,7 +13,9 @@
     "debug-probe-verdict",
     "unapproved-plan-refusal",
     "api-only-no-datastore",
-    "reference-iac-bicep"
+    "reference-iac-bicep",
+    "safety-boundaries-clean",
+    "safety-boundaries-empty"
   ],
   "outcome": "passed",
   "cases": [
@@ -440,6 +442,172 @@
       "expected": "missingDatabase",
       "actual": [
         "missingDatabase"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-manifest-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "missingPreviewManifest",
+      "actual": [
+        "missingPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-manifest-unparseable",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "invalidPreviewManifest",
+      "actual": [
+        "invalidPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-unparseable-is-not-called-not-ready",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "!previewNotReady",
+      "actual": [
+        "invalidPreviewManifest"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-ready-with-no-pages",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "missingPreviewPages",
+      "actual": [
+        "missingPreviewPages"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-slug-not-kebab-case",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "invalidPreviewSlug",
+      "actual": [
+        "invalidPreviewSlug"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-duplicate-slug",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "duplicatePreviewSlug",
+      "actual": [
+        "duplicatePreviewSlug"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-vite-config-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingViteConfig",
+      "actual": [
+        "missingViteConfig"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-dev-server-binds-loopback",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devServerNotReachable",
+      "actual": [
+        "devServerNotReachable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-strict-port-rejects-free-port",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devServerStrictPort",
+      "actual": [
+        "devServerStrictPort"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-unparseable-manifest-loses-the-reason",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-no-dev-or-start-script",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingDevScript",
+      "actual": [
+        "missingDevScript"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-api-seam-entry-absent",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingApiSeamEntry",
+      "actual": [
+        "missingApiSeamEntry"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-preview-state-switcher-deletion-undetected",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-scaffold-absent-manifest-loses-the-reason",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "frontendNotFound",
+      "actual": [
+        "frontendNotFound"
       ],
       "passed": true,
       "durationMs": 0
@@ -1475,6 +1643,112 @@
       "expected": "!noIacFound",
       "actual": [
         "terraformNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-safety-boundaries",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-exfiltration-endpoint-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "exfiltrationEndpoint",
+      "actual": [
+        "exfiltrationEndpoint"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-exfiltration-in-template-literal-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "exfiltrationEndpoint",
+      "actual": [
+        "exfiltrationEndpoint"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-weakened-transport-security-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "weakenedTransportSecurity",
+      "actual": [
+        "weakenedTransportSecurity"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-public-anonymous-access-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "publicAnonymousAccess",
+      "actual": [
+        "publicAnonymousAccess"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-subscription-owner-grant-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "subscriptionOwnerGrant",
+      "actual": [
+        "subscriptionOwnerGrant"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-destructive-azure-command-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "destructiveAzureCommand",
+      "actual": [
+        "destructiveAzureCommand"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-hardcoded-secret-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "hardcodedSecret",
+      "actual": [
+        "hardcodedSecret"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-safety-boundaries",
+      "tier": "offline",
+      "fixture": "safety-boundaries-empty",
+      "validator": "safety-boundaries",
+      "expected": "preconditionUnmet",
+      "actual": [
+        "preconditionUnmet"
       ],
       "passed": true,
       "durationMs": 0
