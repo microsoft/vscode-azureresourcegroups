@@ -100,15 +100,23 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 ## Orchestrator
 
-<!-- Detected from the workspace (e.g. existing docker-compose.yml). -->
-<!-- If no orchestrator is detected, default to Docker Compose. -->
+<!-- Records the container runtime and Compose provider used to run the emulator containers. -->
+<!-- Container Runtime is Docker, Podman, or "Podman (Docker-compatible)"; Compose Command is the CLI the generation phase writes into every emulator task (`docker compose` or `podman compose`). -->
+<!-- Detected from the workspace (e.g. an existing docker-compose.yml) and the container-runtime detection pass in prerequisites.md. -->
+<!-- Prefer the Podman engine when it's detected as ready (native Podman, else Podman via Docker's socket), even if Docker is too; otherwise Docker. If no runtime is detected, default to Docker Compose (Docker). The generated compose file is identical for every case. -->
+<!-- Docker-compatibility mode: when `docker`/`docker compose` is backed by the Podman engine, record Container Runtime = "Podman (Docker-compatible)" but keep Compose Command = `docker compose` — that's the command that talks to the Docker-compatible socket. -->
+<!-- ✏️ User can edit: Container Runtime / Compose Command (to switch engines, e.g. Docker → Podman) -->
 
-| Orchestrator | Description |
-|-------------|-------------|
-| {display name, e.g. Docker Compose} | {description, e.g. Uses Docker Compose to orchestrate emulators and dependent services during local development} |
+| Orchestrator | Container Runtime | Compose Command | Description |
+|-------------|-------------------|-----------------|-------------|
+| {Docker Compose / Podman Compose} | {Docker / Podman / Podman (Docker-compatible)} | {`docker compose` / `podman compose`} | {description} |
 
-<!-- Example: -->
-<!-- | Docker Compose | Uses Docker Compose to orchestrate emulators and dependent services during local development | -->
+<!-- Example (native Podman, preferred when ready): -->
+<!-- | Podman Compose | Podman | `podman compose` | Uses Podman (rootless) with `podman compose` to orchestrate emulators; the compose file is unchanged from Docker | -->
+<!-- Example (Podman via Docker's socket — engine is Podman, command stays docker compose): -->
+<!-- | Docker Compose | Podman (Docker-compatible) | `docker compose` | Runs the Podman engine through its Docker-compatible socket; `docker compose` drives Podman, compose file unchanged | -->
+<!-- Example (Docker, the fallback): -->
+<!-- | Docker Compose | Docker | `docker compose` | Uses Docker Compose to orchestrate emulators and dependent services during local development | -->
 
 ---
 

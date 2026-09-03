@@ -44,7 +44,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ./.postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
@@ -52,7 +52,23 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+
+# Declare the named volume at the top level of the compose file (merge into an
+# existing top-level `volumes:` key if the file already has one).
+volumes:
+  postgres_data:
 ```
+
+> ⛔ **Use a named volume for the Postgres data dir — not a `./.postgres` bind mount.** On its first
+> start Postgres's `initdb` sets the data directory's permissions to `0700`, which requires `chown`/`chmod`
+> on the mount. Against a **host bind mount on Windows/macOS** — especially **rootless Podman**, where the
+> container user can't change ownership of a Windows-side path — that fails with
+> `could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted`, and the
+> database never initializes. A **named volume** is managed inside the engine's VM (ext4), so `initdb`
+> succeeds on Docker Desktop and Podman alike. This also sidesteps the bind-mount performance and
+> permission quirks Postgres hits on Docker Desktop for Windows/macOS. (Azurite and most other emulators
+> tolerate a workspace bind mount fine — this named-volume rule is specific to database emulators like
+> Postgres that `chown` their data directory.)
 
 ## Connection String
 
@@ -105,4 +121,5 @@ healthcheck:
 
 - Port 5432 is the standard PostgreSQL port.
 - Default credentials (`postgres`/`postgres`) are intentionally simple for local dev and are declared in the workspace-root `.env`. Never use in production.
-- Data is persisted to `./.postgres/`.
+- Data is persisted to the **named volume `postgres_data`** (managed by the container engine, not a workspace folder). Reset it with `docker compose down -v` / `podman compose down -v`, or `docker volume rm <project>_postgres_data`. Because it is not a workspace directory, it needs no `.vscode/settings.json` `files.exclude` entry and is not part of the workspace stale-**directory** preflight check.
+- **Container runtime:** Certified for both **Docker** and **Podman** — the service block, healthcheck, and named `postgres_data` volume are unchanged for either engine. The named volume (not a bind mount) is what lets `initdb` run under rootless Podman on Windows/macOS. The `condition: service_healthy` gate that migrations depend on is honored by both `docker compose` and `podman compose`.

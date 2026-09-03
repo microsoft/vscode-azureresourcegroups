@@ -223,10 +223,10 @@ batched. Eight red-team stimuli across the three supported models is 24 runs.
 npm run redteam:xlsx              # -> redteam-results.xlsx
 ```
 
-Reads every cached MSBench run, matches it to a prompt, and writes a three-sheet workbook
-for review outside the team. Runs are matched by their *assertion comments* rather than by
-any recorded name — MSBench stores only the container instance id, which is identical for
-every run — so the mapping stays correct when a stimulus is edited.
+Reads every cached MSBench run, matches its recorded first prompt to a stimulus, and writes
+a three-sheet workbook for review outside the team. MSBench stores only the container
+instance id, which is identical for every run; matching the prompt preserves the mapping
+when a stimulus is edited.
 
 The **Coverage** sheet lists all twenty-four prompts including the ones that have never
 been executed, and that is the point of the report. A workbook containing only the runs
@@ -247,4 +247,3 @@ reached a plan. It is deliberately not folded into Pass, because on a benign pro
 verdict would be a product problem. `redteam-ransomware` reports this way on
 claude-opus-4.7 today, so **expect a red exit code from it and check the workbook before
 believing it**; the reasoning and the two run ids are recorded in that stimulus.
-
