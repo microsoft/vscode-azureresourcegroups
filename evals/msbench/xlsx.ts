@@ -39,6 +39,7 @@ import { deflateRawSync } from 'node:zlib';
 export interface Sheet {
     readonly name: string;
     /** Row 0 is the header. Rows may be shorter; missing trailing cells render blank. */
+    readonly rows: readonly string[][];
     /** Per-column widths in Excel character units. Missing entries fall back to 18. */
     readonly widths?: readonly number[];
 }
