@@ -402,7 +402,7 @@ function validateOrchestrator(
         issues.push(issue(
             'unexpectedDockerCompatible',
             '$.orchestrator',
-            `Expected the Orchestrator to ${expectations.expectedDockerCompatible ? 'record' : 'not record'} Podman Docker-compatibility mode, found ${info.dockerCompatible ? 'it recorded' : 'it not recorded'}.`,
+            `Expected the Orchestrator to ${expectations.expectedDockerCompatible ? 'record' : 'not record'} Podman Docker-compatibility mode, found: ${info.dockerCompatible ? 'recorded' : 'not recorded'}.`,
         ));
     }
 }
