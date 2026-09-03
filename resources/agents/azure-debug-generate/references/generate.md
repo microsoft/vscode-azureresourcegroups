@@ -162,7 +162,9 @@ Use the **Service Root** column from the plan's Services table to determine the 
 
 ### Task `runOptions` Rules
 
-Every task generated for the debug chain (install, clean, watch, build, top-level, and emulator tasks) **must** include `runOptions` with `instanceLimit: 1` and `instancePolicy: "silent"`. This prevents duplicate task instances and silently skips re-invocations when a task is already running (e.g., from compound + individual `preLaunchTask` chains).
+**Every** task in `tasks.json` must include `runOptions` with `instanceLimit: 1` and `instancePolicy: "silent"` — install, clean, watch, build, top-level, emulator, **and the sequenced compound task** from [multi-service.md](multi-service.md) § Compound Debug Configuration. There is no task type this is optional for; if you are writing a `"label"`, you are writing `runOptions` beside it.
+
+This prevents duplicate task instances and silently skips re-invocations when a task is already running (e.g., from compound + individual `preLaunchTask` chains). The compound task is the one that needs it most, not least: it is reachable both directly and as a `preLaunchTask`, so it is the likeliest to be invoked twice.
 
 ### Start Emulators Task
 

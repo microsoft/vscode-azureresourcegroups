@@ -53,7 +53,8 @@ When a frontend service proxies to a local backend (e.g., a dev server proxy for
     "{backend-service-id}: {backend-top-level-task}",
     "{frontend-service-id}: {frontend-top-level-task}"
   ],
-  "dependsOrder": "sequence"
+  "dependsOrder": "sequence",
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" }
 }
 ```
 
