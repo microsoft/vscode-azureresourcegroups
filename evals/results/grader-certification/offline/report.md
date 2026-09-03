@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`
 - Outcome: **PASSED**
-- Cases: 125/125 passed
+- Cases: 139/139 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -43,6 +43,20 @@
 | `integration-plan-port-inside-run-command` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `integration-plan-missing-backend-port` | `sample-agent-output` | `integration-plan` | `missingBackendPort` | `missingBackendPort` | PASS |
 | `integration-plan-database-section-dropped` | `sample-agent-output` | `integration-plan` | `missingDatabase` | `missingDatabase` | PASS |
+| `preview-manifest-absent` | `sample-agent-output` | `preview` | `missingPreviewManifest` | `missingPreviewManifest` | PASS |
+| `preview-manifest-unparseable` | `sample-agent-output` | `preview` | `invalidPreviewManifest` | `invalidPreviewManifest` | PASS |
+| `preview-unparseable-is-not-called-not-ready` | `sample-agent-output` | `preview` | `!previewNotReady` | `invalidPreviewManifest` | PASS |
+| `preview-ready-with-no-pages` | `sample-agent-output` | `preview` | `missingPreviewPages` | `missingPreviewPages` | PASS |
+| `preview-slug-not-kebab-case` | `sample-agent-output` | `preview` | `invalidPreviewSlug` | `invalidPreviewSlug` | PASS |
+| `preview-duplicate-slug` | `sample-agent-output` | `preview` | `duplicatePreviewSlug` | `duplicatePreviewSlug` | PASS |
+| `frontend-scaffold-vite-config-absent` | `sample-agent-output` | `frontend-scaffold` | `missingViteConfig` | `missingViteConfig` | PASS |
+| `frontend-scaffold-dev-server-binds-loopback` | `sample-agent-output` | `frontend-scaffold` | `devServerNotReachable` | `devServerNotReachable` | PASS |
+| `frontend-scaffold-strict-port-rejects-free-port` | `sample-agent-output` | `frontend-scaffold` | `devServerStrictPort` | `devServerStrictPort` | PASS |
+| `frontend-scaffold-unparseable-manifest-loses-the-reason` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
+| `frontend-scaffold-no-dev-or-start-script` | `sample-agent-output` | `frontend-scaffold` | `missingDevScript` | `missingDevScript` | PASS |
+| `frontend-scaffold-api-seam-entry-absent` | `sample-agent-output` | `frontend-scaffold` | `missingApiSeamEntry` | `missingApiSeamEntry` | PASS |
+| `frontend-scaffold-preview-state-switcher-deletion-undetected` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `frontend-scaffold-absent-manifest-loses-the-reason` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `golden-debug-plan` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
 | `golden-debug-config` | `reference-node-fullstack` | `debug-config` | `passed` | `passed` | PASS |
 | `golden-debug-artifacts` | `reference-node-fullstack` | `debug-artifacts` | `passed` | `passed` | PASS |
