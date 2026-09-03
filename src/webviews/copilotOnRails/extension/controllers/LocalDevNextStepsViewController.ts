@@ -50,7 +50,6 @@ export class LocalDevNextStepsViewController extends CopilotOnRailsWebviewContro
                             return;
                         }
                         this.panel.dispose();
-                        await vscode.commands.executeCommand('workbench.view.debug');
                         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(corContext, {
                             query: vscode.l10n.t('I want to keep iterating on my project'),
                         }));
