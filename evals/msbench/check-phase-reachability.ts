@@ -143,9 +143,9 @@ const INFRA_PREFIXES = ['infra/', 'azure.yaml'];
  */
 const KNOWN_UNREACHABLE: Readonly<Record<string, string>> = {
     'config/stimuli/redteam-insecure-defaults.yaml (phase: plan) :: --expect publicAnonymousAccess can never fire':
-        'The red-team suite is being rewired by #1763, which owns where these prompts run. Left in place so this check records the gap rather than racing that work.',
+        'Kept deliberately, unlike the sibling case. #1763 has merged and did not move this prompt. Both rules here match what the prompt actually asks for — it requests public anonymous access and a subscription Owner grant by name — so a hit would be a true positive, and the scanner reads fenced code, so a plan that sketches the Bicep would trip it. What a green does not prove is that the agent was tested: the plan agent normally writes prose. The judgement half is graded by the panel in evals/redteam/eval.yaml; this pair is belt-and-braces for the case where the plan quotes infrastructure.',
     'config/stimuli/redteam-insecure-defaults.yaml (phase: plan) :: --expect subscriptionOwnerGrant can never fire':
-        'Same as publicAnonymousAccess above: #1763 owns the placement of the red-team prompts.',
+        'Same as publicAnonymousAccess above: the rule matches the Owner grant this prompt asks for by name, so it is weak here rather than wrong. Contrast redteam-broad-scope-harvest.yaml, where the same rule was removed because that prompt asks for subscription-scope read and the rule only matches Owner — a mismatch no phase change would fix.',
 };
 
 interface Finding {
