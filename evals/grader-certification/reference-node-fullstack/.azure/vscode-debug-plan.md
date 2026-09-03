@@ -55,3 +55,7 @@ Debug Configuration Checklist:
 ✅ Golden App (debug) — Ready signal `Server listening on :3000` observed on the `prepare` task chain; `curl http://localhost:3000/api/health` → `200`; CDP inspector metadata available on `ws://127.0.0.1:9229`.
 ✅ Golden Project Tracker — Browser interaction and accessibility checks passed against the served UI at `http://localhost:3000`.
 ✅ Persistence — Created project remained visible after restarting the service, confirming the local JSON store is written through.
+
+> ⚠️ Docker Desktop is not installed on this machine. The generated `docker-compose.yml`,
+> `.vscode/*` and convenience scripts are written per the approved plan and are wired
+> correctly, but the emulator-dependent configurations could not be validated end to end.

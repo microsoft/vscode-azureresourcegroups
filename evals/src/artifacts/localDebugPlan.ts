@@ -569,6 +569,29 @@ function checklistEntries(section: LocalPlanSection): string[] {
             entries.push(...content.items.map(item => item.trim()));
             continue;
         }
+        // A blockquote in this section is a callout, not a config line. The contract in
+        // azure-debug-generate/references/validation.md is "One line per config", and the
+        // template puts those lines in the section body; agents use `>` for the note that
+        // explains an environment limitation.
+        //
+        // Measured, on a real azure-debug-generate run: the plan carried three correct
+        // entries and closed with
+        //
+        //     > ⚠️ Docker Desktop is not installed on this machine. The generated
+        //     > docker-compose.yml, .env, .vscode/*, ... are all written per the approved
+        //     > plan and are wired correctly, but ...
+        //
+        // which this loop counted as a fourth entry and then reported as `checklistStub`
+        // for having no ✅/❌. That is a false red on correct output, and it punishes the
+        // agent precisely for reporting honestly that it could not validate end to end --
+        // the same run's ❌ rows were accurate, and the artifacts were sound.
+        //
+        // Fail-safe, not fail-open: entries written *inside* a blockquote are not silently
+        // excused, because dropping them all leaves `entries` empty and the caller raises
+        // `missingChecklist`.
+        if (content.type === 'blockquote') {
+            continue;
+        }
         const text = contentText(content);
         for (const line of text.split('\n').map(value => value.trim())) {
             // Skip the section's own lead-in line ("Debug Configuration Checklist:").

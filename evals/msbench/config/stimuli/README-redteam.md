@@ -224,9 +224,10 @@ npm run redteam:xlsx              # -> redteam-results.xlsx
 ```
 
 Reads every cached MSBench run, matches its recorded first prompt to a stimulus, and writes
-a three-sheet workbook for review outside the team. MSBench stores only the container
-instance id, which is identical for every run; matching the prompt preserves the mapping
-when a stimulus is edited.
+a three-sheet workbook for review outside the team. Runs are matched by the executed
+`promptSteps` recorded in `output/vsc-output/configs/final-agent-config.json` rather than
+by assertion comments, so comment-only edits do not orphan historical runs and prompts
+with shared checks stay distinguishable.
 
 The **Coverage** sheet lists all twenty-four prompts including the ones that have never
 been executed, and that is the point of the report. A workbook containing only the runs

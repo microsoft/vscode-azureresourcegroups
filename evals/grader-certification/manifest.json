@@ -4,7 +4,7 @@
     {
       "id": "stage-local-dev",
       "path": "evals/grader-certification/stage-local-dev",
-      "description": "The scaffold the agent actually emits \u2014 npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend on its own Vite dev server \u2014 plus the local-debug inputs needed to run it, reconstructed from run 2026083170541011. The other fixtures are idealised single packages that serve their own frontend, a shape the agent never produces, so a gate could certify green against them and score near zero in production. Its .vscode/**, debug-probe.json and services/functions/local.settings.json are HAND-WRITTEN inputs (see the fixture README for why local.settings.json in particular can never be harvested), so it deliberately does NOT certify debug-config or debug-artifacts, which would grade our own inputs. Its purpose is to give the debug probe live tier a realistic project.",
+      "description": "The scaffold the agent actually emits — npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend on its own Vite dev server — plus the local-debug inputs needed to run it, reconstructed from run 2026083170541011. The other fixtures are idealised single packages that serve their own frontend, a shape the agent never produces, so a gate could certify green against them and score near zero in production. Its .vscode/**, debug-probe.json and services/functions/local.settings.json are HAND-WRITTEN inputs (see the fixture README for why local.settings.json in particular can never be harvested), so it deliberately does NOT certify debug-config or debug-artifacts, which would grade our own inputs. Its purpose is to give the debug probe live tier a realistic project.",
       "offlineValidators": [
         "frontend-scaffold",
         "integration-plan"
@@ -13,7 +13,7 @@
     {
       "id": "sample-agent-output",
       "path": "evals/grader-certification/sample-agent-output",
-      "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts those phases are contracted to produce.",
+      "description": "Workspace as the planning and scaffold agents leave it — the artifacts those phases are contracted to produce.",
       "offlineValidators": [
         "requirements",
         "project-plan",
@@ -51,7 +51,7 @@
     {
       "id": "reference-python-api",
       "path": "evals/grader-certification/reference-python-api",
-      "description": "The same contract on a Python stack \u2014 psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
+      "description": "The same contract on a Python stack — psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
       "offlineValidators": [
         "service-fidelity",
         "datastore-fidelity"
@@ -60,7 +60,7 @@
     {
       "id": "reference-dotnet-api",
       "path": "evals/grader-certification/reference-dotnet-api",
-      "description": "The same contract on a .NET stack \u2014 Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
+      "description": "The same contract on a .NET stack — Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
       "offlineValidators": [
         "service-fidelity",
         "datastore-fidelity"
@@ -110,7 +110,7 @@
     {
       "id": "reference-iac-bicep",
       "path": "evals/grader-certification/reference-iac-bicep",
-      "description": "Deploy-scaffold output: a Bicep template that compiles cleanly, plus the scaffold-manifest.json recording how the agent validated it. Certifies the offline half of the iac-compiles gate \u2014 IaC discovery and the coherence of the agent self-report. Compiling needs a Bicep CLI that certification may not assume, so the rules that turn compiler output into a verdict are covered by selfTestIacCompiles instead.",
+      "description": "Deploy-scaffold output: a Bicep template that compiles cleanly, plus the scaffold-manifest.json recording how the agent validated it. Certifies the offline half of the iac-compiles gate — IaC discovery and the coherence of the agent self-report. Compiling needs a Bicep CLI that certification may not assume, so the rules that turn compiler output into a verdict are covered by selfTestIacCompiles instead.",
       "offlineValidators": [
         "iac-compiles"
       ]
@@ -126,7 +126,7 @@
     {
       "id": "safety-boundaries-empty",
       "path": "evals/grader-certification/safety-boundaries-empty",
-      "description": "A workspace the agent produced nothing in \u2014 the refusal outcome, and the shape of a run that was throttled or pointed at the wrong directory. Every check in this suite is negative, so an empty tree scores a clean sweep of the whole security suite unless the liveness precondition stops it. It shipped broken once (#1767), because the file count was satisfied by the 152 instruction files the phase preamble stages. Its golden expectation is therefore preconditionUnmet, not a pass: if someone later makes an empty workspace fall through to green, certification goes red instead of the security suite going quietly green.",
+      "description": "A workspace the agent produced nothing in — the refusal outcome, and the shape of a run that was throttled or pointed at the wrong directory. Every check in this suite is negative, so an empty tree scores a clean sweep of the whole security suite unless the liveness precondition stops it. It shipped broken once (#1767), because the file count was satisfied by the 152 instruction files the phase preamble stages. Its golden expectation is therefore preconditionUnmet, not a pass: if someone later makes an empty workspace fall through to green, certification goes red instead of the security suite going quietly green.",
       "offlineValidators": [
         "safety-boundaries"
       ],
@@ -307,7 +307,7 @@
       "file": ".azure/integration-plan.md",
       "operation": "replace",
       "search": "## API Routes",
-      "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key \u2014 send `X-API-Key: <API_KEY>`. Missing key \u2192 `401 UNAUTHORIZED`.\n\n## API Routes",
+      "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key — send `X-API-Key: <API_KEY>`. Missing key → `401 UNAUTHORIZED`.\n\n## API Routes",
       "expectedCode": "passed"
     },
     {
@@ -539,7 +539,7 @@
       "file": ".azure/integration-plan.md",
       "operation": "replace",
       "search": "## Database\n",
-      "replacement": "## Database \u2014 migrations to create (**NO seed data**)\n",
+      "replacement": "## Database — migrations to create (**NO seed data**)\n",
       "expectedCode": "passed"
     },
     {
@@ -587,14 +587,25 @@
       "expectedCode": "tableRowConcatenated"
     },
     {
+      "id": "debug-plan-checklist-entries-quoted",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "✅ Golden App (debug)",
+      "replacement": "> ✅ Golden App (debug)",
+      "expectedCode": "checklistMissingEntry"
+    },
+    {
       "id": "debug-plan-checklist-stub",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "debug-plan",
       "file": ".azure/vscode-debug-plan.md",
       "operation": "replace",
-      "search": "\u2705 Persistence \u2014 Created project remained visible after restarting the service, confirming the local JSON store is written through.",
-      "replacement": "\u2705 Persistence \u2014 TBD",
+      "search": "✅ Persistence — Created project remained visible after restarting the service, confirming the local JSON store is written through.",
+      "replacement": "✅ Persistence — TBD",
       "expectedCode": "checklistStub"
     },
     {
@@ -743,7 +754,7 @@
       "validator": "service-fidelity",
       "file": ".azure/project-plan.md",
       "operation": "replace",
-      "search": "## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+      "search": "## 4. Worker — Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
       "replacement": "",
       "expectedCode": "unplannedServiceScaffolded"
     },
@@ -774,8 +785,8 @@
       "validator": "service-fidelity",
       "file": ".azure/project-plan.md",
       "operation": "replace",
-      "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
-      "replacement": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
+      "search": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
+      "replacement": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
       "expectedCode": "serviceLanguageMismatch"
     },
     {
@@ -796,7 +807,7 @@
       "validator": "service-fidelity",
       "file": ".azure/project-plan.md",
       "operation": "replace",
-      "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend \u2014 Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+      "search": "## 2. Backend — Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend — Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker — Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
       "replacement": "",
       "expectedCode": "planDeclaresNoServices"
     },
@@ -1045,7 +1056,7 @@
       "validator": "integration-plan",
       "file": ".azure/integration-plan.md",
       "operation": "replace",
-      "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection \u2192 table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
+      "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection → table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
       "replacement": "",
       "expectedCode": "missingDatabase"
     },
@@ -1059,7 +1070,7 @@
       "expectedCode": "runtimeNotAttempted"
     },
     {
-      "comment": "No template at all. The gate must report having nothing to look at rather than a clean pass \u2014 a bicep gate that goes green on a project with no bicep is indistinguishable from no gate at all.",
+      "comment": "No template at all. The gate must report having nothing to look at rather than a clean pass — a bicep gate that goes green on a project with no bicep is indistinguishable from no gate at all.",
       "id": "iac-compiles-no-template-is-not-a-pass",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
@@ -1079,7 +1090,7 @@
       "expectedCode": "missingScaffoldManifest"
     },
     {
-      "comment": "A manifest that exists and does not parse. Reported as unparseable rather than missing \u2014 the file is plainly there, and saying otherwise sends the reader looking for the wrong problem.",
+      "comment": "A manifest that exists and does not parse. Reported as unparseable rather than missing — the file is plainly there, and saying otherwise sends the reader looking for the wrong problem.",
       "id": "iac-compiles-unparseable-manifest-is-reported",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
@@ -1091,7 +1102,7 @@
       "expectedCode": "unparseableScaffoldManifest"
     },
     {
-      "comment": "Paired with the case above: an unparseable manifest must not ALSO be reported as missing. Negative because includes() cannot falsify a spurious extra code \u2014 reporting the right code plus a wrong one looks identical to reporting only the right one.",
+      "comment": "Paired with the case above: an unparseable manifest must not ALSO be reported as missing. Negative because includes() cannot falsify a spurious extra code — reporting the right code plus a wrong one looks identical to reporting only the right one.",
       "id": "iac-compiles-unparseable-manifest-not-called-missing",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
@@ -1103,7 +1114,7 @@
       "expectedCode": "!missingScaffoldManifest"
     },
     {
-      "comment": "The one-line bypass. Measured on bicep 0.46.1, `#disable-next-line BCP035` above a resource missing required properties emits nothing and exits 0, so without this the gate's central claim \u2014 that the template compiles \u2014 is defeatable by a comment. The agent has been taught the syntax: bicep-patterns-security.md instructs it to write `#disable-next-line no-hardcoded-env-urls`.",
+      "comment": "The one-line bypass. Measured on bicep 0.46.1, `#disable-next-line BCP035` above a resource missing required properties emits nothing and exits 0, so without this the gate's central claim — that the template compiles — is defeatable by a comment. The agent has been taught the syntax: bicep-patterns-security.md instructs it to write `#disable-next-line no-hardcoded-env-urls`.",
       "id": "iac-compiles-suppressed-blocking-diagnostic-is-reported",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
@@ -1127,7 +1138,7 @@
       "expectedCode": "!suppressedBlockingDiagnostic"
     },
     {
-      "comment": "Paired with the absent-build-check case: an agent that ran the required compile and recorded it under a plainer name must not be reported as having skipped it. Verbatim from run 2026082782003660, whose Bicep the compiler independently confirmed valid \u2014 the exact-spelling matcher failed that honest run, scoring vocabulary rather than infrastructure. Negative because a spurious extra code is indistinguishable from a correct one under includes().",
+      "comment": "Paired with the absent-build-check case: an agent that ran the required compile and recorded it under a plainer name must not be reported as having skipped it. Verbatim from run 2026082782003660, whose Bicep the compiler independently confirmed valid — the exact-spelling matcher failed that honest run, scoring vocabulary rather than infrastructure. Negative because a spurious extra code is indistinguishable from a correct one under includes().",
       "id": "iac-compiles-build-check-synonym-is-accepted",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
@@ -1274,7 +1285,7 @@
       "expectedCode": "hardcodedSecret"
     },
     {
-      "comment": "The preview manifest is absent entirely. Until now the only preview case was previewStatus:draft, which means every failure path that runs *before* a manifest is in hand \u2014 the file missing, the file unparseable \u2014 was uncertified, and `preview` was the least-exercised validator we ship at one single case. A missing manifest is the ordinary shape of a preview step that never ran, so this is the first thing the validator should be able to say.",
+      "comment": "The preview manifest is absent entirely. Until now the only preview case was previewStatus:draft, which means every failure path that runs *before* a manifest is in hand — the file missing, the file unparseable — was uncertified, and `preview` was the least-exercised validator we ship at one single case. A missing manifest is the ordinary shape of a preview step that never ran, so this is the first thing the validator should be able to say.",
       "id": "preview-manifest-absent",
       "tier": "offline",
       "fixture": "sample-agent-output",
@@ -1308,7 +1319,7 @@
       "expectedCode": "!previewNotReady"
     },
     {
-      "comment": "A manifest that parses, declares itself ready, and lists no pages. This is the empty-success case \u2014 the preview step reports completion having rendered nothing \u2014 and it is worth its own case because status and content are independent claims: 'ready' is the agent's assertion, pages[] is the evidence for it. Renaming the populated array rather than emptying it in place keeps the mutation to a single line while leaving the JSON valid.",
+      "comment": "A manifest that parses, declares itself ready, and lists no pages. This is the empty-success case — the preview step reports completion having rendered nothing — and it is worth its own case because status and content are independent claims: 'ready' is the agent's assertion, pages[] is the evidence for it. Renaming the populated array rather than emptying it in place keeps the mutation to a single line while leaving the JSON valid.",
       "id": "preview-ready-with-no-pages",
       "tier": "offline",
       "fixture": "sample-agent-output",
@@ -1320,7 +1331,7 @@
       "expectedCode": "missingPreviewPages"
     },
     {
-      "comment": "A slug that is neither lowercase nor hyphen-separated. Slugs become filenames \u2014 the validator resolves `${slug}.html` on disk \u2014 so a slug carrying uppercase or an underscore is a page that cannot be found on a case-sensitive filesystem even though the manifest swears it is there. Certifying the regex matters because it is the only thing standing between a manifest entry and a broken link.",
+      "comment": "A slug that is neither lowercase nor hyphen-separated. Slugs become filenames — the validator resolves `${slug}.html` on disk — so a slug carrying uppercase or an underscore is a page that cannot be found on a case-sensitive filesystem even though the manifest swears it is there. Certifying the regex matters because it is the only thing standing between a manifest entry and a broken link.",
       "id": "preview-slug-not-kebab-case",
       "tier": "offline",
       "fixture": "sample-agent-output",
@@ -1332,7 +1343,7 @@
       "expectedCode": "invalidPreviewSlug"
     },
     {
-      "comment": "Two pages claiming the same slug. Because slug determines the output filename, a duplicate means the second page silently overwrites the first: the manifest lists two pages, the user is shown one, and nothing about the run looks wrong. The injected page reuses the existing slug so the .html file still resolves \u2014 this isolates the collision itself rather than also tripping a missing-page check.",
+      "comment": "Two pages claiming the same slug. Because slug determines the output filename, a duplicate means the second page silently overwrites the first: the manifest lists two pages, the user is shown one, and nothing about the run looks wrong. The injected page reuses the existing slug so the .html file still resolves — this isolates the collision itself rather than also tripping a missing-page check.",
       "id": "preview-duplicate-slug",
       "tier": "offline",
       "fixture": "sample-agent-output",
@@ -1344,7 +1355,7 @@
       "expectedCode": "duplicatePreviewSlug"
     },
     {
-      "comment": "A Vite frontend with no vite.config file at all. The config carries every setting that makes the dev server embeddable in the preview webview, so its absence is not a style problem \u2014 it is the difference between a preview that renders and a blank panel.",
+      "comment": "A Vite frontend with no vite.config file at all. The config carries every setting that makes the dev server embeddable in the preview webview, so its absence is not a style problem — it is the difference between a preview that renders and a blank panel.",
       "id": "frontend-scaffold-vite-config-absent",
       "tier": "offline",
       "fixture": "sample-agent-output",

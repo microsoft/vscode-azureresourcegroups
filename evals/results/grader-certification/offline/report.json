@@ -706,6 +706,18 @@
       "durationMs": 0
     },
     {
+      "id": "debug-plan-checklist-entries-quoted",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "checklistMissingEntry",
+      "actual": [
+        "checklistMissingEntry"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "debug-plan-checklist-stub",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
