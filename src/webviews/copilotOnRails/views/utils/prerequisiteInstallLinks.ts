@@ -34,6 +34,11 @@ interface InstallLinkRule {
 // `\b` (word boundary) guards short acronyms (az, azd, func, npm, pip, node…) so
 // they match as whole tokens, not as substrings of unrelated words like "Azure".
 const INSTALL_LINK_RULES: InstallLinkRule[] = [
+    // Podman rules come before the Docker rules: a "Podman (Docker-compatible)" runtime name
+    // contains "docker", so without these it would resolve to the Docker link. Podman Compose
+    // before Podman for the same specific-first reason as Docker Compose before Docker.
+    { match: /podman[\s-]?compose/i, link: { label: 'Podman Compose', url: 'https://podman-desktop.io/docs/compose' } },
+    { match: /podman/i, link: { label: 'Podman Desktop', url: 'https://podman-desktop.io/downloads' } },
     { match: /docker[\s-]?compose/i, link: { label: 'Docker Compose', url: 'https://docs.docker.com/compose/install/' } },
     { match: /docker/i, link: { label: 'Docker Desktop', url: 'https://www.docker.com/products/docker-desktop/' } },
     { match: /ms-azuretools\.vscode-azurefunctions/i, link: { label: 'Azure Functions extension', url: 'https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions' } },

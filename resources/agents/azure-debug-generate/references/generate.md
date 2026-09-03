@@ -11,11 +11,13 @@ The plan's tables drive all generation:
 | Plan Section | What It Drives |
 |-------------|----------------|
 | **Services** table | Which services get launch.json/tasks.json entries. |
-| **Emulators** table | Which emulator docker-compose services to generate. |
-| **Orchestrator** table | Which orchestrator to use (e.g., Docker Compose) |
-| **Migrations** table | Which migration docker-compose services to generate. |
+| **Emulators** table | Which emulator compose services to generate. |
+| **Orchestrator** table | The container runtime (Docker/Podman) and the **Compose Command** (`docker compose` / `podman compose`) to write into every emulator/migration task. |
+| **Migrations** table | Which migration compose services to generate. |
 | **API Test Collections** table | Which API test scripts to generate. |
 | **Convenience Scripts** table | Which convenience scripts to generate. |
+
+> **Container runtime is a plan value — never hard-code `docker compose`.** Read the **Compose Command** cell from the plan's Orchestrator table and use it verbatim for every generated Compose invocation (Start Emulators task, migration task, convenience scripts, validation, teardown). It is `docker compose` by default and `podman compose` when the plan selected Podman. The generated `docker-compose.yml` itself is **identical for either engine** — only the command that drives it changes. In the examples throughout these references, `docker compose` stands in for the plan's Compose Command; substitute `podman compose` when the plan says Podman.
 
 ### Targeted Resolution
 
@@ -43,6 +45,8 @@ For each service in the plan's Services table (where Generate is checked), gener
 | 5 | **Generate convenience scripts** — For each checked script in the plan's Convenience Scripts table, add to the project's native script runner. | `runtimes/{rt}.md` § Convenience Scripts |
 | 6 | **Generate migrations** — If the plan's Migrations table has checked rows, do targeted resolution for migration details, then generate the docker-compose migration service. | [migrations.md](migrations.md) |
 | 7 | **Generate API test collections** — If the plan's API Test Collections table has checked rows, do targeted resolution for endpoints/triggers, then generate test scripts. | [api-test-collections.md](api-test-collections.md) |
+
+> **Podman emulator certification.** When the plan's container runtime is **Podman**, each emulator's reference file declares its Podman status under `## Container Runtime Support`. Azurite and PostgreSQL are certified. For any emulator not marked Podman-certified, emit a `⚠️ LIMITED SUPPORT: Emulator "{name}" is not yet certified for Podman` warning (per [limited-support.md](limited-support.md)) and generate a best-effort compose service anyway — do **not** silently swap the runtime back to Docker.
 
 ---
 
@@ -164,6 +168,8 @@ Every task generated for the debug chain (install, clean, watch, build, top-leve
 
 When the plan includes emulators, generate a shared `Start Emulators` task. This task is a **sibling dependency** of each service's top-level startup task (e.g., `func host start`). Do NOT place `Start Emulators` as a dependency of build chain tasks like `npm install` or `npm watch` — it belongs in the startup task's `dependsOn` array alongside the build chain prerequisite.
 
+Use the plan's **Compose Command** for the task `command` — `docker compose up -d` by default, or `podman compose up -d` when the plan's Orchestrator selected Podman.
+
 ```json
 {
   "type": "shell",
@@ -265,19 +271,17 @@ Always merge these keys into the workspace `.vscode/settings.json` on **every** 
 
 ### Emulator Data Directory Exclusions
 
-When emulators are configured via docker-compose, add their data directories to both `files.exclude` and `search.exclude` in **`.vscode/settings.json`** to reduce workspace noise:
+When emulators are configured with **workspace bind mounts** (e.g. Azurite's `./.azurite:/data`), add their data directories to both `files.exclude` and `search.exclude` in **`.vscode/settings.json`** to reduce workspace noise:
 
 ```json
 {
   "files.exclude": {
-    "**/.azurite": true,
-    "**/.postgres": true
+    "**/.azurite": true
   },
   "search.exclude": {
-    "**/.azurite": true,
-    "**/.postgres": true
+    "**/.azurite": true
   }
 }
 ```
 
-> Derive directory names from the actual `volumes:` mounts in `docker-compose.yml` — do not hardcode. Each emulator's data directory pattern is defined in `emulators/{name}.md`.
+> Derive directory names from the actual **bind-mount** `volumes:` entries in `docker-compose.yml` (a `./.name:/path` host mount) — do not hardcode. **Named volumes** (e.g. Postgres's `postgres_data`) live inside the container engine, not the workspace, so they need no exclusion. Each emulator's data pattern is defined in `emulators/{name}.md`.

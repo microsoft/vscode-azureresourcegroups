@@ -150,18 +150,27 @@ A gate that cannot fail is not a gate, so both directions are proven.
 
 ```bash
 node certify.ts --offline     # 11 cases, no VS Code, ~2s — safe for CI
-node certify.ts --live        # 5 cases, real VS Code + real js-debug
+node certify.ts --live        # 9 cases, real VS Code + real js-debug
 node certify.ts               # both
 ```
 
 Useful flags: `--only=<case-id>`, `--verbose`, `--vscode=/path/to/code`.
+
+**On Windows `code` is a `.cmd`**, which `spawnSync` cannot execute, so the live
+tier resolves `Code.exe` instead — from whatever `code.cmd` is on PATH, then the
+usual install locations. Before that it died with `spawnSync code ENOENT` before
+a single case ran and reported it as seven identical *"probe did NOT activate"*
+failures, which reads as a broken probe rather than a runner that never started
+one. The live tier had therefore never been run on Windows at all. Resolution
+happens only when the live tier is actually selected, so `--offline` still needs
+no VS Code.
 
 **Offline** synthesises verdict files and asserts the grader's exit code for
 each, including the ones that must never blame the product: a missing verdict, a
 malformed verdict, an unknown outcome, and a schema-version mismatch. This
 certifies the part that assigns blame, so it runs anywhere.
 
-**Live** stages the known-good fixture plus four mutations and runs real VS Code
+**Live** stages the known-good fixture plus eight mutations and runs real VS Code
 against each. The load-bearing one is `mutation-breakpoint-unreachable`, which
 puts the breakpoint on the `POST` 400 branch while triggering `GET /api/health`:
 it must go red, and red for the right reason.
@@ -315,7 +324,75 @@ Node family, via the built-in js-debug. That is a real constraint, not a
 preference, and wiring it unconditionally produces exactly the failure this gate
 was built to prevent.
 
-Two directions, both verified rather than reasoned about:
+Four directions, all verified rather than reasoned about:
+
+**A `preLaunchTask` this environment cannot resolve is not a project that does not
+work.** An Azure Functions project declares `preLaunchTask: "func: host start"`
+with `"type": "func"`, and that provider comes from the Azure Functions
+extension — which the agent's own `.azure/vscode-debug-plan.md` lists as a
+prerequisite, and which is not installed here. With no provider the task never
+runs, nothing opens the inspector port, `startDebugging` returns false, and the
+verdict *was* `appFailedToStart`: **exit 1, blaming the product for a project it
+generated correctly.** Measured on
+[`grader-certification/stage-local-dev`](../grader-certification/stage-local-dev),
+where it took 64 seconds to say so. The probe now fetches the available tasks
+before launching and returns `probeError` (exit 3) naming the task and listing
+what does resolve — in about one second. Certified by
+`mutation-prelaunch-task-unresolvable`.
+
+**Attach configurations are driveable, and the check is deliberately about the
+task rather than about `request`.** The first version of this preflight declined
+every `request: attach` configuration, which would have written off the whole
+Functions stack on a false premise. It is false: VS Code runs the `isBackground`
+preLaunchTask, waits for its problem matcher to report ready, and attaches.
+Verified end to end against an attach configuration whose task starts
+`node --inspect=9229` from a `type: shell` task:
+
+```
+preLaunchTask "serve" resolves in this environment
+startDebugging returned true
+trigger connected after 1 attempt(s)
+stopped: reason=breakpoint session=Remote Process [0] « Attach Under Background Task
+outcome: hit
+```
+
+Certified by `mutation-attach-with-resolvable-task-is-driven`, which exists so
+that mistake cannot be made again silently.
+
+**So the Functions stack is answerable here.** It needs two things, and the
+custom image (`msbench-1.1.0`) already carries one:
+
+| Needed | Provides | Status |
+| --- | --- | --- |
+| `ms-azuretools.vscode-azurefunctions` | the `func` **task type**, so `preLaunchTask` resolves | added to [`msbench/config/base.yaml`](../msbench/config/base.yaml) |
+| `func` on PATH | the Functions host itself | already in the custom image |
+
+Measured on `stage-local-dev` with the extension installed into an isolated
+extensions dir — the preflight goes from declining to passing:
+
+```
+preLaunchTask "func: host start" resolves in this environment
+trigger port 127.0.0.1:7071 is free
+```
+
+**A breakpoint hit in a Functions project is not yet proven**, and the remaining
+distance is honest to state: the task chain is
+`func: host start` → `api: build` → `install`, so the project must install and
+compile inside the probe budget, and this fixture's breakpoint sits on
+`status = 'healthy'`, which only executes when PostgreSQL *and* Azurite answer.
+Locally neither runs, so the branch is unreachable; the custom image starts both
+in the phase preamble. That makes the remaining proof a container run rather than
+a local experiment.
+
+**The extension's dependency is on the extension under test, and the install
+order protects it.** `vscode-azurefunctions` depends on
+`vscode-azureresourcegroups` — us — and installing it pulls that from the
+marketplace. The wrong order would silently replace the VSIX being evaluated with
+a shipped release, and every run would grade the wrong build. Verified rather
+than assumed: with the dependency already installed, VS Code leaves it alone
+(installing `0.12.0` first, then the Functions extension, leaves `0.12.0` on
+disk). Our VSIX is the first `installExtensions` entry, so it is always in place
+first.
 
 **A launch configuration naming an adapter we do not install used to produce a
 fabricated red.** `debugpy`, `go` and `coreclr` are not in this container. With
@@ -338,3 +415,5 @@ is the "gate that cannot pass" shape displaced into the exit-3 column.
 So the gate should be wired where the stimulus writes a probe spec **and** the
 stack is one the harness can drive. Everywhere else it is an environment gap: it
 has a real question and no way to ask it, which is a `knownGap`, not a red.
+
+

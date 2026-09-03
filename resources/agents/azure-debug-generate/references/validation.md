@@ -4,6 +4,10 @@ Verify that the generated VS Code debug configuration actually works. This phase
 
 > ⛔ **MANDATORY.** You MUST execute every step in this file for each launch configuration. Do NOT skip, assume, or approximate results. Do NOT proceed to the closing message until every checklist entry has a real ✅ or ❌ result.
 
+> **Compose command comes from the plan.** Every `docker compose …` invocation below is a stand-in for the plan's Orchestrator **Compose Command** — use `docker compose` by default, or `podman compose` when the plan selected Podman. The commands (`up -d`, `ps`, `logs`, `down`) are identical across both engines.
+
+> ⛔ **Do NOT switch the container runtime to make validation pass.** If an emulator fails to start, a port doesn't reach the host, a volume/permission error occurs, or a health check never passes on the plan's selected engine, **STOP and surface it to the user** (per [preflight.md § Container Runtime Readiness Check](preflight.md)) — offer the fix first, and only switch engines if the user explicitly chooses to. Silently rewriting the Orchestrator/tasks to the other engine and re-validating is a failure even if the app then works.
+
 ---
 
 ## Validation Algorithm
@@ -30,10 +34,10 @@ For each **non-compound** launch configuration in `.vscode/launch.json`:
 
 ### Step 4: Verify Emulators
 
-- If a `docker-compose.yml` was generated, verify all services started correctly after `docker compose up -d`:
+- If a `docker-compose.yml` was generated, verify all services started correctly after `docker compose up -d` (or `podman compose up -d`):
    - **Long-running services** (database emulators, Azurite) → should be running and healthy
    - **One-shot services** (e.g., `db-migrate`) → should have exited with code 0
-   - Use `docker compose ps` and `docker compose logs <service>` to check
+   - Use `docker compose ps` and `docker compose logs <service>` (or the `podman compose` equivalents) to check
    - If any service failed, diagnose the issue, fix the configuration, and re-run until all services are healthy or exited cleanly
    - Only mark the config ❌ after exhausting reasonable fix attempts
 
@@ -109,8 +113,8 @@ Additional runtime-specific checks beyond the generic algorithm. These run after
 After all individual configs **and** every compound have been validated, and **before** the Plan Integration / status write, sweep and stop everything validation spun up:
 
 1. **Stop every lingering background process** you started during validation — every dev server, `func host`, watcher, and task/language process, across all configs and the compound. Nothing you launched may still be running.
-2. **Stop every emulator you started.** If validation ran `docker compose up`, run `docker compose down` (or stop the specific services you started). Do not leave Azurite, database emulators, or any compose service running.
-3. **Verify the ports are free again.** Confirm that every port the generated configs will use is released — application HTTP ports, debug ports, and emulator ports. Use `lsof -i :<port>` (and `docker compose ps` for emulators); each must show nothing bound. If any port is still held, find and stop the owning process before finishing.
+2. **Stop every emulator you started.** If validation ran `docker compose up` (or `podman compose up`), run the matching `docker compose down` / `podman compose down` (or stop the specific services you started). Do not leave Azurite, database emulators, or any compose service running.
+3. **Verify the ports are free again.** Confirm that every port the generated configs will use is released — application HTTP ports, debug ports, and emulator ports. Use `lsof -i :<port>` (and the plan's `docker compose ps` / `podman compose ps` for emulators); each must show nothing bound. If any port is still held, find and stop the owning process before finishing.
 
 > A subsequent user **F5** must start from a completely clean slate. Do NOT proceed to the closing message or set status to `Implemented` while any validation-spawned process or emulator is still running, or while any of these ports is still bound.
 

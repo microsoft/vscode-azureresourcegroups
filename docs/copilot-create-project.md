@@ -249,6 +249,16 @@ API tests — then opens the **Debug Next Steps** view. Like the plan preview, t
 section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
 plan markdown.
 
+The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
+**Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
+The generated `docker-compose.yml` is identical for either engine; only the command that drives it changes.
+The plan **prefers the Podman engine whenever it's installed and ready** (even if Docker is also available), and falls
+back to Docker otherwise — or when neither is detected. Podman is used two ways: **native** (the `podman` CLI, driven by
+`podman compose`) or **Docker-compatibility mode** (the Podman engine behind Docker's socket, still driven by
+`docker compose`) — recorded as *Podman (Docker-compatible)*. On Windows/macOS, Podman needs a running **Podman
+machine** — if it isn't started, generation asks before starting it. You can switch engines by editing the plan's
+*Container Runtime* / *Compose Command* before approving.
+
 <p align="center">
   <img src="images/copilot-create-project/08-debug-plan-view.png" alt="Debug plan view" />
 </p>
@@ -500,6 +510,11 @@ before submitting.
 | **Report Issue** / **Inspect Diagnostics** say "No … diagnostics … recorded." | The flow never ran in this workspace, or state was reset. | Expected. Reproduce the issue in this workspace first so events are recorded. |
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
+| F5 / *Start Emulators* fails with a connection or "cannot connect to the container runtime" error. | The container engine the plan selected isn't running. | For **Docker**, start Docker Desktop / the Docker service. For **Podman** on Windows/macOS, ensure a **Podman machine** exists and is started (`podman machine init` once, then `podman machine start`). Generation's preflight asks before starting a stopped machine but won't create one for you. |
+| Emulators start under Docker but not after switching the plan to **Podman**. | `podman compose` needs an external Compose provider, or the emulator isn't Podman‑certified. | Confirm `podman compose version` returns a version (it wraps `docker-compose`/`podman-compose`). Azurite and PostgreSQL are certified; other emulators generate best‑effort under Podman and emit a `⚠️ LIMITED SUPPORT` warning. |
+| The plan says *Podman (Docker-compatible)* but `docker compose` can't reach an engine. | Podman's Docker-compatible socket isn't up. | Enable **Docker compatibility** in Podman Desktop and make sure the **Podman machine** is started (`podman machine start`). `docker info` should then report the Podman server. The generated tasks keep using `docker compose` — that's the command that talks to the compatible socket. |
+| Podman containers run, but the app on the **Windows host** can't reach them (`/api/health` shows `database: error`; `Test-NetConnection localhost:5432` is `False`). | The Podman machine isn't forwarding container ports to the Windows host — common with the **Hyper‑V** machine provider (which also needs admin). | Use the **WSL** machine provider instead of Hyper‑V (no admin, and it auto‑forwards ports): `podman machine stop; podman machine rm; $env:CONTAINERS_MACHINE_PROVIDER = "wsl"; podman machine init; podman machine start`. You do **not** need to install Hyper‑V. |
+| Postgres emulator fails to start under Podman with `could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted`. | A **bind mount** for the Postgres data dir: `initdb` can't `chown` a Windows‑side path under rootless Podman. | The generated compose uses a **named volume** (`postgres_data`) for exactly this reason — if you edited it back to a `./.postgres` bind mount, restore the named volume. Reset it with `podman compose down -v`. |
 
 ## Clean up resources after a failed deploy
 

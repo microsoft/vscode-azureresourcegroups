@@ -49,6 +49,17 @@ services:
 
 <!-- Delete this section if the emulator is not a database. -->
 
+## Container Runtime Support
+
+<!-- State whether this emulator has been certified for Docker, Podman, or both. -->
+<!-- The compose service block is engine-agnostic, but some Microsoft emulator images make Docker-specific assumptions (privileged mode, architecture, licensing). -->
+<!-- If this emulator is NOT yet certified for Podman, say so here so the generation phase emits a `⚠️ LIMITED SUPPORT` warning when the plan selects Podman. -->
+
+| Docker | Podman |
+|--------|--------|
+| {✅ certified / 🔲 planned} | {✅ certified / 🔲 planned} |
+
 ## Notes
 
 <!-- Platform caveats (arm64/x86), known issues, resource requirements. -->
+<!-- Note any Podman-specific caveats here (SELinux `:Z` labels on Linux, rootless port ranges, Podman-machine bind-mount paths). -->

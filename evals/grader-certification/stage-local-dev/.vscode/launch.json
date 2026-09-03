@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Task Tracker API (debug)",
+            "type": "node",
+            "request": "attach",
+            "port": 9229,
+            "preLaunchTask": "func: host start",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Task Tracker Frontend (debug)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/services/web/src",
+            "preLaunchTask": "web: dev server"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Debug All Services",
+            "configurations": [
+                "Task Tracker API (debug)",
+                "Task Tracker Frontend (debug)"
+            ],
+            "stopAll": true
+        }
+    ]
+}
