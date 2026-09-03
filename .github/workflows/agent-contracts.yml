@@ -1,0 +1,117 @@
+name: Agent Contracts
+
+# The half of the Vally eval suite that needs no Copilot credentials.
+#
+# Running the agent itself now happens on MSBench (see msbench-evals.yml), but
+# the checks below still earn their place in PR CI: they are fast, they need no
+# token, and they guard the graders and agent assets that the MSBench run
+# depends on. A broken grader or a drifted instruction file would otherwise only
+# surface as a confusing eval failure much later.
+#
+# Deliberately absent: anything that drives a live agent. That now happens on
+# MSBench (see msbench-evals.yml), and the files that did it headlessly —
+# run-eval.cjs, check-copilot-auth.ts, check-gate-tools.ts and the SDK executor —
+# have been deleted rather than left unreferenced in the tree.
+on:
+  pull_request:
+    paths:
+      - 'evals/**'
+      - 'resources/agents/**'
+      - '.vally.yaml'
+      - '.github/workflows/agent-contracts.yml'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Add Vally CLI to PATH
+        run: echo "$GITHUB_WORKSPACE/evals/node_modules/.bin" >> "$GITHUB_PATH"
+
+      # A rule removed from the shipped agent should not linger in the eval's
+      # copy of it, or the eval grades a prompt we no longer ship.
+      - name: Check agent instruction drift
+        run: npm run drift
+        working-directory: evals
+
+      # Graders run straight off TypeScript source, so a type error is a broken
+      # grader — catch it before it costs a full eval run.
+      - name: Type-check evals
+        run: npm run typecheck
+        working-directory: evals
+
+      # The grader import scanner decides what gets staged into the container, and a
+      # naive one already failed the build on a prose sentence. These cases are the
+      # ones it must get right — including that a genuine bare import STILL throws,
+      # since the guard's entire value is its ability to fail.
+      - name: Self-test the import scanner
+        run: npm run imports:self-test
+        working-directory: evals
+
+      # Prove the graders still detect the regressions they claim to detect.
+      - name: Certify graders
+        run: npm run certify
+        working-directory: evals
+
+      # Same idea one layer up: prove the stack schema still rejects the sixteen
+      # broken stack files it claims to reject. A schema that quietly accepts
+      # everything would let a stack requiring a binary the container does not
+      # have reach a paid run, which is the cost this check exists to avoid.
+      - name: Check stack schema
+        run: npm run stacks:check
+        working-directory: evals
+
+      # A SQL assertion has no grader filename, so its `comment` is the only
+      # stable identity it carries into stored run results. Rewording one forks
+      # that gate into a second identity with no history — silently, since the
+      # assertion still runs and still passes. The liveness sentinel reached ten
+      # different wordings across eleven stimuli before anyone noticed, and no
+      # identity scheme can repair that retroactively. Comments are the one place
+      # paraphrasing is normally harmless, so nothing but a check will stop it.
+      - name: Check shared assertion comments are canonical
+        run: npm run gates
+        working-directory: evals
+
+      # A phase runs a fixed set of agents, and an agent may only write what its
+      # instructions permit. An assertion whose evidence can only appear in an artifact
+      # the phase cannot produce reports green because nothing was able to go wrong.
+      - name: Check every assertion can fire in its phase
+        run: npm run phases:check
+        working-directory: evals
+
+      # Run through the evals package so the spec is actually linted: a bare
+      # `vally lint` at the repo root discovers no skills and silently passes.
+      - name: Lint eval specs
+        run: npm run lint
+        working-directory: evals
+
+      # `run.sh` promises a clean machine can execute it, and the MSBench eval job
+      # depends on that: it installs nothing before running `run.sh --skip-build`.
+      # A script it invokes that statically imports a package therefore fails on
+      # the one path where failure costs money. That rule was written down, in
+      # prose, and then broken by the next change to the same file family — so it
+      # is a mechanism now rather than a hope.
+      #
+      # Deliberately last: this step moves `evals/node_modules` aside and restores
+      # it in a `finally`. Running it after everything else means that even a
+      # catastrophic failure to restore cannot make an unrelated step fail with a
+      # confusing error.
+      - name: Check run.sh works on a clean machine
+        run: npm run clean-machine:check
+        working-directory: evals

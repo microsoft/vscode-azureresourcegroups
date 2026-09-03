@@ -1,0 +1,169 @@
+# Stimulus 1.5 `plan-generation-task-app` from evals/project-plan/eval.yaml.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# The FIRST multi-turn stimulus in this folder. The four before it are one
+# prompt, one artifact; this one is two prompts and exercises the link the
+# product actually depends on — requirements confirmed, THEN a plan.
+#
+# Turn scoping is the whole point, so it is worth being precise about it.
+# `SQLiteAssertionDatabase.formatWithStepIndexFilter` appends
+# `AND stepIndex = :stepIndex` (or `WHERE …`) to every *query* assertion, with
+# `:stepIndex` bound to the index of the step the assertion is declared under.
+# So an assertion sees only its own turn, and where an assertion lives is a
+# load-bearing decision rather than a formatting one — an assertion under the
+# wrong step still passes, it just stops meaning anything.
+#
+# Mapping from the source spec's graders:
+#
+#   vally grader                        turn    declared under
+#   ----------------------------------------------------------------
+#   tool-calls requirements-view-opened  0      step 0  (explicit in source)
+#   file-exists plan-exists              -      step 1
+#   program plan-structure-valid         -      step 1
+#   program plan-webview-parseable       -      step 1
+#   tool-calls plan-view-opened          -      step 1
+#   constraints.reject_tools             -      BOTH   (see below)
+#
+# The source marks only `requirements-view-opened` with `turn: 0`; the rest are
+# untargeted, and in Vally an untargeted grader reads the whole trajectory and
+# the final workspace (`executor/azure-agent-executor.ts` sends every turn into
+# one session and grades the result once). Here they are declared under step 1,
+# the last step, which is the closest equivalent — and deliberately a slightly
+# stronger claim: the plan must be produced *in the turn after confirmation*,
+# not merely exist by the end. That is the product contract this stimulus is
+# for, and it is safe under either reading of the `files` table (per-step delta
+# or per-step snapshot) because the plan is written during turn 1 either way.
+#
+# The `exec:` graders are declared under step 1 for a second, harder reason:
+# `exec:` runs after the step it is attached to. Attached to step 0 they would
+# run before `.azure/project-plan.md` exists and fail for a reason that has
+# nothing to do with the product.
+#
+# ─── IF YOU COPY THIS FILE TO ADD ANOTHER MULTI-TURN STIMULUS ───────────────
+#
+# Two rules below are easy to drop because a file that drops them still passes.
+# That is the point: both failures are silent.
+#
+#   1. EVERY step gets its own liveness sentinel as its FIRST assertion.
+#      Not one per file — one per step. PR #1706 added the sentinel because
+#      `COUNT(*) = 0` is trivially true against an empty table. The multi-turn
+#      version of that bug is a run that finishes turn 0 and then dies, and it
+#      defeats a single sentinel: `llm_responses` is non-empty, so a step-0
+#      sentinel passes, and then every step-1 negative assertion passes
+#      VACUOUSLY while the step-1 positives fail as though the product broke.
+#      A sentinel bound to each :stepIndex is what makes that turn's
+#      assertions mean anything.
+#
+#   2. EVERY whole-conversation constraint gets a copy per step.
+#      A Vally `constraints.reject_tools` covers the entire trajectory, but the
+#      implied filter means each ported copy sees exactly ONE turn. One copy
+#      therefore leaves every other turn unchecked while still reading green.
+#
+# The shared property: an assertion in the wrong place, or missing for one
+# turn, does not go red. It quietly stops testing anything. Neither rule is
+# visible in a passing result, so neither can be recovered by looking at one.
+
+promptSteps:
+  # ─── Turn 0: describe the app ────────────────────────────────────────────
+  - text: |
+      I want to build a task management app where teams can create projects,
+      assign tasks to people, set due dates, and track progress. React frontend,
+      Azure Functions backend, PostgreSQL for the data. I want it to look polished.
+    assertions:
+      # Liveness sentinel — must come first. See
+      # config/stimuli/photo-app-requirements.yaml for the full reasoning.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: tool-calls turn: 0 required [workflow-tools-open_requirements_view]
+      # The one grader the source pins to a turn. `turn: 0` maps onto "declared
+      # under promptSteps[0]", where the implied filter binds :stepIndex = 0.
+      # Scoping matters here: the agent may legitimately re-open the webview
+      # later, and an unscoped check would be satisfied by that instead of by
+      # the behaviour under test — asking BEFORE it has an answer.
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      #
+      # Declared on BOTH steps, and that is not redundancy. A Vally constraint
+      # applies to the whole trajectory, but the implied filter makes each copy
+      # see exactly one turn — so a single copy would leave the other turn
+      # unchecked while still reading green. Duplicating it is the honest port,
+      # and it buys per-turn attribution: the failing assertion names the turn
+      # that fell back to chat questions.
+      #
+      # `enableImpliedStepIndexFilter: false` would express this as one
+      # whole-conversation assertion and keep the 1:1 grader mapping. Not used:
+      # it is unverified against this harness version, and a config the runner
+      # rejects costs a whole run to find out. Plain YAML that cannot fail
+      # schema validation is worth one extra assertion.
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Turn 1: requirements confirmed, expect the plan ─────────────────────
+  - text: "Requirements submitted at .azure/requirements.json. All answers confirmed."
+    assertions:
+      # The sentinel that only a multi-turn stimulus needs, and the reason this
+      # file has two. PR #1706 added the sentinel because negative assertions
+      # are vacuous against an empty table; the multi-turn version of that bug
+      # is a run which completes turn 0 and then dies — throttled on the second
+      # turn, or stalled. `llm_responses` is non-empty, so a step-0 sentinel
+      # still passes, while every step-1 negative passes trivially and the
+      # positives fail as if the product were broken. Bound to :stepIndex = 1,
+      # this asserts the second turn actually happened.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: file-exists .azure/project-plan.md
+      - comment: Agent should have written the plan after requirements were confirmed
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/project-plan.md'
+
+      # vally: program plan-structure-valid
+      # The real validator, shared with grader certification — structure,
+      # numbering, required sections and the route table. Semantic checks that
+      # SQL could only approximate, which is the drift this eval exists to
+      # catch. cwd is the workspace, so graderHarness resolves the artifact
+      # without EVALUATE_WORKSPACE — see README.md.
+      - comment: project-plan.md satisfies the plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts
+
+      # vally: program plan-webview-parseable
+      # Runs the extension's real `parseScaffoldPlanMarkdown` — the function the
+      # plan webview itself calls. A plan that passes here cannot fail to render
+      # in product, which a structural check alone would not establish.
+      - comment: project-plan.md renders in the plan webview
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-webview-parseable.ts
+
+      # vally: tool-calls required [workflow-tools-open_plan_view]
+      # Scoped to turn 1, so this is the requirements -> plan handoff itself:
+      # the plan view opened on the turn that followed confirmation.
+      - comment: Agent should have opened the plan webview after confirmation
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions] — turn 1 copy.
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Triage for the `files`-table assertions above, recorded not asserted.
+      # `assertZeroExitCode: false`, so it adds no check and cannot change the
+      # assertion count — the same shape as the fingerprint below.
+      #
+      # It exists because the `files` table is NOT a filesystem listing: it holds
+      # what the agent wrote through the tracked channel during a step. A file put
+      # there by an extension, the phase `script:`, the seed recipe or the container
+      # is absent from it however plainly it exists on disk. So a red `files`
+      # assertion has two very different causes, and they are indistinguishable
+      # from the verdict alone. Present on disk but absent from `files` is the
+      # wrong-channel signature; absent from both is a real product failure.
+      # build-config.ts requires this pairing rather than trusting anyone to
+      # remember it.
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/project-plan.md: $(test -f .azure/project-plan.md && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # Recorded, not asserted. See config/stimuli/photo-app-requirements.yaml.
+      # On the last step, where the `exec:` graders above run.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

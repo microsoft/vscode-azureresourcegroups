@@ -1,0 +1,161 @@
+{
+  "services": [
+    {
+      "name": "functions",
+      "sku": "FlexConsumption (FC1)",
+      "purpose": "Host scrapbook-api Azure Functions v4 (HTTP + Queue triggers). Node 20.",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "func-scrapbook-dev-5381"
+    },
+    {
+      "name": "staticWebApp",
+      "sku": "Free",
+      "purpose": "Host scrapbook-web React SPA (static Vite build). Free tier CDN.",
+      "component": "scrapbook-web",
+      "region": "eastus2",
+      "resourceName": "swa-scrapbook-dev-5381"
+    },
+    {
+      "name": "storageAccount",
+      "sku": "Standard_LRS",
+      "purpose": "AzureWebJobsStorage + Blob container 'photos' + Queue 'caption-jobs' + Flex Consumption deployment package.",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "stscrapbookdev5381"
+    },
+    {
+      "name": "postgresFlexibleServer",
+      "sku": "Standard_B1ms",
+      "purpose": "Application relational DB (users, pairings, photos, captions).",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "psql-scrapbook-dev-5381",
+      "version": "16"
+    },
+    {
+      "name": "azureOpenAI",
+      "sku": "S0",
+      "purpose": "Cognitive Services account hosting gpt-4o-mini deployment for caption generation.",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "cog-scrapbook-dev-5381"
+    },
+    {
+      "name": "keyVault",
+      "sku": "standard",
+      "purpose": "Store AUTH_SIGNING_KEY, DB admin password, and any operator-set secrets. Function App reads via managed identity.",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "kv-scrapbook-dev-5381"
+    },
+    {
+      "name": "userAssignedIdentity",
+      "sku": "n/a",
+      "purpose": "Managed identity for the Function App to access Storage, Key Vault, Postgres AAD auth (optional), and Azure OpenAI without secrets.",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "id-scrapbook-dev-5381"
+    },
+    {
+      "name": "logAnalyticsWorkspace",
+      "sku": "PerGB2018",
+      "purpose": "Backing workspace for Application Insights and platform diagnostics.",
+      "component": "shared",
+      "region": "eastus2",
+      "resourceName": "log-scrapbook-dev-5381"
+    },
+    {
+      "name": "applicationInsights",
+      "sku": "n/a",
+      "purpose": "APM + telemetry for Function App (already configured in host.json).",
+      "component": "scrapbook-api",
+      "region": "eastus2",
+      "resourceName": "appi-scrapbook-dev-5381"
+    }
+  ],
+  "costEstimate": {
+    "monthlyUsd": 23.0,
+    "currency": "USD",
+    "breakdown": [
+      { "service": "Azure Functions Flex Consumption (FC1)", "sku": "FC1 (Node 20)", "monthlyUsd": 0.0, "note": "First 100k executions + 100k GB-seconds free monthly grant; demo workload stays within grant." },
+      { "service": "Azure Static Web Apps", "sku": "Free", "monthlyUsd": 0.0, "note": "Free tier: 100 GB bandwidth/mo, 2 custom domains, SSL included." },
+      { "service": "Storage Account (Blob + Queue + Files)", "sku": "Standard_LRS", "monthlyUsd": 1.0, "note": "<5 GB storage, low transactions." },
+      { "service": "PostgreSQL Flexible Server", "sku": "Standard_B1ms (Burstable, 1 vCPU, 2 GiB)", "monthlyUsd": 12.5, "note": "Burstable compute; 32 GB storage add ~$3.7/mo; single AZ; 7-day PITR." },
+      { "service": "PostgreSQL storage + backup", "sku": "32 GiB", "monthlyUsd": 4.0, "note": "Included storage + free backup up to server size." },
+      { "service": "Azure OpenAI — gpt-4o-mini", "sku": "Standard (2024-07-18)", "monthlyUsd": 5.0, "note": "Pay-per-token: $0.15/1M input, $0.60/1M output. Demo traffic estimate." },
+      { "service": "Key Vault", "sku": "standard", "monthlyUsd": 0.1, "note": "$0.03 per 10k operations; a handful of secret reads/mo." },
+      { "service": "Application Insights + Log Analytics", "sku": "PerGB2018", "monthlyUsd": 0.5, "note": "First 5 GB/mo ingestion free; small overage." }
+    ],
+    "disclaimer": "Estimates based on public Azure retail pricing snapshot for eastus2 at plan time. MCP pricing tool unavailable in this session — figures are best-effort from documented rates. Actual cost varies with traffic, storage growth, and OpenAI token volume. Review https://azure.microsoft.com/pricing/calculator for authoritative numbers."
+  },
+  "rejectedAlternatives": [
+    { "service": "App Service (B1) + custom containers", "reason": "The API is an Azure Functions v4 project — Functions Flex Consumption is the native, cheaper (scale-to-zero) fit." },
+    { "service": "Azure SQL Database (Basic)", "reason": "Existing schema uses PostgreSQL-specific types (uuid, timestamptz, gen_random_uuid); migrating dialects would violate deploy-as-is." },
+    { "service": "Cosmos DB Serverless", "reason": "App requires relational joins + unique constraints on pairings; NoSQL rework rejected." },
+    { "service": "Container Apps + custom Node container", "reason": "No Dockerfile present; the app builds to Functions runtime — no need for container hosting." },
+    { "service": "Service Bus (queue)", "reason": "App already uses @azure/storage-queue with a documented queue trigger; Storage Queue keeps the free tier + zero code change." },
+    { "service": "Azure Static Web Apps Standard", "reason": "Free tier meets low-traffic demo requirements; can upgrade later without redeploy." }
+  ],
+  "naming": {
+    "pattern": "{abbreviation}-{project}-{env}-{suffix}",
+    "resourcePrefix": "scrapbook-dev-5381",
+    "resources": [
+      { "type": "resourceGroup", "name": "rg-scrapbook-dev-5381" },
+      { "type": "functionApp", "name": "func-scrapbook-dev-5381" },
+      { "type": "staticWebApp", "name": "swa-scrapbook-dev-5381" },
+      { "type": "storageAccount", "name": "stscrapbookdev5381" },
+      { "type": "postgresFlexibleServer", "name": "psql-scrapbook-dev-5381" },
+      { "type": "postgresDatabase", "name": "scrapbook" },
+      { "type": "openAI", "name": "cog-scrapbook-dev-5381" },
+      { "type": "openAIDeployment", "name": "gpt-4o-mini" },
+      { "type": "keyVault", "name": "kv-scrapbook-dev-5381" },
+      { "type": "userAssignedIdentity", "name": "id-scrapbook-dev-5381" },
+      { "type": "logAnalytics", "name": "log-scrapbook-dev-5381" },
+      { "type": "appInsights", "name": "appi-scrapbook-dev-5381" }
+    ]
+  },
+  "quotas": [],
+  "assumptions": [
+    "MCP quota + pricing tools not available in this session; quota validation is best-effort (region availability confirmed via `az provider show` and `az cognitiveservices model list`, but per-subscription quota was NOT confirmed).",
+    "OpenAI content-generation is optional at runtime (isConfigured flag) — if OpenAI provisioning fails, the app deploys with caption features disabled rather than blocking the whole rollout.",
+    "PostgreSQL admin password will be auto-generated at deploy time and stored in Key Vault (never surfaced to the user).",
+    "AUTH_SIGNING_KEY will be auto-generated (64-byte hex) at deploy time and stored in Key Vault (never surfaced to the user).",
+    "Static Web App is provisioned separately from Functions (BYO backend model) with CORS on the Function App locked to the SWA hostname.",
+    "Region eastus2 chosen for its combined support for Postgres Flex + Azure OpenAI + Functions Flex Consumption; fallback to eastus if quota healing needed."
+  ],
+  "iacFormat": "bicep",
+  "appDbName": "scrapbook",
+  "postDeployRecommendations": [
+    { "title": "Rotate AUTH_SIGNING_KEY periodically via Key Vault", "reason": "Reduce blast radius of a leaked signing key.", "effort": "low", "services": ["keyVault", "functionApp"] },
+    { "title": "Enable Application Insights availability tests against /api/health", "reason": "Continuous uptime monitoring with alerting.", "effort": "low", "services": ["appInsights"] },
+    { "title": "Extend PostgreSQL PITR retention and enable geo-redundant backup", "reason": "Default 7-day PITR is thin for production data.", "effort": "medium", "services": ["postgresFlexibleServer"] },
+    { "title": "Upgrade Static Web Apps to Standard for staging environments + private endpoints", "reason": "Free tier lacks staging slots and private networking.", "effort": "low", "services": ["staticWebApp"] },
+    { "title": "Move Postgres to VNet + private endpoint", "reason": "Public network access with firewall is convenient but not defense-in-depth.", "effort": "medium", "services": ["postgresFlexibleServer"] }
+  ],
+  "instrumentation": {
+    "appInsightsEnabled": true,
+    "reason": "host.json already declares applicationInsights sampling; Function App will be provisioned with the connection string wired via APPLICATIONINSIGHTS_CONNECTION_STRING."
+  },
+  "deploymentVariables": {
+    "environmentName": "scrapbook-dev-5381",
+    "location": "eastus2",
+    "sessionId": "5381e26f-f598-415f-bd03-e3678f1060bc",
+    "deployedBy": "Nathan Turinski"
+  },
+  "quotaValidation": {
+    "verified": false,
+    "method": "unverifiable",
+    "verifiedRegion": "eastus2",
+    "checkedRegions": ["eastus2"],
+    "reason": "MCP quota tool not available in this session. Region availability confirmed for the required providers (Microsoft.DBforPostgreSQL/flexibleServers, Microsoft.CognitiveServices gpt-4o-mini Standard). Per-subscription quota was not enumerated; deploy will surface a real quota error immediately if hit.",
+    "offerRestrictions": [
+      { "provider": "Microsoft.DBforPostgreSQL", "region": "eastus2", "restricted": false }
+    ],
+    "offerRestrictionsVerified": true
+  },
+  "deployStrategy": {
+    "codeDeployPattern": "oryx-auto",
+    "reason": "Azure Functions Flex Consumption uses zip deploy with remote build. tsc runs via the Functions build pipeline; no native modules."
+  }
+}

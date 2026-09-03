@@ -1,0 +1,59 @@
+{
+    "schemaVersion": 1,
+    "outcome": "hit",
+    "detail": "Breakpoint hit in services/api/src/server.ts",
+    "timeline": [
+        "00.000 probe activated",
+        "00.412 resolved breakpoint services/api/src/server.ts:42",
+        "01.180 startDebugging returned true",
+        "02.940 stopped: breakpoint"
+    ],
+    "output": [
+        "listening on http://localhost:3000"
+    ],
+    "spec": {
+        "launchConfig": "Debug API",
+        "breakpoint": {
+            "glob": "services/api/src/**/*.ts",
+            "pattern": "app\\.get\\("
+        },
+        "trigger": {
+            "url": "http://localhost:3000/api/health"
+        }
+    },
+    "resolution": {
+        "glob": "services/api/src/**/*.ts",
+        "pattern": "app\\.get\\(",
+        "filesMatchedByGlob": [
+            "services/api/src/server.ts"
+        ],
+        "globMatchCount": 1,
+        "match": {
+            "file": "services/api/src/server.ts",
+            "line": 42,
+            "text": "app.get('/api/health', (req, res) => {"
+        }
+    },
+    "adapter": {
+        "startDebuggingReturned": true,
+        "triggerConnected": true,
+        "setBreakpoints": [
+            {
+                "verified": false,
+                "line": 42,
+                "message": "Unbound breakpoint"
+            }
+        ]
+    },
+    "stopped": {
+        "reason": "breakpoint",
+        "frame": "<anonymous>",
+        "file": "services/api/src/server.ts",
+        "line": 42,
+        "locals": {
+            "req": "IncomingMessage",
+            "res": "ServerResponse"
+        }
+    },
+    "durationMs": 2940
+}

@@ -28,12 +28,13 @@ import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
+import { registerDebugSessionWatcher } from './commands/copilotOnRails/registerDebugSessionWatcher';
 import { createResourceGroup } from './commands/createResourceGroup';
 import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
-import { mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
+import { azureProjectId, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
@@ -50,6 +51,9 @@ import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResour
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
+import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
+import { ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
+import { registerProjectSubmissionStateWatcher } from './tree/project/registerProjectSubmissionStateWatcher';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -57,6 +61,15 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
+import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
+import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
+import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
+import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
+import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
+import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
+import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -71,6 +84,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
+
+    const corPlanFilesWatcher = new ProjectPlanFilesWatcher();
+    context.subscriptions.push(corPlanFilesWatcher);
+    registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
+    registerDebugSessionWatcher(context, corPlanFilesWatcher);
+    registerRequirementsAutoOpen(context);
+    registerDeploymentPlanAutoOpen(context);
+    registerAutopilot(context);
+    registerDebugPlanImplementedWatcher(context);
+    registerDeployInventoryWatcher(context);
+    registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -117,6 +141,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }));
 
         registerCommands();
+        void resumePendingCreateWithCopilot();
+        void resumeCreateProjectViewAfterReload();
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
@@ -171,6 +197,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         workspaceResourceBranchDataProviderManager,
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
+
+    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, corPlanFilesWatcher);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider(azureProjectId, azureProjectProgressTreeDataProvider));
+    ext.actions.refreshProjectTree = () => azureProjectProgressTreeDataProvider.refresh();
+
+    registerResumeAffordances(context, corPlanFilesWatcher);
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {
@@ -327,4 +359,5 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
 export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
+    void disableAutopilot();
 }

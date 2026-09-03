@@ -1,0 +1,22 @@
+# expect: stackKnownGapUnknownGate
+# Declares a gap for a gate that is not in gates.yaml — usually a misspelling.
+# A gap for a gate that does not exist explains no red at all.
+schemaVersion: 1
+id: gap-for-unknown-gate
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps:
+  - gates: [runtime-frontend-typo]
+    reason: ecosystemNotSupported
+    tracking: names a gate that does not exist
+phases: [plan]

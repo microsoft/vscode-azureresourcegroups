@@ -29,7 +29,11 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "workspaceContains:**/.azure/.pending-create",
+        "workspaceContains:**/.azure/project-plan.md",
+        "workspaceContains:**/.azure/requirements.json",
+        "workspaceContains:**/.azure/vscode-debug-plan.md"
     ],
     "main": "./main.js",
     "contributes": {
@@ -98,6 +102,26 @@
                 ]
             }
         ],
+        "chatAgents": [
+            {
+                "path": "resources/agents/azure-project-plan.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-project-scaffold.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-project-integrate.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-debug-plan.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-debug-generate.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-deploy.agent.md"
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -123,6 +147,22 @@
             ]
         },
         "commands": [
+            {
+                "command": "copilotOnRails.inspectDiagnostics",
+                "title": "%copilotOnRails.inspectDiagnostics%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.reportIssue",
+                "title": "%copilotOnRails.reportIssue%",
+                "category": "Azure",
+                "icon": "$(feedback)"
+            },
+            {
+                "command": "copilotOnRails.downloadAgentInstructions",
+                "title": "%copilotOnRails.downloadAgentInstructions%",
+                "category": "Azure"
+            },
             {
                 "command": "azureResourceGroups.uploadFileCloudConsole",
                 "title": "%azureResourceGroups.uploadToCloudShell%",
@@ -224,6 +264,12 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureProject.refresh",
+                "title": "%azureProject.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "azureResourceGroups.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -237,11 +283,6 @@
             {
                 "command": "azureResourceGroups.viewProperties",
                 "title": "%azureResourceGroups.viewProperties%",
-                "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.reportIssue",
-                "title": "%azureResourceGroups.reportIssue%",
                 "category": "Azure"
             },
             {
@@ -350,6 +391,46 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "copilotOnRails.openScaffoldPlanView",
+                "title": "%copilotOnRails.openScaffoldPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openDebugPlanView",
+                "title": "%copilotOnRails.openDebugPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openDeploymentPlanView",
+                "title": "%copilotOnRails.openDeploymentPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openDeployResultView",
+                "title": "%copilotOnRails.openDeployResultView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openRequirementsView",
+                "title": "%copilotOnRails.openRequirementsView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openFrontendPreviewView",
+                "title": "%copilotOnRails.openFrontendPreviewView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openDebugNextStepsView",
+                "title": "%copilotOnRails.openDebugNextStepsView%",
+                "category": "Azure"
+            },
+            {
+                "command": "copilotOnRails.openScaffoldNextStepsView",
+                "title": "%copilotOnRails.openScaffoldNextStepsView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -405,6 +486,13 @@
                     "icon": "$(azure)",
                     "type": "tree"
                 }
+            ],
+            "explorer": [
+                {
+                    "id": "azureProject",
+                    "name": "%azureProject.viewName%",
+                    "visibility": "collapsed"
+                }
             ]
         },
         "viewsWelcome": [
@@ -423,9 +511,17 @@
                 "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
             },
             {
+                "view": "azureProject",
+                "contents": "%azureProject.welcomeContent%"
+            },
+            {
                 "view": "azureResourceGroups",
                 "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)\n[View Accounts & Tenants](command:azureTenantsView.focus)",
                 "when": "azureResourceGroups.needsTenantAuth == true"
+            },
+            {
+                "view": "workbench.explorer.emptyView",
+                "contents": "%azureProject.emptyExplorerWelcomeContent%"
             }
         ],
         "menus": {
@@ -473,6 +569,16 @@
                     "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@4"
+                },
+                {
+                    "command": "azureProject.refresh",
+                    "when": "view == azureProject",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "copilotOnRails.reportIssue",
+                    "when": "view == azureProject",
+                    "group": "navigation@2"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",
@@ -623,6 +729,18 @@
                     "when": "isWorkspaceTrusted"
                 },
                 {
+                    "command": "copilotOnRails.reportIssue",
+                    "when": "never"
+                },
+                {
+                    "command": "copilotOnRails.openScaffoldNextStepsView",
+                    "when": "never"
+                },
+                {
+                    "command": "copilotOnRails.openDebugNextStepsView",
+                    "when": "never"
+                },
+                {
                     "command": "azureResourceGroups.showGroupOptions",
                     "when": "never"
                 },
@@ -668,6 +786,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "copilotOnRails.openFrontendPreviewView",
                     "when": "never"
                 }
             ],
@@ -894,14 +1016,18 @@
         ]
     },
     "scripts": {
-        "build": "npm run build:esbuild && npm run build:check",
+        "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
+        "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
         "build:check": "tsc --noEmit",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
-        "api-extractor": "cd api && npm run api-extractor"
+        "api-extractor": "cd api && npm run api-extractor",
+        "eval:drift": "node evals/check-agent-drift.ts",
+        "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",
+        "eval:cor:thresholds:validate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/releaseThresholds.ts evals/release-thresholds.v1.json"
     },
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
@@ -914,13 +1040,16 @@
         "@types/semver": "^7.7.1",
         "@types/uuid": "^9.0.1",
         "@types/vscode": "1.105.0",
+        "@types/vscode-webview": "^1.57.5",
         "@types/ws": "^8.5.10",
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
         "esbuild": "*",
         "esbuild-plugin-copy": "*",
-        "tsx": "*"
+        "mermaid": "^11.15.0",
+        "sass": "~1.79.6",
+        "typescript-eslint": "^8.61.1"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
@@ -928,6 +1057,7 @@
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
+        "@microsoft/vscode-azext-webview": "^1.0.2",
         "@microsoft/vscode-inproc-mcp": "^1.0.0",
         "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",

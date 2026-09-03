@@ -20,6 +20,7 @@ import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { registerCopilotOnRailsCommands } from './copilotOnRails/registerCopilotOnRailsCommands';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
@@ -156,6 +157,9 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    // Copilot on Rails
+    registerCopilotOnRailsCommands();
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

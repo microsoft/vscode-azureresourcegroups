@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# phase: functions-breakpoint
+#
+# Stimulus `functions-breakpoint-node` — does F5 work in an Azure Functions
+# project, inside the container?
+#
+# `debug-breakpoint-node` answers that for a plain Node app that launches its own
+# process. Every project the scaffold agent emits is a Functions app whose launch
+# configuration is `request: attach` behind `preLaunchTask: "func: host start"` —
+# a different code path end to end, and the one that produced a fabricated
+# product failure until the probe's preflight was narrowed. So a green there says
+# nothing about here, and this stimulus exists because that had to be measured
+# rather than assumed.
+#
+# The agent does nothing in this phase; the product is not under test. A red here
+# is a statement about the harness, never about generated code.
+#
+# ── This assertion was inverted until it had something to regress against ─────
+#
+# It first shipped asserting the breakpoint was NOT hit, so that a FAILURE was the
+# proof. That is not a stylistic choice: asserting the positive cannot distinguish
+# success from silence, and this suite has been caught by that shape four separate
+# times — a gate wired into a phase that never wrote its `debug-probe.json`, seven
+# graders wired but never staged, a safety gate whose file count was satisfied by
+# the harness's own staged instructions, and every gate in a `RATE_LIMIT` run. In
+# all four, nothing happened and everything passed.
+#
+# The inversion earned its place immediately. Run 2026090178170878 PASSED it —
+# meaning no breakpoint was hit — and the fingerprint showed why: `func start`
+# cannot run without `services/functions/local.settings.json`, which the scaffold
+# agent is instructed to gitignore and which therefore can never be harvested. A
+# conventional positive assertion would have gone green on that run, on which the
+# debugger never started, and nobody would have looked.
+#
+# Run 2026090180705733 then FAILED both inverted controls, which was the proof:
+#
+#     stopped: reason=breakpoint session=Remote Process [0] « Task Tracker API (debug)
+#     outcome: hit — breakpoint hit at services/functions/src/functions/health.ts:12
+#
+# With a green baseline on record the assertion is now stated positively, so it
+# can catch a regression rather than only a first success. The inverted form is
+# the right way to establish a claim and the wrong way to keep it.
+
+promptSteps:
+  - text: |
+      Say "ready" and stop. This run is infrastructure only — the debug probe
+      writes the evidence before this turn is graded.
+    assertions:
+      # Liveness sentinel — must come first, and every stimulus needs one.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: The probe extension installed and activated
+        exec: test -f .eval/probe.log
+
+      # THE question. The grader maps the probe's verdict onto the exit-code
+      # contract: 0 hit, 1 product-shaped failure, 3 harness fault.
+      #
+      # The comment is shared verbatim with `debug-breakpoint-node`, because it
+      # runs the same command and is therefore the same gate — see
+      # check-stimulus-comments.ts, which enforces exactly that. Which stack a
+      # result came from is carried by the stimulus, not by rewording the gate.
+      - comment: A breakpoint is hit in the debuggable fixture
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-breakpoint.ts
+
+      # The same claim read from the artifact rather than from an exit code, so a
+      # green is corroborated by two independent routes. Cheap, and it is what
+      # caught the difference between "the gate passed" and "the gate ran".
+      - comment: The recorded verdict is a hit
+        exec: 'grep -q ''"outcome": *"hit"'' .eval/debug-verdict.json'
+
+      # Non-asserting, so it can never fail the run or change the assertion count.
+      # Read this FIRST on a red: the verdict carries the timeline, the adapter's
+      # setBreakpoints responses and the debuggee's output, which is the difference
+      # between "the debugger does not work here" and a specific, fixable reason.
+      - comment: Fingerprint; probe breadcrumb, full debug verdict, and the emulator/tool inventory
+        assertZeroExitCode: false
+        exec: 'echo "--- breadcrumb ---"; cat .eval/probe.log 2>&1 || echo "NO PROBE LOG"; echo "--- verdict ---"; cat .eval/debug-verdict.json 2>&1 || echo "NO VERDICT"; echo "--- tools ---"; for b in node npm func azurite psql; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; echo "--- dist ---"; ls -la services/functions/dist 2>&1 | head -10'

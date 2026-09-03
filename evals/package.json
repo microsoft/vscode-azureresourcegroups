@@ -1,0 +1,45 @@
+{
+    "name": "evals",
+    "version": "1.0.0",
+    "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run the credential-free gates from evals/: npm run drift | typecheck | certify | lint",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "drift": "node check-agent-drift.ts",
+        "gates": "node msbench/check-stimulus-comments.ts",
+        "phases:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/check-phase-reachability.ts",
+        "redteam:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/assert-negative-checks.ts",
+        "lint": "npm run lint:plan && npm run lint:local-dev && npm run lint:redteam",
+        "lint:plan": "vally lint --eval-spec project-plan/eval.yaml",
+        "lint:local-dev": "vally lint --eval-spec local-dev/eval.yaml",
+        "lint:redteam": "vally lint --eval-spec redteam/eval.yaml",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "imports:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/importScanner.ts --self-test",
+        "clean-machine:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/check-clean-machine.ts",
+        "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
+        "stacks:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON check-stacks.ts",
+        "regrade": "node --disable-warning=ExperimentalWarning msbench/regrade.ts",
+        "redteam:xlsx": "node --disable-warning=ExperimentalWarning msbench/export-redteam-xlsx.ts",
+        "analyze-run": "node --disable-warning=ExperimentalWarning msbench/analyze-run.ts",
+        "seed:harvest": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts",
+        "seed:check": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --check",
+        "seed:self-test": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --self-test",
+        "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
+        "ci:local": "node ci-local.ts",
+        "msbench:self-test": "node msbench/verify-run.ts --self-test"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@microsoft/vally": "0.13.0",
+        "jsonc-parser": "^2.3.1"
+    },
+    "devDependencies": {
+        "@microsoft/vally-cli": "0.13.0",
+        "@types/node": "22.x",
+        "typescript": "^5.9.2",
+        "yaml": "^2.9.0"
+    },
+    "engines": {
+        "node": ">=22.18"
+    }
+}

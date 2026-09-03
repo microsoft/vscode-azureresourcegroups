@@ -2,6 +2,14 @@
     "folders": [
         {
             "path": "../testWorkspace"
+        },
+        {
+            "name": "copilotOnRails-scrapbook",
+            "path": "testProjects/copilotOnRails/scrapbook"
+        },
+        {
+            "name": "copilotOnRails-attendance",
+            "path": "testProjects/copilotOnRails/attendance"
         }
     ]
 }

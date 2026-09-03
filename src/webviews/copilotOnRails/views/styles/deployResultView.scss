@@ -1,0 +1,569 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+@use './fluentTooltipPortal';
+
+.deployResultView {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 28px;
+    width: 100%;
+    box-sizing: border-box;
+
+    a {
+        color: var(--vscode-textLink-foreground);
+        text-decoration: none;
+        word-break: break-all;
+
+        &:hover {
+            color: var(--vscode-textLink-activeForeground);
+            text-decoration: underline;
+        }
+    }
+
+    .mono,
+    code {
+        font-family: var(--vscode-editor-font-family), monospace;
+    }
+
+    .muted {
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .resultHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--vscode-widget-border);
+
+        .resultHeaderMain {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .statusIcon {
+            font-size: 28px;
+            line-height: 1;
+            flex-shrink: 0;
+
+            &.good {
+                color: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
+            }
+
+            &.bad {
+                color: var(--vscode-testing-iconFailed, var(--vscode-errorForeground, #f85149));
+            }
+
+            &.warn {
+                color: var(--vscode-editorWarning-foreground, #cca700);
+            }
+
+            &.neutral {
+                color: var(--vscode-descriptionForeground);
+            }
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.35em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            letter-spacing: -0.01em;
+        }
+
+        .resultHeaderActions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+    }
+
+    .banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.82em;
+        color: var(--vscode-foreground);
+
+        &.warn {
+            background: var(--vscode-inputValidation-warningBackground, var(--vscode-toolbar-hoverBackground));
+            border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+        }
+    }
+
+    .infoCards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        .infoCard {
+            flex: 1 1 180px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+
+            .infoLabel {
+                font-size: 0.85em;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--vscode-descriptionForeground);
+            }
+
+            .infoValue {
+                font-size: 0.85em;
+                color: var(--vscode-foreground);
+                font-weight: 500;
+                overflow-wrap: anywhere;
+            }
+        }
+    }
+
+    .healthBadge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 0.9em;
+        font-weight: 600;
+        text-transform: capitalize;
+
+        &.good {
+            background: var(--vscode-testing-iconPassed, #3fb950);
+            color: var(--vscode-editor-background);
+        }
+
+        &.bad {
+            background: var(--vscode-testing-iconFailed, #f85149);
+            color: var(--vscode-editor-background);
+        }
+
+        &.warn {
+            background: var(--vscode-editorWarning-foreground, #cca700);
+            color: var(--vscode-editor-background);
+        }
+
+        &.neutral {
+            background: var(--vscode-toolbar-hoverBackground);
+            color: var(--vscode-descriptionForeground);
+        }
+    }
+
+    .sectionCard {
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        padding: 14px 18px;
+
+        summary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin: -4px -6px 0 -6px;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            &::before {
+                content: '\25B6';
+                display: inline-block;
+                width: 14px;
+                text-align: center;
+                font-size: 0.6em;
+                color: var(--vscode-foreground);
+                transition: transform 0.15s;
+                flex-shrink: 0;
+            }
+
+            &:hover {
+                background: var(--vscode-list-hoverBackground);
+            }
+
+            h2 {
+                margin: 0;
+            }
+        }
+
+        &[open]>summary {
+            margin-bottom: 8px;
+
+            &::before {
+                transform: rotate(90deg);
+            }
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            opacity: 0.85;
+        }
+
+        .sectionHint {
+            margin: 0 0 10px;
+            font-size: 0.8em;
+            line-height: 1.4;
+            color: var(--vscode-descriptionForeground);
+        }
+    }
+
+    .resultTable {
+        width: 100%;
+        margin: 2px 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--vscode-widget-border);
+        // Fixed layout keeps long resource names and URLs from starving the
+        // narrow type/health columns.
+        table-layout: fixed;
+
+        th,
+        td {
+            text-align: left;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            border-bottom: 1px solid var(--vscode-widget-border);
+            overflow-wrap: anywhere;
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-descriptionForeground);
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        td {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        td:first-child {
+            font-weight: 500;
+            color: var(--vscode-foreground);
+        }
+
+        .cellError {
+            margin-top: 2px;
+            color: var(--vscode-errorForeground);
+            font-size: 0.95em;
+        }
+    }
+
+    .endpointsTable {
+        th:nth-child(1) {
+            width: 18%;
+        }
+
+        th:nth-child(2) {
+            width: 62%;
+        }
+
+        th:nth-child(3) {
+            width: 20%;
+        }
+    }
+
+    .resourcesTable {
+        th:nth-child(1) {
+            width: 32%;
+        }
+    }
+
+    .healthMeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 10px;
+        font-size: 0.8em;
+        color: var(--vscode-descriptionForeground);
+
+        code {
+            font-size: 0.95em;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: var(--vscode-textCodeBlock-background);
+        }
+    }
+
+    .dependencyList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            font-size: 0.8em;
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 12px;
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+
+        .stateDot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+
+            &.good {
+                background: var(--vscode-testing-iconPassed, #3fb950);
+            }
+
+            &.bad {
+                background: var(--vscode-testing-iconFailed, #f85149);
+            }
+        }
+
+        .dependencyName {
+            color: var(--vscode-foreground);
+            font-weight: 500;
+        }
+
+        .dependencyState {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .optionalTag {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-descriptionForeground);
+            opacity: 0.8;
+        }
+    }
+
+    .definitionList {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 16px;
+        margin: 0;
+        font-size: 0.8em;
+
+        dt {
+            color: var(--vscode-descriptionForeground);
+            font-weight: 600;
+        }
+
+        dd {
+            margin: 0;
+            color: var(--vscode-foreground);
+        }
+    }
+
+    .bulletList {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 0.8em;
+        line-height: 1.6;
+        color: var(--vscode-descriptionForeground);
+
+        &.warn {
+            color: var(--vscode-editorWarning-foreground, #cca700);
+        }
+
+        code {
+            color: var(--vscode-foreground);
+        }
+    }
+
+    .healingList {
+        margin: 0;
+        padding-left: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        font-size: 0.8em;
+        line-height: 1.5;
+
+        li {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        p {
+            margin: 2px 0;
+        }
+
+        strong {
+            color: var(--vscode-foreground);
+        }
+
+        .healingAttemptHeader {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .healingAttemptNumber {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .planChangeBadge {
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: var(--vscode-editorWarning-foreground, #cca700);
+            color: var(--vscode-editor-background);
+        }
+    }
+
+    .commandRow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .commandText {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            background: var(--vscode-textCodeBlock-background);
+            color: var(--vscode-foreground);
+            font-size: 0.8em;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    .cleanupResourceList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .cleanupResourceItem {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 12px;
+            border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+            border-radius: 6px;
+            background: var(--vscode-editorWidget-background);
+        }
+
+        .cleanupResourceHeader {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .cleanupResourceName {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .cleanupResourceType,
+        .cleanupResourceGroup {
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .cleanupResourceGroup::before {
+            content: '· ';
+        }
+
+        .cleanupBadge {
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-editor-background);
+
+            &.failed {
+                background: var(--vscode-editorError-foreground, #f14c4c);
+            }
+
+            &.orphaned {
+                background: var(--vscode-editorWarning-foreground, #cca700);
+            }
+        }
+    }
+}
+
+.parseFailureWarning {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 32px auto;
+    max-width: 720px;
+    padding: 20px 24px;
+    background-color: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    border-radius: 6px;
+    color: var(--vscode-foreground);
+
+    .parseFailureIcon {
+        font-size: 24px;
+        line-height: 1;
+        color: var(--vscode-editorWarning-foreground, #cca700);
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+
+    .parseFailureBody {
+        flex: 1;
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+
+        .parseFailureFile {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            word-break: break-all;
+        }
+    }
+}

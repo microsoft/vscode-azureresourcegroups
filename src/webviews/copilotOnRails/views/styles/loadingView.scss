@@ -1,0 +1,54 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.loadingView {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 28px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.loadingView .loadingCard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.loadingView .loadingMessage {
+    margin: 0;
+    max-width: 480px;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: var(--vscode-descriptionForeground);
+}
+
+.loadingView .needHelpLink {
+    margin-top: 12px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.loadingView .loadingFooter {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 16px;
+    padding-bottom: 8px;
+    border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+}
+
+.loadingView .reportIssueButton {
+    // Keep this visually distinct from the teal "resume" text link that also
+    // appears in the loading view, so the two actions don't blend together.
+    flex: 0 0 auto;
+}

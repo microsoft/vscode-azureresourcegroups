@@ -1,0 +1,679 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+@use './fluentTooltipPortal';
+
+
+.fui-DialogSurface {
+    background-color: var(--vscode-editorWidget-background) !important;
+    color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogSurface__backdrop,
+.fui-Dialog__backdrop {
+    background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+
+.fui-DialogActions .fui-Button {
+    border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-focusBorder))) !important;
+}
+
+.fui-DialogActions .fui-Button[data-appearance='primary'],
+.fui-DialogActions .fui-Button.fui-Button--primary {
+    border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
+}
+
+.deploymentPlanView {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 28px;
+    width: 100%;
+    box-sizing: border-box;
+
+    .stickyTop {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--vscode-editor-background);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding-top: 8px;
+        padding-bottom: 28px;
+        margin-bottom: -28px;
+        // Extend behind the parent's horizontal padding so content
+        // scrolling underneath is fully hidden.
+        margin-left: -28px;
+        margin-right: -28px;
+        padding-left: 28px;
+        padding-right: 28px;
+    }
+
+    .planHeader {
+        .headerTop {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.35em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            letter-spacing: -0.01em;
+        }
+
+        .headerActions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+
+            >* {
+                flex-shrink: 0;
+            }
+
+            .fui-Button {
+                overflow: visible;
+            }
+
+            // Keep the disabled primary (Approve) button visibly blue instead
+            // of graying it out, just dimmed to signal the disabled state.
+            .fui-Button[data-appearance='primary']:disabled,
+            .fui-Button--primary:disabled {
+                background-color: var(--vscode-button-background) !important;
+                color: var(--vscode-button-foreground) !important;
+                border-color: var(--vscode-button-background) !important;
+                opacity: 0.6;
+            }
+
+            .feedbackIconWrapper {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                overflow: visible;
+            }
+
+            .feedbackBadge {
+                position: absolute;
+                top: -6px;
+                right: -8px;
+            }
+        }
+    }
+
+    .infoCards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        .infoCard {
+            flex: 1 1 200px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+
+            .infoLabel {
+                font-size: 0.85em;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--vscode-descriptionForeground);
+
+                .requiredMarker {
+                    color: var(--vscode-errorForeground, var(--vscode-inputValidation-errorBorder));
+                    font-weight: 700;
+                }
+            }
+
+            .infoValue {
+                font-size: 0.85em;
+                color: var(--vscode-foreground);
+                font-weight: 500;
+
+                code {
+                    font-family: var(--vscode-editor-font-family), monospace;
+                    font-size: 0.9em;
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                    background: var(--vscode-textCodeBlock-background);
+                    color: var(--vscode-descriptionForeground);
+                    margin-left: 4px;
+                }
+            }
+
+            .infoHint {
+                font-size: 0.8em;
+                color: var(--vscode-descriptionForeground);
+                font-style: italic;
+            }
+        }
+    }
+
+    .sectionCard {
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        padding: 14px 18px;
+
+        summary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin: -4px -6px 0 -6px;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            &::before {
+                content: '\25B6';
+                display: inline-block;
+                width: 14px;
+                text-align: center;
+                font-size: 0.6em;
+                color: var(--vscode-foreground);
+                transition: transform 0.15s;
+                flex-shrink: 0;
+            }
+
+            &:hover {
+                background: var(--vscode-list-hoverBackground);
+            }
+
+            h2 {
+                margin: 0;
+            }
+        }
+
+        &[open]>summary {
+            margin-bottom: 8px;
+
+            &::before {
+                transform: rotate(90deg);
+            }
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            opacity: 0.85;
+        }
+
+        h3 {
+            margin: 16px 0 6px 0;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+
+            &:first-child {
+                margin-top: 0;
+            }
+        }
+    }
+
+    .planTable {
+        width: 100%;
+        margin: 2px 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--vscode-widget-border);
+
+        th,
+        td {
+            text-align: left;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-descriptionForeground);
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        td:first-child {
+            font-weight: 500;
+            color: var(--vscode-foreground);
+        }
+
+        tfoot td {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-top: 1px solid var(--vscode-widget-border);
+            color: var(--vscode-foreground);
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+    }
+
+    .prereqRefreshButton {
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .installedChip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+
+        svg {
+            flex: 0 0 auto;
+            font-size: 13px;
+            width: 1em;
+            height: 1em;
+        }
+
+        &.installed-installed {
+            color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+        }
+
+        &.installed-unknown {
+            color: var(--vscode-descriptionForeground);
+        }
+    }
+
+    .installLink {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        color: var(--vscode-textLink-foreground);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+
+        svg {
+            flex: 0 0 auto;
+            font-size: 13px;
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .installLinkEmpty {
+        color: var(--vscode-descriptionForeground);
+    }
+
+    // The resources table is the only editable one, and its SKU dropdown must stay readable.
+    // Auto layout lets the long Purpose text starve the SKU column, so pin the widths instead
+    // and let Purpose wrap into the space it is given. Widths are keyed to the 5-column layout
+    // (Service, Resource Name, Component, Purpose, SKU) and must sum to 100%.
+    .planTable.resourcesTable {
+        table-layout: fixed;
+
+        th,
+        td {
+            overflow-wrap: anywhere;
+        }
+
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 16%;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 20%;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 16%;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 26%;
+        }
+
+        th:last-child,
+        td:last-child {
+            width: 22%;
+        }
+    }
+
+    .sectionNote {
+        margin: 8px 0 0 0;
+        font-size: 0.78em;
+        line-height: 1.5;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .recommendationList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        li {
+            border-left: 2px solid var(--vscode-widget-border);
+            padding-left: 10px;
+        }
+
+        .recommendationTitle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82em;
+            color: var(--vscode-foreground);
+        }
+
+        .recommendationReason,
+        .recommendationServices {
+            font-size: 0.78em;
+            line-height: 1.5;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .recommendationServices {
+            margin-top: 2px;
+            font-family: var(--vscode-editor-font-family), monospace;
+            opacity: 0.8;
+        }
+    }
+
+    .badge.effort {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.9em;
+        font-weight: 600;
+        background: var(--vscode-toolbar-hoverBackground);
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .cellDropdown {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        background: var(--vscode-dropdown-background);
+        color: var(--vscode-dropdown-foreground);
+        border: 1px solid transparent;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font-size: 1em;
+        font-family: inherit;
+        cursor: pointer;
+        transition: border-color 0.15s;
+        text-overflow: ellipsis;
+
+        &:hover {
+            border-color: var(--vscode-dropdown-border);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--vscode-focusBorder);
+        }
+
+        &.edited {
+            border-color: var(--vscode-editorGutter-modifiedBackground, var(--vscode-focusBorder));
+        }
+    }
+
+    .planTable td.editedCell {
+        box-shadow: inset 2px 0 0 var(--vscode-editorGutter-modifiedBackground, var(--vscode-focusBorder));
+    }
+
+    .planMain {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .revisionBanner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: var(--vscode-editorInfo-background, var(--vscode-toolbar-hoverBackground));
+        border: 1px solid var(--vscode-focusBorder);
+        color: var(--vscode-foreground);
+        font-size: 0.82em;
+    }
+
+    &.revising {
+
+        .cellDropdown,
+        .planMain .planTable {
+            opacity: 0.7;
+        }
+    }
+
+    .feedbackDrawer {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 340px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 40px);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+
+        .drawerHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+
+            h2 {
+                margin: 0;
+                font-size: 0.85em;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                opacity: 0.85;
+            }
+        }
+
+        .drawerBody {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .drawerHint {
+            margin: 0;
+            font-size: 0.78em;
+            line-height: 1.4;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .drawerInfo {
+            margin: 0;
+            padding: 6px 14px 8px;
+            font-size: 0.75em;
+            line-height: 1.4;
+            color: var(--vscode-descriptionForeground);
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        .feedbackList {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .feedbackItem {
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 6px 8px;
+            background: var(--vscode-toolbar-hoverBackground);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 4px;
+            font-size: 0.8em;
+            line-height: 1.35;
+
+            &.dropdown {
+                .arrow {
+                    color: var(--vscode-descriptionForeground);
+                    margin: 0 2px;
+                }
+
+                .feedbackChipText {
+                    flex: 1;
+                    min-width: 0;
+                    color: var(--vscode-foreground);
+                    word-break: break-word;
+                }
+            }
+
+            &.freeform .feedbackFreeformText {
+                flex: 1;
+                min-width: 0;
+                color: var(--vscode-foreground);
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+
+        .freeformBlock {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            .freeformActions {
+                display: flex;
+                justify-content: flex-end;
+            }
+        }
+
+        .drawerFooter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--vscode-widget-border);
+
+            // Give the "Discard all" button a clearly visible border and
+            // background so it reads as a button rather than plain text.
+            .discardButton {
+                font-size: var(--vscode-font-size, 13px) !important;
+                font-weight: 600 !important;
+                background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background)) !important;
+                color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)) !important;
+                border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-widget-border))) !important;
+
+                &:hover:not(:disabled) {
+                    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-toolbar-hoverBackground)) !important;
+                }
+
+                &:disabled {
+                    opacity: 0.5 !important;
+                    cursor: default !important;
+                }
+            }
+        }
+    }
+}
+
+@media (max-width: 600px) {
+    .deploymentPlanView .feedbackDrawer {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
+    }
+}
+
+.parseFailureWarning {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 32px auto;
+    max-width: 720px;
+    padding: 20px 24px;
+    background-color: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    border-radius: 6px;
+    color: var(--vscode-foreground);
+
+    .parseFailureIcon {
+        font-size: 24px;
+        line-height: 1;
+        color: var(--vscode-editorWarning-foreground, #cca700);
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+
+    .parseFailureBody {
+        flex: 1;
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+
+        .parseFailureFile {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            word-break: break-all;
+        }
+    }
+}

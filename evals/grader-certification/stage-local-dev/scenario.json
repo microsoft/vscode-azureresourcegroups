@@ -1,0 +1,29 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-stage-local-dev",
+    "prompt": "Build a task tracker with a React frontend, an Azure Functions API and PostgreSQL for storage, with file attachments in Blob Storage.",
+    "baselinePrompt": "Create a task tracker with a React frontend, an Azure Functions HTTP API and a PostgreSQL database, with file attachments held in Blob Storage. Include build, test and lint scripts, a local run configuration, and the deployment files needed to host it.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "node",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}
+

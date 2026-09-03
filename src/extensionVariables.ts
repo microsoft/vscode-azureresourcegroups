@@ -23,6 +23,7 @@ export namespace extActions {
     export let refreshFocusTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
     export let refreshTenantTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
     export let refreshActivityLogTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshProjectTree: () => void;
 }
 
 /**

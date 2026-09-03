@@ -6,7 +6,8 @@
         {
             "label": "Watch: ESBuild",
             "dependsOn": [
-                "Watch: ESBuild (extension)"
+                "Watch: ESBuild (extension)",
+                "Watch: ESBuild (webviews)"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -23,6 +24,22 @@
             "args": [
                 "run",
                 "build:esbuild",
+                "--",
+                "--watch",
+            ],
+            "problemMatcher": "$esbuild-watch",
+            "presentation": {
+                "reveal": "silent",
+            },
+            "isBackground": true,
+        },
+        {
+            "label": "Watch: ESBuild (webviews)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "build:webviews",
                 "--",
                 "--watch",
             ],

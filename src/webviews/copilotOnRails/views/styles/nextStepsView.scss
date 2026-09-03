@@ -1,0 +1,125 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.nextStepsView {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 24px 28px 40px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.nextStepsView .nextStepsContent {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.nextStepsView .nextStepsHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    margin-top: 8px;
+
+    h1 {
+        margin: 0;
+        font-size: 1.6em;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+    }
+
+    p {
+        margin: 0 auto;
+        max-width: 560px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.9em;
+        line-height: 1.55;
+    }
+}
+
+.nextStepsView .nextStepsCards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nextStepsView .nextStepCard {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    text-align: left;
+    padding: 16px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--vscode-widget-border, var(--vscode-input-border, var(--vscode-contrastBorder)));
+    background: var(--vscode-input-background);
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        border-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-hoverBackground);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+    }
+}
+
+.nextStepsView .nextStepCardIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+
+    .codicon {
+        font-size: 18px;
+    }
+}
+
+.nextStepsView .nextStepCardBody {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+
+    h2 {
+        margin: 0;
+        font-size: 1em;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    p {
+        margin: 0;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.85em;
+        line-height: 1.5;
+    }
+}
+
+.nextStepsView .nextStepCardChevron {
+    flex: 0 0 auto;
+    color: var(--vscode-descriptionForeground);
+
+    .codicon {
+        font-size: 16px;
+    }
+}
