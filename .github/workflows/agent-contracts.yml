@@ -86,7 +86,11 @@ jobs:
       # paraphrasing is normally harmless, so nothing but a check will stop it.
       - name: Check shared assertion comments are canonical
         run: npm run gates
+        working-directory: evals
 
+      # A phase runs a fixed set of agents, and an agent may only write what its
+      # instructions permit. An assertion whose evidence can only appear in an artifact
+      # the phase cannot produce reports green because nothing was able to go wrong.
       - name: Check every assertion can fire in its phase
         run: npm run phases:check
         working-directory: evals
