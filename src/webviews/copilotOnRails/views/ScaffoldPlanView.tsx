@@ -954,13 +954,18 @@ function classifyInstalled(cell: string): InstalledStatus {
     return 'unknown';
 }
 
-function isDockerCompose(toolName: string): boolean {
+// Compose providers can't be reliably detected in a sandboxed/non-interactive shell
+// (the CLI plugin often resolves only in the user's initialized shell), so we never
+// claim a definitive installed/missing status for them. This covers both Docker
+// Compose and Podman Compose, which are interchangeable container-runtime options.
+function isComposeProvider(toolName: string): boolean {
     const name = toolName.trim().toLowerCase();
-    return name.includes('docker compose') || name.includes('docker-compose');
+    return name.includes('docker compose') || name.includes('docker-compose') ||
+        name.includes('podman compose') || name.includes('podman-compose');
 }
 
 function classifyInstalledForRow(toolName: string, cell: string): InstalledStatus {
-    if (isDockerCompose(toolName)) {
+    if (isComposeProvider(toolName)) {
         return 'unknown';
     }
     return classifyInstalled(cell);

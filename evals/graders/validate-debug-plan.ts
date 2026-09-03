@@ -15,9 +15,12 @@
  *        --assert-emulator=<substring>   (repeatable)
  *        --assert-no-emulators
  *        --assert-checklist
+ *        --assert-runtime=<docker|podman>
+ *        --assert-docker-compat        (require Podman Docker-compatibility mode)
+ *        --assert-no-docker-compat     (require NOT Docker-compatibility mode)
  */
 
-import type { LocalDebugPlanExpectations } from '../src/artifacts/localDebugPlan.ts';
+import type { ContainerRuntime, LocalDebugPlanExpectations } from '../src/artifacts/localDebugPlan.ts';
 import { validateLocalDebugPlanArtifact } from '../src/artifacts/localDebugPlan.ts';
 import { failWithIssues, readArtifact, runGrader } from './graderHarness.ts';
 
@@ -31,6 +34,8 @@ runGrader('vscode-debug-plan.md satisfies the debug plan contract', () => {
         expectedEmulators: valuesOf(args, '--assert-emulator'),
         expectNoEmulators: args.includes('--assert-no-emulators'),
         requireChecklist: args.includes('--assert-checklist'),
+        expectedRuntime: runtimeOf(args, '--assert-runtime'),
+        expectedDockerCompatible: dockerCompatOf(args),
     };
 
     const result = validateLocalDebugPlanArtifact(content, expectations);
@@ -61,4 +66,32 @@ function countOf(args: string[], flag: string): number | undefined {
         throw new Error(`Invalid ${flag}=${raw}: expected a non-negative integer`);
     }
     return parsed;
+}
+
+function runtimeOf(args: string[], flag: string): ContainerRuntime | undefined {
+    const raw = valueOf(args, flag)?.toLowerCase();
+    if (raw === undefined) {
+        return undefined;
+    }
+    if (raw !== 'docker' && raw !== 'podman') {
+        // A bad flag is a miswired eval spec, not a product defect — exit 3, blame the harness.
+        throw new Error(`Invalid ${flag}=${raw}: expected "docker" or "podman"`);
+    }
+    return raw;
+}
+
+function dockerCompatOf(args: string[]): boolean | undefined {
+    const wants = args.includes('--assert-docker-compat');
+    const wantsNot = args.includes('--assert-no-docker-compat');
+    if (wants && wantsNot) {
+        // Contradictory flags are a miswired eval spec — exit 3, blame the harness.
+        throw new Error('Cannot pass both --assert-docker-compat and --assert-no-docker-compat');
+    }
+    if (wants) {
+        return true;
+    }
+    if (wantsNot) {
+        return false;
+    }
+    return undefined;
 }

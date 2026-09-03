@@ -24,6 +24,17 @@ suite('prerequisiteInstallLinks', () => {
         assert.strictEqual(getPrerequisiteInstallLink('Docker')?.url, 'https://www.docker.com/products/docker-desktop/');
     });
 
+    test('resolves Podman Compose before Podman', () => {
+        assert.strictEqual(getPrerequisiteInstallLink('Podman Compose')?.url, 'https://podman-desktop.io/docs/compose');
+        assert.strictEqual(getPrerequisiteInstallLink('podman-compose')?.url, 'https://podman-desktop.io/docs/compose');
+        assert.strictEqual(getPrerequisiteInstallLink('Podman')?.url, 'https://podman-desktop.io/downloads');
+    });
+
+    test('resolves Podman (Docker-compatible) to Podman, not Docker', () => {
+        // The docker-compat runtime label embeds "docker", so the Podman rules must win.
+        assert.strictEqual(getPrerequisiteInstallLink('Podman (Docker-compatible)')?.url, 'https://podman-desktop.io/downloads');
+    });
+
     test('resolves the Azure Functions extension before the Core Tools CLI', () => {
         assert.strictEqual(
             getPrerequisiteInstallLink('`ms-azuretools.vscode-azurefunctions`')?.url,

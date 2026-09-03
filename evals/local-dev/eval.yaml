@@ -103,3 +103,39 @@ stimuli:
           required: [workflow-tools-start_azure_debug_generate]
     constraints:
       reject_tools: [vscode_askQuestions]
+
+  # ─── 2.3 Podman selected → plan records the runtime, stops at the gate ─────
+  # Verifies the container-runtime is a plan value, not a hard-coded default: when
+  # the user asks for Podman, the plan's Orchestrator must record the podman runtime
+  # (and its `podman compose` command). Stops at the approval gate, so this stimulus
+  # does NOT require Podman to be installed in the eval environment — it only checks
+  # the plan the agent wrote, before any generation runs.
+  - name: debug-plan-podman-runtime
+    turns:
+      - |
+        The project plan has been approved. Execute the approved
+        `.azure/project-plan.md` and scaffold the project.
+      - |
+        Now set up local debugging for this project so I can hit F5 in VS Code.
+        I use Podman, not Docker Desktop — plan the emulators to run on Podman.
+    graders:
+      - type: file-exists
+        name: debug-plan-exists
+        config:
+          path: .azure/vscode-debug-plan.md
+      - type: program
+        name: debug-plan-records-podman
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-runtime=podman]
+      - type: program
+        name: stops-at-approval-gate
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-gate.ts]
+      - type: tool-calls
+        name: opens-local-plan-view
+        config:
+          required: [workflow-tools-open_local_plan_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
