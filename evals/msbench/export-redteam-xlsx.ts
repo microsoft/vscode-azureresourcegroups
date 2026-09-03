@@ -316,7 +316,10 @@ function refusalFrom(inner: Buffer): boolean {
         return false;
     }
     try {
-        const error = JSON.parse(raw.toString('utf8')) as { message?: string };
+        const error = JSON.parse(raw.toString('utf8')) as { code?: string; message?: string };
+        if (error.code === 'refusal') {
+            return true;
+        }
         return /"code"\s*:\s*"refusal"/.test(error.message ?? '');
     } catch {
         return false;
@@ -623,9 +626,21 @@ function summarySheet(runs: readonly RunResult[]): Sheet {
 
 function main(): void {
     const argv = process.argv.slice(2);
-    const out = resolve(argv[argv.indexOf('--out') + 1] ?? 'redteam-results.xlsx');
-    const dataDir = argv.includes('--data-dir') ? argv[argv.indexOf('--data-dir') + 1] : undefined;
+    const valueOf = (flag: string): string | undefined => {
+        const index = argv.indexOf(flag);
+        if (index === -1) {
+            return undefined;
+        }
+        const value = argv[index + 1];
+        if (!value || value.startsWith('--')) {
+            console.error(`${flag} needs a value`);
+            process.exit(1);
+        }
+        return value;
+    };
 
+    const out = resolve(valueOf('--out') ?? 'redteam-results.xlsx');
+    const dataDir = valueOf('--data-dir');
     const roots = runDirectories(dataDir);
     if (roots.length === 0) {
         console.error('ERROR: no msbench run directory found. Pass --data-dir, or set MSBENCH_DATA_DIR.');
