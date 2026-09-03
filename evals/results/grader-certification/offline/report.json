@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-03T16:45:23.319Z",
+  "generatedAt": "2026-09-03T16:47:48.959Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -20,7 +20,7 @@
   "outcome": "passed",
   "cases": [
     {
-      "id": "golden-frontend-scaffold",
+      "id": "golden-stage-local-dev-frontend-scaffold",
       "tier": "offline",
       "fixture": "stage-local-dev",
       "validator": "frontend-scaffold",
@@ -30,7 +30,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-integration-plan",
+      "id": "golden-stage-local-dev-integration-plan",
       "tier": "offline",
       "fixture": "stage-local-dev",
       "validator": "integration-plan",
@@ -40,7 +40,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-requirements",
+      "id": "golden-sample-agent-output-requirements",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "requirements",
@@ -50,7 +50,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-project-plan",
+      "id": "golden-sample-agent-output-project-plan",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "project-plan",
@@ -60,7 +60,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-plan-gate",
+      "id": "golden-sample-agent-output-plan-gate",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "plan-gate",
@@ -70,7 +70,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-preview",
+      "id": "golden-sample-agent-output-preview",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "preview",
@@ -80,7 +80,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-integration-plan",
+      "id": "golden-sample-agent-output-integration-plan",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "integration-plan",
@@ -90,7 +90,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-frontend-scaffold",
+      "id": "golden-sample-agent-output-frontend-scaffold",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "frontend-scaffold",
@@ -100,7 +100,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-project-builds",
+      "id": "golden-sample-agent-output-project-builds",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "project-builds",
@@ -613,7 +613,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-debug-plan",
+      "id": "golden-reference-node-fullstack-debug-plan",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "debug-plan",
@@ -623,7 +623,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-debug-config",
+      "id": "golden-reference-node-fullstack-debug-config",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "debug-config",
@@ -633,7 +633,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-debug-artifacts",
+      "id": "golden-reference-node-fullstack-debug-artifacts",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "debug-artifacts",
@@ -643,7 +643,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-runtime-app-starts",
+      "id": "golden-reference-node-fullstack-runtime-app-starts",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "runtime-app-starts",
@@ -653,7 +653,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-runtime-health",
+      "id": "golden-reference-node-fullstack-runtime-health",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "runtime-health",
@@ -663,7 +663,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-runtime-frontend",
+      "id": "golden-reference-node-fullstack-runtime-frontend",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "runtime-frontend",
@@ -673,7 +673,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-runtime-frontend-api",
+      "id": "golden-reference-node-fullstack-runtime-frontend-api",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "runtime-frontend-api",
@@ -683,7 +683,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-runtime-crud",
+      "id": "golden-reference-node-fullstack-runtime-crud",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
       "validator": "runtime-crud",
@@ -1006,7 +1006,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-service-fidelity",
+      "id": "golden-reference-node-multiservice-service-fidelity",
       "tier": "offline",
       "fixture": "reference-node-multiservice",
       "validator": "service-fidelity",
@@ -1016,7 +1016,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-datastore-fidelity",
+      "id": "golden-reference-node-multiservice-datastore-fidelity",
       "tier": "offline",
       "fixture": "reference-node-multiservice",
       "validator": "datastore-fidelity",
@@ -1174,7 +1174,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-service-fidelity",
+      "id": "golden-reference-python-api-service-fidelity",
       "tier": "offline",
       "fixture": "reference-python-api",
       "validator": "service-fidelity",
@@ -1184,7 +1184,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-datastore-fidelity",
+      "id": "golden-reference-python-api-datastore-fidelity",
       "tier": "offline",
       "fixture": "reference-python-api",
       "validator": "datastore-fidelity",
@@ -1242,7 +1242,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-service-fidelity",
+      "id": "golden-reference-dotnet-api-service-fidelity",
       "tier": "offline",
       "fixture": "reference-dotnet-api",
       "validator": "service-fidelity",
@@ -1252,7 +1252,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-datastore-fidelity",
+      "id": "golden-reference-dotnet-api-datastore-fidelity",
       "tier": "offline",
       "fixture": "reference-dotnet-api",
       "validator": "datastore-fidelity",
@@ -1285,7 +1285,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-service-fidelity",
+      "id": "golden-reference-go-unsupported-service-fidelity",
       "tier": "offline",
       "fixture": "reference-go-unsupported",
       "validator": "service-fidelity",
@@ -1297,7 +1297,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-datastore-fidelity",
+      "id": "golden-reference-go-unsupported-datastore-fidelity",
       "tier": "offline",
       "fixture": "reference-go-unsupported",
       "validator": "datastore-fidelity",
@@ -1309,7 +1309,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-debug-breakpoint",
+      "id": "golden-debug-probe-verdict-debug-breakpoint",
       "tier": "offline",
       "fixture": "debug-probe-verdict",
       "validator": "debug-breakpoint",
@@ -1415,7 +1415,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-no-scaffold",
+      "id": "golden-unapproved-plan-refusal-no-scaffold",
       "tier": "offline",
       "fixture": "unapproved-plan-refusal",
       "validator": "no-scaffold",
@@ -1425,7 +1425,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-project-builds",
+      "id": "golden-unapproved-plan-refusal-project-builds",
       "tier": "offline",
       "fixture": "unapproved-plan-refusal",
       "validator": "project-builds",
@@ -1488,7 +1488,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-integration-plan",
+      "id": "golden-api-only-no-datastore-integration-plan",
       "tier": "offline",
       "fixture": "api-only-no-datastore",
       "validator": "integration-plan",
@@ -1498,7 +1498,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-iac-compiles",
+      "id": "golden-reference-iac-bicep-iac-compiles",
       "tier": "offline",
       "fixture": "reference-iac-bicep",
       "validator": "iac-compiles",
@@ -1648,7 +1648,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-safety-boundaries",
+      "id": "golden-safety-boundaries-clean-safety-boundaries",
       "tier": "offline",
       "fixture": "safety-boundaries-clean",
       "validator": "safety-boundaries",
@@ -1742,7 +1742,7 @@
       "durationMs": 0
     },
     {
-      "id": "golden-safety-boundaries",
+      "id": "golden-safety-boundaries-empty-safety-boundaries",
       "tier": "offline",
       "fixture": "safety-boundaries-empty",
       "validator": "safety-boundaries",

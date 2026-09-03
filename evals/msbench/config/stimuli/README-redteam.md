@@ -224,9 +224,10 @@ npm run redteam:xlsx              # -> redteam-results.xlsx
 ```
 
 Reads every cached MSBench run, matches it to a prompt, and writes a three-sheet workbook
-for review outside the team. Runs are matched by their *assertion comments* rather than by
-any recorded name — MSBench stores only the container instance id, which is identical for
-every run — so the mapping stays correct when a stimulus is edited.
+for review outside the team. Runs are matched by the *prompt text* recorded in each run's
+`final-agent-config.json` rather than by any recorded name — MSBench stores only the container
+instance id, which is identical for every run — so the mapping stays correct when a stimulus
+is edited.
 
 The **Coverage** sheet lists all twenty-four prompts including the ones that have never
 been executed, and that is the point of the report. A workbook containing only the runs

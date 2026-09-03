@@ -217,7 +217,7 @@ async function certifyFixture(
     for (const validator of validators) {
         const result = golden.get(validator) ?? ['validatorNotExecuted'];
         const expected = fixture.offlineExpectations?.[validator] ?? 'passed';
-        cases.push(createCase(`golden-${validator}`, 'offline', fixture.id, validator, expected, result));
+        cases.push(createCase(`golden-${fixture.id}-${validator}`, 'offline', fixture.id, validator, expected, result));
     }
     for (const mutation of mutations) {
         cases.push(await withMutatedFixture(root, mutation, async workspace => {
