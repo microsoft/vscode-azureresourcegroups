@@ -35,7 +35,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { DebugProbeVerdict, ProbeOutcome, ProbeSpec } from './extension/src/verdict.ts';
 import { PROBE_SCHEMA_VERSION, VERDICT_RELATIVE_PATH } from './extension/src/verdict.ts';
@@ -320,6 +320,76 @@ const LIVE_CASES: LiveCase[] = [
         expectedExit: EXIT_GRADER_ERROR,
     },
     {
+        id: 'mutation-attach-with-resolvable-task-is-driven',
+        // The POSITIVE control for attach, and the reason the preflight below is about the
+        // task rather than about `request`.
+        //
+        // An attach configuration is perfectly driveable: VS Code runs the `isBackground`
+        // preLaunchTask, waits for its problem matcher to report ready, and attaches. The
+        // first version of this preflight declined every attach config, which would have
+        // written off the entire Azure Functions stack on a false premise. This case exists
+        // so that mistake cannot be made again silently.
+        description: 'an attach configuration whose preLaunchTask starts the app is driven to a real breakpoint',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 90_000 },
+        expectedOutcome: 'hit',
+        expectedExit: EXIT_PASS,
+        mutate: workspace => {
+            const launchPath = join(workspace, '.vscode', 'launch.json');
+            const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as {
+                configurations: Record<string, unknown>[];
+            };
+            const config = launch.configurations[0];
+            delete config.program;
+            delete config.runtimeArgs;
+            delete config.env;
+            config.request = 'attach';
+            config.port = 9229;
+            config.preLaunchTask = 'serve';
+            writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
+
+            // The `func: host start` shape, expressed with a task type that needs no
+            // extension: a background task that opens the inspector and announces itself.
+            const tasksPath = join(workspace, '.vscode', 'tasks.json');
+            const tasks = JSON.parse(readFileSync(tasksPath, 'utf8')) as { tasks: unknown[] };
+            tasks.tasks.push({
+                label: 'serve',
+                type: 'shell',
+                command: 'node --inspect=9229 src/server.js',
+                options: { cwd: '${workspaceFolder}', env: { PORT: '7071' } },
+                isBackground: true,
+                problemMatcher: {
+                    owner: 'serve',
+                    pattern: { regexp: '^$' },
+                    background: { activeOnStart: true, beginsPattern: '.', endsPattern: 'listening' },
+                },
+            });
+            writeFileSync(tasksPath, `${JSON.stringify(tasks, null, 4)}\n`, 'utf8');
+        },
+    },
+    {
+        id: 'mutation-prelaunch-task-unresolvable',
+        // The Azure Functions shape. A Functions project declares
+        // `preLaunchTask: "func: host start"` with `"type": "func"`, and that provider comes
+        // from the Azure Functions extension — which the agent's own vscode-debug-plan.md
+        // lists as a prerequisite and which is not installed here. With no provider nothing
+        // starts, `startDebugging` returns false, and the verdict WAS `appFailedToStart`:
+        // exit 1, blaming the product for a project it generated correctly. Measured on
+        // grader-certification/stage-local-dev, where it took 64 seconds to say so; the
+        // preflight now says it in about one.
+        description: 'a preLaunchTask this environment cannot resolve is an environment gap, not a product failure',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
+        expectedOutcome: 'probeError',
+        expectedExit: EXIT_GRADER_ERROR,
+        mutate: workspace => {
+            const launchPath = join(workspace, '.vscode', 'launch.json');
+            const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as {
+                configurations: { preLaunchTask?: string }[];
+            };
+            launch.configurations[0].preLaunchTask = 'func: host start';
+            writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
+        },
+    },
+    {
         id: 'mutation-debug-adapter-missing',
         // The project-builds shape, in this gate. A launch config naming an
         // adapter this environment does not install is CORRECT — it would work
@@ -483,13 +553,62 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
 
 let verbose = false;
 
+/**
+ * A VS Code binary this process can actually `spawnSync`.
+ *
+ * `'code'` works on macOS and Linux, where it is a shell script on PATH. On Windows it is
+ * `code.cmd`, which `spawnSync` cannot execute without a shell — so the live tier died with
+ * `spawnSync code ENOENT` before a single case ran, and reported that as seven identical
+ * "VS Code did not finish … (probe did NOT activate)" failures.
+ *
+ * That wording is why it survived: it reads as a broken probe rather than a runner that
+ * never started one. The live tier had never been run on Windows at all, and the only way
+ * through was already knowing to pass `--vscode=`. A gate whose negative controls cannot be
+ * executed is a gate nobody can confirm still discriminates — which is the whole point of
+ * this file.
+ *
+ * `Code.exe` is resolved rather than `code.cmd` because it is directly executable. Shelling
+ * out instead would push a path containing `Microsoft VS Code` through cmd quoting for no
+ * benefit. The bin script lives at `<root>/bin/code.cmd` and the executable at
+ * `<root>/Code.exe`, so PATH still does the discovery and this only walks up from it.
+ */
+function resolveVsCode(explicit: string | undefined): string {
+    if (explicit) {
+        return explicit;
+    }
+    if (process.platform !== 'win32') {
+        return 'code';
+    }
+    const onPath = (process.env.PATH ?? '')
+        .split(delimiter)
+        .map(entry => join(entry, 'code.cmd'))
+        .find(candidate => existsSync(candidate));
+    const candidates = [
+        ...(onPath ? [resolve(dirname(onPath), '..', 'Code.exe')] : []),
+        join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Microsoft VS Code', 'Code.exe'),
+        join(process.env.ProgramFiles ?? '', 'Microsoft VS Code', 'Code.exe'),
+        join(process.env['ProgramFiles(x86)'] ?? '', 'Microsoft VS Code', 'Code.exe'),
+    ];
+    const found = candidates.find(candidate => existsSync(candidate));
+    if (found) {
+        return found;
+    }
+    // Falling back to 'code' would reproduce the ENOENT this exists to prevent, and the
+    // failure would again be reported per-case as a probe that did not activate.
+    throw new Error(
+        'could not find Code.exe. The live tier spawns VS Code directly, and on Windows `code` is a\n'
+        + `.cmd that spawnSync cannot execute. Looked in:\n  ${candidates.join('\n  ')}\n`
+        + 'Pass --vscode=<path to Code.exe> to override.',
+    );
+}
+
 function main(): void {
     const args = process.argv.slice(2);
     const offlineOnly = args.includes('--offline');
     const liveOnly = args.includes('--live');
     verbose = args.includes('--verbose');
     const only = args.find(arg => arg.startsWith('--only='))?.split('=')[1];
-    const vscodeBinary = args.find(arg => arg.startsWith('--vscode='))?.split('=')[1] ?? 'code';
+    const explicitVsCode = args.find(arg => arg.startsWith('--vscode='))?.split('=')[1];
 
     const results: CaseResult[] = [];
     if (!liveOnly) {
@@ -498,7 +617,10 @@ function main(): void {
     }
     if (!offlineOnly) {
         process.stderr.write('Live tier — real VS Code, real js-debug\n');
-        results.push(...runLiveTier(vscodeBinary, only));
+        // Resolved here rather than with the other arguments: `resolveVsCode` throws when it
+        // cannot find one, and the offline tier is the CI tier and needs no VS Code at all.
+        // Resolving eagerly would make `--offline` fail on exactly the machines it is for.
+        results.push(...runLiveTier(resolveVsCode(explicitVsCode), only));
     }
 
     process.stderr.write('\n');
