@@ -89,11 +89,16 @@ function showReopenAffordance(): void {
         return;
     }
     if (!reopenStatusBarItem) {
-        reopenStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
-        reopenStatusBarItem.command = copilotOnRailsCommandIds.showProgressView;
-        reopenStatusBarItem.text = `$(loading~spin) ${vscode.l10n.t('Show Copilot progress')}`;
-        reopenStatusBarItem.tooltip = vscode.l10n.t('Reopen the Copilot progress view you closed');
-        ext.context.subscriptions.push(reopenStatusBarItem);
+        const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+        statusBarItem.command = copilotOnRailsCommandIds.showProgressView;
+        statusBarItem.text = `$(loading~spin) ${vscode.l10n.t('Show Copilot progress')}`;
+        statusBarItem.tooltip = vscode.l10n.t('Reopen the Copilot progress view you closed');
+        reopenStatusBarItem = statusBarItem;
+        ext.context.subscriptions.push(statusBarItem, vscode.Disposable.from(() => {
+            if (reopenStatusBarItem === statusBarItem) {
+                reopenStatusBarItem = undefined;
+            }
+        }));
     }
     reopenStatusBarItem.show();
 }
