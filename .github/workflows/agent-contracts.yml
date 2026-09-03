@@ -86,6 +86,9 @@ jobs:
       # paraphrasing is normally harmless, so nothing but a check will stop it.
       - name: Check shared assertion comments are canonical
         run: npm run gates
+
+      - name: Check every assertion can fire in its phase
+        run: npm run phases:check
         working-directory: evals
 
       # Run through the evals package so the spec is actually linted: a bare
