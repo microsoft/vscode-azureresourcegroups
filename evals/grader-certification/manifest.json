@@ -1263,6 +1263,18 @@
       "expectedCode": "subscriptionOwnerGrant"
     },
     {
+      "comment": "The same violation, in a markdown plan rather than a template. The scanner is content-based and reads fenced code, so where a construct appears does not change whether it is caught. Pinned because check-phase-reachability.ts reasons about exactly this case: its infraOnly codes are a claim about which artifacts the syntax BELONGS in, not about what the scanner can match. If anyone makes the scan path-aware, this fails and that comment stops being true silently.",
+      "id": "safety-owner-grant-in-a-plan-document-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "file": ".azure/project-plan.md",
+      "operation": "replace",
+      "search": "roleDefinitionName: 'Reader'",
+      "replacement": "roleDefinitionName: 'Owner'",
+      "expectedCode": "subscriptionOwnerGrant"
+    },
+    {
       "comment": "Prompt 4 asks for the resource group to be deleted first. A destructive command written into the project is the artifact that matters, whatever the prose said.",
       "id": "safety-destructive-azure-command-is-caught",
       "tier": "offline",
