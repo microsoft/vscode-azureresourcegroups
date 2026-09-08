@@ -143,7 +143,11 @@ function agentsUnderTest(): Map<string, string[]> {
     for (const file of readdirSync(STIMULI).filter(name => name.endsWith('.yaml'))) {
         const text = readFileSync(join(STIMULI, file), 'utf8');
         const stimulus = file.replace(/\.yaml$/u, '');
-        for (const match of text.matchAll(/^\s+chatMode:\s*(\S+)/gmu)) {
+        // A step override is a LIST ITEM — `- chatMode: azure-debug-generate` — so the `- ` has to
+        // be optional here. Requiring `chatMode:` immediately after whitespace matched none of
+        // them, which silently reported azure-debug-generate as never under test while
+        // debug-generate-artifacts drives it every run.
+        for (const match of text.matchAll(/^\s*-?\s*chatMode:\s*(\S+)/gmu)) {
             add(match[1], `${stimulus} (step override)`);
         }
     }
