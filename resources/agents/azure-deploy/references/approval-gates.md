@@ -1,6 +1,6 @@
 # Approval Gates — Steps 6 & 8
 
-> **Gate summary:** AppOnboard has **2 approval gates**: (1) **Scaffold Gate** (orchestrator Step 6) — approve architecture plan before generating IaC, (2) **Deploy Gate** (orchestrator Step 8 / deploy/instructions.md Step 4) — approve cost + resource summary before `az deployment`. Both are mandatory and SEPARATE — scaffold approval does NOT imply deploy approval.
+> **Gate summary:** AppOnboard has **2 approval gates, and they are two *different* decisions**: (1) **Scaffold Gate** (orchestrator Step 6) — a **design approval**: approve the architecture, SKUs, and *estimated* cost BEFORE any IaC is generated. **Nothing is created and nothing is billed at this gate.** (2) **Deploy Gate** (orchestrator Step 8 / deploy/instructions.md Step 4) — the **deploy / spend approval**: this is the point where real, billable Azure resources are created via `az deployment`. Both are mandatory and SEPARATE — scaffold (design) approval does **NOT** imply deploy (spend) approval. Frame each gate as its own decision so the deploy gate never reads as a redundant re-approval of the same thing.
 
 ## Scaffold Approval Gate (Step 6)
 
@@ -30,6 +30,8 @@ Verify file list against target SKU — F1/D1: no Dockerfile (built-in runtime).
 
 > ⛔ **Private networking redirect.** If the user chooses **Private access** (here or during Edit plan): set `context.json.routeToSkill: "azure-enterprise-infra-planner"` and `routeReason: "private-networking-requested"`, then **HALT** — do NOT generate IaC. Tell the user: *"AppOnboard can't generate private networking (VNet + private endpoint). Handing off to azure-enterprise-infra-planner, which will design the secure topology and deploy it from here — it takes over the rest of the onboarding. Your AppOnboard session is saved for reference."* Then hand off to the `azure-enterprise-infra-planner` agent. This mirrors the prereq `routeToSkill` halt (instructions.md Step 3) but fires at the Scaffold Gate.
 
+> ⛔ **Frame this as a design approval, not the deploy.** Include this exact standalone line ABOVE the approval prompt: **"This approves the architecture and the *estimated* cost only — no Azure resources are created and nothing is billed yet. After the infrastructure is generated and validated, you'll get a separate deploy approval, which is the point where real resources are created."** This is what keeps the later deploy gate from feeling like a redundant re-approval — it is a genuinely different decision (design now, spend later).
+
 > ⛔ **Pick the prompt variant FIRST (based on whether the plan has a database), then use it verbatim — do NOT paraphrase or reword:**
 > - **Plan includes PostgreSQL/MySQL** → **"✅ Ready to proceed with scaffolding? (Yes / Edit plan / Private access / Cancel)"** — the `ask_user` choices MUST be exactly: `Yes`, `Edit plan`, `Private access`, `Cancel`.
 > - **No database in plan** → **"✅ Ready to proceed with scaffolding? (Yes / Edit plan / Cancel)"** — the `ask_user` choices MUST be exactly: `Yes`, `Edit plan`, `Cancel`.
@@ -54,7 +56,10 @@ Display:
 - Self-review summary (count of VERIFIED/PLAUSIBLE/FLAGGED findings)
 - Resource group name + region
 - Services + SKUs + estimated cost
-- End with **"🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"**
+
+> ⛔ **Frame this as the spend / commit gate — this is the approval that matters.** Include this exact standalone line immediately ABOVE the prompt: **"✅ Infrastructure generated and validated. Approving now CREATES real, billable Azure resources — this is the deploy. (The earlier gate approved the design; this one commits the spend.)"** The cost shown here is the same estimate from the design gate — call it out so the user knows THIS click is the one that spends money, not the earlier one.
+
+End with **"🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"**
 
 > ⛔ **After deploy approval:** Your NEXT action MUST be: read `deploy/instructions.md`, then read `.copilot-azure/sessions/{id}/deploy-checklist.md`. Do NOT hand off to any other deploy workflow — this agent uses its own embedded deploy phase.
 

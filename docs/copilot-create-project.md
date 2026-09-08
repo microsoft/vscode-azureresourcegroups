@@ -271,7 +271,14 @@ machine** — if it isn't started, generation asks before starting it. You can s
 
 Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
 `.azure/prepare-plan.json` (or, when it runs with a deploy session, to
-`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`, and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
+`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations.
+
+Deployment goes through **two separate approvals**, and they are different decisions:
+
+1. **Design approval** — you approve the architecture, SKUs, and *estimated* cost. **Nothing is created and nothing is billed yet.** Approving here lets the agent generate the infrastructure (Bicep/Terraform), `azure.yaml`, and Dockerfiles and validate them. This is also the cheapest point to change a service, SKU, or region — the edit re-runs the plan, not a rebuild of generated infrastructure.
+2. **Deploy approval** — after the infrastructure is generated and validated, the agent stops again with a clearly-labeled **spend** gate. Approving *here* is what creates real, billable Azure resources. You deploy with `azd up`.
+
+Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
 <p align="center">
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
