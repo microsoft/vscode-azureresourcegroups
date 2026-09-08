@@ -1,0 +1,110 @@
+# phase: scaffold
+# seed: approved-fullstack
+#
+# Stimulus `integrate-seam` — the first stimulus to grade `azure-project-integrate`.
+#
+# ── Why this agent had no stimulus until now ──────────────────────────────────────
+#
+# `integrate` is the only stage of the pipeline with no coverage at all: 35 of the 48
+# stimuli run the plan phase, 4 scaffold, 4 local, 1 deploy, and none reach the
+# integrate agent. Two registered MCP tools are owned by it and therefore could not
+# be asserted anywhere — `open_scaffold_next_steps_view` and `start_local_development`
+# — which is what `check-tool-coverage.ts` reports.
+#
+# The gap matters beyond tool coverage. Integration is the *seam*: the scaffold phase
+# generates a frontend and an API separately, and this agent is what makes them agree.
+# Both known defects in that area live here — the pilot run's `integration-plan` gate
+# failed because no `integration-plan.md` was written at all, and #1786 is a seam rule
+# broken when a page needs data that no planned route provides.
+#
+# ── Why the workspace is scaffolded by an earlier TURN, not by a seed ─────────────
+#
+# The obvious approach is a pre-scaffolded seed, and it is wrong here. The only two
+# such seeds — `prescaffolded-reference` and `prescaffolded-postgres` — are labelled
+# HARNESS SELF-TEST ONLY in `stage-workspace.ts`, because they are fixtures used to
+# certify graders offline. Grading the agent against one would measure the fixture.
+#
+# So turn 0 runs the real scaffold agent and turn 1 switches to integrate, which is
+# the mechanism `debug-generate-artifacts` already uses (`- chatMode:` overrides,
+# established by `chain-mechanism-probe` rather than assumed). The cost is a real
+# scaffold on every run; the benefit is that what integrate receives is genuine agent
+# output rather than a hand-maintained tree that cannot drift with the product.
+#
+# ── The pair that makes the hand-off assertion mean something ─────────────────────
+#
+# `start_local_development` is asserted twice, in opposite directions, on consecutive
+# turns of the SAME run: forbidden on turn 1, where nothing has approved anything, and
+# required on turn 2, immediately after the user approves. One positive alone cannot
+# tell an agent that hands off correctly from one that hands off always — and this
+# suite has already been bitten by exactly that, which is why `scaffold-fullstack` and
+# `scaffold-autopilot` are built as a pair. Both degenerate strategies fail one half.
+
+promptSteps:
+  # ─── Turn 0: scaffold, so there is something real to integrate ─────────────────
+  #
+  # Inherits `chatMode: azure-project-scaffold` from config/phases/scaffold.yaml.
+  # Nothing here is the subject of this stimulus; it exists to produce the input.
+  # Graded only for liveness, because a turn that produced nothing would leave every
+  # assertion below judging an empty workspace.
+  - text: |
+      Scaffold the project described by the approved `.azure/project-plan.md`.
+    assertions:
+      - comment: Sentinel; scaffold turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+  # ─── Turn 1: integrate — the subject of this stimulus ──────────────────────────
+  - chatMode: azure-project-integrate
+    text: |
+      The scaffold is complete. Integrate the frontend and the API: wire the pages to
+      the routes they need and record the result in `.azure/integration-plan.md`.
+    assertions:
+      # Liveness sentinel, turn 1. Load-bearing rather than routine: every assertion
+      # below is either an absence or a tool call, and both are satisfied by a turn in
+      # which nothing happened.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program integration-plan --has-frontend
+      # The artifact the seam is recorded in. Graded with the same validator the
+      # scaffold suite uses, so a plan that exists but does not describe the frontend
+      # seam fails here rather than passing on file existence alone.
+      - comment: integration-plan.md satisfies the hand-off contract, including the frontend seam
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-integration-plan.ts --has-frontend
+
+      # vally: tool-calls required [workflow-tools-open_scaffold_next_steps_view]
+      # The surface this agent is contracted to finish on. Without it the integration
+      # is done and the user is shown nothing — invisible to the artifact assertion
+      # above, which passes as long as the file is right.
+      - comment: Agent should have opened the scaffold next steps view
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_scaffold_next_steps_view%'
+
+      # vally: tool-calls forbidden [workflow-tools-start_local_development]
+      # First half of the pair. Nothing in this turn approves moving on, so a hand-off
+      # here is the agent skipping the gate — and it would take the work into a chat
+      # session the harness is not watching, leaving turn 2 to look like an agent that
+      # simply stopped.
+      - comment: Agent should not have started local development before approval
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_local_development%'
+
+  # ─── Turn 2: approve, and require the hand-off ────────────────────────────────
+  - chatMode: azure-project-integrate
+    text: |
+      Looks good — go ahead and set up local development.
+    assertions:
+      - comment: Sentinel; approval turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: tool-calls required [workflow-tools-start_local_development]
+      # Second half of the pair, and the reason the negative above is evidence rather
+      # than a formality: the only difference between the two turns is that the user
+      # approved, so an agent that never hands off fails here while one that always
+      # hands off fails on turn 1.
+      - comment: Agent should have started local development once approved
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_local_development%'
+
+      # Recorded, not asserted. Whether the agent hands off, explains, or asks a
+      # follow-up are different behaviours that the checks above cannot distinguish,
+      # and the transcript is what tells them apart on the first red.
+      - comment: Triage; what the agent did at the local-development hand-off
+        exec: 'ls -la /workspace/.azure/ 2>&1 || true'
+        assertZeroExitCode: false
