@@ -65,22 +65,24 @@ const REGISTRATION = join(REPO, 'src', 'chat', 'tools', 'copilotOnRails', 'regis
 /**
  * Tools whose absence from the corpus is a property of the harness rather than a gap to close.
  *
- * Keyed by the runtime tool name. Each reason has to name the mechanism, not just assert that it
- * is fine — a waiver that says "not applicable" is indistinguishable from one nobody rechecked.
+ * This list is deliberately EMPTY, and the reason is worth recording because the obvious entry
+ * was wrong.
+ *
+ * The four `start_*` hand-off tools look unobservable: `launchAgentChat` opens a FRESH chat
+ * session (`workbench.action.chat.newChat`) because agents coordinate through `.azure/*` files
+ * rather than chat history, and `promptSteps` drives one session — so the work moves somewhere the
+ * harness is not watching. All true, and all about the hand-off's *destination*.
+ *
+ * The tool *call* is recorded before any of that happens. Two independent proofs:
+ * `scaffold-autopilot` asserts `COUNT(*) > 0 ... LIKE '%start_project_integrate%'` and the corpus
+ * shows that tool invoked; `debug-generate-artifacts` asserts the same for
+ * `start_azure_debug_generate`. A suite would not assert on a tool it could not see.
+ *
+ * "The harness cannot follow where this leads" and "the harness cannot see this happen" are
+ * different claims, and only the first one is true. Waiving on the second would have excused
+ * exactly the coverage this check exists to demand.
  */
-const STRUCTURALLY_UNREACHABLE: Record<string, string> = {
-    mcp_copilot_azure_start_project_scaffold:
-        'Phase hand-off. launchAgentChat opens a FRESH chat session (workbench.action.chat.newChat), ' +
-        'and promptSteps drives one session, so a call here moves the work somewhere the harness is ' +
-        'not watching. The scaffold phase is entered by staging .azure/project-plan.md instead — the ' +
-        'same on-disk coordination the product uses. See config/stimuli/chain-mechanism-probe.yaml.',
-    mcp_copilot_azure_start_local_development:
-        'Phase hand-off into the local phase; same fresh-session mechanism as start_project_scaffold.',
-    mcp_copilot_azure_start_azure_debug_generate:
-        'Phase hand-off into debug generation; same fresh-session mechanism.',
-    mcp_copilot_azure_start_deployment:
-        'Phase hand-off into the deploy phase; same fresh-session mechanism.',
-};
+const STRUCTURALLY_UNREACHABLE: Record<string, string> = {};
 
 /**
  * A tool has two names and they are not interchangeable, which is worth stating because getting
@@ -191,6 +193,29 @@ function agentReferencesTool(agent: string, tool: string): boolean {
     return false;
 }
 
+/**
+ * Which stimuli assert that this tool was (or was not) called?
+ *
+ * This is the question that decides coverage. An agent being *instructed* to call a tool means a
+ * path exists; a stimulus *asserting* on `toolCalls` is the only thing that turns a missing call
+ * into a red. The suite already does this for six tools, in both directions — `scaffold-fullstack`
+ * requires `start_project_integrate` NOT to fire while `scaffold-autopilot` requires that it does,
+ * which is a falsifiable pair rather than a one-sided check.
+ */
+function assertingStimuli(shortToolName: string): string[] {
+    const owners: string[] = [];
+    for (const file of readdirSync(STIMULI).filter(name => name.endsWith('.yaml'))) {
+        const text = readFileSync(join(STIMULI, file), 'utf8');
+        for (const line of text.split(/\r?\n/u)) {
+            if (line.includes('FROM toolCalls') && line.includes(shortToolName)) {
+                owners.push(file.replace(/\.yaml$/u, ''));
+                break;
+            }
+        }
+    }
+    return owners;
+}
+
 function main(): void {
     const tools = registeredTools();
     const underTest = agentsUnderTest();
@@ -212,46 +237,49 @@ function main(): void {
             // because the override *is* a stimulus naming that agent.
             .filter(([, where]) => where.some(w => w.includes('(step override)') || runnable.has(w)));
 
-        // Order matters: the structural waiver wins over "an agent is instructed to call it".
-        // Both `start_project_scaffold` and `start_azure_debug_generate` ARE named in an
-        // under-test agent's workflow, so the reachability test alone calls them covered — while
-        // the corpus shows zero invocations across 86 runs. Specification is not observability,
-        // and reporting the optimistic half would recreate the blind spot this check exists for.
-        if (STRUCTURALLY_UNREACHABLE[tool]) {
-            waived.push(tool);
-            console.log(`  UNOBSERVABLE ${tool}`);
-        } else if (callers.length > 0) {
+        // Order matters, and the ordering encodes what "covered" means here. An assertion on
+        // `toolCalls` is the only thing that makes a missing call fail a run; being named in an
+        // agent's workflow merely means a path exists. Reporting the second as coverage is how a
+        // suite ends up green while never touching the surface it claims to test.
+        const asserted = assertingStimuli(instructionName);
+        if (asserted.length > 0) {
             reachable.push(tool);
-            console.log(`  REACHABLE   ${tool}`);
-            console.log(`              via ${callers.map(([a, p]) => `${a} (${p.join(', ')})`).join(', ')}`);
+            console.log(`  ASSERTED    ${tool}`);
+            console.log(`              by ${asserted.slice(0, 4).join(', ')}${asserted.length > 4 ? ` (+${asserted.length - 4} more)` : ''}`);
+        } else if (STRUCTURALLY_UNREACHABLE[tool]) {
+            waived.push(tool);
+            console.log(`  WAIVED      ${tool}`);
         } else {
             const owner = [...underTest.keys()].find(agent => agentReferencesTool(agent, instructionName));
             uncovered.push({
                 tool,
-                detail: owner
-                    ? `instructed in ${owner}, but no stimulus runs a phase that uses it`
-                    : 'no agent under test is instructed to call it',
+                detail: callers.length > 0
+                    ? `reachable via ${callers.map(([a]) => a).join(', ')}, but NO stimulus asserts it is called`
+                    : owner
+                        ? `instructed in ${owner}, but no stimulus runs a phase that uses it, and none asserts it`
+                        : 'no agent under test is instructed to call it, and no stimulus asserts it',
             });
-            console.log(`  UNCOVERED   ${tool}`);
+            console.log(`  UNASSERTED  ${tool}`);
         }
     }
 
-    console.log(`\nreachable ${reachable.length} · waived ${waived.length} · uncovered ${uncovered.length}\n`);
+    console.log(`\nasserted ${reachable.length} · waived ${waived.length} · unasserted ${uncovered.length}\n`);
 
     if (uncovered.length === 0) {
-        console.log('Every registered tool is reachable by some stimulus, or waived with a mechanism.');
+        console.log('Every registered tool has a stimulus asserting on its invocation.');
         return;
     }
 
-    console.log('UNCOVERED — a registered product surface no stimulus can exercise. A regression in');
-    console.log('any of these is invisible to this suite: artifact assertions still pass, because they');
-    console.log('grade the files an agent wrote and never ask how it was entered.\n');
+    console.log('UNASSERTED — a registered product surface no stimulus checks the invocation of.');
+    console.log('A regression in any of these is invisible: artifact assertions still pass, because');
+    console.log('they grade the files an agent wrote and never ask how it was entered.\n');
     for (const { tool, detail } of uncovered) {
         console.log(`  * ${tool}\n      ${detail}`);
     }
-    console.log('\nClose it with a stimulus that reaches the tool, or add a STRUCTURALLY_UNREACHABLE');
-    console.log('entry naming the mechanism that prevents it. Do not waive one merely because it is');
-    console.log('untested — that is the state this check exists to report.');
+    console.log('\nClose it by asserting on the call — `SELECT COUNT(*) > 0 FROM toolCalls WHERE tool');
+    console.log("LIKE '%<tool>%'` — in a stimulus that reaches the agent. Six tools already do this,");
+    console.log('and four of them in both directions, which is the pattern worth copying: a positive');
+    console.log('in one stimulus and a negative in its pair proves the assertion discriminates.');
     process.exitCode = 1;
 }
 
