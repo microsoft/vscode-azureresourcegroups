@@ -160,10 +160,43 @@ function folderName(uri: vscode.Uri): string {
 /** Entries that don't count as real project content when checking for a blank slate. */
 const IGNORED_ENTRIES = new Set(['.git', '.DS_Store']);
 
+/**
+ * Content the extension writes into the workspace itself — agent instructions land in
+ * `.github/agents` and the harness overrides in `.vscode/settings.json`. A folder that holds
+ * nothing but what we put there is still a blank slate from the user's point of view, so
+ * these folders are only disqualifying when they contain something we didn't write.
+ */
+const EXTENSION_OWNED_ENTRIES: Record<string, ReadonlySet<string>> = {
+    '.github': new Set(['agents']),
+    '.vscode': new Set(['settings.json']),
+};
+
 async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
     try {
         const entries = await vscode.workspace.fs.readDirectory(folder);
-        return entries.every(([name]) => IGNORED_ENTRIES.has(name));
+        for (const [name] of entries) {
+            if (IGNORED_ENTRIES.has(name)) {
+                continue;
+            }
+
+            const owned = EXTENSION_OWNED_ENTRIES[name];
+            if (owned && (await containsOnly(vscode.Uri.joinPath(folder, name), owned))) {
+                continue;
+            }
+
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** True when every entry in `folder` is either allowed or otherwise ignorable. */
+async function containsOnly(folder: vscode.Uri, allowed: ReadonlySet<string>): Promise<boolean> {
+    try {
+        const entries = await vscode.workspace.fs.readDirectory(folder);
+        return entries.every(([name]) => allowed.has(name) || IGNORED_ENTRIES.has(name));
     } catch {
         return false;
     }
