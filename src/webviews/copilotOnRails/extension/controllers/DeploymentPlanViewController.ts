@@ -17,6 +17,7 @@ import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } 
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
+import { recordDeploymentPlanApproved } from "../utils/deploymentPlanApprovalState";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
@@ -52,6 +53,7 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         environmentNameLabel: vscode.l10n.t('Environment'),
         estimatedCostLabel: vscode.l10n.t('Estimated cost'),
         approveButton: vscode.l10n.t('Approve Plan'),
+        approvedTooltip: vscode.l10n.t('Plan already approved'),
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
         feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
         approveButtonTooltip: vscode.l10n.t('Approve the plan and continue with Copilot'),
@@ -128,10 +130,28 @@ export class DeploymentPlanViewController extends CopilotOnRailsWebviewControlle
                     return;
                 }
 
+                // Persist that this exact plan was approved, so reopening the view renders it
+                // read-only instead of offering a second approval. Best-effort — a failure here
+                // must not block the approval that already went to the agent.
+                await this.recordApproval();
+
                 this.recordPlanTelemetry(context);
                 this.panel.dispose();
             });
         });
+    }
+
+    /** Records the approved plan's content hash (see deploymentPlanApprovalState). Best-effort. */
+    private async recordApproval(): Promise<void> {
+        if (!this.sourceFileUri) {
+            return;
+        }
+        try {
+            const content = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
+            await recordDeploymentPlanApproved(this.sourceFileUri, content);
+        } catch {
+            // The file may be momentarily unavailable; approval already reached the agent.
+        }
     }
 
     private recordPlanTelemetry(context: CopilotOnRailsContext): void {

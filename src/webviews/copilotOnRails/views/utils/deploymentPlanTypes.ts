@@ -91,6 +91,14 @@ export interface DeploymentPlanData {
     costEstimate?: DeploymentPlanCostEstimate;
     postDeployRecommendations?: DeploymentPlanRecommendation[];
     deploymentVariables?: DeploymentPlanDeploymentVariables;
+    /**
+     * True when the user already approved this exact plan. The view then keeps the Approve
+     * button disabled with a "Plan already approved" tooltip (matching the scaffold/debug plan
+     * views), so reopening an approved plan can't re-trigger the deploy agent. Set by the
+     * extension from a persisted approval marker (see deploymentPlanApprovalState), not from the
+     * vendored `prepare-plan.json`.
+     */
+    approved?: boolean;
     parseError?: DeploymentPlanParseError;
 }
 
