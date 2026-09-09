@@ -83,7 +83,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
         return [
             new ProjectCreationStageItem(effectiveStage, files.hasProjectPlan),
             new LocalDevelopmentStageItem(effectiveStage, files.hasLocalDevelopmentPlan),
-            new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan, files.hasAppOnboardSession),
+            new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan, files.hasAppOnboardSession, files.hasDeployResult),
         ];
     }
 }
