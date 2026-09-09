@@ -2657,6 +2657,28 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
+- **`msbench-cli extract` reports refusal on stderr and still exits 0.** Pointed at a
+  destination that already exists and is nonempty it prints
+  `ERROR <dir> exists and is nonempty. Quitting to avoid overwriting.`, writes nothing,
+  and **exits 0** — the same status as a successful extraction. Measured on the same run
+  id, same CLI, only the destination differing:
+
+  | destination | exit code | instance output written |
+  | --- | --- | --- |
+  | fresh directory | 0 | yes |
+  | existing nonempty directory | 0 | **no** |
+
+  So `result.status !== 0` cannot tell the two apart, and any consumer relying on it
+  returns a stale cache as though it were a fresh download. This is not hypothetical: it
+  made `gate-health` report a permanent `READER FAULT` on run `2026090413313337` after a
+  single audit taken while that run was still in flight cached a partial extraction, and
+  it made `regrade`'s `--refresh` a silent no-op. `--refresh` could not clear either,
+  because it re-extracts into the same nonempty directory and hits the identical refusal.
+  Both now clear their own cache before extracting and verify that something was actually
+  written; a caller-supplied `--extract-dir` is reported rather than deleted.
+
+  The general rule this is an instance of: **an exit code is a claim, not a
+  verification.** Where a tool's output is the thing you need, check for the output.
 - **Name the field that answers your question before you read one.** Every status
   surface here has a neighbouring field that looks like the answer and isn't, and
   reading the neighbour has now cost four separate investigations in two days:

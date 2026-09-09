@@ -25,7 +25,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /**
@@ -115,6 +115,16 @@ export function resolveExtraction(request: ExtractRequest, log: Logger = console
         args.push('--instance', wanted);
     }
 
+    // `msbench-cli extract` refuses to write into a destination that already exists and is
+    // nonempty. When the destination is this module's own cache it is derived data, safe to
+    // discard, and clearing it is what makes `--refresh` mean what it says. A caller-supplied
+    // `--extract-dir` gets no such treatment — it may point somewhere that must not be deleted,
+    // so that case is detected and reported after the call instead.
+    if (!request.extractDir) {
+        rmSync(dir, { recursive: true, force: true });
+    }
+    const destinationWasNonEmpty = existsSync(dir) && readdirSync(dir).length > 0;
+
     log(`$ msbench-cli ${args.join(' ')}`);
     const result = spawnSync('msbench-cli', args, { stdio: 'inherit' });
     if (result.error && (result.error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -128,6 +138,37 @@ export function resolveExtraction(request: ExtractRequest, log: Logger = console
         throw new MsBenchToolError(
             `msbench-cli extract exited ${result.status}. If this is an auth failure, run \`az login\` — ` +
             'extraction reads a stored blob and needs an Azure identity.'
+        );
+    }
+
+    // Exit 0 does not mean anything was written. `msbench-cli extract` reports
+    // "exists and is nonempty. Quitting to avoid overwriting." on stderr and **still exits 0**,
+    // so the status check above cannot tell a real extraction from a refused one.
+    //
+    // Left undetected that makes `--refresh` a silent no-op — the caller asks to re-download,
+    // gets the stale cache back, and is told nothing — and it lets `--instance B` be answered
+    // by a cache built from `--instance A`. Both are wrong answers rather than failures, which
+    // is worse than either an error or a slow re-download.
+    //
+    // The test is deliberately "did extraction write an instance tree at all", counting
+    // `incomplete` alongside `instances`. A tree that arrived without its `session.sqlite` is a
+    // *different* failure with its own reporting downstream — notably the Windows path-length
+    // limit that truncates extractions under a repo-nested cache — and swallowing that into this
+    // message would trade one misdiagnosis for another.
+    const found = findInstances(dir);
+    const wroteNothing = found.instances.length === 0 && found.incomplete.length === 0;
+    const missingWanted = wanted !== undefined &&
+        !found.instances.some(candidate => matchesInstance(candidate.name, wanted)) &&
+        !found.incomplete.some(name => matchesInstance(name, wanted));
+    if (wroteNothing || missingWanted) {
+        throw new MsBenchToolError(
+            `msbench-cli extract exited 0 but wrote no extraction to ${dir}` +
+            `${missingWanted ? ` matching --instance ${wanted}` : ''}.\n` +
+            (destinationWasNonEmpty
+                ? 'The destination already existed and was nonempty, so extraction was almost ' +
+                'certainly refused ("Quitting to avoid overwriting") — which still exits 0.\n' +
+                `Remove ${dir} and retry, or pass --extract-dir <empty-dir>.`
+                : `Run \`msbench-cli extract --run_id ${runId} --output <dir>\` directly to see why.`)
         );
     }
     return dir;

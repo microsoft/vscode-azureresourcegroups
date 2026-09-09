@@ -12,6 +12,7 @@ import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewCo
 import { closeLoadingView } from "./openLoadingView";
 import { getAvailableAzureLocations } from "./utils/azureLocations";
 import { getDeployPrerequisites, storeDeployPrerequisites } from "./utils/deployPrerequisites";
+import { isDeploymentPlanApproved } from "./utils/deploymentPlanApprovalState";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
@@ -39,6 +40,12 @@ async function openDeploymentPlanViewWithContentAsync(content: string, sourceFil
 
     if (prerequisites && prerequisites.length > 0) {
         planData.prerequisites = prerequisites;
+    }
+
+    // A plan the user already approved reopens read-only — no second Approve button (which
+    // would re-trigger the deploy agent). Only meaningful for a cleanly-parsed plan.
+    if (sourceFileUri && !planData.parseError) {
+        planData.approved = isDeploymentPlanApproved(sourceFileUri, content);
     }
 
     const locations = await getAvailableAzureLocations();
