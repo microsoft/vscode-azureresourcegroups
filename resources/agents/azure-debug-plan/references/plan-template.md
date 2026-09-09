@@ -21,6 +21,26 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 
 ---
 
+## ⚠️ Mermaid Label Quoting — ALWAYS Quote Every Label
+
+In the `## Architecture Diagram` mermaid block, **every node label and every edge label MUST be wrapped in double quotes.** This rule is unconditional — quote every label, every time, even when it looks harmless.
+
+```mermaid
+graph LR
+    %% ✅ CORRECT — every label quoted
+    API["Commerce API<br/>Azure Functions :7071"] -->|"@azure/storage-blob"| AZ["Azurite<br/>:10000"]
+    API -->|"pg"| PG[("PostgreSQL<br/>:5432")]
+
+    %% ❌ WRONG — unquoted labels; the leading @ is a parse error
+    %% API[Commerce API<br/>Azure Functions :7071] -->|@azure/storage-blob| AZ[Azurite]
+```
+
+**Why:** mermaid v11 uses `@` for edge-ID (`e1@-->`) and node-metadata (`id@{ shape: ... }`) syntax, so an `@` at the **start** of an unquoted label is lexed as a link ID and the whole diagram fails to parse with `Expecting 'AMP', 'COLON', ... got 'LINK_ID'`. Scoped npm package names (`@azure/storage-blob`, `@azure/identity`, `@prisma/client`) are the most common trigger, and they are exactly what shows up in Azure dependency edge labels. The debug-plan webview renders this block with mermaid — a parse error replaces the diagram with a raw `mermaid (error)` code block.
+
+Quoting is always valid in mermaid and also protects labels containing `(`, `)`, `:`, `-`, `/`, `#`, or `·`. Do **not** try to detect which labels are "risky" — just quote all of them.
+
+---
+
 ## Template
 
 ````markdown
@@ -143,6 +163,10 @@ graph LR
     %% Generated from Debug Configurations + Emulators tables above.
     %% Show each service as a node, each emulator as a node,
     %% and edges for the Azure Dependencies that connect them.
+    %% MANDATORY: wrap EVERY node label and EVERY edge label in double quotes —
+    %% e.g. API["Commerce API<br/>Azure Functions :7071"] -->|"@azure/storage-blob"| AZ["Azurite"]
+    %% An unquoted leading @ (scoped npm packages) is parsed as mermaid edge-ID
+    %% syntax and breaks the whole diagram. See "Mermaid Label Quoting" above.
 ```
 
 ---
