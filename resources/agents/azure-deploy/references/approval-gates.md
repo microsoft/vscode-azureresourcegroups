@@ -8,6 +8,16 @@ Display the architecture plan for user approval BEFORE generating any files:
 
 > ⛔ **Open the plan view FIRST.** Call `open_deploy_plan_view` before displaying the gate text — it renders the `prepare-plan.json` you just wrote (services, SKUs, region, cost) in a side-by-side view. Call it once per gate; it is a display action only and never replaces the chat approval prompt below.
 
+> ⛔ **Record the CLI prerequisites through the MCP tool — not in chat.** The plan view has a prerequisites section for the two CLIs this stage depends on, and it is populated **only** by `record_deploy_prerequisites`. Before (or right alongside) `open_deploy_plan_view`:
+>
+> 1. Probe each CLI with its version command in the user's own default shell — **azd** → `azd version`, **az** → `az version`.
+> 2. Call `record_deploy_prerequisites` with one entry per tool: `installed: true` when the command returned a version, otherwise `installed: false`. Include the detected `version` when you have it.
+> 3. Do **not** pass install links or display names — the view resolves those from its own catalog.
+>
+> Example: `record_deploy_prerequisites({ tools: [{ id: "azd", installed: true, version: "1.9.2" }, { id: "az", installed: false }] })`
+>
+> Checking the CLIs by hand and describing the result in chat does **not** satisfy this — the user's plan view stays empty. Never write these into `prepare-plan.json`; that is the vendored pipeline's artifact. If the tool is not directly listed, load it first per "Azure Resources MCP Tools" in [`azure-deploy.agent.md`](../../azure-deploy.agent.md) — do **not** conclude it is unavailable.
+
 > ⛔ **Resource group edit is MANDATORY in the gate display.** Show this exact block:
 > ```
 > 🏢 **Subscription:** {subscriptionName} (`{subscriptionId}`)
