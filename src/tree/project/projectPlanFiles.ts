@@ -14,6 +14,8 @@ export interface ProjectPlanFiles {
     hasLocalDevelopmentPlan: boolean;
     hasDeploymentPlan: boolean;
     hasAppOnboardSession: boolean;
+    /** True once the deploy agent has written a `deploy-result.json`, i.e. there are results to show. */
+    hasDeployResult: boolean;
     /** True when any project artifact exists (requirements, a plan file, or an App Onboard session). */
     hasAny: boolean;
     /** The furthest stage reached. */
@@ -53,7 +55,12 @@ const PLAN_FILE_GLOBS = [
 ] as const;
 
 /** All artifacts that indicate an in-progress project, for watching. */
-const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS, APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB] as const;
+const ALL_PROJECT_FILE_GLOBS = [
+    REQUIREMENTS_FILE_GLOB,
+    ...PLAN_FILE_GLOBS,
+    APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB,
+    ...DEPLOY_RESULT_FILE_GLOBS,
+] as const;
 
 export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWatcher {
     const folder = vscode.workspace.workspaceFolders?.[0];
@@ -130,9 +137,10 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const hasLocalDevelopmentPlan = exists(DEBUG_PLAN_FILE_GLOB);
     const hasDeploymentPlan = PREPARE_PLAN_FILE_GLOBS.some(exists);
     const hasAppOnboardSession = exists(APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB);
+    const hasDeployResult = DEPLOY_RESULT_FILE_GLOBS.some(exists);
 
     let currentStage: ProjectStage = 0;
-    if (hasDeploymentPlan || hasAppOnboardSession) {
+    if (hasDeploymentPlan || hasAppOnboardSession || hasDeployResult) {
         currentStage = 2;
     } else if (hasLocalDevelopmentPlan) {
         currentStage = 1;
@@ -144,7 +152,8 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
         hasLocalDevelopmentPlan,
         hasDeploymentPlan,
         hasAppOnboardSession,
-        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan || hasAppOnboardSession,
+        hasDeployResult,
+        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan || hasAppOnboardSession || hasDeployResult,
         currentStage,
     };
 }
