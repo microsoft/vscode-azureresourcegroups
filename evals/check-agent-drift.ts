@@ -150,6 +150,19 @@ const contracts: Contract[] = [
         pattern: /`?\/api\/health`?/,
         grader: "plan-structure-valid (Route Definitions)",
     },
+    {
+        // The sequenced compound task is reachable both directly and as a compound's
+        // `preLaunchTask`, so it is the task likeliest to be invoked twice — and it was
+        // the one task whose literal template omitted `runOptions`. A real run copied the
+        // template faithfully and produced 6 conforming tasks out of 7, failing
+        // `debug-config` with `invalidTaskRunOptions` on exactly the task the template
+        // shipped without it. Pinning the template, not the prose, because the template is
+        // what the agent copied.
+        file: "azure-debug-generate/references/multi-service.md",
+        name: "compound-task-run-options",
+        pattern: /"dependsOrder":\s*"sequence",\s*\n\s*"runOptions":\s*\{\s*"instanceLimit":\s*1,\s*"instancePolicy":\s*"silent"\s*\}/,
+        grader: "debug-config-structurally-sound (invalidTaskRunOptions)",
+    },
 ];
 
 /**
