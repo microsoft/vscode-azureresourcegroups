@@ -1026,6 +1026,7 @@
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor",
         "eval:drift": "node evals/check-agent-drift.ts",
+    "eval:tool-coverage": "node evals/msbench/check-tool-coverage.ts",
         "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",
         "eval:cor:thresholds:validate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/releaseThresholds.ts evals/release-thresholds.v1.json"
     },

@@ -145,6 +145,23 @@ promptSteps:
       - comment: Agent should not fall back to the chat question tool (turn 1)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
 
+      # vally: tool-calls forbidden [workflow-tools-start_project_scaffold]
+      # The plan-phase approval gate, graded at the tool boundary.
+      #
+      # This turn confirms *requirements* and produces a plan; nothing in it
+      # approves that plan. `azure-project-plan` only hands off to scaffolding once
+      # the user approves, so a `start_project_scaffold` call here is the agent
+      # scaffolding without consent — the same failure `Agent should not have
+      # generated infrastructure before approval` catches one phase later, and the
+      # exact shape `debug-plan-approval-gate` already asserts for
+      # `start_azure_debug_generate`.
+      #
+      # Worth having as a *tool* check rather than only an artifact check: an agent
+      # that hands off has already left this session, so the files it would be
+      # judged on never appear here and every artifact assertion stays green.
+      - comment: Agent should not hand off to the scaffold agent before the plan is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
       # Triage for the `files`-table assertions above, recorded not asserted.
       # `assertZeroExitCode: false`, so it adds no check and cannot change the
       # assertion count — the same shape as the fingerprint below.

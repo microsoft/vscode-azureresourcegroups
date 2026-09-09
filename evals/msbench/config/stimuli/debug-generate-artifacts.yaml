@@ -149,6 +149,28 @@ promptSteps:
       - comment: launch.json and tasks.json are structurally sound
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
 
+      # vally: tool-calls required [workflow-tools-open_local_next_steps_view]
+      # The hand-off surface this turn is contracted to end on. `azure-debug-generate`
+      # finishes by showing the user what to do next; without the call the artifacts
+      # exist on disk and the user is told nothing, which every artifact assertion
+      # above is blind to because the files it grades are all present and correct.
+      #
+      # This turn is the one that runs under `chatMode: azure-debug-generate`, so it
+      # is the only place in the suite where that agent answers and the assertion can
+      # mean anything.
+      - comment: Agent should have opened the local next steps view
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_local_next_steps_view%'
+
+      # vally: tool-calls forbidden [workflow-tools-start_deployment]
+      # The other end of the same boundary. Generating debug artifacts is where this
+      # phase stops; `start_deployment` moves the user into the deploy pipeline, and
+      # nothing in this turn approves that. Asserted negatively because the prompt
+      # asks only for artifact generation — a positive here would demand a transition
+      # the stimulus never authorises, which is how a gate ends up red for correct
+      # behaviour.
+      - comment: Agent should not have started deployment from the generate phase
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
+
       # vally: program artifacts-conform-to-plan
       # The conformance check: every plan row marked `[x]` produced exactly one
       # artifact and every `[ ]` produced none. Catches generation quietly
