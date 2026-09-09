@@ -327,6 +327,8 @@ export const DeploymentPlanView = (): JSX.Element => {
         );
     }
 
+    const isAlreadyApproved = !!plan.approved;
+
     return (
         <div className={`deploymentPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
             <div className='planMain'>
@@ -360,13 +362,13 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     />
                                 </Tooltip>
                                 <Tooltip
-                                    content={missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip}
+                                    content={isAlreadyApproved ? strings.approvedTooltip : (missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip)}
                                     relationship='label'
                                 >
                                     <Button
                                         appearance='primary'
                                         icon={<CheckmarkRegular />}
-                                        disabled={isAwaitingRevision || missingRequiredSelection}
+                                        disabled={isAwaitingRevision || missingRequiredSelection || isAlreadyApproved}
                                         onClick={handleApprove}
                                     >
                                         {strings.approveButton}
