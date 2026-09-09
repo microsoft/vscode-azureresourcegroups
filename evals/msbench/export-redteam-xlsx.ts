@@ -344,7 +344,7 @@ function inspectRun(runDir: string, runId: string, byPrompt: Map<string, string>
 
     let evalJson: Buffer | undefined;
     let configJson: Buffer | undefined;
-    let refused = false;
+    let refused: boolean;
     try {
         const outer = readFileSync(zipPath);
         const inner = findEntry(outer, name => name.endsWith('-output.zip'));

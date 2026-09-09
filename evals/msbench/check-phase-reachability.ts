@@ -172,7 +172,7 @@ function defaultPhase(): string {
 function agentsInPhase(phase: string, stimuliByPhase: Map<string, string[]>): Set<string> {
     const agents = new Set<string>();
 
-    let phaseText = '';
+    let phaseText: string;
     try {
         phaseText = read(join(PHASES, `${phase}.yaml`));
     } catch {
