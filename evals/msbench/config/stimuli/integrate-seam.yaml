@@ -49,7 +49,7 @@ promptSteps:
   - text: |
       Scaffold the project described by the approved `.azure/project-plan.md`.
     assertions:
-      - comment: Sentinel; scaffold turn must have produced a response or its checks are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
   # ─── Turn 1: integrate — the subject of this stimulus ──────────────────────────
@@ -91,7 +91,7 @@ promptSteps:
     text: |
       Looks good — go ahead and set up local development.
     assertions:
-      - comment: Sentinel; approval turn must have produced a response or its checks are vacuous
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: tool-calls required [workflow-tools-start_local_development]
