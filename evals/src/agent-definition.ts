@@ -29,6 +29,8 @@ const MODEL_DISPLAY_NAME_TO_ID = new Map<string, string>([
     ['Claude Opus 4.6 (copilot)', 'claude-opus-4.6'],
     ['Claude Opus 4.7 (copilot)', 'claude-opus-4.7'],
     ['Claude Sonnet 4.6 (copilot)', 'claude-sonnet-4.6'],
+    ['GPT-5.6 Sol (copilot)', 'gpt-5.6-sol'],
+    ['GPT-5.6 Terra (copilot)', 'gpt-5.6-terra'],
 ]);
 
 /**

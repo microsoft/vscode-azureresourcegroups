@@ -75,6 +75,8 @@ function openCreateProjectView(initialPrompt?: string, initialModel?: string): v
         modelOptions: [
             'Claude Opus 4.7 (copilot)',
             'Claude Sonnet 4.6 (copilot)',
+            'GPT-5.6 Sol (copilot)',
+            'GPT-5.6 Terra (copilot)',
         ],
         recentPrompts: getRecentPrompts(),
         initialPrompt,
