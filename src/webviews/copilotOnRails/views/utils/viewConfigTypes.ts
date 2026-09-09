@@ -51,6 +51,7 @@ export type DeploymentPlanViewStrings = {
     environmentNameLabel: string;
     estimatedCostLabel: string;
     approveButton: string;
+    approvedTooltip: string;
     feedbackButtonAriaLabel: string;
     feedbackButtonTooltip: string;
     approveButtonTooltip: string;
