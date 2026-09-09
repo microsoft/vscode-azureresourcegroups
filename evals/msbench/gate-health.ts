@@ -61,7 +61,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -365,6 +365,23 @@ function extractRun(runId: string, refresh: boolean): string | undefined {
     if (!refresh && findInstances(dir).length > 0) {
         return dir;
     }
+
+    // `msbench-cli extract` refuses to write into a directory that already exists and is nonempty
+    // ("Quitting to avoid overwriting") — and it reports that refusal on stderr while still exiting
+    // **0**. The status check below therefore cannot see it, and the refusal is indistinguishable
+    // from a successful extraction.
+    //
+    // That turned a transient condition into a permanent one. Auditing a run while it was still in
+    // flight cached a partial extraction — `run_metadata.json` and no instance output, because none
+    // existed yet. Every later audit then found no instances, re-invoked extract, got the silent
+    // refusal plus exit 0, and reported the run as a READER FAULT forever. `--refresh` could not
+    // clear it either: it skips the early return above but extracts into the same nonempty
+    // directory, so it hit the identical refusal.
+    //
+    // Clearing the destination first makes the extraction authoritative rather than advisory. It is
+    // safe because the cache is derived data, reconstructible from `results.zip` on demand, and it
+    // is reached only when the cache holds no instances — the case that needs re-extraction anyway.
+    rmSync(dir, { recursive: true, force: true });
 
     const result = spawnSync('msbench-cli', ['extract', '--run_id', runId, '--output', dir], {
         encoding: 'utf8',
