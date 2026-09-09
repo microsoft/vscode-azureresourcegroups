@@ -57,6 +57,12 @@ export interface PlannedService {
    *  ARM rejects major-only strings (e.g. MySQL '8.0'); use the exact supported patch
    *  (e.g. '8.0.21'). Omit for non-DB services. */
   version?: string;
+  /** Set true when a subscription policy disables local auth / enforces keyless for this
+   *  service (e.g. Az.Sec.DisableLocalAuth.CosmosDB), detected in Step 2. Signals the scaffold
+   *  agent to provision managed identity + RBAC (and Entra auth for data services) instead of
+   *  connection strings / account keys. Managed identity is the default regardless; this flag
+   *  makes it non-negotiable. Omit when no such policy applies. */
+  forceManagedIdentity?: boolean;
 }
 
 export interface CostBreakdownItem {

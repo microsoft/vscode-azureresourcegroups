@@ -33,6 +33,16 @@ If the app seeds data using a generated secret (admin password, API key), either
 - ⛔ **Never generate `administratorLogin` or `administratorLoginPassword`** for SQL — including inside conditional branches. Use Entra-only auth (see SQL Server pattern below).
 - App-to-service auth: managed identity + RBAC role assignments. Zero secrets in code or config.
 
+> ⛔ **Data-plane auth is managed identity / Microsoft Entra by DEFAULT for ALL data services — not just app→service.** Bake it into the initial IaC; it is **never a post-deploy recommendation.**
+> - **Azure SQL** — Entra-only (see SQL Server pattern below), no admin password.
+> - **Cosmos DB** — `disableLocalAuth: true` + data-plane RBAC (see § Cosmos DB — Data Plane RBAC and [rbac-roles.md](rbac-roles.md)). Do not wire an account-key connection string.
+> - **PostgreSQL / MySQL Flexible Server** — Microsoft Entra authentication + the app's managed identity; password auth disabled (see [bicep-patterns-data.md](bicep-patterns-data.md)).
+> - **Storage / Service Bus / Event Hubs / Key Vault** — managed identity + RBAC.
+>
+> Account keys, connection-string secrets, and admin passwords are an **explicit, approved fallback only** — used when a service or runtime genuinely has no Entra support, or for local-dev emulators (which have no managed identity). Prefer the fallback **only** after the user approves it at the Scaffold Gate, and record it in `assumptions[]`.
+>
+> The application code selects auth by environment — a connection string locally (emulator), `DefaultAzureCredential` in Azure — so the same build is keyless in the cloud. See the "Managed Identity — Azure vs local" section in the shared runtime references ([dotnet](../../../shared-references/runtimes/dotnet.md) / [typescript](../../../shared-references/runtimes/typescript.md) / [python](../../../shared-references/runtimes/python.md)). If a subscription policy disables local auth (e.g. `Az.Sec.DisableLocalAuth.CosmosDB`), this MI-by-default posture is already correct — the prepare phase's policy check (prepare/instructions.md § Step 2) must surface it and force MI **before** deploy, not after a failure.
+
 ```bicep
 identity: {
   type: 'SystemAssigned'

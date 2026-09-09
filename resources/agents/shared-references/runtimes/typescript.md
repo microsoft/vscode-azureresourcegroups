@@ -527,6 +527,36 @@ export interface HealthResponse {
 
 ---
 
+## Managed Identity — Azure vs local (secure by default)
+
+The **same code** authenticates with a **connection string locally** (against an emulator, which has no managed identity) and with **managed identity in Azure** — never account keys in the cloud. Pick the auth by the *shape* of the configured value: a resource **URI / endpoint** → `DefaultAzureCredential`; a classic **connection string** → key / local auth.
+
+```ts
+import { DefaultAzureCredential } from '@azure/identity';
+import { BlobServiceClient } from '@azure/storage-blob';
+
+// STORAGE_CONNECTION_STRING is a blob service URI in Azure, or "UseDevelopmentStorage=true" (Azurite) locally.
+const storage = process.env.STORAGE_CONNECTION_STRING!;
+export const blob = /^https:\/\//.test(storage)
+  ? new BlobServiceClient(storage, new DefaultAzureCredential()) // Azure: managed identity
+  : BlobServiceClient.fromConnectionString(storage);             // local: emulator connection string
+```
+
+### Managed Identity — Quick Reference
+
+| Resource | Production config value | Code (cloud path) |
+|----------|------------------------|-------------------|
+| Blob Storage | `STORAGE_CONNECTION_STRING=https://<acct>.blob.core.windows.net` | `new BlobServiceClient(url, new DefaultAzureCredential())` |
+| Queue Storage | `https://<acct>.queue.core.windows.net` | `new QueueServiceClient(url, new DefaultAzureCredential())` |
+| Cosmos DB | `COSMOSDB_CONNECTION_STRING=https://<acct>.documents.azure.com:443/` | `new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential() })` |
+| Service Bus | `SERVICEBUS_FQNS=<ns>.servicebus.windows.net` | `new ServiceBusClient(fqns, new DefaultAzureCredential())` |
+| Key Vault | `KEYVAULT_URI=https://<vault>.vault.azure.net/` | `new SecretClient(uri, new DefaultAzureCredential())` |
+| PostgreSQL Flexible Server | Entra token (no password) | `pg` `Pool({ password: async () => (await cred.getToken('https://ossrdbms-aad.database.windows.net/.default')).token })` |
+
+Add `@azure/identity` to dependencies. `DefaultAzureCredential` uses the app's managed identity in Azure and the developer's `az login` / VS Code sign-in locally, so the **same build** runs against the emulator locally and against the real service (keyless) in Azure. **Never ship account keys or connection-string secrets to Azure** — the IaC provisions the resource with local auth disabled and grants the app's managed identity the right RBAC role (see azure-deploy scaffold references).
+
+---
+
 ## Dependencies Quick Reference
 
 ### Core Dependencies

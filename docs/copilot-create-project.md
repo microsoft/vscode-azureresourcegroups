@@ -259,6 +259,10 @@ back to Docker otherwise — or when neither is detected. Podman is used two way
 machine** — if it isn't started, generation asks before starting it. You can switch engines by editing the plan's
 *Container Runtime* / *Compose Command* before approving.
 
+> **Auth for local development.** Emulators (Azurite, local Postgres/MySQL) have no managed identity, so the generated
+> code and `.env` use **connection strings** locally. The same code detects a real Azure endpoint at runtime and switches
+> to **managed identity** in the cloud (see *Stage 7*), so nothing needs to change between local and deployed builds.
+
 <p align="center">
   <img src="images/copilot-create-project/08-debug-plan-view.png" alt="Debug plan view" />
 </p>
@@ -274,6 +278,14 @@ Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan 
 `.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`, and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
+
+> **Secure by default (managed identity).** The generated infrastructure provisions **managed identity + RBAC** for
+> every service — including data services (Azure SQL / PostgreSQL / MySQL use Microsoft Entra auth, Cosmos DB disables
+> local auth) — instead of shipping account keys or connection-string secrets to Azure. The deployed app authenticates
+> keylessly with its managed identity; the *same* code uses connection strings only against local emulators. Connection
+> strings/admin passwords are used in the cloud only as an explicitly-approved fallback for a runtime with no Entra
+> support. If the target subscription enforces keyless access (a `DisableLocalAuth` policy), the prepare phase detects it
+> and makes managed identity mandatory before deploy.
 
 <p align="center">
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />

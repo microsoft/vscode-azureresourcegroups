@@ -42,7 +42,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 | # | Step | Action | Reference |
 |---|------|--------|-----------|
 | 1 | **Read session state** | Load `prereq-output.json` + `context.json`. Resolve subscription | Cross-ref [subscription-resolution.md](../references/subscription-resolution.md) if needed |
-| 2 | **Query policy constraints** | Inline MCP: fetch policy + advisor recommendations | `mcp_azure_mcp_policy` + `mcp_azure_mcp_advisor` |
+| 2 | **Query policy constraints** | ⛔ **MANDATORY inline MCP** — `mcp_azure_mcp_policy` for subscription policy + `mcp_azure_mcp_advisor` for recommendations. Do NOT skip. Flag any `DisableLocalAuth` / keyless-enforcement policy (e.g. `Az.Sec.DisableLocalAuth.CosmosDB`) → set `forceManagedIdentity: true` so scaffold provisions Entra/MI auth (see Step 2 detail below). | `mcp_azure_mcp_policy` + `mcp_azure_mcp_advisor` |
 | 3 | **Map components to services** | Per-component Azure service selection, Dockerfile routing, deploy-as-is | ⛔ **You MUST read [service-mapping.md](references/service-mapping.md) and [deploy-strategy.md](references/deploy-strategy.md)** |
 | 4 | **Select SKUs + WAF analysis** | Budget-aware SKU selection, inline WAF service guidance | ⛔ **You MUST read [sku-matrix.md](references/sku-matrix.md)** |
 | 5 | **Validate quotas + region capacity** | ⛔ Read [`subagent-quota.md`](references/subagent-quota.md) → dispatch as `task` (NEXT action MUST be `task`, ⛔ agent_type: `"task"` — NEVER `"general-purpose"`). Copy the **COMPLETE and UNMODIFIED** template text into the task prompt between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters — do NOT summarize. Append the caller-provided inputs listed in [`subagent-quota.md`](references/subagent-quota.md)'s Input table AFTER the template block. ⛔ **After dispatching, proceed to Step 6 (cost estimation) while the subagent runs. Do NOT run quota checks yourself — the subagent handles it. Collect subagent results before Step 9 (write plan).** | ⛔ **You MUST read [`subagent-quota.md`](references/subagent-quota.md)** |
@@ -52,6 +52,13 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 | 9 | **Write prepare-plan.json** | Per `PreparePlan` schema. Include postDeployRecommendations, deploymentVariables | ⛔ **You MUST read [prepare-schemas.ts](references/prepare-schemas.ts)** for `PreparePlan` schema |
 | 10 | **Return summary** | Structured summary for orchestrator approval gate | (inline — 1 line) |
 | 11 | **Validate plan** | 4-dimension check: Goal Alignment, WAF Alignment, Dependency Completeness, Deployment Viability. Fix inline on failure, document tradeoffs in `assumptions[]`. | All must pass before writing |
+
+### Step 2 — Policy Constraints & Keyless Enforcement
+
+> ⛔ **The policy check is MANDATORY, not best-effort.** Skipping it is how connection-string / account-key deployments slip through and then fail at deploy time against org policy (issue: Cosmos deployed with keys, blocked by `Az.Sec.DisableLocalAuth.CosmosDB`).
+> - Call `mcp_azure_mcp_policy` for the target subscription/resource-group scope. If it is unavailable, record the gap in `assumptions[]` and **proceed as if keyless is required** (secure default) — never silently assume local auth is allowed.
+> - Any policy that **disables local auth / enforces keyless** for a service the plan uses (`DisableLocalAuth`, `Deny` on account keys, Entra-only enforcement) → set `forceManagedIdentity: true` on that service in `prepare-plan.json` so the scaffold agent provisions managed identity + RBAC (and, for data services, Entra auth) instead of connection strings.
+> - Secure-by-default is the posture **regardless** of policy: managed identity is the default for every service; connection strings/keys are only an explicitly-approved local-dev-emulator or no-Entra-support fallback (see scaffold [bicep-patterns-security.md](../scaffold/references/bicep-patterns-security.md)). A `DisableLocalAuth` policy simply makes the already-correct default non-negotiable.
 
 ### Step 5 — Post-Quota Validation
 
