@@ -137,6 +137,24 @@ interface SeededFile {
 type Recipe = () => SeededFile[];
 
 /**
+ * The plan documents the plan-bearing recipes would stage, resolved exactly as a run
+ * resolves them.
+ *
+ * Exported so `check-seed-contract.ts` can validate *the bytes that get staged* rather
+ * than re-deriving them. Re-deriving is the specific failure this module's header warns
+ * about: a second copy of "which plan wins, and what its status line says" would be a
+ * second source of truth, and the checker would then be certifying its own copy while the
+ * suite ran something else.
+ */
+export function planSeedDocuments(): { seed: string; status: string; content: string; source: PlanSource }[] {
+    const source = readPlanSource();
+    return [
+        { seed: 'approved-fullstack', status: 'Approved', content: withStatus(source, 'Approved'), source },
+        { seed: 'unapproved-plan', status: 'Planning', content: withStatus(source, 'Planning'), source },
+    ];
+}
+
+/**
  * `approved-fullstack` and `unapproved-plan` come from the *same* source document and
  * differ in the status line alone. That is load-bearing rather than tidy, and
  * `harvest-seed.mjs` stated the property better than a paraphrase would:
