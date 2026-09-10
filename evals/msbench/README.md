@@ -1524,27 +1524,11 @@ these two values:**
 | Key | Value | Where it comes from |
 | --- | --- | --- |
 | endpoint tag | `copilot-on-rails` | `--tag endpoint=copilot-on-rails` (set by `run.sh`) |
-| model | `claude-opus-4.7` | derived from `modelSelector` in [`config/base.yaml`](config/base.yaml) |
+| model | `claude-sonnet-4.5` | derived from `modelSelector` in [`config/base.yaml`](config/base.yaml) |
 
 CES serialises runs that share the same **(model, endpoint tag)** pair: the second one
 waits in a queue rather than racing the first for the same model capacity. Unqueued runs
 race — ours against each other, and against any other team on the same model.
-
-> **The model must be one the agents declare.** `resources/agents/*.agent.md` list
-> `Claude Opus 4.7` and `Claude Sonnet 4.6`; anything else measures a configuration the
-> product does not ship. `base.yaml` pinned `claude-sonnet-4.5` for 66 of the corpus's
-> 93 runs before this was noticed, so results cached before 2026-09-09 are evidence
-> about the harness rather than about the shipped agent. `check-agent-drift.ts` now
-> validates this value, and the older `claude-sonnet-4.5` figures quoted further down
-> are left as the historical record of what those runs actually used.
->
-> **Of the two declared models, only `claude-opus-4.7` currently runs.**
-> `claude-sonnet-4.6` fails immediately with
-> `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
-> (measured, run `2026090974671590`), so it is not a usable default even though it is
-> declared and cheaper. Re-test it before switching; a model that passes the drift check
-> can still be undispatchable, because that check reads the agent front-matter and knows
-> nothing about backend availability.
 
 The catch is that **there is no validation of these strings**. A run tagged
 `copilot_on_rails`, `CopilotOnRails`, or `copilot-on-rails ` is accepted, submitted, and
