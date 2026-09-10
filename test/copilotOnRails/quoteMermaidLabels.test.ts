@@ -39,6 +39,38 @@ suite('quoteMermaidLabels', () => {
             );
         });
 
+        test('quotes round labels', () => {
+            // The round shape is one of the most common in a generated architecture
+            // diagram, and nothing else in the transform covers a single-paren body.
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A(@azure/identity) --> B(Storefront Web)'),
+                'graph LR\n    A("@azure/identity") --> B("Storefront Web")',
+            );
+        });
+
+        test('quotes a double circle without collapsing it to a circle', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A(((Core))) --> B(Next)'),
+                'graph LR\n    A((("Core"))) --> B("Next")',
+            );
+        });
+
+        test('quotes a label that itself contains parentheses exactly once', () => {
+            // The round rule runs as a second pass over a re-split line, so parentheses
+            // that the first pass has just enclosed in a quoted label are not quoted again.
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    Web[Attendance Web<br/>(Vite dev server)] -->|calls (async)| DB[(Postgres (primary))]'),
+                'graph LR\n    Web["Attendance Web<br/>(Vite dev server)"] -->|"calls (async)"| DB[("Postgres (primary)")]',
+            );
+        });
+
+        test('does not re-quote the outer parentheses of a stadium, cylinder or circle', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A([Stadium]) --> B[(Cylinder)] --> C((Circle))'),
+                'graph LR\n    A(["Stadium"]) --> B[("Cylinder")] --> C(("Circle"))',
+            );
+        });
+
         test('quotes a subgraph title', () => {
             assert.strictEqual(
                 quoteMermaidLabels('graph TB\n    subgraph core [Core Services]\n        A[API] --> B[DB]\n    end'),
@@ -67,13 +99,24 @@ suite('quoteMermaidLabels', () => {
 
     suite('leaves valid syntax alone', () => {
         test('is a no-op on an already-quoted diagram', () => {
-            const code = 'graph LR\n    A["Web App"] -->|"HTTP"| B["API"]';
+            const code = 'graph LR\n    A["Web App"] -->|"HTTP"| B["API"]\n    B --> C("Round")';
             assert.strictEqual(quoteMermaidLabels(code), code);
         });
 
         test('is idempotent', () => {
-            const once = quoteMermaidLabels('graph LR\n    A[API] -->|calls| B[(DB)]');
+            const once = quoteMermaidLabels('graph LR\n    A[API] -->|calls| B[(DB)] --> C(Cache)');
             assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('does not quote the arguments of a click call handler', () => {
+            // `click nodeId call handler(a, b)` is the one flowchart statement with an
+            // unquoted, comma-separated argument list in parens. Quoting it would collapse
+            // the two arguments into a single string.
+            const code = 'graph LR\n    A(Node) --> B[Done]\n    click A call handleClick(alpha, beta)';
+            assert.strictEqual(
+                quoteMermaidLabels(code),
+                'graph LR\n    A("Node") --> B["Done"]\n    click A call handleClick(alpha, beta)',
+            );
         });
 
         test('does not touch brackets, braces or pipes inside an already-quoted label', () => {
@@ -94,10 +137,10 @@ suite('quoteMermaidLabels', () => {
         });
 
         test('does not touch comment lines', () => {
-            const code = 'graph LR\n    %% A[Not a node] and |not an edge|\n    A[API] --> B[DB]';
+            const code = 'graph LR\n    %% A[Not a node] and |not an edge| and (not round)\n    A[API] --> B[DB]';
             assert.strictEqual(
                 quoteMermaidLabels(code),
-                'graph LR\n    %% A[Not a node] and |not an edge|\n    A["API"] --> B["DB"]',
+                'graph LR\n    %% A[Not a node] and |not an edge| and (not round)\n    A["API"] --> B["DB"]',
             );
         });
 
@@ -112,6 +155,9 @@ suite('quoteMermaidLabels', () => {
         });
 
         test('does not flatten parallelogram or trapezoid shapes into rectangles', () => {
+            // Deliberate trade: their labels stay unquoted, because rewriting `[/x/]` to
+            // `["/x/"]` would silently turn a parallelogram into a rectangle with literal
+            // slashes in it. Leaving one rare label unquoted is the lesser harm.
             const code = 'graph LR\n    A[/Input/] --> B[\\Output\\] --> C[/Trapezoid\\]';
             assert.strictEqual(quoteMermaidLabels(code), code);
         });

@@ -20,6 +20,11 @@
  *
  * The transform is deliberately conservative: it only quotes a label that is not
  * quoted already, so it is a no-op on diagrams that already render.
+ *
+ * Covered shapes: rectangle, round, stadium, subroutine, cylinder, circle,
+ * double circle, rhombus and hexagon nodes, plus subgraph titles and edge
+ * labels. The asymmetric shape (`A>text]`) and the parallelogram/trapezoid
+ * family (`A[/text/]`) are knowingly left alone — see `quoteLabelsInLine`.
  */
 
 /** Diagram kinds this transform understands. Anything else is passed through untouched. */
@@ -79,16 +84,27 @@ function quoteLabelsInLine(line: string): string {
     // skipped entirely on any line that carries a metadata block.
     const hasMetadata = line.includes('@{');
 
-    return mapUnquotedSegments(line, (segment) => {
+    // Pass 1 — every shape whose label is delimited by brackets or braces, plus edge
+    // labels. Nested delimiters are matched longest-first, so an outer delimiter is
+    // consumed before an inner rule can claim its body. The asymmetric shape (`A>text]`)
+    // has no rule: its opening delimiter is a bare `>`, which is indistinguishable from
+    // an arrowhead, so a rule for it could not be made safe.
+    const afterBrackets = mapUnquotedSegments(line, (segment) => {
         let result = segment
-            // Cylinder `[(text)]` and circle `((text))` are matched before the plain
-            // `[text]` rule so their delimiters survive.
-            .replace(/\[\(([^)\]\n]+)\)\]/g, (_match, label: string) => `[(${quote(label)})]`)
-            .replace(/\(\(([^)\n]+)\)\)/g, (_match, label: string) => `((${quote(label)}))`)
+            .replace(/\(\(\(([^()\n]+)\)\)\)/g, (_match, label: string) => `(((${quote(label)})))`)
+            // The cylinder body is lazy up to the first `)]` so a label that itself
+            // contains parentheses — `[(Postgres (primary))]` — is quoted whole.
+            .replace(/\[\(([^[\]\n]+?)\)\]/g, (_match, label: string) => `[(${quote(label)})]`)
+            .replace(/\(\(([^)\n]+)\)\)/g, (match, label: string) =>
+                // A double circle already rewritten above leaves a body starting with `(`.
+                label.startsWith('(') ? match : `((${quote(label)}))`,
+            )
             .replace(/\[([^[\]\n]+)\]/g, (match, label: string) =>
                 // A label already rewritten by the cylinder rule starts with `(` or `"`, and
                 // `/` and `\` are the parallelogram/trapezoid shape delimiters rather than
-                // label text. Leave all of those to the rules that own them.
+                // label text. Leave all of those to the rules that own them. A parallelogram
+                // or trapezoid label therefore stays unquoted — a deliberate trade, since
+                // flattening the shape into a rectangle would be the worse outcome.
                 /^[("/\\]/.test(label) ? match : `[${quote(label)}]`,
             );
 
@@ -99,6 +115,23 @@ function quoteLabelsInLine(line: string): string {
         // Edge labels: `-->|text|`.
         return result.replace(/\|([^|\n]+)\|/g, (_match, label: string) => `|${quote(label)}|`);
     });
+
+    // `click nodeId call handler(a, b)` is the one flowchart statement that puts an
+    // unquoted, comma-separated argument list in parentheses. Quoting it would collapse
+    // the arguments into a single string, so interaction statements skip the round rule.
+    if (/^\s*click\b/.test(line)) {
+        return afterBrackets;
+    }
+
+    // Pass 2 — the round shape `(text)`. It runs over a *freshly* re-split line rather
+    // than inside pass 1, because pass 1 introduces quotes of its own: the parentheses
+    // in `Web[Attendance Web (Vite)]` become part of a quoted label, and re-splitting is
+    // what stops them from being quoted a second time. Re-splitting also means the outer
+    // parentheses of a stadium, cylinder, circle or double circle are already separated
+    // from their now-quoted body, so this rule cannot touch them.
+    return mapUnquotedSegments(afterBrackets, (segment) =>
+        segment.replace(/\(([^()\n]+)\)/g, (_match, label: string) => `(${quote(label)})`),
+    );
 }
 
 const quote = (label: string): string => (label.includes('"') ? label : `"${label}"`);
