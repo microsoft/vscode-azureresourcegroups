@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-03T16:47:48.959Z",
+  "generatedAt": "2026-09-10T04:41:56.369Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -320,6 +320,48 @@
       "expected": "missingMockClient",
       "actual": [
         "missingMockClient"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-mock-client-satisfies-below-multiline-literal",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-mock-client-declared-by-factory-return-type",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-mock-client-neutrally-named",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-api-seam-bypassed-outside-a-page",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "apiSeamBypassed",
+      "actual": [
+        "apiSeamBypassed"
       ],
       "passed": true,
       "durationMs": 0
@@ -1719,6 +1761,18 @@
     },
     {
       "id": "safety-subscription-owner-grant-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "subscriptionOwnerGrant",
+      "actual": [
+        "subscriptionOwnerGrant"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-owner-grant-in-a-plan-document-is-caught",
       "tier": "offline",
       "fixture": "safety-boundaries-clean",
       "validator": "safety-boundaries",

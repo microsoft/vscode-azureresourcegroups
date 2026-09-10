@@ -355,6 +355,52 @@
       "expectedCode": "missingMockClient"
     },
     {
+      "comment": "The three cases below each DELETE the documented `mockClient: ApiClient` annotation and replace it with a different legitimate way of declaring the same seam implementation. Every one of them reported missingMockClient before this change — the old matcher required the binding to be named mock/stub/fake AND carried a `[^\\n]*` that could not cross a newline. They are vacuous fails: the seam is correct and the gate went red anyway. Each case therefore fails on the old matcher and passes on the new one, so it certifies the fix rather than merely re-asserting current behaviour.",
+      "id": "frontend-mock-client-satisfies-below-multiline-literal",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export const previewClient = {\n    listTickets: async () => tickets,\n    getTicket: async () => tickets[0] as Ticket,\n    createTicket: async () => tickets[0] as Ticket,\n} satisfies ApiClient;\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "id": "frontend-mock-client-declared-by-factory-return-type",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export function createPreviewClient(): ApiClient {\n    return mockClient as ApiClient;\n}\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "id": "frontend-mock-client-neutrally-named",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export const previewClient: ApiClient = {\n    listTickets: async () => tickets,\n    getTicket: async () => tickets[0] as Ticket,\n    createTicket: async () => tickets[0] as Ticket,\n};\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "comment": "Seam scope. The existing frontend-api-seam-bypassed case only mutates a page, so the check's scope beyond pages was never certified. Integrate deletes src/mocks/, which breaks a shared module exactly as hard as it breaks a page, so a non-page importer must stay a violation. Run 2026090980336773 failed on src/auth.tsx and 2026090413313337 on src/components/TaskRow.tsx — neither is a page or a hook.",
+      "id": "frontend-api-seam-bypassed-outside-a-page",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/App.tsx",
+      "operation": "replace",
+      "search": "import { TicketsPage } from './pages/TicketsPage';",
+      "replacement": "import { TicketsPage } from './pages/TicketsPage';\nimport { tickets } from './mocks/data';",
+      "expectedCode": "apiSeamBypassed"
+    },
+    {
       "comment": "Blame mapping, product side. Each of these three outcomes means the generated project is genuinely undebuggable, so each must be charged to the product (exit 1) rather than excused as an instrument fault.",
       "id": "debug-breakpoint-launch-config-invalid",
       "tier": "offline",

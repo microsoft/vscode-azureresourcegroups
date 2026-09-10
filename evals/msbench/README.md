@@ -2650,6 +2650,32 @@ with a clear message:
   two live CLI processes are *not* evidence of parallel execution — the CLI stays
   resident whether or not CES has started its run — so this says the lock is
   worktree-scoped, and says nothing either way about whether CES serialised them.
+- **A mandated CI gate rewrites `user-overrides.yaml`, so "don't run `build-config.ts`
+  during a sweep" is not enforceable by reading the command you typed.**
+  `npm run clean-machine:check` — one of the pre-PR gates, and the one whose whole point
+  is that a rule in prose is weaker than a mechanism — executes
+  `build-config.ts photo-app-requirements` as one of its four clean-machine entrypoints
+  ([`check-clean-machine.ts`](check-clean-machine.ts), the `runEntrypoints` table). That
+  invocation rewrites `assets/user-overrides.yaml` like any other, and `build-config.ts`
+  takes **no lock** — `assets/.run.lock` is `run.sh`'s alone. So a gate that never
+  mentions `build-config.ts` silently mutates the file a sweep is depending on.
+
+  Two independent observations on 2026-09-09, from different sessions that had each been
+  told the script was unsafe to run: the gate rewrote a *staged* overrides file mid-sweep,
+  which is why run `2026090978012026` genuinely ran `gpt-5.6-sol` and was reported as
+  `requested claude-opus-4.7`; and it rewrote the file again in a second worktree during
+  unrelated grader work. Neither session ran `build-config.ts` knowingly.
+
+  [#1810](https://github.com/microsoft/vscode-azureresourcegroups/pull/1810) removed the
+  damage: `verify-run.ts` now reads `requested` from the run's own config inside the
+  extract rather than from the mutable live file, so a concurrent rebuild can no longer
+  fabricate a MODEL MISMATCH. **The rewrite itself still happens** — #1810 fixed what the
+  mutation could corrupt downstream, not the mutation.
+
+  Blast radius is worktree-scoped, same as the lock: gates run in one worktree cannot
+  disturb a sweep in another. The collision is a sweep and the gate suite in the **same**
+  worktree. Practical rule: while a sweep is in flight, run the gates from a different
+  worktree, or accept that `assets/` will be rebuilt under it.
 - **`output.zip` sits at an unpredictable index inside `results.zip`.** Across 24 local
   archives it has appeared at indices 1, 2, 3, 4, 5, 6 and 10; `2026082620153444` has it
   last. Any consumer that assumes a fixed member position will eventually read the wrong
