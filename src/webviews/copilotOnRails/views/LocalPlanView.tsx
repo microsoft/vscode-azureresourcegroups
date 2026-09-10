@@ -53,6 +53,7 @@ import {
     type LocalPlanSection,
 } from "./utils/parseLocalDebugPlanMarkdown";
 import { getPrerequisiteInstallLink } from "./utils/prerequisiteInstallLinks";
+import { quoteMermaidLabels } from "./utils/quoteMermaidLabels";
 
 mermaid.initialize({
     startOnLoad: false,
@@ -1041,7 +1042,7 @@ const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
         mermaid
-            .render(id, code)
+            .render(id, quoteMermaidLabels(code))
             .then(({ svg }) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
