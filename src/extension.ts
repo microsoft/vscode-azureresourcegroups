@@ -61,6 +61,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
+import { reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
@@ -152,6 +153,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             serverVersion: ext.version,
             registerTools: (server) => registerMcpTools(server),
         });
+
+        // Reap any temporary database firewall rule an interrupted migration left behind. This is
+        // the guarantee the deploy agent's instructions cannot make: it runs regardless of how the
+        // previous session ended. Fire-and-forget so a signed-out or slow Azure call never delays
+        // activation.
+        void reconcileMigrationFirewallLeases(activateContext);
     });
 
     const extensionManager = new ResourceGroupsExtensionManager();

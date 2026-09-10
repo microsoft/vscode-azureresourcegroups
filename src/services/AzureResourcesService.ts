@@ -86,16 +86,25 @@ function classifyDeploymentOperationsError(error: unknown): DeploymentOperations
     }
 }
 
+/**
+ * Builds a `ResourceManagementClient` for a subscription, resolving the correct session when the
+ * account contains duplicate subscriptions. Shared so every ARM caller in the extension gets the
+ * same credential handling.
+ */
+export async function createResourceClientForSubscription(context: IActionContext, subscription: AzureSubscription): Promise<ResourceManagementClient> {
+    // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
+    const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
+    const subContext = createSubscriptionContext(subscription);
+    if (duplicateSubsMode) {
+        const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
+        subContext.credentials = createCredential(() => session);
+    }
+    return await createResourceClient([context, subContext]);
+}
+
 export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => {
     async function createClient(context: IActionContext, subscription: AzureSubscription): Promise<ResourceManagementClient> {
-        // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
-        const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
-        const subContext = createSubscriptionContext(subscription);
-        if (duplicateSubsMode) {
-            const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
-            subContext.credentials = createCredential(() => session);
-        }
-        return await createResourceClient([context, subContext]);
+        return await createResourceClientForSubscription(context, subscription);
     }
     return {
         async listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]> {
