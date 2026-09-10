@@ -104,23 +104,6 @@ serviceName eq 'Storage' and armRegionName eq '{region}' and meterName eq 'Hot L
 
 ---
 
-### Key Vault
-
-**Filter:**
-```
-serviceName eq 'Key Vault' and armRegionName eq '{region}' and priceType eq 'Consumption'
-```
-
-**Key meters:**
-
-| Tier | `meterName` | Unit |
-|------|-------------|------|
-| Standard | `Operations` | 10K |
-
-**Monthly (Standard):** `retailPrice × (estimatedOps / 10000)`. Negligible for typical AppOnboard apps.
-
----
-
 ### Service Bus
 
 **Filter:**

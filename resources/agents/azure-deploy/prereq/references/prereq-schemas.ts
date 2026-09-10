@@ -21,7 +21,9 @@
 export interface BuildRequirements {
   hasNativeModules: boolean;
   hasDockerfile: boolean;
-  /** True when the app can deploy on App Service F1 (Free) SKU */
+  /** @deprecated F1/D1/Free are never offered (managed identity is mandatory and the
+   *  free-tier MI sidecar OOMs). Retained for back-compat; treat as always false.
+   *  The compute floor is always B1. */
   f1Viable: boolean;
   /** True when Dockerfile uses BuildKit-only syntax (--mount, # syntax=docker/dockerfile:1) */
   hasBuildKitSyntax?: boolean;
@@ -31,7 +33,7 @@ export interface BuildRequirements {
    *  larger compiled dependencies like scipy may take 600+s).
    *  Used by deploy phase to set WEBSITES_CONTAINER_START_TIME_LIMIT. */
   estimatedInstallTime?: number;
-  /** Why F1 is not viable — set when f1Viable is false.
+  /** @deprecated F1 is never selected. Retained as a "size up from B1" signal.
    *  Examples: "native modules (node-gyp)", "large dependency tree (27 pinned deps)",
    *  "build-time compilation (TypeScript tsc)", "major migration (Flask 0.12→2.3)" */
   f1BlockReason?: string;

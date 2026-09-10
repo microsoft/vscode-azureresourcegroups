@@ -22,13 +22,13 @@ Extract every security claim from the generated IaC and check for internal contr
 |-------|---------|
 | Managed identity declared but secret hardcoded | `identity: { type: 'SystemAssigned' }` but `password: 'hardcoded'` in same file |
 | HTTPS enforced but HTTP endpoint exposed | `httpsOnly: true` but ingress allows HTTP |
-| Resource accessed via managed identity but matching role not granted | KV secret read without KV Secrets User, ACR image pull without AcrPull, or any MI→resource dependency missing its `roleAssignment` — access fails at runtime → `FLAGGED` |
+| Resource accessed via managed identity but matching role not granted | ACR image pull without AcrPull, Storage access without a Storage Data role, or any MI→resource dependency missing its `roleAssignment` — access fails at runtime → `FLAGGED` |
 | ⛔ Role assignment scope targets wrong resource | `scope: resourceGroup()` on resource-specific roles → `FLAGGED`. Must scope to specific resource. |
 | `principalType` missing on role assignments | Causes intermittent 30s+ delays |
-| ⛔ Identity block missing on compute resource | ⛔ **MANDATORY FAIL** — ALL compute MUST have `identity: { type: 'SystemAssigned' }`. ⛔ **HARD EXCEPTION — F1/D1 Linux:** MI sidecar causes OOM on free tier → rate `PLAUSIBLE`, **NEVER** `FLAGGED`. The gen template intentionally omits MI for F1/D1. If F1/D1 detected in plan, this check MUST be `PLAUSIBLE`. |
+| ⛔ Identity block missing on compute resource | ⛔ **MANDATORY FAIL** — ALL compute MUST have `identity: { type: 'SystemAssigned' }`. There is NO exception: managed identity is required on every SKU (the compute floor is B1, which supports MI; F1/D1/Free are never generated). Missing identity → `FLAGGED`. |
 | SQL firewall `0.0.0.0/0` without private endpoint | Prefer MI + private endpoint. AllowAzureServices genuinely needed → `PLAUSIBLE`. |
 | ⛔ SCM/FTP auth policy missing on App Service | ALL App Service MUST have `basicPublishingCredentialsPolicies`: `scm.allow: true`, `ftp.allow: false`. Missing → `FLAGGED`. |
-| ⛔ KV URL uses `environment().suffixes.keyvaultDns` | Leading dot → double-dot URL → `ContainerAppSecretKeyVaultUrlInvalid`. Use `keyVault.name` + `.vault.azure.net` or `vaultUri` output. → ⛔ **FLAGGED** |
+| ⛔ Any `Microsoft.KeyVault/vaults`, `@Microsoft.KeyVault(...)`, or `keyVaultUrl` present | ⛔ **MANDATORY FAIL** — no Key Vault is created; app-internal secrets live on the compute resource. → ⛔ **FLAGGED** |
 
 **Rating:** Claims that contradict each other → `FLAGGED`. Consistent claims → `VERIFIED`.
 
@@ -44,10 +44,11 @@ Validate against pattern files loaded at Steps 3–5 and [rbac-roles.md](rbac-ro
 | `main.parameters.json` uses ARM JSON (not `.bicepparam`) | `bicep-patterns.md` |
 | Naming: `{prefix}{name}{token}` ≤32 chars | `bicep-patterns.md` |
 | System-assigned managed identity on all services | `bicep-patterns-security.md` |
-| No `administratorLogin` in generated Bicep | `bicep-patterns-security.md` |
-| KV uses RBAC authorization (not access policies) | `bicep-patterns-security.md` |
-| ⛔ `enablePurgeProtection` exists in KV module | Remove — `false` rejected by ARM, `true` blocks KV deletion → ⛔ **FLAGGED** |
-| ⛔ KV deployer role assignment — `Key Vault Secrets Officer` for `deployerObjectId` scoped to KV resource | `bicep-patterns-security.md` § Key Vault Deployer RBAC. Without this, `az keyvault secret set` fails with 403. |
+| No `administratorLogin`/`administratorLoginPassword`/access key on ANY data service (SQL, PG, MySQL, Redis, Storage, Cosmos) — Entra/MI-only | `bicep-patterns-security.md` § Data Services |
+| PG/MySQL set an Entra admin child resource; PG `authConfig.passwordAuth: 'Disabled'` | `bicep-patterns-data.md` |
+| No F1/D1 App Service SKU, no Free Static Web Apps tier | `sku-matrix.md` |
+| ⛔ No `Microsoft.KeyVault/vaults` resource | No Key Vault is created — app-internal secrets are stored on the compute resource → any KV resource is ⛔ **FLAGGED** | `bicep-patterns-security.md` § No Key Vault |
+| App-internal secrets passed as `@secure()` params → App Service `appSettings` / CA native `secrets` | `bicep-patterns-security.md` § Secrets |
 | Prereq `warnings[]` each have a corresponding IaC fix | Read [`env-var-secrets.md`](env-var-secrets.md) for SSL/TLS fixes |
 | Container Apps: two-phase ACR wiring, `registries` populated when ACR in plan, port alignment | `bicep-container-apps.md` |
 | ⛔ BuildKit Dockerfile without `Dockerfile.azure` | `hasBuildKitSyntax == true` but no `Dockerfile.azure` in `files[]` → ⛔ **MANDATORY FAIL**. ACR does not support BuildKit. |
@@ -62,7 +63,7 @@ Trace references BETWEEN modules — per-file checks miss broken cross-module wi
 | Check | Rating |
 |-------|--------|
 | **Param wiring** — every `module` call in `main.bicep`: verify every param without `= default` is passed | Missing param → `FLAGGED` |
-| **Secret ref completeness** — every CA `secrets[].keyVaultUrl` has a matching KV secret resource | Missing KV secret → `FLAGGED` |
+| **Secret ref completeness** — every CA `secretRef` has a matching entry in the CA's native `secrets[]` (name + `value`); ⛔ NO `keyVaultUrl` / Key Vault | Missing native secret or any `keyVaultUrl` → `FLAGGED` |
 | **Output ref validity** — every `moduleRef.outputs.X` is declared in the referenced module | Missing output → `FLAGGED` |
 
 ### Terraform
@@ -71,7 +72,7 @@ Trace references BETWEEN modules — per-file checks miss broken cross-module wi
 |-------|--------|
 | File structure: `main.tf`, `variables.tf`, `outputs.tf`, `backend.tf`, `modules/` | `mcp_azure_mcp_azureterraformbestpractices` |
 | Provider: `azurerm ~> 4.0` | Terraform registry |
-| System-assigned managed identity, no `administrator_login`, KV RBAC | `terraform-patterns.md` |
+| System-assigned managed identity, no `administrator_login`, no Key Vault (`shared_access_key_enabled=false` etc.) | `terraform-patterns.md` |
 | Container Apps: two-phase ACR wiring | Same pattern as Bicep |
 
 **Rating:** Matches → `VERIFIED`. Reasonable deviation → `PLAUSIBLE`. Violates → `FLAGGED`.

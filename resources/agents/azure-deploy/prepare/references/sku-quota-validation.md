@@ -56,8 +56,6 @@ At/near cap → treat SWA Free as UNAVAILABLE (no self-service increase — rais
 
 **Storage** — default limit 250 accounts/region. Rarely exhausted — skip programmatic check unless the plan requires multiple storage accounts.
 
-**Key Vault** — no quota API exists (returns `NotFound`). Default limit ~1000 vaults/subscription. Skip programmatic check.
-
 ### Interpret Results
 
 - `available > 0` → AVAILABLE. `available = 0` / `limit <= 0` → BLOCKED (a `limit=0`, `used=-1` response is the API sentinel for "Free tier not offered in this region" — the script clamps it so it does not read as available). 404/empty → fallback candidate.

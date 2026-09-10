@@ -42,7 +42,7 @@ Return JSON (≤500 tokens):
 - ⛔ **Do NOT invoke any other agents or hand off** — no external agent calls of any kind. You are a pricing subagent only. Use direct HTTP to `https://prices.azure.com/api/retail/prices` for price queries (MCP pricing was already attempted inline by the caller).
 - ⛔ Check free-tier shortcut FIRST — if ALL services use free SKUs, return $0 with disclaimer
 - ⛔ `armSkuName` is case-sensitive — use `B1` not `b1`
-- ⛔ For services with empty `armSkuName` (Container Apps, Functions Consumption, ACR, Storage, Cosmos, Key Vault): use `filter`/`meterName` matching — a `sku` filter returns `[]`
+- ⛔ For services with empty `armSkuName` (Container Apps, Functions Consumption, ACR, Storage, Cosmos): use `filter`/`meterName` matching — a `sku` filter returns `[]`
 - ⛔ **Monthly multiplier = each meter's `unitOfMeasure`** (`1 Hour`→×730, `1/Day`→×30 [ACR/registry, SQL DTU], `1 GB/Month`→×GB, `1 Second`→usage) — NEVER blanket ×730; applying ×730 to a `1/Day` meter overstates ~24×
 - ⛔ Use direct HTTP to `https://prices.azure.com/api/retail/prices` for all price lookups. Do NOT use `mcp_azure_mcp_pricing` — it was already tried inline and failed.
 - ⛔ Never hardcode dollar amounts — always query live prices

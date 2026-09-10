@@ -30,7 +30,7 @@
 
 1. Pick SKU from [sku-matrix.md](sku-matrix.md) based on budget intent.
 2. Find service section in [pricing-guide-services.md](pricing-guide-services.md) for filter strings and formulas.
-3. Call the pricing router — tool `mcp_azure_mcp_pricing` (VS Code) / `azure-pricing` (CLI) — with `intent`, `command: "pricing_get"`, and a `parameters` object (NOT `--flags`). Parallel OK. ⛔ At least one filter inside `parameters`: `sku`, `service`, `region`, `service-family`, or `filter`. ⛔ **`sku` matches `armSkuName`, not `skuName`** — use it ONLY when `armSkuName` is populated (App Service, MySQL/PostgreSQL, Redis). Empty-`armSkuName` services (ACR, Storage, Cosmos, Key Vault) return `[]` or 400 for `sku`/`service` — use a raw `filter` on `serviceName` + `meterName` instead.
+3. Call the pricing router — tool `mcp_azure_mcp_pricing` (VS Code) / `azure-pricing` (CLI) — with `intent`, `command: "pricing_get"`, and a `parameters` object (NOT `--flags`). Parallel OK. ⛔ At least one filter inside `parameters`: `sku`, `service`, `region`, `service-family`, or `filter`. ⛔ **`sku` matches `armSkuName`, not `skuName`** — use it ONLY when `armSkuName` is populated (App Service, MySQL/PostgreSQL, Redis). Empty-`armSkuName` services (ACR, Storage, Cosmos) return `[]` or 400 for `sku`/`service` — use a raw `filter` on `serviceName` + `meterName` instead.
 4. Apply the monthly multiplier from each meter's `unitOfMeasure` (see § Monthly Multiplier) — NOT a per-service constant.
 5. Cross-check returned `retailPrice` against planned SKU.
 

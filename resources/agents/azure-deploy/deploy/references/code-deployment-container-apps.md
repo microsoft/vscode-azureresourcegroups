@@ -26,7 +26,7 @@ Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + A
 |------|---------|-------|
 | 1. Build image | `az acr build --subscription {subscriptionId} -r {acrName} -t {appName}:latest . --no-logs` | Builds from workspace root. If `buildRequirements.hasBuildKitSyntax`, use `-f Dockerfile.azure` (see BuildKit handling below). ⛔ **Build-time env vars:** If Dockerfile has `ARG NEXT_PUBLIC_*` or `ARG VITE_*`, pass `--build-arg NEXT_PUBLIC_API_URL=https://{api-fqdn}` to inject the deployed API URL. These vars are baked into the JS bundle at build time — runtime env vars have no effect on client-side code. Get the API FQDN from Phase 1 output: `az containerapp show -g {rg} -n {apiApp} --query properties.configuration.ingress.fqdn -o tsv`. |
 | 2. Update Bicep image | Edit `infra/modules/{containerapp}.bicep`: replace placeholder with `image: '{acrLoginServer}/{appName}:latest'`. Add ACR registry config: `registries: [{ server: acrLoginServer, identity: 'system' }]` | IaC-only — no imperative `az containerapp update` |
-| 3. Redeploy | `az deployment sub create --subscription {subscriptionId} --location {location} --template-file infra/main.bicep --parameters @infra/main.parameters.json --parameters administratorLoginPassword=$dbPassword --name app-onboard-code-deploy-{timestamp} --query properties.provisioningState -o tsv` | Emit new portal link. ⛔ `$dbPassword` = existing KV secret, never new/placeholder — see [Parameter Pass-Through](#parameter-pass-through-bicep-redeploy-safety). |
+| 3. Redeploy | `az deployment sub create --subscription {subscriptionId} --location {location} --template-file infra/main.bicep --parameters @infra/main.parameters.json --parameters containerImage='{acrLoginServer}/{appName}:latest' --name app-onboard-code-deploy-{timestamp} --query properties.provisioningState -o tsv` | Emit new portal link. ⛔ No DB password param — databases are managed-identity only (see [Parameter Pass-Through](#parameter-pass-through-bicep-redeploy-safety)). |
 | 4. Verify revision | `az containerapp show --subscription {subscriptionId} -g {rg} -n {ca} --query "{revision:properties.latestReadyRevisionName, image:properties.template.containers[0].image}" -o json` | Confirm image is not the placeholder |
 
 > ⛔ **`az acr build` failures count toward the `deploy-result.json.healingAttempts[]` counter.** After 3 failed builds (even with different root causes), pause and present a diagnosis to the user: "Web image build failed 3 times: [root causes]. Continue healing? (Yes / Cancel)." Each build fix attempt = 1 healing entry. Cross-reference deploy instructions.md healing loop rule.
@@ -41,15 +41,16 @@ az containerapp update --subscription {subscriptionId} -g {rg} -n {ca} --source 
 
 > ⛔ **`az containerapp update --source` is allowed for code deploy ONLY.** This is different from `az containerapp up --source` (which is ⛔ BLOCKED because it creates resources imperatively). `update --source` updates an EXISTING Container App — no state drift.
 
-## Seed KV Secrets (between Phase 1 and Phase 2)
+## App-Internal Secrets (native CA secrets — No Key Vault, no seeding step)
 
-After Phase 1, seed real secret values into KV before Phase 2 activates `secretRef`:
+App-internal secrets are set as **native Container Apps secrets** directly in the Bicep, with the value supplied as an `@secure()` param on the deployment command. ⛔ **No Key Vault, no `az keyvault secret set` step.** Generate each secret ONCE and pass it on every `az deployment sub create`:
 
 ```powershell
-az keyvault secret set --subscription {subscriptionId} --vault-name {kvName} --name {secret-name} --value $generatedValue
+$secretKey = (openssl rand -base64 32) -replace '[/+=]',''   # generate ONCE, persist to deploy-secrets.env
+az deployment sub create ... --parameters secretKey=$secretKey --query properties.provisioningState -o tsv
 ```
 
-> ⛔ Use the SAME generated password passed to `az deployment sub create`. Shell variables don't persist between tool calls — reload from `deploy-secrets.env` (see deploy-safety.md § Deploy Checklist) or pass to BOTH commands in the same block.
+> ⛔ Reload the SAME value from `deploy-secrets.env` on every retry/redeploy (shell variables don't persist between tool calls). Pass it to EVERY deployment so the desired-state apply keeps the CA secret stable.
 
 ## After Code Deploy (all paths)
 
@@ -57,9 +58,9 @@ az keyvault secret set --subscription {subscriptionId} --vault-name {kvName} --n
 - Proceed to Step 7 (Health-Check Endpoints)
 - If health check returns placeholder content → image update didn't take effect. Check `az containerapp revision list`
 
-> ⛔ **`az containerapp revision restart` does NOT re-resolve KV secrets.** Container Apps caches KV-backed `secretRef` values at revision *creation* time. To pick up updated KV secrets, create a NEW revision by redeploying Bicep (preferred) or `az containerapp update --revision-suffix rev{timestamp}`. Do NOT use `revision restart` for KV secret rotation — it only restarts the container with the same cached values.
+> ⛔ **`az containerapp revision restart` does NOT pick up a changed secret.** Container Apps bind secret values at revision *creation* time. To pick up an updated native secret, create a NEW revision by redeploying Bicep (preferred) or `az containerapp update --revision-suffix rev{timestamp}`.
 
-> ⛔ **KV secretRef AND ACR registries require managed identity + roles to exist first.** Phase 1 of the two-phase deploy creates the Container App with a placeholder image, `registries: []`, and `secrets: []`. Both KV `secretRef` and ACR `registries` with `identity: 'system'` fail in Phase 1 because the CA's managed identity doesn't exist yet (no principalId → AcrPull/KV role assignment fails → "Operation expired"). After Phase 1 completes and RBAC propagates (~60s), Phase 2 redeploys with ACR registries + KV secretRef + real image + correct `targetPort`.
+> ⛔ **ACR registries require the CA managed identity + AcrPull to exist first.** Phase 1 of the two-phase deploy creates the Container App with a placeholder image and `registries: []` (native secrets MAY be set in Phase 1 — they have no RBAC dependency). ACR `registries` with `identity: 'system'` fails in Phase 1 because the CA's managed identity doesn't exist yet (no principalId → AcrPull fails → "Operation expired"). After Phase 1 completes and RBAC propagates (~60s), Phase 2 redeploys with ACR registries + real image + correct `targetPort`.
 
 ## Config-File Apps (Go/Viper, Spring Boot, etc.)
 
@@ -77,16 +78,15 @@ ACR's `az acr build` uses the classic Docker builder — it does NOT support Bui
 
 ## Parameter Pass-Through (Bicep Redeploy Safety)
 
-⛔ **On every redeploy, pass the SAME values you originally used** — a full desired-state apply, not a patch, so an omitted param reverts to its default and a regenerated secret overwrites the live value. Two params bite:
+⛔ **On every redeploy, pass the SAME values you originally used** — a full desired-state apply, not a patch, so an omitted param reverts to its default. The one param that bites:
 
 - **`containerImage`** — omitting it reverts the Container App to the placeholder image.
-- **`administratorLoginPassword`** (DB modules) — passing a new or placeholder value silently RESETS the database admin password, desyncing it from the Key Vault secret the app reads → runtime auth failures (`Access denied for user`).
+
+> ⛔ **No `administratorLoginPassword` (or any DB password/key) param exists** — databases are Entra/managed-identity only. There is nothing to re-pass and no `deploy-secrets.env` DB password. App-internal secrets (e.g. `SECRET_KEY`) live in Key Vault and are read via the app's MI — they are not passed as deploy params.
 
 ```powershell
-$dbPassword = az keyvault secret show --subscription {subscriptionId} --vault-name {kvName} --name {db-secret} --query value -o tsv
 az deployment sub create ... `
   --parameters containerImage='{acrLoginServer}/{appName}:latest' `
-  --parameters administratorLoginPassword=$dbPassword `
   --query properties.provisioningState -o tsv
 ```
 

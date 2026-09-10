@@ -35,9 +35,9 @@ When `az deployment sub create` returns 403 (insufficient subscription-scope per
 
 ## Deploy Checklist
 
-> ⛔ **Use sync shells** so state persists. **Persist secrets** to `.copilot-azure/sessions/{id}/deploy-secrets.env` — generate each secret ONCE (URL-safe, no `/+=`), reload in every later shell. Never regenerate an existing key. Key Vault is the durable source of truth for every secret (the file is only a cross-shell reload cache and is git-ignored via `.copilot-azure/`). NEVER echo or log rendered secret values.
+> ⛔ **Use sync shells** so state persists. **App-internal secrets only** (e.g. `SECRET_KEY`, JWT signing key, third-party API keys) are generated at deploy and passed as `@secure()` params → stored on the compute resource (App Service app settings / Container Apps native secrets). ⛔ **No Key Vault.** ⛔ **There are NO database/cache/storage passwords or access keys** — those services are managed-identity + token (see [database-post-deploy.md](database-post-deploy.md)). Persist any app-internal secret to `.copilot-azure/sessions/{id}/deploy-secrets.env` — generate each ONCE (URL-safe, no `/+=`), reload in every later shell, and pass to EVERY deployment. Never regenerate an existing key (the desired-state apply would overwrite the live value). The file is a git-ignored cross-shell reload cache. NEVER echo or log rendered secret values.
 >
-> ⛔ **URL-safe passwords required** when app uses URL-based connection strings. Forbidden chars: `# @ / ? % : & = + ;`.
+> ⛔ **URL-safe app-internal secrets** when embedded in URLs. Forbidden chars: `# @ / ? % : & = + ;`.
 > ⛔ **`az webapp deploy` does NOT support `--track-status`.**
 > ⛔ **`az rest` on Windows PowerShell:** ALWAYS include `--headers "Content-Type=application/json"`.
 > ⛔ **Suppress deployment output:** Add `--query properties.provisioningState -o tsv` to deployment commands. For `az acr build`, append `--no-logs`.

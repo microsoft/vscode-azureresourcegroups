@@ -21,15 +21,15 @@ Component→Azure service selection. Apply `context.json.intent` as modifiers, `
 
 **AKS vs Container Apps:** Use Container Apps when scale-to-zero needed, no K8s expertise, or KEDA-driven event processing. Delegate AKS planning to the `azure-kubernetes` agent.
 
-**App Service vs Container Apps:** App Service preferred when user wants free tier (F1 $0 / B1 ~$13/mo) or single-process with no container orchestration. Container Apps preferred for REST/GraphQL APIs (scaffold generates Dockerfile if missing), scale-to-zero, multi-container/sidecar, or event-driven KEDA scaling. Budget affects SKU tier (Consumption vs Dedicated), not compute service type. Container Apps Consumption has no fixed free tier but scales to zero.
+**App Service vs Container Apps:** App Service preferred for single-process apps with no container orchestration (B1 floor, ~$13/mo — no free tier is offered). Container Apps preferred for REST/GraphQL APIs (scaffold generates Dockerfile if missing), scale-to-zero, multi-container/sidecar, or event-driven KEDA scaling. Budget affects SKU tier (Consumption vs Dedicated), not compute service type. Container Apps Consumption scales to zero (near-$0 idle) — the closest thing to free, and it supports managed identity.
 
 **Static Dockerfile sites (nginx/httpd serving HTML):**
-- **Primary:** Static Web Apps Free — $0, global CDN.
+- **Primary:** Static Web Apps **Standard** — global CDN, custom auth/CORS, managed-identity BYO backends.
   > ⛔ **SWA region availability:** Validate via `az provider show --namespace Microsoft.Web --query "resourceTypes[?resourceType=='staticSites'].locations" -o tsv`.
-- **Alternative:** App Service F1 (Free) — ⛔ F1 does NOT run Docker. Use Windows F1 (IIS serves `index.html` natively) or Linux F1 (`linuxFxVersion: 'STATICSITE|1.0'`). ⛔ Do NOT use `NODE|*`/`PHP|*`/`PYTHON|*` for static sites — causes 504/503 cold start.
+- **Alternative:** App Service **B1** — ⛔ for static content use Windows B1 (IIS serves `index.html` natively) or Linux B1 (`linuxFxVersion: 'STATICSITE|1.0'`). ⛔ Do NOT use `NODE|*`/`PHP|*`/`PYTHON|*` for static sites — causes 504/503 cold start.
 - **If Docker required:** Container Apps (scale-to-zero) or App Service B1+ (custom containers).
 
-**Plain HTML (no package manager, no Dockerfile):** Windows App Service F1 preferred (IIS serves natively). Linux: `linuxFxVersion: 'STATICSITE|1.0'`. Or Static Web Apps Free.
+**Plain HTML (no package manager, no Dockerfile):** Static Web Apps Standard preferred, or Windows App Service B1 (IIS serves natively; Linux: `linuxFxVersion: 'STATICSITE|1.0'`).
 
 ## Data
 
@@ -66,7 +66,6 @@ Component→Azure service selection. Apply `context.json.intent` as modifiers, `
 |---------|---------|
 | Log Analytics | Centralized logging |
 | Application Insights | Monitoring + APM |
-| Key Vault | Secrets management |
 | Managed Identity | Service-to-service auth (zero secrets) |
 
 ## Specialized Routing
@@ -93,7 +92,7 @@ When `context.json.detectedInfraProvider.terraform` is `"gcp"` or `"aws"`, read 
 | `google_sql_database_instance` (MYSQL) | MySQL Flexible Server | Map tier, backup config |
 | `google_artifact_registry_repository` | Container Registry (ACR) | Basic tier unless geo-replication needed |
 | `google_pubsub_topic` / `google_pubsub_subscription` | Service Bus | Map topic/subscription model |
-| `google_secret_manager_secret` | Key Vault | Map secret references |
+| `google_secret_manager_secret` | On-compute app secret (App Service app settings / CA native secrets) — ⛔ no Key Vault | App-internal secrets only; Azure resource auth uses managed identity |
 | `google_firestore_database` | Cosmos DB (NoSQL API) | Map indexes, TTL config |
 | `google_cloudfunctions2_function` | Azure Functions | Map triggers, runtime |
 | `google_service_account` + `google_project_iam_member` | Managed Identity + RBAC | Map role bindings |
@@ -109,6 +108,6 @@ Other GCP resources (storage, redis, compute network, VPC connector, cloud tasks
 | `aws_lambda_function` | Azure Functions | Map runtime, handler, triggers |
 | `aws_dynamodb_table` | Cosmos DB (NoSQL API) | Map capacity, indexes |
 | `aws_sns_topic` | Service Bus or Event Grid | Map subscriptions |
-| `aws_secretsmanager_secret` | Key Vault | Map secret references |
+| `aws_secretsmanager_secret` | On-compute app secret (App Service app settings / CA native secrets) — ⛔ no Key Vault | App-internal secrets only; Azure resource auth uses managed identity |
 
 Other AWS resources (S3, ECR, SQS, ElastiCache) map 1:1 to their Azure equivalents (Blob Storage, ACR, Queue Storage/Service Bus, Redis Cache). SQS → Service Bus if FIFO ordering needed.

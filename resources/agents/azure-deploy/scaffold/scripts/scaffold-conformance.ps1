@@ -83,7 +83,6 @@ $typeMap = [ordered]@{
   'container registry'           = 'Microsoft\.ContainerRegistry/registries'
   'mysql'                        = 'Microsoft\.DBforMySQL/flexibleServers'
   'postgres'                     = 'Microsoft\.DBforPostgreSQL/flexibleServers'
-  'key vault'                    = 'Microsoft\.KeyVault/vaults'
   'log analytics'                = 'Microsoft\.OperationalInsights/workspaces'
   'application insights'         = 'Microsoft\.Insights/components'
   'static web app'               = 'Microsoft\.Web/staticSites'
@@ -137,26 +136,54 @@ if (($hasMysql -or $hasPg) -and $iac) {
     Add-Fail 'MYSQL-NO-NETWORK-BLOCK' 'MySQL module includes a network block (delegatedSubnetResourceId) — omit it for public access; an empty value is rejected by ARM' 'infra/modules'
   }
 
-  # 11. DB-LOGIN-NOT-RESERVED — administratorLogin must not be an Azure-reserved name.
-  if ($iac -match "administratorLogin:\s*'(root|admin|administrator|guest|public|sa|azure_superuser|azure_pg_admin)'") {
-    Add-Fail 'DB-LOGIN-NOT-RESERVED' "administratorLogin uses a reserved name ('$($Matches[1])') — derive a safe login (e.g. '{project}admin'), never a compose-sourced reserved name" 'infra/modules'
+  # 11. DB-NO-LOCAL-AUTH — data services MUST be Entra / managed-identity only. No admin login/password.
+  if ($iac -match "administratorLogin\s*:") {
+    Add-Fail 'DB-NO-LOCAL-AUTH' "administratorLogin/administratorLoginPassword present — databases must be Entra-only (authConfig passwordAuth Disabled + Entra admin). Remove ALL admin login/password params." 'infra/modules'
+  }
+  if ($iac -match "passwordAuth\s*:\s*'Enabled'") {
+    Add-Fail 'DB-NO-LOCAL-AUTH' "PostgreSQL authConfig sets passwordAuth: 'Enabled' — must be 'Disabled' (Entra-only)" 'infra/modules'
+  }
+  # 11b. DB-ENTRA-ADMIN — PG/MySQL must set an Entra administrator so migrations run token-based.
+  if (($hasPg -or $hasMysql) -and ($iac -notmatch 'flexibleServers/administrators')) {
+    Add-Fail 'DB-ENTRA-ADMIN' 'PostgreSQL/MySQL module missing an administrators (Entra admin) child resource — required for Entra-only auth + token-based migrations' 'infra/modules'
+  }
+  # 11c. PG-ENTRA-ONLY — PostgreSQL must explicitly disable password auth.
+  if ($hasPg -and ($iac -notmatch "passwordAuth\s*:\s*'Disabled'")) {
+    Add-Fail 'PG-ENTRA-ONLY' "PostgreSQL module missing authConfig { passwordAuth: 'Disabled', activeDirectoryAuth: 'Enabled' }" 'infra/modules'
+  }
+}
+
+# --- No shared-key / access-key / local-auth on any data service (managed-identity only) ---
+if ($iac) {
+  # 11d. STORAGE-NO-SHARED-KEY
+  if (($iac -match 'Microsoft\.Storage/storageAccounts') -and ($iac -notmatch 'allowSharedKeyAccess\s*:\s*false')) {
+    Add-Fail 'STORAGE-NO-SHARED-KEY' 'Storage account must set allowSharedKeyAccess: false (managed-identity only)' 'infra/modules'
+  }
+  # 11e. REDIS-NO-KEYS
+  if (($iac -match 'Microsoft\.Cache/redis') -and ($iac -notmatch 'disableAccessKeyAuthentication\s*:\s*true')) {
+    Add-Fail 'REDIS-NO-KEYS' 'Redis must set disableAccessKeyAuthentication: true + accessPolicyAssignments (Entra only)' 'infra/modules'
+  }
+  # 11f. COSMOS-NO-LOCAL-AUTH
+  if (($iac -match 'Microsoft\.DocumentDB/databaseAccounts') -and ($iac -notmatch 'disableLocalAuth\s*:\s*true')) {
+    Add-Fail 'COSMOS-NO-LOCAL-AUTH' 'Cosmos DB must set disableLocalAuth: true (data-plane RBAC only)' 'infra/modules'
+  }
+  # 11g. SBUS-EHUB-NO-LOCAL-AUTH
+  if (($iac -match 'Microsoft\.ServiceBus/namespaces|Microsoft\.EventHub/namespaces') -and ($iac -notmatch 'disableLocalAuth\s*:\s*true')) {
+    Add-Fail 'MSG-NO-LOCAL-AUTH' 'Service Bus / Event Hubs namespace must set disableLocalAuth: true (managed-identity only)' 'infra/modules'
+  }
+  # 11h. NO-FREE-SKU — free/shared compute tiers are not allowed (managed identity is mandatory).
+  if ($iac -match "name\s*:\s*'(F1|D1)'") {
+    Add-Fail 'NO-FREE-SKU' "App Service plan uses a free/shared SKU ('$($Matches[1])') — floor is B1 (managed identity is mandatory; the free-tier MI sidecar OOMs)" 'infra/modules'
+  }
+  if (($iac -match 'Microsoft\.Web/staticSites') -and ($iac -match "tier\s*:\s*'Free'")) {
+    Add-Fail 'NO-FREE-SKU' "Static Web App uses the Free tier — floor is Standard" 'infra/modules'
   }
 }
 
 # --- Key Vault checks ---
-# Gate on the IaC resource (matches the .sh twin and this script's own CA/ACR gating) — NOT the plan
-# service name, which misses KV when the plan names the service anything other than 'Key Vault'.
-if (($iac -match 'Microsoft\.KeyVault/vaults')) {
-  # 7. KV-NO-PURGE — subscription policy rejects enablePurgeProtection:false; omit it entirely.
-  if ($iac -match 'enablePurgeProtection') {
-    Add-Fail 'KV-NO-PURGE' 'enablePurgeProtection present — omit it (policy may reject false)' 'infra/modules'
-  }
-  # 8. KV-DEPLOYER-ROLE — deployer needs Key Vault Secrets Officer + a deployerObjectId param.
-  $hasOfficer = $iac -match 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
-  $hasParam   = ($paramsRaw -match 'deployerObjectId') -or ($iac -match 'deployerObjectId')
-  if (-not ($hasOfficer -and $hasParam)) {
-    Add-Fail 'KV-DEPLOYER-ROLE' 'missing deployer Key Vault Secrets Officer role and/or deployerObjectId param' 'infra/modules/role-assignments.bicep'
-  }
+# --- No Key Vault (app-internal secrets live on the compute resource) ---
+if (($iac -match 'Microsoft\.KeyVault/vaults') -or ($iac -match '@Microsoft\.KeyVault') -or ($iac -match 'keyVaultUrl')) {
+  Add-Fail 'NO-KEYVAULT' 'Key Vault detected (Microsoft.KeyVault/vaults, @Microsoft.KeyVault(...), or keyVaultUrl) — no Key Vault is allowed. Store app-internal secrets on the compute resource: @secure() param -> App Service appSettings / Container Apps native secrets[].' 'infra/'
 }
 
 # --- Container Apps / ACR checks (deterministic ARM-failure invariants) ---
