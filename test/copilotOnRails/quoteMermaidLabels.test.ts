@@ -39,6 +39,22 @@ suite('quoteMermaidLabels', () => {
             );
         });
 
+        test('quotes a round label that starts with @', () => {
+            // `(text)` is one of the most common flowchart shapes, and a leading `@` breaks
+            // it for the same reason it breaks an edge label.
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n  A(@azure/identity) --> B\n'),
+                'graph LR\n  A("@azure/identity") --> B\n',
+            );
+        });
+
+        test('quotes a benign round label without corrupting it', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n  A(Storefront Web) --> B(Commerce API)\n'),
+                'graph LR\n  A("Storefront Web") --> B("Commerce API")\n',
+            );
+        });
+
         test('quotes a subgraph title', () => {
             assert.strictEqual(
                 quoteMermaidLabels('graph TB\n    subgraph core [Core Services]\n        A[API] --> B[DB]\n    end'),
@@ -74,6 +90,21 @@ suite('quoteMermaidLabels', () => {
         test('is idempotent', () => {
             const once = quoteMermaidLabels('graph LR\n    A[API] -->|calls| B[(DB)]');
             assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('is idempotent on a round-shape diagram', () => {
+            const once = quoteMermaidLabels('graph LR\n  A(@azure/identity) --> B(Commerce API)\n');
+            assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('does not re-quote a stadium label as a round one', () => {
+            // The `[text]` rule turns `A([Start])` into `A(["Start"])` before the round
+            // rule runs, so the round rule has to leave a paren body that starts with `[`
+            // alone — otherwise the stadium collapses into `A("[\"Start\"]")`.
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n  A([Start]) --> B\n'),
+                'graph LR\n  A(["Start"]) --> B\n',
+            );
         });
 
         test('does not touch brackets, braces or pipes inside an already-quoted label', () => {
