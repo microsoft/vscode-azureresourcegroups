@@ -199,11 +199,29 @@ interface GateTally {
     notApplicableReasons: Map<string, number>;
 }
 
+/**
+ * What a gate's numbers are actually *about*.
+ *
+ * A gate wired only into a harness self-test grades a checked-in fixture, so its pass rate is a
+ * statement about the fixture and the container — never about the agent. Reporting it in the same
+ * column as a product gate is how a healthy suite comes to look broken: on 2026-09-10 the five
+ * `runtime-*` gates sat at 0–42% and were read as "the product cannot produce working code", when
+ * every one of them is declared solely by `gates-selftest-*`, whose own first line reads
+ * "⚠️ HARNESS SELF-TEST. NOT A PRODUCT SIGNAL. ⚠️".
+ *
+ * `mixed` is deliberately not split into two numbers. Doing that needs per-run attribution of
+ * stimulus, which this tool does not have; claiming a split it cannot compute would replace an
+ * obviously-uninterpretable row with a confidently wrong one.
+ */
+type GateSubject = 'product' | 'fixture' | 'mixed' | 'unknown';
+
 interface GateRow {
     gate: string;
     tally: GateTally;
     verdict: Verdict;
     confident: boolean;
+    /** Whether the row grades agent output, a fixture, or both. See `GateSubject`. */
+    subject: GateSubject;
 }
 
 interface Options {
@@ -956,6 +974,48 @@ async function declaredToday(identityByComment: boolean): Promise<Map<string, st
     return declared;
 }
 
+/**
+ * Stimuli that grade a checked-in fixture rather than agent output.
+ *
+ * Detected from the banner the stimulus writes about itself rather than from a filename list, so a
+ * new self-test is classified the moment it is written and a renamed one does not silently become
+ * a product signal. The marker is a YAML *comment*, so this reads the raw text — `declaredToday`
+ * parses the document and comments are gone by then.
+ */
+function fixtureStimuli(): Set<string> {
+    const fixtures = new Set<string>();
+    if (!existsSync(STIMULI_DIR)) {
+        return fixtures;
+    }
+    for (const file of readdirSync(STIMULI_DIR).filter(name => /\.ya?ml$/u.test(name))) {
+        // Only the BANNER counts — the first lines, where a self-test declares what it is.
+        // Scanning the whole file matches any stimulus that merely discusses fixtures: caught
+        // immediately, because `integrate-seam` explains at line 24 why it does NOT use a
+        // fixture seed and was classified as one. That failed towards hiding real product
+        // signal, which is the direction this report must never fail in.
+        const banner = readFileSync(join(STIMULI_DIR, file), 'utf8').split(/\r?\n/u).slice(0, 3).join('\n');
+        if (/HARNESS SELF-TEST/iu.test(banner) || /NOT A PRODUCT SIGNAL/iu.test(banner)) {
+            fixtures.add(file.replace(/\.ya?ml$/u, ''));
+        }
+    }
+    return fixtures;
+}
+
+/** Classify every declared gate by what its observations are about. */
+function subjectsByGate(declared: Map<string, string[]>): Map<string, GateSubject> {
+    const fixtures = fixtureStimuli();
+    const subjects = new Map<string, GateSubject>();
+    for (const [gate, stimuli] of declared) {
+        const unique = [...new Set(stimuli)];
+        const fromFixture = unique.filter(name => fixtures.has(name)).length;
+        subjects.set(
+            gate,
+            fromFixture === 0 ? 'product' : fromFixture === unique.length ? 'fixture' : 'mixed',
+        );
+    }
+    return subjects;
+}
+
 /** The commonest few causes, for a one-line summary. */
 function topReasons(counter: Map<string, number>, limit = 2): string {
     return [...counter.entries()]
@@ -973,16 +1033,23 @@ function printTable(rows: GateRow[]): void {
         `${'n/att'.padStart(7)}${'n/a'.padStart(6)}${'runs'.padStart(6)}${'rate'.padStart(7)}  VERDICT`
     );
     console.log('-'.repeat(width + 38));
-    for (const { gate, tally, verdict, confident } of rows) {
+    for (const { gate, tally, verdict, confident, subject } of rows) {
         const name = gate.length > width - 2 ? `${gate.slice(0, width - 5)}...` : gate;
         const rate = passRate(tally);
+        // Said on the row itself, not only in a footnote: the whole failure this prevents is
+        // someone reading a rate off this table and quoting it as product quality.
+        const about = subject === 'fixture'
+            ? '  [FIXTURE — not a product signal]'
+            : subject === 'mixed'
+                ? '  [MIXED fixture+product — rate not interpretable]'
+                : '';
         console.log(
             `${name.padEnd(width)}${String(tally.passed).padStart(6)}${String(tally.failed).padStart(6)}` +
             `${String(tally.notAttempted).padStart(7)}${String(tally.notApplicable).padStart(6)}` +
             `${String(tally.runs.size).padStart(6)}` +
             // "n/a" rather than 100%: a gate with no applicable observations has no pass rate.
             `${(rate === undefined ? 'n/a' : `${Math.round(rate * 100)}%`).padStart(7)}` +
-            `  ${verdict}${confident ? '' : ' (low confidence)'}`
+            `  ${verdict}${confident ? '' : ' (low confidence)'}${about}`
         );
     }
     console.log('');
@@ -1049,6 +1116,28 @@ function printFindings(
     console.log('='.repeat(78));
     console.log('WHAT TO GO AND LOOK AT');
     console.log('='.repeat(78));
+
+    // Printed before every other finding, because it decides how to read all of them: a fixture
+    // row's numbers are not about the agent, and a mixed row's rate is not about anything.
+    const fixtureRows = rows.filter(row => row.subject === 'fixture');
+    const mixedRows = rows.filter(row => row.subject === 'mixed');
+    if (fixtureRows.length > 0 || mixedRows.length > 0) {
+        console.log('');
+        console.log('WHAT THESE NUMBERS ARE ABOUT — read this before quoting any rate below.');
+        if (fixtureRows.length > 0) {
+            console.log(`  ${fixtureRows.length} gate(s) are declared ONLY by harness self-tests. They grade a`);
+            console.log('  checked-in fixture, so their pass rate describes the fixture and the container');
+            console.log('  and says NOTHING about the agent. Quoting one as product quality is the vacuous');
+            console.log('  pass this tool exists to prevent, pointed at the tool itself:');
+            console.log(`    ${fixtureRows.map(row => row.gate).join(', ')}`);
+        }
+        if (mixedRows.length > 0) {
+            console.log(`  ${mixedRows.length} gate(s) are declared by BOTH a self-test and a product stimulus, so`);
+            console.log('  each row sums fixture and agent observations. The rate is not interpretable in');
+            console.log('  either direction; split the stimulus or read the runs individually:');
+            console.log(`    ${mixedRows.map(row => row.gate).join(', ')}`);
+        }
+    }
 
     let actionable = 0;
 
@@ -1388,17 +1477,24 @@ async function main(): Promise<void> {
         throw new GateHealthError('No assertion results found in any audited run; nothing to audit.');
     }
 
+    const declared = await declaredToday(options.identityByComment);
+    const subjects = subjectsByGate(declared);
+
     const rows: GateRow[] = [...tallies.entries()]
         .map(([gate, tally]) => ({
             gate,
             tally,
             verdict: classify(tally),
             confident: tally.runs.size >= options.minRuns,
+            // A gate observed in the corpus but absent from today's stimuli cannot be classified:
+            // its declaring stimulus was renamed or deleted. Reported as `unknown` rather than
+            // assumed to be a product signal.
+            subject: subjects.get(gate) ?? 'unknown',
         }))
         .sort((a, b) => a.gate.localeCompare(b.gate));
 
     const unexercised = new Map<string, string[]>();
-    for (const [gate, stimuli] of await declaredToday(options.identityByComment)) {
+    for (const [gate, stimuli] of declared) {
         if (!tallies.has(gate)) {
             unexercised.set(gate, stimuli);
         }
@@ -1413,10 +1509,11 @@ async function main(): Promise<void> {
             readerFaults,
             skipped,
             minRuns: options.minRuns,
-            gates: rows.map(({ gate, tally, verdict, confident }) => ({
+            gates: rows.map(({ gate, tally, verdict, confident, subject }) => ({
                 gate,
                 verdict,
                 confident,
+                subject,
                 passed: tally.passed,
                 failed: tally.failed,
                 notAttempted: tally.notAttempted,
