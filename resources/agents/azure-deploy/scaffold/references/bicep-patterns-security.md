@@ -108,6 +108,17 @@ appSettings: [
 
 For Container Apps, put the secret in the Container App's **native** `secrets: [{ name, value: secretKey }]` array (value from an `@secure()` param) and reference it via `secretRef` — see [bicep-container-apps.md](bicep-container-apps.md). ⛔ **Never** emit a `Microsoft.KeyVault/vaults` resource.
 
+### App Settings Are Non-Secret Endpoint Configuration Only
+
+> ⛔ **App settings / container `env` MUST NOT contain any secret or connection string.** With managed identity the app authenticates by token — there is nothing secret to configure. App settings carry ONLY **non-secret endpoint configuration** that tells the app *where* and *as which identity* to connect:
+> - **Endpoint / host** — e.g. `PGHOST=myserver.postgres.database.azure.com`, `AZURE_STORAGE_BLOB_ENDPOINT=https://myacct.blob.core.windows.net`
+> - **Resource name** — e.g. database name, container/queue name
+> - **Identity principal** — the MI's DB principal name as the connection `user` (Postgres/MySQL AAD auth)
+> - **`AZURE_CLIENT_ID`** — ONLY for a user-assigned MI, so `DefaultAzureCredential` selects the right identity (omit for system-assigned)
+> - **Non-secret app flags** — e.g. `NODE_ENV`, `PGSSLMODE=require`, CORS origins
+>
+> ❌ **NEVER put in app settings / `env`:** a full **connection string** (`DATABASE_URL=postgres://user:pass@host/db`, `AccountKey=...`, `SharedAccessKey=...`), a **password**, an **access key**, a **SAS token**, or any other credential. If a value would authenticate you, it does not belong here — use managed identity instead. The ONLY secret-like value permitted anywhere is a genuinely app-internal secret (e.g. `SECRET_KEY`) that is NOT an Azure resource credential, and even that is passed as an `@secure()` param, never as a plain app-setting literal.
+
 ### Transport — HTTPS Only
 
 All web-facing resources:
