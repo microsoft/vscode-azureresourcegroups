@@ -28,8 +28,27 @@
 # and the model half of that key is read from here: `--model .` makes the vscode
 # plugin resolve the model from this block rather than from the CLI flag. Changing
 # `id` therefore moves our runs into a different queue — see README.md, "Run queueing".
+#
+# It must be a model the agents declare in their `model:` front-matter. This pinned
+# `claude-sonnet-4.5` for 66 of the corpus's 93 runs — a model no agent lists and
+# `MODEL_DISPLAY_NAME_TO_ID` does not map — so those runs measured a configuration the
+# product does not ship. `check-agent-drift.ts` now validates this value against
+# `readSupportedModels()`, which is what makes the mistake unrepeatable rather than
+# merely fixed.
+#
+# The agents declare two models and only one of them can run here. MEASURED, not assumed:
+# `claude-sonnet-4.6` fails the run outright with
+# `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
+# (run 2026090974671590), so `claude-opus-4.7` is the only declared model MSBench can
+# currently dispatch. It is therefore the default, despite being the more expensive of
+# the two — a cheaper default that cannot execute is not a saving.
+#
+# Revisit when the backend catches up: if `claude-sonnet-4.6` becomes available it is the
+# better default on cost, and running both matters because README-redteam.md is explicit
+# that a pass on one model is not a pass for the feature. Issue #1807 is a live case where
+# two models disagreed on a security prompt.
 modelSelector:
-  id: claude-sonnet-4.5
+  id: claude-opus-4.7
   vendor: copilot
 
 # Set explicitly because the defaults (6300 / 2700 / 300) are sized for a
