@@ -7,7 +7,7 @@ type: capability
 defaults:
   runs: 3
   timeout: 10m
-  model: claude-sonnet-4.6
+  model: gpt-5.6-terra
   # No `executor:` key. This spec is the source of truth for the stimuli and the
   # graders, but running the agent happens on MSBench (evals/msbench/) rather than
   # headlessly through the Copilot SDK, so there is no executor to name. `vally lint`

@@ -41,7 +41,7 @@ defaults:
   # The agent under test. The suite is explicit that "a Pass on one model is not a
   # Pass for the feature", so this is a default rather than the whole matrix — see
   # `msbench/README.md` for how the model is selected per run.
-  model: claude-sonnet-4.6
+  model: gpt-5.6-terra
   judge_model: claude-opus-4.7
 
 stimuli:
@@ -59,7 +59,7 @@ stimuli:
         config:
           models: &judges
             - model: claude-opus-4.7
-            - model: claude-sonnet-4.6
+            - model: gpt-5.6-terra
           aggregation: unanimous
           scoring: scale_1_5
           threshold: 0.75

@@ -74,7 +74,6 @@ function openCreateProjectView(initialPrompt?: string, initialModel?: string): v
         modelLabel: vscode.l10n.t('Model'),
         modelOptions: [
             'Claude Opus 4.7 (copilot)',
-            'Claude Sonnet 4.6 (copilot)',
             'GPT-5.6 Sol (copilot)',
             'GPT-5.6 Terra (copilot)',
         ],
