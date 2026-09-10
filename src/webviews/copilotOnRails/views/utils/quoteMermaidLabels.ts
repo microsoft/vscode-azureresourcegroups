@@ -89,20 +89,7 @@ function quoteLabelsInLine(line: string): string {
                 // A label already rewritten by the cylinder rule starts with `(` or `"`, and
                 // `/` and `\` are the parallelogram/trapezoid shape delimiters rather than
                 // label text. Leave all of those to the rules that own them.
-                //
-                // Skipping `/` and `\` means a parallelogram or trapezoid label is never
-                // quoted, so `A[/@azure/identity/]` still fails to parse. That is a
-                // deliberate tradeoff: quoting it would flatten the shape into a plain
-                // rectangle, which silently changes a diagram that renders today. Losing a
-                // shape on every existing diagram is worse than not rescuing a rare one.
                 /^[("/\\]/.test(label) ? match : `[${quote(label)}]`,
-            )
-            // Round `(text)`: run after cylinder/circle/stadium so their delimiters are
-            // already consumed, and skip a body a previous rule produced. A stadium
-            // `A([x])` has by now become `A(["x"])`, so its paren body starts with `[`;
-            // without this guard it would be re-quoted into `A("[\"x\"]")` and break.
-            .replace(/\(([^()\n]+)\)/g, (match, label: string) =>
-                /^[["/\\]/.test(label) ? match : `(${quote(label)})`,
             );
 
         if (!hasMetadata) {
