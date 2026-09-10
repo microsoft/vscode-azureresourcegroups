@@ -68,6 +68,9 @@ Use this map from source area to the screenshot(s) it backs:
   refresh them. If your change touched no UI, say so.
 - Re-read the affected sections and confirm every command id, MCP tool name, agent name, file path, and
   view→command mapping still matches the code you changed.
-- Keep the reference tables and the Mermaid pipeline diagram accurate.
+- Keep the reference tables and the Mermaid pipeline diagram accurate. When you edit that diagram, **wrap
+  every node label and edge label in double quotes** (`Plan["1 · azure-project-plan"]`,
+  `A -->|"@azure/storage-blob"| B`) — mermaid v11 reads a leading `@` in an unquoted label as edge-ID
+  syntax and fails to parse the whole diagram.
 - If nothing user-visible changed (a pure internal refactor), no doc update is needed — note that briefly
   instead of editing the doc.
