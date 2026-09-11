@@ -58,7 +58,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    - **Unknown TF** (`detectedInfraProvider.terraform` == `"unknown"`): ask user which provider before routing.
    - **No IaC**: continue.
 4. **Determine compute targets** — Check which compute targets are in the plan (App Service/Functions, Container Apps, or both) and whether PostgreSQL/Redis is present. Do NOT read any reference files — pass this info to the sub-agent at Step 5.
-4b. **Pre-check API versions (main thread)** — MCP tool access is unreliable in `task` agents — call these in the main thread before dispatching. Call `mcp_bicep_list_az_resource_types_for_provider` (or `bicep-list_az_resource_types_for_provider`) once per provider namespace in `prepare-plan.json.services[]` (e.g., `Microsoft.Web`, `Microsoft.App`, `Microsoft.DBforPostgreSQL`, `Microsoft.Cache`, `Microsoft.KeyVault`, `Microsoft.ContainerRegistry`). Extract the latest GA API version (no `-preview`) for each resource type. Build an `apiVersions` map and pass it to the IaC gen sub-agent at Step 5. Fallback: if MCP unavailable, run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` per resource type — this filters to GA-only and picks the latest. Pass `"MCP unavailable"` only if both MCP AND CLI fail. Sub-agent still validates generated Bicep via `az bicep build`.
+4b. **Pre-check API versions (main thread)** — MCP tool access is unreliable in `task` agents — call these in the main thread before dispatching. Call `mcp_bicep_list_az_resource_types_for_provider` (or `bicep-list_az_resource_types_for_provider`) once per provider namespace in `prepare-plan.json.services[]` (e.g., `Microsoft.Web`, `Microsoft.App`, `Microsoft.DBforPostgreSQL`, `Microsoft.Cache`, `Microsoft.ContainerRegistry`). Extract the latest GA API version (no `-preview`) for each resource type. Build an `apiVersions` map and pass it to the IaC gen sub-agent at Step 5. Fallback: if MCP unavailable, run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` per resource type — this filters to GA-only and picks the latest. Pass `"MCP unavailable"` only if both MCP AND CLI fail. Sub-agent still validates generated Bicep via `az bicep build`.
 
 ### ACTION (Steps 5–12)
 
@@ -94,7 +94,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    ### Compute targets
    {App Service/Functions, Container Apps, or both + whether PostgreSQL/Redis present}
    ### apiVersions
-   {map from Step 4b, e.g. {"Microsoft.KeyVault/vaults": "2023-07-01", ...} — or "MCP unavailable" if skipped}
+   {map from Step 4b, e.g. {"Microsoft.Web/sites": "2023-12-01", ...} — or "MCP unavailable" if skipped}
    ### Working directory
    {absolute path}
    ```
@@ -143,7 +143,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
 
 10a. **Format IaC (main thread)** — For each `.bicep` file in `infra/` (including `modules/`): call `mcp_bicep_format_bicep_file` (or `bicep-format_bicep_file`) with `{ filePath: "<absolute path>" }`.This enforces LF line endings via the `bicepconfig.json` written during IaC generation. Fallback: skip if unavailable.
 
-10a-conf. **Conformance gate (main thread — MANDATORY for Bicep)** — ⛔ **Skip this entire step when the scaffold emitted Terraform** (`infra/main.bicep` absent) — these checks are Bicep-only (Terraform is syntax-validated via `terraform validate` in the validate subagent). Otherwise run the conformance script from this phase's `scripts/` dir; it deterministically catches ARM-rejected values `az bicep build` can't (invalid Bicep values, wrong DB version, reserved DB login, `enablePurgeProtection`):
+10a-conf. **Conformance gate (main thread — MANDATORY for Bicep)** — ⛔ **Skip this entire step when the scaffold emitted Terraform** (`infra/main.bicep` absent) — these checks are Bicep-only (Terraform is syntax-validated via `terraform validate` in the validate subagent). Otherwise run the conformance script from this phase's `scripts/` dir; it deterministically catches ARM-rejected values and policy violations `az bicep build` can't (invalid Bicep values, wrong DB version, any Key Vault → `NO-KEYVAULT`, DB admin login/password → `DB-NO-LOCAL-AUTH`, free/shared SKUs → `NO-FREE-SKU`):
    ```
    {scaffoldDir}/scripts/scaffold-conformance.ps1 -SessionPath ".copilot-azure/sessions/{uuid}" -InfraPath infra   # pwsh (preferred)
    bash {scaffoldDir}/scripts/scaffold-conformance.sh ".copilot-azure/sessions/{uuid}" infra                       # bash (only if pwsh unavailable; needs jq for the plan-dependent checks)

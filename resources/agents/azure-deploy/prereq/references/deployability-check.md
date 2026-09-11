@@ -40,6 +40,6 @@ Check if the repo's stack requires a specialized deployment agent. If a match is
 | `@github/copilot-sdk`, `github-copilot-sdk`, `GitHub.CopilotSdk` | `azure-hosted-copilot-sdk` | `copilot-sdk-detected` |
 | `azure_ai_projects`, `azure-ai-agents`, `foundry-agents` | `microsoft-foundry` | `foundry-agents-detected` |
 
-## f1Viable Aggregation
+## f1Viable Aggregation (deprecated signal)
 
-After the deployability check completes, cross-check `buildRequirements.f1Viable`. The build axis may have set an initial value — the deployability check MUST override it to `false` if ANY blocker was found during [dependency-compatibility.md § Native Module Detection](dependency-compatibility.md) or [§ F1 Viability — Beyond Native Modules](dependency-compatibility.md). Verify `f1BlockReason` is populated when `f1Viable: false`.
+F1/D1/Free are never selected (floor is B1), so `f1Viable` is effectively always `false`. Still populate `f1BlockReason` when a blocker is found during [dependency-compatibility.md § Native Module Detection](dependency-compatibility.md) or [§ SKU Sizing Signals](dependency-compatibility.md) — it drives sizing **up** from B1 (B2/S1), never a drop to free.

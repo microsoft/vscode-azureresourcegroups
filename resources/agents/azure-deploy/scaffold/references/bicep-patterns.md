@@ -87,14 +87,13 @@ module resources './modules/resources.bicep' = {
 
 ## Naming Convention (Bicep)
 
-The prepare phase generates a logical resource prefix in `prepare-plan.json.naming.resourcePrefix` (e.g., `myapp-dev`). Scaffold MUST add a globally unique suffix using Bicep's `uniqueString()` function to prevent cross-deployment name collisions on globally unique Azure resources (App Service, Key Vault, Storage Account, ACR).
+The prepare phase generates a logical resource prefix in `prepare-plan.json.naming.resourcePrefix` (e.g., `myapp-dev`). Scaffold MUST add a globally unique suffix using Bicep's `uniqueString()` function to prevent cross-deployment name collisions on globally unique Azure resources (App Service, Storage Account, ACR).
 
 ```bicep
 // main.bicep — derive unique suffix from resource group
 var nameSuffix = uniqueString(resourceGroup().id)
 
 // Pass unique names to modules
-param kvName string = 'kv-${resourcePrefix}-${take(nameSuffix, 4)}'
 param appName string = 'app-${resourcePrefix}-${take(nameSuffix, 4)}'
 param storName string = 'st${replace(resourcePrefix, '-', '')}${take(nameSuffix, 4)}'
 param acrName string = 'cr${replace(resourcePrefix, '-', '')}${take(nameSuffix, 4)}'
@@ -133,6 +132,6 @@ Load multiple only if the plan includes multiple compute targets.
 
 Use the latest stable API version for each resource type. Never use preview APIs unless required for a feature with no GA alternative. Validate via `bicep build` — stale API versions produce warnings.
 
-## Key Vault Reference Syntax
+## App-Internal Secret Syntax (No Key Vault)
 
-Syntax differs by service — never mix. See [bicep-container-apps.md](bicep-container-apps.md) for Container Apps `secretRef` and [bicep-patterns-security.md](bicep-patterns-security.md) for App Service `@Microsoft.KeyVault()`. For Terraform, see [terraform-patterns.md](terraform-patterns.md).
+⛔ **No Key Vault is created.** App-internal secrets (e.g. `SECRET_KEY`) are stored on the compute resource from an `@secure()` param at deploy time. App Service → `siteConfig.appSettings`; Container Apps → native `secrets: [{ name, value }]` + `secretRef` (see [bicep-container-apps.md](bicep-container-apps.md)). Never use `@Microsoft.KeyVault(...)` / `keyVaultUrl`. See [bicep-patterns-security.md](bicep-patterns-security.md) § Secrets. For Terraform, see [terraform-patterns.md](terraform-patterns.md).

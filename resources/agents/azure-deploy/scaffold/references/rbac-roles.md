@@ -11,7 +11,6 @@ If the required role is NOT in the table below, call `azure__documentation` with
 | Role | ID | Use |
 |------|-----|-----|
 | AcrPull | `7f951dda-4ed3-4680-a7ca-43fe172d538d` | Container Apps → ACR |
-| Key Vault Secrets User | `4633458b-17de-408a-b874-0445c86b69e6` | App → Key Vault secrets |
 | Storage Blob Data Contributor | `ba92f5b4-2d11-453d-a403-e96b0029c9fe` | App → Storage blobs (read/write/delete) |
 | Storage Blob Data Reader | `2a2b9908-6ea1-4ae2-8e65-a410df84e7d1` | App → Storage blobs (read-only) |
 | Storage Queue Data Contributor | `974c5e8b-45b9-4653-ba55-5f855dd0fb88` | App → Storage queues |
@@ -33,7 +32,7 @@ If the required role is NOT in the table below, call `azure__documentation` with
 
 | System | Resource type | Use for |
 |--------|--------------|--------|
-| ARM RBAC | `Microsoft.Authorization/roleAssignments` | Subscription/RG-level permissions (Contributor, Reader, Key Vault Secrets User) |
+| ARM RBAC | `Microsoft.Authorization/roleAssignments` | Subscription/RG-level permissions (Contributor, Reader, Storage/DB data roles) |
 | Cosmos DB data plane | `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments` | Document read/write access (Data Reader, Data Contributor) |
 
 Built-in Cosmos DB data roles:
