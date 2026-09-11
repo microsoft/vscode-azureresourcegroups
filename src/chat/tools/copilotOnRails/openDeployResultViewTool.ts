@@ -11,6 +11,7 @@ import { azureDeployAgent } from "../../../constants";
 import { DEPLOY_RESULT_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openDeployResultViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openDeployResultView";
+import { recordDeployArtifactsTelemetry } from "../../../webviews/copilotOnRails/extension/utils/deployArtifactTelemetryUtils";
 
 const openDeployResultViewToolName = 'open_deploy_result_view';
 
@@ -24,7 +25,10 @@ export const openDeployResultViewTool: CopilotTool<z.ZodVoid, typeof Unspecified
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openDeployResultViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openDeployResultViewToolName, extras }, async (corContext) => {
-                await openDeployResultViewFromWorkspace(corContext);
+                const resultFile = await openDeployResultViewFromWorkspace(corContext);
+                if (resultFile) {
+                    await recordDeployArtifactsTelemetry(corContext, resultFile);
+                }
                 return { message: 'Opened the Deployment Results view.' };
             });
         }) ?? {

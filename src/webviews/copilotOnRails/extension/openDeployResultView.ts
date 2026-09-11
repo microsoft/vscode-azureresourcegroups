@@ -155,7 +155,7 @@ async function findActiveSessionDeployResult(matches: readonly vscode.Uri[]): Pr
 }
 
 /** Command/tool entry point: find the newest deploy result and show it. */
-export async function openDeployResultViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
+export async function openDeployResultViewFromWorkspace(_context: CopilotOnRailsContext): Promise<vscode.Uri | undefined> {
     const selected = await findLatestDeployResult();
     if (!selected) {
         void vscode.window.showInformationMessage(
@@ -164,6 +164,7 @@ export async function openDeployResultViewFromWorkspace(_context: CopilotOnRails
         return;
     }
     await openDeployResultViewAsync(selected);
+    return selected;
 }
 
 async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
