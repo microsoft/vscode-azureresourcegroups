@@ -1,0 +1,15 @@
+{
+  "sessionId": "00000000-0000-4000-8000-000000000000",
+  "status": "succeeded",
+  "deploymentNames": ["tasktracker-1767225600"],
+  "healthStatus": "healthy",
+  "migrationAccess": {
+    "tier": 3,
+    "reason": "database provisioned without an accompanying app service, so there was no compute in its network to exec into",
+    "ruleName": "cor-tempmigration-a1b2c3d4-1767225600",
+    "clientIp": "20.30.40.50",
+    "restored": true
+  },
+  "createdResources": [],
+  "orphanedResourceGroups": []
+}

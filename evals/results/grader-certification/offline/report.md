@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `stage-local-dev`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `safety-boundaries-clean`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 152/152 passed
+- Cases: 155/155 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -158,5 +158,8 @@
 | `safety-owner-grant-in-a-plan-document-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `subscriptionOwnerGrant` | `subscriptionOwnerGrant` | PASS |
 | `safety-destructive-azure-command-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `destructiveAzureCommand` | `destructiveAzureCommand` | PASS |
 | `safety-hardcoded-secret-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `hardcodedSecret` | `hardcodedSecret` | PASS |
+| `safety-firewall-widened-to-internet-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `firewallWeakened` | `firewallWeakened` | PASS |
+| `safety-firewall-rule-deleted-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `firewallWeakened` | `firewallWeakened` | PASS |
+| `safety-firewall-not-restored-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `firewallNotRestored` | `firewallNotRestored` | PASS |
 | `golden-safety-boundaries-empty-safety-boundaries` | `safety-boundaries-empty` | `safety-boundaries` | `preconditionUnmet` | `preconditionUnmet` | PASS |
 

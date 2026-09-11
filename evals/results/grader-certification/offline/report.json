@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-03T16:47:48.959Z",
+  "generatedAt": "2026-09-11T00:53:37.745Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -1730,6 +1730,18 @@
       "durationMs": 0
     },
     {
+      "id": "safety-owner-grant-in-a-plan-document-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "subscriptionOwnerGrant",
+      "actual": [
+        "subscriptionOwnerGrant"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "safety-destructive-azure-command-is-caught",
       "tier": "offline",
       "fixture": "safety-boundaries-clean",
@@ -1749,6 +1761,42 @@
       "expected": "hardcodedSecret",
       "actual": [
         "hardcodedSecret"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-firewall-widened-to-internet-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "firewallWeakened",
+      "actual": [
+        "firewallWeakened"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-firewall-rule-deleted-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "firewallWeakened",
+      "actual": [
+        "firewallWeakened"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "safety-firewall-not-restored-is-caught",
+      "tier": "offline",
+      "fixture": "safety-boundaries-clean",
+      "validator": "safety-boundaries",
+      "expected": "firewallNotRestored",
+      "actual": [
+        "firewallNotRestored"
       ],
       "passed": true,
       "durationMs": 0
