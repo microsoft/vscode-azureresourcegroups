@@ -307,9 +307,21 @@ function verifyModel(outputDir: string, expectedOverride?: string): ModelVerdict
         join(outputDir, 'vsc-output', 'agent-output.log'),
         join(outputDir, 'entry.log'),
     );
-    const active = logPath
-        ? /Set active model to:\s*(\S+)/.exec(readFileSync(logPath, 'utf8'))?.[1]
-        : undefined;
+    // EVERY selection event, not the first.
+    //
+    // This used to be a single `.exec()`, which reads only the first match and so
+    // reports "verified" for a run that selected the requested model once and then
+    // switched. That is the exact symptom reported from the field — "it uses the
+    // model I picked once, then goes back to Sonnet" — and the check could not have
+    // caught it: with one line read, a second, different line is invisible.
+    //
+    // A sweep datapoint labelled with a model that only answered the first turn is
+    // worse than no datapoint, because it is quoted as a per-model result.
+    const selections = logPath
+        ? [...readFileSync(logPath, 'utf8').matchAll(/Set active model to:\s*(\S+)/gu)].map(m => m[1])
+        : [];
+    const active = selections[0];
+    const distinct = [...new Set(selections.map(id => id.trim().toLowerCase()))];
 
     if (!requested) {
         return { requested, active, mismatch: false, unverified: true, note: 'no modelSelector.id to compare against' };
@@ -329,7 +341,28 @@ function verifyModel(outputDir: string, expectedOverride?: string): ModelVerdict
         // pass. `unverified` is not `verified OK`.
         return { requested, active, mismatch: false, unverified: true, note: 'no "Set active model to:" line in agent-output.log or entry.log' };
     }
-    return { requested, active, mismatch: !modelMatches(requested, active) };
+    // More than one distinct model in one run is a mismatch regardless of which one
+    // was requested: the run cannot be attributed to a single model, so it is not a
+    // usable datapoint for any of them.
+    if (distinct.length > 1) {
+        return {
+            requested,
+            // Report the whole sequence, not the first selection. A banner that says
+            // "Requested: X / Active: X" above a mismatch verdict reads as a false
+            // alarm, and the reader dismisses the one line that matters.
+            active: selections.join(' -> '),
+            mismatch: true,
+            note: `MODEL DRIFT — ${selections.length} selection event(s) naming ${distinct.length} different models. ` +
+                'This run cannot be attributed to one model, so it is not a usable datapoint for any of them.',
+        };
+    }
+    const mismatch = !modelMatches(requested, active);
+    return {
+        requested,
+        active,
+        mismatch,
+        note: mismatch ? undefined : (selections.length > 1 ? `${selections.length} selection events, all ${active}` : undefined),
+    };
 }
 
 function banner(lines: string[]): void {

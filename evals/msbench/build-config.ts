@@ -48,6 +48,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DISK_TRIAGE_COMMENT, FINGERPRINT_COMMENT, SENTINEL_COMMENT } from './assertionIdentity.ts';
+import { readSupportedModels } from '../src/agent-definition.ts';
 import type { PhaseWiring } from '../src/gateWiring.ts';
 import type { Stack } from '../src/stack.ts';
 import { seedFor, seedPaths } from './stage-workspace.ts';
@@ -160,6 +161,22 @@ function flagValue(name: string): string | undefined {
 const MODEL_SELECTOR_ID = /^(modelSelector:[\s\S]*?\n\s+id:[^\S\n]*)([^\s#]+)/m;
 
 /**
+ * The models the *product* declares support for, read from the agent frontmatter.
+ *
+ * Derived rather than listed, so it cannot drift from what ships. A second
+ * hardcoded list is exactly how the suite ended up pinned to `claude-sonnet-4.5`
+ * in `base.yaml` — an id that appears in no agent's `model:` frontmatter and has
+ * no entry in `MODEL_DISPLAY_NAME_TO_ID`. Every run in the corpus therefore graded
+ * a model the product does not ship the agent on, and nothing said so until the
+ * id disappeared from the CES catalogue and every run began failing with
+ * `X_MODEL_NOT_FOUND_ERROR`.
+ *
+ * `azure-project-plan` is the reference agent: all six ship the same list, and
+ * `check-agent-drift.ts` fails if they diverge.
+ */
+const SUPPORTED_MODEL_IDS = readSupportedModels(resolve(HERE, '..', '..'), 'azure-project-plan');
+
+/**
  * Apply `--model <id>`, which retargets the run without touching `base.yaml`.
  *
  * ## Why this exists
@@ -185,16 +202,26 @@ const MODEL_SELECTOR_ID = /^(modelSelector:[\s\S]*?\n\s+id:[^\S\n]*)([^\s#]+)/m;
  * for part of the id.
  */
 function applyModelOverride(merged: string): string {
-    const model = flagValue('--model');
-    if (model === undefined) {
-        return merged;
-    }
-    if (!model || model.startsWith('--')) {
+    // `COR_MODEL` makes a model choice stick across a whole suite.
+    //
+    // `--model` is per-invocation, and `base.yaml` supplies a default, so a sweep
+    // that drives many stimuli reverts to that default on any invocation where the
+    // flag is forgotten. The result is a "sweep" whose datapoints are silently a
+    // mixture of models — reported from the field as "it uses the model I picked
+    // once, then goes back to Sonnet". Exporting COR_MODEL once covers every
+    // invocation in the shell, including loops that pass no flag at all.
+    //
+    // The flag still wins, so a single stimulus can be retargeted inside a sweep.
+    const override = flagValue('--model') ?? process.env.COR_MODEL;
+    if (override !== undefined && (!override || override.startsWith('--'))) {
         console.error('--model needs a model id, e.g. --model claude-opus-4.7');
         process.exit(1);
     }
     const match = MODEL_SELECTOR_ID.exec(merged);
     if (!match) {
+        if (override === undefined) {
+            return merged;
+        }
         console.error(
             'Could not find a modelSelector.id to override in the generated config.\n'
             + '  --model must not silently do nothing: the run would be recorded as a\n'
@@ -203,10 +230,35 @@ function applyModelOverride(merged: string): string {
         process.exit(1);
     }
     const previous = match[2];
-    if (previous === model) {
+    const resolved = override ?? previous;
+
+    // Validate what the run will ACTUALLY use, not just an explicit override.
+    // Checking only the override leaves the more dangerous case unguarded: a
+    // `base.yaml` default that no agent ships. That is how the whole corpus came to
+    // grade `claude-sonnet-4.5` — an id in no agent's `model:` frontmatter — until it
+    // vanished from the CES catalogue and the suite stopped dead with
+    // X_MODEL_NOT_FOUND_ERROR. The default is the value nobody looks at, so it is
+    // precisely the one that has to be checked.
+    if (!SUPPORTED_MODEL_IDS.includes(resolved)) {
+        const via = override === undefined
+            ? "base.yaml's modelSelector.id"
+            : (flagValue('--model') !== undefined ? '--model' : 'COR_MODEL');
+        console.error(
+            `Model '${resolved}' (from ${via}) is not one the product declares support for.\n`
+            + `  Supported: ${SUPPORTED_MODEL_IDS.join(', ')}\n`
+            + '  These come from the `model:` frontmatter of resources/agents/*.agent.md,\n'
+            + '  mapped by MODEL_DISPLAY_NAME_TO_ID in evals/src/agent-definition.ts.\n'
+            + '  Grading a model the product does not ship the agent on measures a\n'
+            + '  configuration no user can reach.',
+        );
+        process.exit(1);
+    }
+
+    if (resolved === previous) {
         return merged;
     }
-    return merged.replace(MODEL_SELECTOR_ID, `$1${model} # --model override (base.yaml default: ${previous})`);
+    const source = flagValue('--model') !== undefined ? '--model override' : 'COR_MODEL';
+    return merged.replace(MODEL_SELECTOR_ID, `$1${resolved} # ${source} (base.yaml default: ${previous})`);
 }
 
 /**
