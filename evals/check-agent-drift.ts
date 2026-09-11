@@ -337,28 +337,68 @@ const currentFiles = agentAssetFiles();
 /**
  * The eval spec must run the agent on a model the product actually ships it on.
  * Catching a bad pin here costs a second; catching it at trial time costs a run.
+ *
+ * Two files are checked, and the second is the one that matters. This rule was
+ * written against the legacy Vally spec, which pins a supported model and so kept
+ * reporting green — while every MSBench run took its model from
+ * `msbench/config/base.yaml`, which nothing validated. That file pinned
+ * `claude-sonnet-4.5`, a model no agent declares and `MODEL_DISPLAY_NAME_TO_ID`
+ * does not map, for 66 of the 93 runs in the local corpus.
+ *
+ * A guard that tests a file nobody runs is the vacuous pass this suite exists to
+ * prevent, so `base.yaml` is checked first and by the same rule.
  */
-const evalSpecPath = path.join(scriptDir, "project-plan", "eval.yaml");
+interface ModelPin {
+    /** Path relative to `evals/`, for the failure message. */
+    readonly label: string;
+    readonly file: string;
+    /** Pulls the pinned model id out of that file's own syntax. */
+    readonly read: (text: string) => string | undefined;
+}
+
+const MODEL_PINS: readonly ModelPin[] = [
+    {
+        // What every MSBench run resolves its model from: `--model .` makes the vscode
+        // plugin read this block rather than the CLI flag. See msbench/README.md,
+        // "Run queueing" — `id` is also half the CES queueing key.
+        label: "msbench/config/base.yaml",
+        file: path.join(scriptDir, "msbench", "config", "base.yaml"),
+        read: text => /^modelSelector:\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+id:\s*(\S+)\s*$/m.exec(text)?.[1],
+    },
+    {
+        // The legacy Vally spec. Kept under the same rule so it cannot rot back, but it
+        // drives no run today — only `npm run lint:plan` reads it.
+        label: "project-plan/eval.yaml",
+        file: path.join(scriptDir, "project-plan", "eval.yaml"),
+        read: text => {
+            const defaults = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(text)?.[1] ?? "";
+            return /^\s+model:\s*(\S+)\s*$/m.exec(defaults)?.[1];
+        },
+    },
+];
+
 try {
     const supported = readSupportedModels(repoRoot, PLAN);
-    const spec = fs.readFileSync(evalSpecPath, "utf8");
-    const defaultsBlock = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(spec)?.[1] ?? "";
-    const pinned = /^\s+model:\s*(\S+)\s*$/m.exec(defaultsBlock)?.[1];
-    if (!pinned) {
-        failures.push(
-            "eval-model-unpinned: evals/project-plan/eval.yaml has no `defaults.model`.\n"
-            + "    Without a pin the SDK falls back to the host CLI's default, which differs\n"
-            + "    between a developer machine and CI, so the graders disagree.\n"
-            + `    Supported: ${supported.join(", ")}`,
-        );
-    } else if (!supported.includes(pinned)) {
-        failures.push(
-            `eval-model-unsupported: evals/project-plan/eval.yaml pins '${pinned}', which `
-            + `${PLAN}.agent.md does not list.\n`
-            + `    Supported: ${supported.join(", ")}`,
-        );
-    } else {
-        checked.push(`eval-model-pinned (${pinned})`);
+    for (const pin of MODEL_PINS) {
+        const pinned = pin.read(fs.readFileSync(pin.file, "utf8"));
+        if (!pinned) {
+            failures.push(
+                `eval-model-unpinned: evals/${pin.label} declares no model.\n`
+                + "    Without a pin the model falls back to a host default, which differs\n"
+                + "    between a developer machine and CI, so the graders disagree.\n"
+                + `    Supported: ${supported.join(", ")}`,
+            );
+        } else if (!supported.includes(pinned)) {
+            failures.push(
+                `eval-model-unsupported: evals/${pin.label} pins '${pinned}', which `
+                + `${PLAN}.agent.md does not list.\n`
+                + `    Supported: ${supported.join(", ")}\n`
+                + "    A run on an undeclared model measures a configuration the product does\n"
+                + "    not ship, and its result is not evidence about the shipped agent.",
+            );
+        } else {
+            checked.push(`eval-model-pinned (${pin.label}: ${pinned})`);
+        }
     }
 } catch (err) {
     failures.push(`eval-model-resolution: ${err instanceof Error ? err.message : String(err)}`);
