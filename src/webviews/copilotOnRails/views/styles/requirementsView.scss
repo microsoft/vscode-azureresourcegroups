@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './disabledButton';
+
 .requirementsView {
     display: flex;
     flex-direction: column;
@@ -176,8 +178,10 @@
                 font-weight: 600;
                 padding: 1px 6px;
                 border-radius: 3px;
-                background: var(--vscode-badge-background);
-                color: var(--vscode-badge-foreground);
+                // Badges are informational, not interactive — keep them off the
+                // primary button palette so they don't read as clickable.
+                background: #a074c4;
+                color: #1b1b1b;
                 border: 1px solid var(--vscode-contrastBorder, transparent);
                 white-space: nowrap;
                 flex-shrink: 0;
@@ -415,8 +419,10 @@
                         font-weight: 600;
                         padding: 2px 6px;
                         border-radius: 3px;
-                        background: var(--vscode-badge-background);
-                        color: var(--vscode-badge-foreground);
+                        // Badges are informational, not interactive — keep them off
+                        // the primary button palette so they don't read as clickable.
+                        background: #8dc149;
+                        color: #1b1b1b;
                         border: 1px solid var(--vscode-contrastBorder, transparent);
                         white-space: nowrap;
                     }

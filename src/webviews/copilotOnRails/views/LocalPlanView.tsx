@@ -39,6 +39,7 @@ import {
     useState,
     type JSX,
 } from "react";
+import { classifyInstalledForRow, InstalledChip } from "./components/InstalledChip";
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
@@ -844,6 +845,11 @@ const DataTable = ({
     const toolIdx = isPrereq
         ? headers.findIndex((h) => h.toLowerCase().includes("tool"))
         : -1;
+    // Render the detection pass result as the same chip the Project Scaffolding
+    // plan uses instead of echoing the raw ✅/❓ characters from the markdown.
+    const installedIdx = isPrereq
+        ? headers.findIndex((h) => h.toLowerCase().includes("installed"))
+        : -1;
     const columnHidden = (idx: number): boolean => idx === installIdx;
 
     return (
@@ -907,6 +913,18 @@ const DataTable = ({
                                                         </span>
                                                     </Tooltip>
                                                 </span>
+                                            </td>
+                                        );
+                                    }
+                                    if (ci === installedIdx) {
+                                        return (
+                                            <td key={ci}>
+                                                <InstalledChip
+                                                    status={classifyInstalledForRow(
+                                                        toolName,
+                                                        cell,
+                                                    )}
+                                                />
                                             </td>
                                         );
                                     }
