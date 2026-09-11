@@ -39,10 +39,12 @@ SELECT * FROM pgaadauth_create_principal_with_oid('{appMiName}', '{appMiObjectId
 "@
 
 # 2b. Grant privileges — run on the app database {dbName} (the role already exists cluster-wide).
+# NOTE: a PowerShell here-string does NOT treat "" as an escape — use a single " around the identifier
+# (doubling it emits `TO ""myapp"";` → Postgres `zero-length delimited identifier`).
 az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d {dbName} --querytext @"
-GRANT ALL PRIVILEGES ON DATABASE {dbName} TO ""{appMiName}"";
-GRANT ALL ON SCHEMA public TO ""{appMiName}"";
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ""{appMiName}"";
+GRANT ALL PRIVILEGES ON DATABASE {dbName} TO "{appMiName}";
+GRANT ALL ON SCHEMA public TO "{appMiName}";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "{appMiName}";
 "@
 ```
 
@@ -65,22 +67,38 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ""{appMiName}""
 
 Migrations run where the managed identity lives — inside the app, not from your workstation.
 
-> ⛔ **The migration tool must authenticate with a token, not a password.** Either (1) the app already uses token auth (`DefaultAzureCredential` / `Authentication=Active Directory Default`) so the command works unchanged, or (2) inject a freshly minted MI token as the driver's password env var before running. If the app's stack cannot present an Entra token to the DB, do NOT re-enable password auth — surface a `FLAGGED` finding + `postDeployRecommendation` for the required client change.
+> ⛔ **Authenticate with a token, never a password — and PREFER the app's own credential.**
+> - **(1) Preferred — `DefaultAzureCredential`:** if the app's DB config uses `DefaultAzureCredential` / `Authentication=Active Directory Default`, the migration command works **unchanged** and authenticates as the app MI. No token handling, no `curl`/`jq`, works on slim/distroless images. Use this whenever possible.
+> - **(2) Fallback — inject an MI token:** only if the app cannot self-authenticate. Fetch a token from the container's IMDS endpoint and pass it as the driver password env var (see below). ⛔ This requires `curl` + `jq` (or `wget`) **in the image** — absent on `slim`/`distroless` builds. If the tools aren't present, do NOT hand-roll it: surface a `FLAGGED` finding + `postDeployRecommendation` to add `DefaultAzureCredential` to the app's DB config.
+> - ⛔ Never re-enable password auth to unblock.
 
 ### App Service (Linux only)
 
 ```powershell
 az webapp ssh -n {app} -g {rg} --subscription {sub}
-# Inside the session: export an MI token as the DB password (PGPASSWORD/MYSQL_PWD), set PGUSER={appMiName}, then run the migration command
+```
+Then, **inside the SSH session** (the container's own shell — no PowerShell layer), for the token-injection fallback (requires `curl`+`jq` in the image):
+```bash
+export PGPASSWORD="$(curl -s "$IDENTITY_ENDPOINT?resource=https://ossrdbms-aad.database.windows.net&api-version=2019-08-01" -H "X-IDENTITY-HEADER: $IDENTITY_HEADER" | jq -r .access_token)"
+export PGUSER={appMiName} PGSSLMODE=require
+{migration_command}
 ```
 
 ### Container Apps
 
+**Preferred (DefaultAzureCredential — nothing to inject, works on distroless):**
 ```powershell
-az containerapp exec -n {ca} -g {rg} --subscription {sub} --command "/bin/sh -c 'export PGPASSWORD=$(curl -s \"$IDENTITY_ENDPOINT?resource=https://ossrdbms-aad.database.windows.net&api-version=2019-08-01\" -H \"X-IDENTITY-HEADER: $IDENTITY_HEADER\" | jq -r .access_token); export PGUSER={appMiName}; export PGSSLMODE=require; {migration_command}'"
+az containerapp exec -n {ca} -g {rg} --subscription {sub} --command '{migration_command}'
 ```
 
-> Preferred: bake the migration into the app's startup (`initCommands[]` → `appCommandLine`) using the app's own `DefaultAzureCredential` config, so migrations run token-based on every cold start (idempotent) with no exec step.
+**Fallback (token injection; image must have `curl`+`jq`):**
+```powershell
+# ⛔ SINGLE-QUOTE the whole --command so $(...) and $IDENTITY_* evaluate IN THE CONTAINER, not on the deployer.
+#    (A double-quoted PowerShell string would run curl locally and expand $IDENTITY_* to empty → empty PGPASSWORD.)
+az containerapp exec -n {ca} -g {rg} --subscription {sub} --command 'sh -lc "export PGPASSWORD=$(curl -s \"$IDENTITY_ENDPOINT?resource=https://ossrdbms-aad.database.windows.net&api-version=2019-08-01\" -H \"X-IDENTITY-HEADER: $IDENTITY_HEADER\" | jq -r .access_token); export PGUSER={appMiName} PGSSLMODE=require; {migration_command}"'
+```
+
+> Preferred over both: bake the migration into the app's startup (`initCommands[]` → `appCommandLine`) using the app's own `DefaultAzureCredential` config, so migrations run token-based on every cold start (idempotent) with no exec step and no `curl`/`jq` dependency.
 
 ## Error Handling
 
