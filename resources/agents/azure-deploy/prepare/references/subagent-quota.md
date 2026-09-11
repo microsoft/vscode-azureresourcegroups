@@ -62,7 +62,7 @@ Return JSON (≤500 tokens):
 
 ## Rules
 
-- ⛔ Free ≠ unlimited — F1, Consumption, Serverless all have per-subscription, per-region quotas
+- ⛔ Paid ≠ unlimited — B1, Flex Consumption, Serverless all have per-subscription, per-region quotas (F1/Free are never selected — floor is B1)
 - ⛔ Check BOTH limit AND current usage — `limit=1, usage=1` means FULL
 - ⛔ For PostgreSQL/MySQL: run offer restriction check per `sku-quota-validation.md` § Offer Restriction Check
 

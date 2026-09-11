@@ -37,8 +37,7 @@ Empty `armSkuName` — ⛔ do NOT filter by `sku` (returns `[]`). Filter: `servi
 
 | SKU | `meterName` | Notes |
 |-----|-------------|-------|
-| F1 | `F1 App` | Free ($0 price) |
-| B1 | `B1` | |
+| B1 | `B1` | Compute floor — no F1/Free (see [sku-matrix.md](sku-matrix.md)) |
 | B2 | `B2` | |
 | S1 | `S1 App` | |
 | P1v3 | `P1 v3 App` | Linux/Windows have different `productName` |
@@ -101,23 +100,6 @@ serviceName eq 'Storage' and armRegionName eq '{region}' and meterName eq 'Hot L
 | Premium_LRS | `Premium LRS Data Stored` | `Premium Block Blob` |
 
 **Monthly:** `retailPrice × estimatedGB`
-
----
-
-### Key Vault
-
-**Filter:**
-```
-serviceName eq 'Key Vault' and armRegionName eq '{region}' and priceType eq 'Consumption'
-```
-
-**Key meters:**
-
-| Tier | `meterName` | Unit |
-|------|-------------|------|
-| Standard | `Operations` | 10K |
-
-**Monthly (Standard):** `retailPrice × (estimatedOps / 10000)`. Negligible for typical AppOnboard apps.
 
 ---
 
@@ -195,8 +177,7 @@ serviceName eq 'Service Bus' and armRegionName eq '{region}'
 ### Static Web Apps
 
 **Not in the Retail Prices API.** Fixed pricing — query [azure.microsoft.com/pricing/details/app-service/static](https://azure.microsoft.com/en-us/pricing/details/app-service/static/):
-- **Free tier:** 100 GB bandwidth, 2 custom domains
-- **Standard tier:** Flat monthly per app, unlimited bandwidth, 5 custom domains
+- **Standard tier (floor — Free is never selected):** Flat monthly per app, unlimited bandwidth, 5 custom domains, SLA, private endpoints
 
 ---
 

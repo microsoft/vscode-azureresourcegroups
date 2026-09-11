@@ -12,7 +12,6 @@ $deploymentName = "app-onboard-deploy-$("{sessionId}".Substring(0,8))"
 $resId = "/subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/$deploymentName"
 $link = "https://portal.azure.com/#view/HubsExtension/DeploymentDetailsBlade/~/overview/id/$($resId.Replace('/', '%2F'))"
 Write-Output "LINK=$link"
-Start-Process $link 2>$null
 ```
 
 Read `LINK=` from terminal output and print the URL in chat on its own bare line — no backticks, no markdown. Then deploy:
@@ -27,7 +26,6 @@ Use `az deployment group create --name $deploymentName --resource-group {rg}` an
 $resId = "/subscriptions/{subscriptionId}/resourceGroups/{rg}/providers/Microsoft.Resources/deployments/$deploymentName"
 $link = "https://portal.azure.com/#view/HubsExtension/DeploymentDetailsBlade/~/overview/id/$($resId.Replace('/', '%2F'))"
 Write-Output "LINK=$link"
-Start-Process $link 2>$null
 ```
 
 For Terraform (no single ARM deployment): `https://portal.azure.com/#@{tenantId}/resource/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/activitylog`
@@ -40,7 +38,7 @@ The portal link stays valid for same-scope retries — ARM overwrites in-place. 
 
 ## Chat Output Rules
 
-1. **Terminal command:** the PowerShell snippet above (outputs the bare URL and auto-opens it in the default browser via `Start-Process`)
+1. **Terminal command:** the PowerShell snippet above (outputs the bare URL via `Write-Output "LINK=..."`). ⛔ **Do NOT auto-open the link in a browser** — never call `Start-Process` (or any browser-launching command) on the portal URL. Just print it so the user can open it if they choose.
 2. **Read the terminal output** — find the line starting with `LINK=` and extract the URL
 3. **Chat output:** paste the bare URL on its own line — no backticks, no markdown, no emoji on the same line
 

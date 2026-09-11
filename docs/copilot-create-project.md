@@ -396,6 +396,11 @@ step‑by‑step instructions live in the sibling folders and are copied into yo
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
 | 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
 
+After a successful deploy, `azure-deploy` also **runs the project's outstanding database migrations**
+rather than leaving them as a manual next step. It reaches the database in tier order — inside the
+deployed app first, then a one‑shot job in the same environment, and only as a last resort through a
+temporary single‑IP firewall rule.
+
 Agent instructions are **version‑stamped**. A `.version` file next to the copied folders records the
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
 silently so a stale copy can't make an agent follow outdated steps.
@@ -421,6 +426,8 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `start_azure_debug_generate` | Starts the `azure-debug-generate` agent in a new session. |
 | `start_deployment` | Starts the `azure-deploy` agent in a new session. |
 | `capture_deployment_inventory` | Snapshots the subscription's Azure resources (baseline before deploy, capture after) and diffs them to record what the session created, classifying each as expected/failed/orphaned/unverified. Report‑only — never deletes. |
+| `open_database_migration_access` | Last‑resort database access for post‑deploy migrations. Adds a **single‑IP** firewall allow rule and records it first, so the extension can remove it even if the session dies. Refuses a server whose public network access is disabled or unconfirmed rather than opening it. |
+| `close_database_migration_access` | Removes the temporary rule that `open_database_migration_access` created and clears its record. Only ever removes rules the extension created, so it can't delete one from the generated infrastructure. |
 
 ## Files & state
 
@@ -439,6 +446,18 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
 `copilotOnRails.createdAt`, and `copilotOnRails.diagnosticEvents` (see below).
+
+`copilotOnRails.firewallLeases` is kept there too. Deploying can involve running outstanding database
+migrations, and if the database can only be reached from your machine, the deploy agent opens a
+**temporary single‑IP firewall rule** named `cor-tempmigration-…`. Each one is recorded as a *lease*
+in workspaceState **before** the rule is created, and the extension removes any outstanding lease the
+next time the workspace is opened — so a session that crashes mid‑migration can't leave your database
+open. You'll see a warning when one is cleaned up this way.
+
+The agent prefers routes that need no network change at all: running the migration inside the deployed
+app (`az containerapp exec`, `az webapp ssh`), then a one‑shot job in the same environment. The
+firewall rule is a last resort, and it is never widened beyond a single address — see
+[`cor-references/migration-access.md`](../resources/agents/azure-deploy/cor-references/migration-access.md).
 
 ---
 

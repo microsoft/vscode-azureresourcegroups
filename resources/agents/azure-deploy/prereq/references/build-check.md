@@ -72,7 +72,7 @@ Scan source files for imports not in the dependency manifest. This catches pre-e
 
 **Transitive dependency check (post-migration):** After upgrading dependencies during 🔶 Major Migration, run install **through the build-validation gate (Step 3) — the migration-intent choice does NOT authorize install; the user must answer that specific per-command consent prompt first** to catch transitive deps. Also run entry-point import to catch import-time validation errors (e.g., WTForms `Email()` requires `email-validator`).
 
-**F1 viability signal:** Check `f1Viable` per [dependency-compatibility.md § F1 Viability](dependency-compatibility.md). A vintage ❌ FAIL requiring 🔶 Major Migration (>5 files) → `f1Viable: false`.
+**SKU sizing signal:** Check `f1Viable` per [dependency-compatibility.md § SKU Sizing Signals](dependency-compatibility.md). F1 is never selected (floor is B1); a vintage ❌ FAIL requiring 🔶 Major Migration (>5 files) sets `f1Viable: false` as a signal to size **up** from B1.
 
 ## Step 3: Build Execution (Optional — User-Confirmed)
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+* Steer `azure-deploy` to run outstanding database migrations after a successful deploy instead of leaving them as a TODO, using a tiered access ladder that prefers running the migration inside the deployed app (no network change) over modifying the database firewall
+* Add the `open_database_migration_access` and `close_database_migration_access` MCP tools. When a migration genuinely requires local database access, they add a single-IP firewall rule and guarantee its removal — including after a crash or abandoned session — instead of relying on the agent to remember to restore it
+
 ## 0.12.7 - 2026-06-11
 
 ### Added

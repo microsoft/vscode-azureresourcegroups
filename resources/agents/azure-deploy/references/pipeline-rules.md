@@ -64,7 +64,7 @@ Set by prereq: (1) auto-approves readiness gate, (2) simplifies prepare Step 3 a
 
 ## Deploy as-is
 
-⛔ Do NOT refactor or upgrade working application code. Deploy what works. Fixing broken code IS allowed (build errors, missing deps) through the approval gate. Upgrade suggestions → `prepare-plan.json.postDeployRecommendations[]`. Infrastructure changes = allowed; code rewrites = forbidden; Azure compatibility changes (TLS, SSL, port) = allowed when detected by prereq AND approved. Never prompt for passwords — auto-generate into Key Vault.
+⛔ Do NOT refactor or upgrade working application code. Deploy what works. Fixing broken code IS allowed (build errors, missing deps) through the approval gate. Upgrade suggestions → `prepare-plan.json.postDeployRecommendations[]`. Infrastructure changes = allowed; code rewrites = forbidden; Azure compatibility changes (TLS, SSL, port) = allowed when detected by prereq AND approved. Never prompt for secrets — databases/caches/storage use managed identity (no passwords exist); auto-generate only app-internal secrets (e.g. `SECRET_KEY`) and store them on the compute resource (App Service app settings / Container Apps native secrets) via an `@secure()` param — no Key Vault.
 
 ## Known Platform Bugs
 

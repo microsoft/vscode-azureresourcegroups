@@ -2,17 +2,18 @@
 
 > ⛔ **SELF-CHECK:** If `costEstimate.breakdown[]` has ANY `monthlyUsd > 0`, at least one `pricing_get` or `az rest` pricing API call MUST appear in this session. Estimating from memory or training data is NEVER acceptable — reference values in this file may be outdated. If API fails after 2 attempts, use the reference value WITH disclaimer: `"⚠️ Estimated from reference — live API unavailable."`
 
-## Free-Tier Shortcut — Skip API
+## No Free-Tier Shortcut — Compute Always Has Cost
 
-> ⛔ **Check this FIRST.** If ALL services use free-tier SKUs → write $0 cost estimate, add disclaimer "Estimate assumes usage within free grant limits", skip to Step 7.
+> ⛔ **There is no $0 shortcut.** Compute has a floor (App Service **B1**, Static Web Apps **Standard**, Functions **Flex Consumption**) — F1/D1/Free/Consumption are never selected (see [sku-matrix.md](sku-matrix.md)). So any app with a compute component has a non-zero monthly cost and MUST get a live pricing call. Do NOT write a $0 estimate for a compute app.
 
-| Service | Free SKU | Skip API? |
-|---------|----------|-----------|
-| App Service | F1 | Yes |
-| Static Web Apps | Free | Yes |
-| Functions | Consumption (≤1M exec) | Yes |
-| Cosmos DB | Free tier (1000 RU/s) | Yes |
-| Container Apps | Consumption (≤180K vCPU-s) | Yes |
+Some services can still fall within free **grant** limits (they are metered, not a fixed free SKU) — note the grant in the estimate but still price the paid meters:
+
+| Service | Free grant (still price paid usage above it) |
+|---------|-----------------------------------------------|
+| Functions (Flex Consumption) | First 250K executions + 100K GB-s/month |
+| Cosmos DB | Free-tier account: 1000 RU/s + 25 GB (one per subscription) |
+| Container Apps | First 180K vCPU-s + 360K GiB-s + 2M requests/month |
+| Log Analytics | First 5 GB/month ingestion |
 
 ---
 
@@ -30,7 +31,7 @@
 
 1. Pick SKU from [sku-matrix.md](sku-matrix.md) based on budget intent.
 2. Find service section in [pricing-guide-services.md](pricing-guide-services.md) for filter strings and formulas.
-3. Call the pricing router — tool `mcp_azure_mcp_pricing` (VS Code) / `azure-pricing` (CLI) — with `intent`, `command: "pricing_get"`, and a `parameters` object (NOT `--flags`). Parallel OK. ⛔ At least one filter inside `parameters`: `sku`, `service`, `region`, `service-family`, or `filter`. ⛔ **`sku` matches `armSkuName`, not `skuName`** — use it ONLY when `armSkuName` is populated (App Service, MySQL/PostgreSQL, Redis). Empty-`armSkuName` services (ACR, Storage, Cosmos, Key Vault) return `[]` or 400 for `sku`/`service` — use a raw `filter` on `serviceName` + `meterName` instead.
+3. Call the pricing router — tool `mcp_azure_mcp_pricing` (VS Code) / `azure-pricing` (CLI) — with `intent`, `command: "pricing_get"`, and a `parameters` object (NOT `--flags`). Parallel OK. ⛔ At least one filter inside `parameters`: `sku`, `service`, `region`, `service-family`, or `filter`. ⛔ **`sku` matches `armSkuName`, not `skuName`** — use it ONLY when `armSkuName` is populated (App Service, MySQL/PostgreSQL, Redis). Empty-`armSkuName` services (ACR, Storage, Cosmos) return `[]` or 400 for `sku`/`service` — use a raw `filter` on `serviceName` + `meterName` instead.
 4. Apply the monthly multiplier from each meter's `unitOfMeasure` (see § Monthly Multiplier) — NOT a per-service constant.
 5. Cross-check returned `retailPrice` against planned SKU.
 
