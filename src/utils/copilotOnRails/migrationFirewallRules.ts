@@ -26,7 +26,7 @@ export const DEFAULT_TTL_MINUTES = 30;
 /** Upper bound on lease lifetime — a migration that takes longer should use tier 1 or 2. */
 export const MAX_TTL_MINUTES = 120;
 
-/** Bound the persisted lease list, mirroring `deploymentPlanApprovalState`'s MAX_ENTRIES. */
+/** Bound on outstanding leases. Reaching it means reconciliation is not keeping up — see `MAX_LEASES` use in `openMigrationAccess`. */
 export const MAX_LEASES = 10;
 
 export interface ParsedServerResourceId {
@@ -137,29 +137,35 @@ export function buildTempRuleName(sessionId: string, expiresAt: Date): string {
 }
 
 /**
- * Guards every delete path. Without this a caller could pass the name of a rule the IaC created
- * (for example `AllowAllAzureServicesAndResourcesWithinAzureIps`) and have the tool remove it.
+ * Recognises a rule name this extension generated, by matching the **whole grammar**
+ * `buildTempRuleName` emits rather than just its prefix.
+ *
+ * This is a resource-name check, not a label check, and the distinction is the point.
+ * `closeMigrationAccess` interpolates the name into an ARM resource id, so a prefix-only
+ * guard would accept `cor-tempmigration-x/..` and let extra path segments through — the
+ * caller could then aim the delete at a resource this extension never created, which is
+ * precisely the protection the prefix was supposed to provide.
+ *
+ * Anchored, no path separators, and length-bounded to Azure's 128-character limit for
+ * firewall rule names.
  */
 export function isTempRuleName(ruleName: string): boolean {
-    return ruleName.startsWith(TEMP_RULE_PREFIX);
+    return ruleName.length <= 128 && /^cor-tempmigration-[A-Za-z0-9-]{1,32}-\d{1,19}$/.test(ruleName);
 }
 
 export function clampTtlMinutes(ttlMinutes: number | undefined): number {
     if (ttlMinutes === undefined || !Number.isFinite(ttlMinutes) || ttlMinutes <= 0) {
         return DEFAULT_TTL_MINUTES;
     }
-    return Math.min(Math.floor(ttlMinutes), MAX_TTL_MINUTES);
+    // Floored, so a fractional value under a minute would otherwise become 0 and mint a lease
+    // that is already expired the moment it is written.
+    return Math.max(1, Math.min(Math.floor(ttlMinutes), MAX_TTL_MINUTES));
 }
 
 export function isLeaseExpired(lease: MigrationAccessLease, now: Date = new Date()): boolean {
     const expiry = Date.parse(lease.expiresAt);
     // An unparseable expiry is treated as expired so a corrupted record still gets reaped.
     return Number.isNaN(expiry) || expiry <= now.getTime();
-}
-
-/** Keeps the most recent leases, dropping the oldest once the bound is exceeded. */
-export function pruneLeases(leases: readonly MigrationAccessLease[], max: number = MAX_LEASES): MigrationAccessLease[] {
-    return leases.length > max ? leases.slice(leases.length - max) : [...leases];
 }
 
 /**

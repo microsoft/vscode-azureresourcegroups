@@ -13,7 +13,6 @@ import {
     isTempRuleName,
     MAX_TTL_MINUTES,
     parseServerResourceId,
-    pruneLeases,
     readPublicNetworkAccess,
     sanitizeSessionId,
     TEMP_RULE_PREFIX,
@@ -118,6 +117,32 @@ suite('migrationFirewallRules', () => {
             assert.strictEqual(isTempRuleName('AllowAllWindowsAzureIps'), false);
             assert.strictEqual(isTempRuleName('ClientIPAddress_2026-1-1'), false);
         });
+
+        // The prefix alone is not a resource-name check: `closeMigrationAccess` interpolates the
+        // name into an ARM resource id, so anything that can introduce a path segment or otherwise
+        // escape the firewallRules child must be rejected even though it starts correctly.
+        test('rejects names that carry the prefix but escape the rule grammar', () => {
+            for (const bad of [
+                `${TEMP_RULE_PREFIX}x/..`,
+                `${TEMP_RULE_PREFIX}x/../../providers/Microsoft.Sql/servers/other`,
+                `${TEMP_RULE_PREFIX}sess-1700000000/suffix`,
+                `${TEMP_RULE_PREFIX}sess`,                       // no expiry segment
+                `${TEMP_RULE_PREFIX}sess-notanumber`,
+                `${TEMP_RULE_PREFIX}se ss-1700000000`,           // whitespace
+                `${TEMP_RULE_PREFIX}sess-1700000000 `,           // trailing space
+                `x${TEMP_RULE_PREFIX}sess-1700000000`,           // not anchored at the start
+                `${TEMP_RULE_PREFIX}${'a'.repeat(200)}-1700000000`,
+            ]) {
+                assert.strictEqual(isTempRuleName(bad), false, `expected "${bad}" to be rejected`);
+            }
+        });
+
+        test('accepts exactly what buildTempRuleName emits', () => {
+            for (const sessionId of ['sess', 'a-b-c', 'A1b2C3', 'a'.repeat(40)]) {
+                const name = buildTempRuleName(sessionId, new Date('2026-01-01T00:30:00Z'));
+                assert.strictEqual(isTempRuleName(name), true, `expected "${name}" to be accepted`);
+            }
+        });
     });
 
     suite('clampTtlMinutes', () => {
@@ -128,6 +153,14 @@ suite('migrationFirewallRules', () => {
             assert.strictEqual(clampTtlMinutes(NaN), 30);
             assert.strictEqual(clampTtlMinutes(45), 45);
             assert.strictEqual(clampTtlMinutes(9999), MAX_TTL_MINUTES);
+        });
+
+        // Floored, so without a lower bound these would mint a lease that is already expired at
+        // the moment it is written — and therefore reaped before the migration could run.
+        test('never returns a lifetime of zero for a positive fractional input', () => {
+            assert.strictEqual(clampTtlMinutes(0.5), 1);
+            assert.strictEqual(clampTtlMinutes(0.001), 1);
+            assert.strictEqual(clampTtlMinutes(1.9), 1);
         });
     });
 
@@ -140,16 +173,6 @@ suite('migrationFirewallRules', () => {
         // A record we can't read is a record we can't trust to be closed, so treat it as reapable.
         test('treats an unparseable expiry as expired', () => {
             assert.strictEqual(isLeaseExpired(lease({ expiresAt: 'not-a-date' })), true);
-        });
-
-        test('prunes oldest first', () => {
-            const leases = Array.from({ length: 5 }, (_, i) => lease({ ruleName: `rule-${i}` }));
-            const pruned = pruneLeases(leases, 3);
-            assert.deepStrictEqual(pruned.map((l) => l.ruleName), ['rule-2', 'rule-3', 'rule-4']);
-        });
-
-        test('leaves a short list untouched', () => {
-            assert.strictEqual(pruneLeases([lease()], 10).length, 1);
         });
     });
 

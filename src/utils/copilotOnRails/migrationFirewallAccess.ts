@@ -15,9 +15,9 @@ import {
     firewallApiVersion,
     isLeaseExpired,
     isTempRuleName,
+    MAX_LEASES,
     MigrationAccessLease,
     parseServerResourceId,
-    pruneLeases,
     readPublicNetworkAccess,
     SupportedServerKind,
     validateClientIp,
@@ -96,7 +96,12 @@ export function readLeases(): MigrationAccessLease[] {
 }
 
 async function writeLeases(leases: readonly MigrationAccessLease[]): Promise<void> {
-    await ext.context.workspaceState.update(LEASE_STATE_KEY, pruneLeases(leases));
+    // Deliberately not bounded here. A lease is the only record that a firewall rule exists, so
+    // dropping the oldest to cap the list would strand exactly the rule that has been outstanding
+    // longest — the removal guarantee would be broken by the code meant to keep state tidy.
+    // Growth is bounded at the other end instead: `openMigrationAccess` refuses once MAX_LEASES
+    // are outstanding, and reconciliation removes them on every activation.
+    await ext.context.workspaceState.update(LEASE_STATE_KEY, [...leases]);
 }
 
 async function addLease(lease: MigrationAccessLease): Promise<void> {
@@ -108,11 +113,22 @@ async function removeLease(ruleName: string): Promise<void> {
     await writeLeases(readLeases().filter((l) => l.ruleName !== ruleName));
 }
 
+/** Test-only: resets the lease store between cases. Reached through `TestApi.testing.migrationFirewall`. */
+export async function clearLeasesForTesting(): Promise<void> {
+    await ext.context.workspaceState.update(LEASE_STATE_KEY, undefined);
+}
+
 // #endregion
 
 export type OpenAccessOutcome =
     | { status: 'opened'; lease: MigrationAccessLease }
-    | { status: 'refused'; reason: 'privateNetworkingOnly' | 'unsupportedServer' | 'invalidIp' | 'serverUnreadable'; detail?: string };
+    | { status: 'refused'; reason: 'privateNetworkingOnly' | 'publicAccessUnverified' | 'unsupportedServer' | 'invalidIp' | 'serverUnreadable' | 'tooManyOutstandingLeases'; detail?: string }
+    /**
+     * The create failed *and* the compensating delete also failed, so a rule may exist with no
+     * successful open to pair it with. Distinct from `refused` because the caller must be able to
+     * name the rule: reporting "no firewall change was made" here would be false.
+     */
+    | { status: 'openFailedRuleOutstanding'; ruleName: string; detail: string };
 
 export interface OpenAccessInput {
     serverResourceId: string;
@@ -137,6 +153,14 @@ export async function openMigrationAccess(context: IActionContext, input: OpenAc
         return { status: 'refused', reason: 'invalidIp', detail: ipValidation.rejection };
     }
 
+    // Leases are never dropped to make room, so the cap has to refuse here instead. Reaching it
+    // means previous exceptions were not cleaned up, and opening another would compound the
+    // problem rather than reveal it.
+    const outstanding = readLeases();
+    if (outstanding.length >= MAX_LEASES) {
+        return { status: 'refused', reason: 'tooManyOutstandingLeases', detail: String(outstanding.length) };
+    }
+
     const subscription = await resolveSubscription(parsed.subscriptionId);
     if (!subscription) {
         return { status: 'refused', reason: 'serverUnreadable', detail: 'subscriptionUnavailable' };
@@ -152,11 +176,21 @@ export async function openMigrationAccess(context: IActionContext, input: OpenAc
         return { status: 'refused', reason: 'serverUnreadable', detail: parseError(error).message };
     }
 
-    // A server with public access disabled is reachable only through its private endpoint. Opening
-    // it would be the exact network-posture change the deploy agent is forbidden to make, so the
-    // tool refuses rather than "helpfully" enabling it.
-    if (readPublicNetworkAccess(serverProperties) === 'Disabled') {
+    // Fail closed. The documented precondition for tier 3 is that public access is *already*
+    // enabled, so the only value that may proceed is an explicit `Enabled`.
+    //
+    // `readPublicNetworkAccess` returns undefined for an absent property, an unrecognised value,
+    // or a provider shape it does not know — and the seam allows `getServerProperties` to return
+    // undefined outright. Treating any of those as "probably fine" would open a public firewall
+    // rule on a server whose posture was never established, which is the one outcome this tool
+    // exists to prevent. Refusing costs a fallback to tier 2 or a failed deploy; guessing wrong
+    // costs an exposed database.
+    const publicAccess = readPublicNetworkAccess(serverProperties);
+    if (publicAccess === 'Disabled') {
         return { status: 'refused', reason: 'privateNetworkingOnly' };
+    }
+    if (publicAccess !== 'Enabled') {
+        return { status: 'refused', reason: 'publicAccessUnverified' };
     }
 
     const now = new Date();
@@ -179,10 +213,17 @@ export async function openMigrationAccess(context: IActionContext, input: OpenAc
     try {
         await operations.putFirewallRule(context, subscription, ruleResourceId(input.serverResourceId, ruleName), apiVersion, ipValidation.ip);
     } catch (error) {
-        // The rule may or may not exist. Leave the lease in place so reconciliation reaps it, and
-        // attempt an immediate cleanup so the common case doesn't wait for the next activation.
-        await closeMigrationAccess(context, { serverResourceId: input.serverResourceId, ruleName });
-        return { status: 'refused', reason: 'serverUnreadable', detail: parseError(error).message };
+        const detail = parseError(error).message;
+        // The create may have partially applied, so the rule's existence is unknown. Attempt an
+        // immediate cleanup rather than waiting for the next activation.
+        const cleanup = await closeMigrationAccess(context, { serverResourceId: input.serverResourceId, ruleName });
+        if (cleanup.status !== 'closed') {
+            // The lease stays, so reconciliation will retry. But the caller must be told a rule may
+            // be outstanding and given its name — reporting "no firewall change was made" would be
+            // false, and the agent would report a clean deploy over an open firewall.
+            return { status: 'openFailedRuleOutstanding', ruleName, detail };
+        }
+        return { status: 'refused', reason: 'serverUnreadable', detail };
     }
 
     return { status: 'opened', lease };

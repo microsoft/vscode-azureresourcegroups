@@ -61,7 +61,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
-import { reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
+import { clearLeasesForTesting, closeMigrationAccess, openMigrationAccess, readLeases, reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
@@ -346,7 +346,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         } catch {
                             return false;
                         }
-                    }
+                    },
+                    migrationFirewall: {
+                        setOverrideOperations: (operations) => {
+                            ext.testing.overrideMigrationFirewallOperations = operations;
+                        },
+                        readLeases: () => readLeases(),
+                        clearLeases: () => clearLeasesForTesting(),
+                        open: (context, input) => openMigrationAccess(context, input),
+                        close: (context, input) => closeMigrationAccess(context, input),
+                        reconcile: (context) => reconcileMigrationFirewallLeases(context),
+                    },
                 },
             }),
         };

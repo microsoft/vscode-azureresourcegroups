@@ -67,17 +67,34 @@ deploy.**
 3. The migration can run with the developer's own Entra credentials. Do **not** copy the admin
    password to the local machine to satisfy this tier.
 
-**Use the extension's tools.** They record the baseline, scope the rule to a single IP, and remove
-it in a real finally — including on crash or abort, which prompt instructions cannot guarantee:
+**Use the extension's tools.** They scope the rule to a single IP and guarantee its removal even
+if this session dies — which prompt instructions cannot:
 
-- `open_database_migration_access` → creates `cor-tempmigration-{sessionId}-{expiry}`
-- `close_database_migration_access` → removes it and verifies the rule list matches the baseline
+- `open_database_migration_access` → records a lease, then creates `cor-tempmigration-{sessionId}-{expiry}`
+- `close_database_migration_access` → deletes that rule and clears the lease
+
+The lease is written **before** the rule is created, and the extension reconciles outstanding
+leases **on its next activation**. So if this session crashes, is compacted, or the window closes
+mid-migration, the rule is removed when the workspace is reopened rather than surviving unnoticed.
+
+> ⛔ Two things these tools do **not** do, so do not tell the user otherwise. They do **not**
+> snapshot or compare the server's full firewall rule list — they only ever create and delete their
+> own uniquely-named rule, and never read, modify, or remove any other rule. And cleanup on a crash
+> happens at the **next activation**, not instantly. If `close_database_migration_access` reports
+> that it could not remove the rule, the rule is still there until then: say exactly that, name the
+> rule, and fail the deploy.
+
+`open_database_migration_access` refuses rather than guessing when it cannot confirm the server's
+network posture, or when ten exceptions are already outstanding in the workspace. A refusal is not
+a failure to route around — fall back to tier 2, or fail the deploy.
 
 Both are `copilot-azure-resources-extension-tools/*` tools. If they are not in your active tool
 list, load them with `tool_search` → `activate_tools` as described in the agent's MCP tools
 section — do **not** treat them as unavailable and fall back to `az`.
 
-**Only if those tools genuinely cannot be loaded**, use `az` — and obey every rule below:
+**Only if those tools genuinely cannot be loaded**, use `az` — and obey every rule below. Note that
+this path has no crash safety at all: nothing records what you changed, so restoring it is entirely
+your responsibility.
 
 - **Record the baseline first**, before any change:
   `az postgres flexible-server firewall-rule list`, `az mysql flexible-server firewall-rule list`,

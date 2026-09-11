@@ -39,7 +39,10 @@ export const openDatabaseMigrationAccessTool: CopilotTool<typeof openDatabaseMig
         // Additive and reversible: creates one narrowly-scoped rule and never edits or removes
         // any rule it did not create.
         destructiveHint: false,
-        idempotentHint: true,
+        // NOT idempotent: each call derives a fresh expiry-based rule name, so a client that
+        // retried this as a "safe" operation would create a second rule and a second lease.
+        // Retrying is the caller's decision to make deliberately, not the protocol's to assume.
+        idempotentHint: false,
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openDatabaseMigrationAccessToolName}/execute`, async (context: IActionContext) => {
@@ -55,6 +58,16 @@ export const openDatabaseMigrationAccessTool: CopilotTool<typeof openDatabaseMig
 async function openAccess(context: CopilotOnRailsContext, input: OpenAccessToolInput): Promise<Record<string, unknown>> {
     const outcome = await openMigrationAccess(context, input);
     setCorProp(context, 'migrationAccessOutcome', outcome.status);
+
+    if (outcome.status === 'openFailedRuleOutstanding') {
+        setCorErrorProp(context, 'migrationAccessOpenStranded', outcome.detail);
+        return {
+            message: vscode.l10n.t('Opening access failed ({0}), and the temporary rule "{1}" could not be cleaned up afterwards, so it may still exist. Treat this deployment as FAILED, record the rule name in deploy-result.json, and tell the user it may still be in place. The extension will retry removing it the next time this workspace is opened.', outcome.detail, outcome.ruleName),
+            refused: true,
+            restored: false,
+            outstandingRuleName: outcome.ruleName,
+        };
+    }
 
     if (outcome.status === 'refused') {
         setCorErrorProp(context, 'migrationAccessRefusedReason', outcome.reason);
@@ -79,6 +92,10 @@ function refusalMessage(reason: string, detail: string | undefined): string {
     switch (reason) {
         case 'privateNetworkingOnly':
             return vscode.l10n.t('This server has public network access disabled, so it is reachable only through its private endpoint. A firewall rule cannot help, and enabling public access is not permitted. Run the migration from inside the network instead (tier 1 or tier 2), or record the migration as incomplete in deploy-result.json and fail the deploy.');
+        case 'publicAccessUnverified':
+            return vscode.l10n.t('The server did not report a recognizable publicNetworkAccess value, so its network posture could not be confirmed. No firewall change was made. Run the migration from inside the network instead (tier 1 or tier 2) rather than opening a rule against a server whose posture is unknown.');
+        case 'tooManyOutstandingLeases':
+            return vscode.l10n.t('There are already {0} temporary migration firewall rule(s) recorded as outstanding in this workspace, so no further access will be opened. Reload the window to let the extension reconcile them, then retry.', detail ?? 'several');
         case 'unsupportedServer':
             return vscode.l10n.t('That resource id is not a PostgreSQL Flexible Server, MySQL Flexible Server, or Azure SQL Server, so this tool will not modify its firewall.');
         case 'invalidIp':
