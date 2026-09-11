@@ -7,6 +7,7 @@ import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent,
 import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, OpenRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { classifyInstalledForRow, InstalledChip } from './components/InstalledChip';
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
@@ -936,53 +937,6 @@ const ProjectStructureCard = ({ section }: { section: ScaffoldPlanSection }): JS
         </div>
     );
 };
-
-// Classifies the value of an "Installed" cell from the agent's detection pass.
-// The planner writes ✅ / ❌ (or yes/no) once it runs the shared prerequisites
-// detection; anything else (e.g. a leftover `{…}` placeholder or `—`) is treated
-// as "unknown" so the card never claims a tool's status it doesn't actually know.
-type InstalledStatus = 'installed' | 'missing' | 'unknown';
-
-function classifyInstalled(cell: string): InstalledStatus {
-    const value = cell.trim().toLowerCase();
-    if (value.includes('✅') || value === 'yes' || value === 'true' || value === 'installed') {
-        return 'installed';
-    }
-    if (value.includes('❌') || value === 'no' || value === 'false' || value === 'missing') {
-        return 'missing';
-    }
-    return 'unknown';
-}
-
-// Compose providers can't be reliably detected in a sandboxed/non-interactive shell
-// (the CLI plugin often resolves only in the user's initialized shell), so we never
-// claim a definitive installed/missing status for them. This covers both Docker
-// Compose and Podman Compose, which are interchangeable container-runtime options.
-function isComposeProvider(toolName: string): boolean {
-    const name = toolName.trim().toLowerCase();
-    return name.includes('docker compose') || name.includes('docker-compose') ||
-        name.includes('podman compose') || name.includes('podman-compose');
-}
-
-function classifyInstalledForRow(toolName: string, cell: string): InstalledStatus {
-    if (isComposeProvider(toolName)) {
-        return 'unknown';
-    }
-    return classifyInstalled(cell);
-}
-
-const INSTALLED_STATUS_LABEL: Record<InstalledStatus, string> = {
-    installed: 'Installed',
-    missing: 'Not installed',
-    unknown: 'Unknown',
-};
-
-const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => (
-    <span className={`installedChip installed-${status}`}>
-        <span className={`codicon ${status === 'installed' ? 'codicon-pass-filled' : status === 'missing' ? 'codicon-error' : 'codicon-question'}`} />
-        {INSTALLED_STATUS_LABEL[status]}
-    </span>
-);
 
 // Renders the Install cell deterministically. The link is resolved from the
 // hardcoded catalog by matching the tool name — never taken from the plan

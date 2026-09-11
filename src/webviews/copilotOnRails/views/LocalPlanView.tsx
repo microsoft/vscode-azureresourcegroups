@@ -39,6 +39,7 @@ import {
     useState,
     type JSX,
 } from "react";
+import { classifyInstalledForRow, InstalledChip } from "./components/InstalledChip";
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
@@ -654,8 +655,51 @@ const SectionCard = ({
     defaultOpen: boolean;
     onRefreshPrerequisites?: () => void;
     isRefreshing?: boolean;
-}): JSX.Element => {
+}): JSX.Element | null => {
     const [open, setOpen] = useState(defaultOpen);
+    const [failedDiagrams, setFailedDiagrams] = useState<ReadonlySet<number>>(
+        () => new Set(),
+    );
+    const handleDiagramStatus = useCallback(
+        (index: number, failed: boolean) =>
+            setFailedDiagrams((previous) => {
+                if (previous.has(index) === failed) {
+                    return previous;
+                }
+                const next = new Set(previous);
+                if (failed) {
+                    next.add(index);
+                } else {
+                    next.delete(index);
+                }
+                return next;
+            }),
+        [],
+    );
+
+    const diagramCount = useMemo(
+        () => section.content.filter(isMermaidCodeBlock).length,
+        [section.content],
+    );
+
+    const isDiagramOnlySection = useMemo(
+        () =>
+            section.content.every(
+                (item) =>
+                    isMermaidCodeBlock(item) ||
+                    item.type === "paragraph" ||
+                    item.type === "blockquote",
+            ),
+        [section.content],
+    );
+
+    if (
+        diagramCount > 0 &&
+        failedDiagrams.size >= diagramCount &&
+        isDiagramOnlySection
+    ) {
+        return null;
+    }
 
     return (
         <div className="sectionCard">
@@ -690,6 +734,9 @@ const SectionCard = ({
                             key={i}
                             item={item}
                             sectionTitle={section.title}
+                            onDiagramStatus={(failed) =>
+                                handleDiagramStatus(i, failed)
+                            }
                         />
                     ))}
                 </div>
@@ -698,12 +745,20 @@ const SectionCard = ({
     );
 };
 
+function isMermaidCodeBlock(item: LocalPlanContent): boolean {
+    return (
+        item.type === "codeBlock" && item.language?.toLowerCase() === "mermaid"
+    );
+}
+
 const ContentBlock = ({
     item,
     sectionTitle,
+    onDiagramStatus,
 }: {
     item: LocalPlanContent;
     sectionTitle: string;
+    onDiagramStatus?: (failed: boolean) => void;
 }): JSX.Element | null => {
     switch (item.type) {
         case "table":
@@ -723,8 +778,13 @@ const ContentBlock = ({
                 />
             );
         case "codeBlock":
-            if (item.language?.toLowerCase() === "mermaid") {
-                return <MermaidBlock code={item.code} />;
+            if (isMermaidCodeBlock(item)) {
+                return (
+                    <MermaidBlock
+                        code={item.code}
+                        onRenderStatus={onDiagramStatus}
+                    />
+                );
             }
             return <CodeBlock language={item.language} code={item.code} />;
         case "bulletList":
@@ -784,6 +844,11 @@ const DataTable = ({
         : -1;
     const toolIdx = isPrereq
         ? headers.findIndex((h) => h.toLowerCase().includes("tool"))
+        : -1;
+    // Render the detection pass result as the same chip the Project Scaffolding
+    // plan uses instead of echoing the raw ✅/❓ characters from the markdown.
+    const installedIdx = isPrereq
+        ? headers.findIndex((h) => h.toLowerCase().includes("installed"))
         : -1;
     const columnHidden = (idx: number): boolean => idx === installIdx;
 
@@ -848,6 +913,18 @@ const DataTable = ({
                                                         </span>
                                                     </Tooltip>
                                                 </span>
+                                            </td>
+                                        );
+                                    }
+                                    if (ci === installedIdx) {
+                                        return (
+                                            <td key={ci}>
+                                                <InstalledChip
+                                                    status={classifyInstalledForRow(
+                                                        toolName,
+                                                        cell,
+                                                    )}
+                                                />
                                             </td>
                                         );
                                     }
@@ -1033,24 +1110,43 @@ const CodeBlock = ({
     </div>
 );
 
-const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
+const MermaidBlock = ({
+    code,
+    onRenderStatus,
+}: {
+    code: string;
+    onRenderStatus?: (failed: boolean) => void;
+}): JSX.Element | null => {
     const ref = useRef<HTMLDivElement>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [failedCode, setFailedCode] = useState<string | null>(null);
+    const onRenderStatusRef = useRef(onRenderStatus);
 
     useEffect(() => {
+        onRenderStatusRef.current = onRenderStatus;
+    });
+
+    useEffect(() => {
+        const container = ref.current;
+        if (!container) {
+            return;
+        }
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
         mermaid
-            .render(id, code)
+            .render(id, code, container)
             .then(({ svg }) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
-                    setError(null);
+                    setFailedCode(null);
+                    onRenderStatusRef.current?.(false);
                 }
             })
-            .catch((err: Error) => {
+            .catch(() => {
+                // A malformed diagram isn't actionable for the user, so drop the
+                // block entirely rather than surfacing a parse error.
                 if (!cancelled) {
-                    setError(err.message);
+                    setFailedCode(code);
+                    onRenderStatusRef.current?.(true);
                 }
             });
         return () => {
@@ -1058,15 +1154,8 @@ const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
         };
     }, [code]);
 
-    if (error) {
-        return (
-            <div className="codeBlock">
-                <span className="codeBlockLang">mermaid (error)</span>
-                <pre>
-                    <code>{code}</code>
-                </pre>
-            </div>
-        );
+    if (failedCode === code) {
+        return null;
     }
 
     return <div className="mermaidDiagram" ref={ref} />;

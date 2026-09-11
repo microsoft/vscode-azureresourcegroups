@@ -48,7 +48,7 @@ Returns: comprehensive best practices for Bicep authoring (naming, organization,
 
 | Required | Optional | Read-Only |
 |----------|----------|-----------|
-| `azResourceType` (e.g. Microsoft.KeyVault/vaults), `apiVersion` (e.g. 2024-11-01) | — | ✅ |
+| `azResourceType` (e.g. Microsoft.Web/sites), `apiVersion` (e.g. 2024-11-01) | — | ✅ |
 
 Returns: complete JSON schema for the resource type including all properties, nested types, constraints.
 

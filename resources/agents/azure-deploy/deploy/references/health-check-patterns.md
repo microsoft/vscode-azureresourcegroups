@@ -58,7 +58,6 @@ az resource show --ids {resourceId} --query "properties.provisioningState" -o ts
 | Azure SQL | `provisioningState` + `az sql db show` |
 | Cosmos DB | `provisioningState` |
 | Storage | `provisioningState` + `statusOfPrimary` |
-| Key Vault | `provisioningState` |
 | Functions | HTTP trigger URL + HTTP check |
 
 > ⛔ **Container Apps — run an explicit live HTTP probe (the pipeline status is NOT sufficient).** After `latestReadyRevisionName` is set, run an observable request against the ingress FQDN and capture the result into `deploy-result.json.endpoints[].healthStatus`:
@@ -84,13 +83,13 @@ Overall `healthStatus` = worst status across all endpoints. If any `unreachable`
 
 ## Functional Endpoint Verification
 
-> ⛔ **A 200 on `/` only proves the web server booted — not that the app works.** After the HTTP check, confirm the app actually functions against the services the plan provisioned (database, cache, KV secrets), not just that it responds.
+> ⛔ **A 200 on `/` only proves the web server booted — not that the app works.** After the HTTP check, confirm the app actually functions against the services the plan provisioned (database, cache), not just that it responds.
 
 Health checks only confirm the web server is responding. Exercise a route that depends on the backing services — for example:
 
 | Pattern | Functional Check |
 |---------|-----------------|
-| Database in the plan (MySQL/PostgreSQL/SQL/Cosmos) | Probe a route that reads/writes the DB (a detected app route, NOT `/` — root often serves a static page with no DB access, so 200 on `/` masks broken DB connectivity). A 5xx or a DB error in the body (`Access denied`, `connection refused`, `does not exist`) → `degraded` — usually a KV↔DB credential mismatch or an unseeded secret. |
+| Database in the plan (MySQL/PostgreSQL/SQL/Cosmos) | Probe a route that reads/writes the DB (a detected app route, NOT `/` — root often serves a static page with no DB access, so 200 on `/` masks broken DB connectivity). A 5xx or a DB error in the body (`connection refused`, `does not exist`, token/auth failure) → `degraded` — usually the app MI wasn't granted a DB role (see [database-post-deploy.md](database-post-deploy.md) § 2). |
 | `FIRST_SUPERUSER` env var or `prestart.sh`/`init_db()` | After health passes, attempt login endpoint. If 401/500 → startup scripts may have failed. Trigger `az containerapp revision restart` to re-run startup. |
 | Migration frameworks (Alembic, Django, Prisma, EF) | After health passes, check `prereq-output.json` for migration signals. If found, run migrations per [database-post-deploy.md](database-post-deploy.md). |
-| Two-phase Container Apps with KV secrets | Wait 60s after Phase 2 for RBAC propagation. If login/API fails with auth errors, KV secrets may not have resolved at revision startup. Create a new revision. |
+| Two-phase Container Apps (managed identity) | Wait 60s after Phase 2 for AcrPull RBAC propagation. If the DB fails with auth/token errors, the app MI may not yet have its DB role — grant it (see [database-post-deploy.md](database-post-deploy.md)) and create a new revision. |

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './disabledButton';
 @use './fluentTooltipPortal';
 
 
@@ -84,16 +85,6 @@
 
             .fui-Button {
                 overflow: visible;
-            }
-
-            // Keep the disabled primary (Approve) button visibly blue instead
-            // of graying it out, just dimmed to signal the disabled state.
-            .fui-Button[data-appearance='primary']:disabled,
-            .fui-Button--primary:disabled {
-                background-color: var(--vscode-button-background) !important;
-                color: var(--vscode-button-foreground) !important;
-                border-color: var(--vscode-button-background) !important;
-                opacity: 0.6;
             }
 
             .feedbackIconWrapper {

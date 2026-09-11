@@ -57,14 +57,14 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 
 > ⛔ **NEVER present a region without checking quota first.** Skipping quota validation causes cascading deploy failures and extended healing loops.
 > ⛔ If plan includes PostgreSQL/MySQL, verify `offerRestrictionsVerified: true` — if false/missing, region is blocked. Do NOT proceed to scaffold with unchecked DB services.
-> ⛔ **Free ≠ unlimited.** Every compute SKU — including F1, Consumption, and Serverless tiers — has a per-subscription, per-region quota. Do NOT skip quota checks because a SKU is free.
+> ⛔ **Paid ≠ unlimited.** Every compute SKU — including B1, Consumption, and Serverless tiers — has a per-subscription, per-region quota. Do NOT skip quota checks. (F1/D1/Free are never selected — the compute floor is B1.)
 > ⛔ After region fallback, update ALL `services[].region` in `prepare-plan.json`. Do not leave stale values.
 
 ## Error Handling
 
 | Error | Remediation |
 |-------|-------------|
-| Pricing API 400 | Verify `--sku` included. Free tiers: skip API |
+| Pricing API 400 | Verify `--sku` included in the query |
 | MCP pricing unavailable | Dispatch [`subagent-pricing.md`](references/subagent-pricing.md) as `task` fallback (uses direct HTTP to `prices.azure.com`) |
 | Prereq output missing | Trigger prereq backfill |
 | Quota check fails | Fall back to best-effort estimate + disclaimer |

@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './disabledButton';
 @use './fluentTooltipPortal';
+@use './installedChip' as installedChipStyles;
 
 // Fluent UI's default DialogSurface background matches the VS Code editor
 // background, which makes the Submit Edits confirmation dialog blend into the
@@ -365,6 +367,8 @@
         overflow-x: auto;
     }
 
+    @include installedChipStyles.installedChip;
+
     .dataTable {
         width: 100%;
         border-collapse: collapse;
@@ -576,16 +580,6 @@
         // clips the top-right corner of the badge.
         .fui-Button {
             overflow: visible;
-        }
-
-        // Keep the disabled primary (Approve) button visibly blue instead
-        // of graying it out, just dimmed to signal the disabled state.
-        .fui-Button[data-appearance='primary']:disabled,
-        .fui-Button--primary:disabled {
-            background-color: var(--vscode-button-background) !important;
-            color: var(--vscode-button-foreground) !important;
-            border-color: var(--vscode-button-background) !important;
-            opacity: 0.6;
         }
 
         .feedbackIconWrapper {

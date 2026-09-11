@@ -96,14 +96,6 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
 
 **Self-review check (L2 Pattern):** If `hasNativeModules == true`, verify Bicep has BOTH `appCommandLine` and `WEBSITES_CONTAINER_START_TIME_LIMIT`. If `prereq-output.json.initCommands[]` has `required: true` entries, verify `appCommandLine` includes them before the app start command. **FLAGGED** if either check fails.
 
-## F1/D1 Free Tier — No Managed Identity
-
-> ⛔ **F1/D1 does NOT support managed identity** (causes OOM / deployment failure). When the plan SKU is F1 or D1:
-> - **Omit** `identity: { type: 'SystemAssigned' }` from the App Service resource
-> - **Do NOT use** `@Microsoft.KeyVault()` in app settings — KV references require managed identity
-> - **Instead:** Pass secrets as `@secure()` params from the KV module's `@secure()` output. The KV module generates the secret value and outputs it securely; main.bicep passes it to the App Service module as a `@secure() param`
-> - **Do NOT output** `principalId` — it doesn't exist without identity
-
 ## Identity Output — SystemAssigned vs UserAssigned
 
-> ⛔ **`appService.identity.principalId` only exists for `SystemAssigned` identity.** When using `UserAssigned`, output the managed identity MODULE's `principalId` instead — `identity.principalId` is undefined and causes `DeploymentOutputEvaluationFailed`. F1/D1 App Service: no identity (OOM), so no principalId output.
+> ⛔ **`appService.identity.principalId` only exists for `SystemAssigned` identity.** When using `UserAssigned`, output the managed identity MODULE's `principalId` instead — `identity.principalId` is undefined and causes `DeploymentOutputEvaluationFailed`. Every App Service has a managed identity (mandatory — the compute floor is B1, which supports MI; F1/D1/Free are never selected).
