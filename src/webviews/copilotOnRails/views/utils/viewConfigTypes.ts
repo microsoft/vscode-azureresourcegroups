@@ -166,6 +166,33 @@ export type DeployResultViewConfiguration = {
     strings: DeployResultViewStrings;
 };
 
+/** Lifecycle of a single step in a loading view's progress checklist. */
+export type LoadingStepStatus = 'pending' | 'active' | 'done' | 'failed';
+
+/** One step in a loading view's progress checklist. */
+export type LoadingStep = {
+    /** Stable identifier, used as the React key. */
+    id: string;
+    /** Step label (e.g. "Provisioning Azure resources"). */
+    label: string;
+    status: LoadingStepStatus;
+    /**
+     * Optional nested checklist rendered under this step, used for the live per-resource
+     * provisioning list. Only one level of nesting is rendered.
+     */
+    children?: readonly LoadingStep[];
+    /**
+     * Optional short counter shown beside the label (e.g. "4 of 7 resources ready"). Reserved for
+     * machine-derived counts — never free-form prose.
+     */
+    summary?: string;
+    /**
+     * Optional secondary text rendered beside the label, de-emphasised and smaller. Used to carry
+     * an Azure resource's name while the label carries its (far more readable) resource type.
+     */
+    note?: string;
+};
+
 /** Configuration for the transient loading view shown between workflow steps. */
 export type LoadingViewConfiguration = {
     /** Stage index for the StageProgress bar (0 = Project Scaffolding, 1 = Local Development, 2 = Deployment). */
@@ -180,6 +207,17 @@ export type LoadingViewConfiguration = {
      * brief delay.
      */
     showNeedHelp?: boolean;
+    /**
+     * Optional checklist of sub-steps rendered under the spinner. Omitted for
+     * phases that have no observable intermediate progress.
+     */
+    /**
+     * When true the view is blocked on the user rather than on Copilot, so the spinner is replaced
+     * with a static prompt icon — an animation here reads as "work in progress" and hides the fact
+     * that nothing advances until the user answers.
+     */
+    awaitingInput?: boolean;
+    steps?: readonly LoadingStep[];
 };
 
 /**

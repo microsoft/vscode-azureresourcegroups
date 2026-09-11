@@ -15,10 +15,12 @@ import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../.
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
-import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
+import { startDeployProgressView } from "../deployProgressWatcher";
+import { resetSurfacedDeployResults } from "../openDeployResultView";
 import { recordDeploymentPlanApproved } from "../utils/deploymentPlanApprovalState";
+import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
 
@@ -137,6 +139,9 @@ export class DeploymentPlanViewController extends CopilotOnRailsWebviewControlle
 
                 this.recordPlanTelemetry(context);
                 this.panel.dispose();
+
+                resetSurfacedDeployResults();
+                startDeployProgressView();
             });
         });
     }

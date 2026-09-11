@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentOperation, GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { DeploymentExtended, DeploymentOperation, GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { createCredential, createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
@@ -35,9 +35,25 @@ export interface DeploymentOperationsResult {
     unavailable?: DeploymentOperationsUnavailableReason;
 }
 
+export interface DeploymentsResult {
+    deployments: DeploymentExtended[];
+    /** Set when the deployment list could not be read at all. See {@link DeploymentOperationsResult.unavailable}. */
+    unavailable?: DeploymentOperationsUnavailableReason;
+}
+
 export interface AzureResourcesService {
     listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]>;
     listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]>;
+    /**
+     * Lists the ARM deployments in a resource group, newest first is *not* guaranteed — callers
+     * that care about recency must sort on `properties.timestamp` themselves.
+     *
+     * Used by the deployment progress view to discover the in-flight deployment(s) while `azd` is
+     * running, because `deploy-result.json.deploymentNames` is only populated after the deploy
+     * finishes. A resource group that does not exist yet (404) resolves to an empty list, since
+     * that is the normal state for the first seconds of a deployment.
+     */
+    listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult>;
     /**
      * Lists the ARM deployment operations for a single deployment. Used by the
      * deployment inventory capture to determine, deterministically, which resource
@@ -73,8 +89,8 @@ function getStatusCode(error: unknown): number | undefined {
 function classifyDeploymentOperationsError(error: unknown): DeploymentOperationsUnavailableReason | undefined {
     switch (getStatusCode(error)) {
         case 404:
-            // The deployment was never created or has already been removed. Genuinely no
-            // operations — the only case that is safe to report as an empty result.
+            // The deployment (or resource group) was never created or has already been removed.
+            // Genuinely nothing to report — the only case that is safe to treat as an empty result.
             return undefined;
         case 401:
         case 403:
@@ -105,6 +121,15 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
         async listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]> {
             const client = await createClient(context, subscription);
             return uiUtils.listAllIterator(client.resourceGroups.list());
+        },
+        async listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult> {
+            const client = await createClient(context, subscription);
+            try {
+                return { deployments: await uiUtils.listAllIterator(client.deployments.listByResourceGroup(resourceGroupName)) };
+            } catch (error) {
+                const unavailable = classifyDeploymentOperationsError(error);
+                return unavailable ? { deployments: [], unavailable } : { deployments: [] };
+            }
         },
         async listDeploymentOperations(context: IActionContext, subscription: AzureSubscription, deploymentName: string, resourceGroupName?: string): Promise<DeploymentOperationsResult> {
             const client = await createClient(context, subscription);

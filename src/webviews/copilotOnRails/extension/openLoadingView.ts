@@ -28,10 +28,26 @@ let closingProgrammatically = false;
 let reopenStatusBarItem: vscode.StatusBarItem | undefined;
 
 /**
+ * Set by the owner of the current progress session to take over what happens when the user
+ * closes the tab themselves. Cleared whenever the session ends or is replaced.
+ */
+let userCloseHandler: (() => void) | undefined;
+
+export type OpenLoadingViewOptions = {
+    /**
+     * Called instead of showing the "Show Copilot progress" affordance when the user closes the
+     * progress tab while work is still in flight. Lets a phase that pushes live updates treat an
+     * early close as "stop tracking" rather than "reopen later on a stale snapshot".
+     */
+    onUserClose?: () => void;
+};
+
+/**
  * Show or update the transient loading view used to bridge workflow steps
  */
-export function openLoadingView(config: LoadingViewConfiguration): void {
+export function openLoadingView(config: LoadingViewConfiguration, options?: OpenLoadingViewOptions): void {
     lastConfig = config;
+    userCloseHandler = options?.onUserClose;
     hideReopenAffordance();
 
     if (controller) {
@@ -47,9 +63,16 @@ export function openLoadingView(config: LoadingViewConfiguration): void {
         // A dispose we didn't initiate means the user closed the progress tab
         // while work was still in flight. Surface a one-click way back instead
         // of stranding them with no visible progress.
-        if (!closingProgrammatically) {
-            showReopenAffordance();
+        if (closingProgrammatically) {
+            return;
         }
+        if (userCloseHandler) {
+            const handler = userCloseHandler;
+            userCloseHandler = undefined;
+            handler();
+            return;
+        }
+        showReopenAffordance();
     });
 }
 
@@ -66,11 +89,32 @@ export function closeLoadingView(): void {
     // progress view is intentionally gone — drop the reopen affordance and the
     // stale config it would reopen.
     lastConfig = undefined;
+    userCloseHandler = undefined;
     hideReopenAffordance();
 }
 
 export function isLoadingViewOpen(): boolean {
     return controller !== undefined;
+}
+
+/**
+ * Refreshes the progress view's content in place, without ever creating a panel.
+ *
+ * Used by long-running phase watchers that push progress updates: if the user closed
+ * the progress tab we still record the newest config so the "Show Copilot progress"
+ * affordance reopens on the current state rather than a stale snapshot — but we don't
+ * force a closed tab back open on every file write.
+ *
+ * @returns `true` when there was a tracked progress session to update.
+ */
+export function updateLoadingView(config: LoadingViewConfiguration): boolean {
+    if (!lastConfig) {
+        // No progress session in flight (or it already handed off) — nothing to refresh.
+        return false;
+    }
+    lastConfig = config;
+    controller?.updateConfig(config);
+    return true;
 }
 
 /**

@@ -35,6 +35,7 @@ export const PREPARE_PLAN_SESSION_FILE_GLOB = '.copilot-azure/sessions/*/prepare
 /** Every location a `prepare-plan.json` may live in, most-canonical first. */
 export const PREPARE_PLAN_FILE_GLOBS = [PREPARE_PLAN_FILE_GLOB, PREPARE_PLAN_SESSION_FILE_GLOB] as const;
 export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
+export const APP_ONBOARD_CONTEXT_FILE_GLOB = '.copilot-azure/sessions/*/context.json';
 
 /**
  * The deploy phase's result artifact. The App Onboard session protocol writes it
