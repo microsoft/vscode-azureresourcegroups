@@ -33,6 +33,58 @@ suite('recordDeployArtifactsTelemetry', () => {
         assert.strictEqual(context.telemetry.properties['deployResult.partial'], 'false');
     });
 
+    test('skips missing files and properties while preserving explicit false and zero values', async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'deploy-telemetry-'));
+        try {
+            const sourceFile = vscode.Uri.file(join(directory, 'deploy-result.json'));
+            await vscode.workspace.fs.writeFile(sourceFile, Buffer.from('{"status":"failed","partial":false}'));
+            await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(sourceFile, '..', 'prereq-output.json'),
+                Buffer.from('{"components":[],"buildRequirements":{}}'));
+            const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+            const existingTelemetry = { ...context.telemetry.properties };
+
+            await recordDeployArtifactsTelemetry(context, sourceFile);
+
+            const expected = {
+                'prereqOutput.parsedOk': true,
+                'prereqOutput.componentCount': 0,
+                'deployResult.parsedOk': true,
+                'deployResult.status': 'failed',
+                'deployResult.partial': false,
+            };
+            assert.deepStrictEqual(context.diagnostics.properties, expected);
+            assert.deepStrictEqual(context.telemetry.properties, {
+                ...existingTelemetry,
+                ...Object.fromEntries(Object.entries(expected).map(([key, value]) => [key, String(value)])),
+            });
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
+    });
+
+    test('a missing final result or status leaves existing properties unchanged', async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'deploy-telemetry-'));
+        try {
+            const sourceFile = vscode.Uri.file(join(directory, 'deploy-result.json'));
+            await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(sourceFile, '..', 'prereq-output.json'), Buffer.from('{}'));
+            for (const content of [undefined, '{}']) {
+                if (content !== undefined) {
+                    await vscode.workspace.fs.writeFile(sourceFile, Buffer.from(content));
+                }
+                const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+                const existingDiagnostics = { ...context.diagnostics.properties };
+                const existingTelemetry = { ...context.telemetry.properties };
+
+                await recordDeployArtifactsTelemetry(context, sourceFile);
+
+                assert.deepStrictEqual(context.diagnostics.properties, existingDiagnostics);
+                assert.deepStrictEqual(context.telemetry.properties, existingTelemetry);
+            }
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
+    });
+
     test('records fixed parse and read failure properties without leaking source values', async () => {
         const directory = await mkdtemp(join(tmpdir(), 'deploy-telemetry-'));
         try {
