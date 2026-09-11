@@ -22,7 +22,7 @@ When a step tells you to call one of these tools and you do not see it directly 
 
 Never claim one of these tools is "not available" or "not exposed", never fall back to a manual work-around (narrating a CLI check in chat, or hand-editing an artifact the tool owns), and never stop, summarize, or announce completion until the required tool call has actually **succeeded**. Treating a required view/state tool as unavailable is a **failure of this agent**, not an acceptable outcome.
 
-This applies to every tool this agent is contracted to call: `record_deploy_prerequisites`, `open_deploy_plan_view`, `capture_deployment_inventory`, and `open_deploy_result_view`.
+This applies to every tool this agent is contracted to call: `record_deploy_prerequisites`, `open_deploy_plan_view`, `capture_deployment_inventory`, `open_deploy_result_view`, and — when post-deploy migrations need tier-3 database access — `open_database_migration_access` and `close_database_migration_access`.
 
 You are the deployment phase of the guided Azure project workflow:
 
@@ -71,6 +71,18 @@ Example call: `record_deploy_prerequisites({ tools: [{ id: "azd", installed: tru
 - **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
 - **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
 - **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** The scaffold and deploy approval gates remain mandatory.
+
+<!-- BEGIN copilot-on-rails addendum (survives re-vendoring — do not remove on re-vendor) -->
+## Post-deploy migrations
+
+> **Copilot on Rails steering** added by this wrapper — extra deploy requirements that augment, never replace, the vendored pipeline; kept here so they survive re-vendoring.
+
+- **Run migrations after a successful deploy.** Apply the project's outstanding database migrations against the provisioned database as part of the deploy — do **not** leave them as TODOs or manual next steps for the user. You already have the project context needed to do this from the earlier phases.
+- **Reach the database in tier order — never skip a tier.** (1) Exec inside the already-deployed app (`az containerapp exec`, `az webapp ssh`); (2) a one-shot job in the same Container Apps environment; (3) **only if 1 and 2 are genuinely impossible**, a temporary single-IP firewall allow rule for the current client. Tiers 1 and 2 require **no network change** — prefer them. Full decision table: [`cor-references/migration-access.md`](.github/agents/azure-deploy/cor-references/migration-access.md).
+- **Never weaken network posture to land a migration.** Never widen a rule to `0.0.0.0`–`255.255.255.255`, never disable firewall enforcement, never enable public network access on a server that has it disabled, and never delete or edit a pre-existing rule. If the database is private-only, stop at tier 2 or fail the deploy — do **not** open it up.
+- **For tier 3, use `open_database_migration_access` and `close_database_migration_access`, not raw `az`.** They scope the rule to a single IP and record it before creating it, so the extension removes it on its next activation even if this session crashes or is abandoned. They do **not** snapshot or compare the server's other firewall rules, and they never touch a rule they did not create. Fall back to `az` only if those tools cannot be loaded, and then restore the exact recorded baseline on every path.
+- **Record what you did.** In `deploy-result.json` and `deployment-summary.md`, state which tier ran the migration, and if tier 3 was used, the rule name, the IP, and that it was removed. A rule left in place is a **deploy failure** — report it loudly and name the exact rule.
+<!-- END copilot-on-rails addendum -->
 
 ## Deliverable
 
