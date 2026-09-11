@@ -151,6 +151,14 @@ if (($hasMysql -or $hasPg) -and $iac) {
   if ($hasPg -and ($iac -notmatch "passwordAuth\s*:\s*'Disabled'")) {
     Add-Fail 'PG-ENTRA-ONLY' "PostgreSQL module missing authConfig { passwordAuth: 'Disabled', activeDirectoryAuth: 'Enabled' }" 'infra/modules'
   }
+  # 11c2. MYSQL-ENTRA-UAMI — MySQL AAD admin requires a user-assigned MI; identityResourceId: null fails to deploy.
+  if ($hasMysql) {
+    if ($iac -match 'identityResourceId\s*:\s*null') {
+      Add-Fail 'MYSQL-ENTRA-UAMI' "MySQL administrators sets identityResourceId: null — will not deploy. Set it to a user-assigned managed identity resourceId and add that UAMI to the server's identity block." 'infra/modules'
+    } elseif ($iac -notmatch 'identityResourceId') {
+      Add-Fail 'MYSQL-ENTRA-UAMI' "MySQL administrators missing identityResourceId — MySQL Entra admin REQUIRES a user-assigned managed identity (unlike PostgreSQL)." 'infra/modules'
+    }
+  }
 }
 
 # --- No shared-key / access-key / local-auth on any data service (managed-identity only) ---

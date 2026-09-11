@@ -2,17 +2,18 @@
 
 > ⛔ **SELF-CHECK:** If `costEstimate.breakdown[]` has ANY `monthlyUsd > 0`, at least one `pricing_get` or `az rest` pricing API call MUST appear in this session. Estimating from memory or training data is NEVER acceptable — reference values in this file may be outdated. If API fails after 2 attempts, use the reference value WITH disclaimer: `"⚠️ Estimated from reference — live API unavailable."`
 
-## Free-Tier Shortcut — Skip API
+## No Free-Tier Shortcut — Compute Always Has Cost
 
-> ⛔ **Check this FIRST.** If ALL services use free-tier SKUs → write $0 cost estimate, add disclaimer "Estimate assumes usage within free grant limits", skip to Step 7.
+> ⛔ **There is no $0 shortcut.** Compute has a floor (App Service **B1**, Static Web Apps **Standard**, Functions **Flex Consumption**) — F1/D1/Free/Consumption are never selected (see [sku-matrix.md](sku-matrix.md)). So any app with a compute component has a non-zero monthly cost and MUST get a live pricing call. Do NOT write a $0 estimate for a compute app.
 
-| Service | Free SKU | Skip API? |
-|---------|----------|-----------|
-| App Service | F1 | Yes |
-| Static Web Apps | Free | Yes |
-| Functions | Consumption (≤1M exec) | Yes |
-| Cosmos DB | Free tier (1000 RU/s) | Yes |
-| Container Apps | Consumption (≤180K vCPU-s) | Yes |
+Some services can still fall within free **grant** limits (they are metered, not a fixed free SKU) — note the grant in the estimate but still price the paid meters:
+
+| Service | Free grant (still price paid usage above it) |
+|---------|-----------------------------------------------|
+| Functions (Flex Consumption) | First 250K executions + 100K GB-s/month |
+| Cosmos DB | Free-tier account: 1000 RU/s + 25 GB (one per subscription) |
+| Container Apps | First 180K vCPU-s + 360K GiB-s + 2M requests/month |
+| Log Analytics | First 5 GB/month ingestion |
 
 ---
 

@@ -30,10 +30,16 @@ $sqlToken = az account get-access-token --resource https://database.windows.net/
 
 The app authenticates with its **managed identity**, which must exist as a database principal. Do this ONCE, as the Entra admin, before migrations. `{appMiName}` = the compute resource name (system-assigned MI display name); `{appMiObjectId}` = its object id.
 
-**PostgreSQL:**
+**PostgreSQL** — two connections are required. The `pgaadauth_*` functions exist **only on the `postgres` database** (running them on the app DB fails with `No function matches the given name and argument types`), and for a **managed identity** you must use the `_with_oid` variant with `objectType 'service'` (the name-only `pgaadauth_create_principal` can't resolve a managed identity by name). Roles are cluster-wide, so create the principal on `postgres`, then GRANT on `{dbName}`:
+
 ```powershell
+# 2a. Create the Entra principal for the app MI — MUST run on the `postgres` database.
+az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext @"
+SELECT * FROM pgaadauth_create_principal_with_oid('{appMiName}', '{appMiObjectId}', 'service', false, false);
+"@
+
+# 2b. Grant privileges — run on the app database {dbName} (the role already exists cluster-wide).
 az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d {dbName} --querytext @"
-SELECT * FROM pgaadauth_create_principal('{appMiName}', false, false);
 GRANT ALL PRIVILEGES ON DATABASE {dbName} TO ""{appMiName}"";
 GRANT ALL ON SCHEMA public TO ""{appMiName}"";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ""{appMiName}"";

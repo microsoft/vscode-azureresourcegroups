@@ -5,7 +5,7 @@ Estimate monthly costs for planned Azure services using Azure Retail Prices API.
 ## References to Read Internally
 
 Read BOTH before making any pricing calls:
-- [pricing-guide.md](pricing-guide.md) — methodology, free-tier shortcut, API patterns, troubleshooting
+- [pricing-guide.md](pricing-guide.md) — methodology, free-grant handling, API patterns, troubleshooting
 - [pricing-guide-services.md](pricing-guide-services.md) — per-service filter strings, meter names, formulas
 
 ## Input (provided by caller)
@@ -40,13 +40,13 @@ Return JSON (≤500 tokens):
 ## Rules
 
 - ⛔ **Do NOT invoke any other agents or hand off** — no external agent calls of any kind. You are a pricing subagent only. Use direct HTTP to `https://prices.azure.com/api/retail/prices` for price queries (MCP pricing was already attempted inline by the caller).
-- ⛔ Check free-tier shortcut FIRST — if ALL services use free SKUs, return $0 with disclaimer
+- ⛔ **No $0 shortcut — compute always has cost** (App Service B1 / SWA Standard / Functions Flex Consumption floor). Price every compute app via live API; note free **grants** (Cosmos free-tier account, Container Apps/Functions grants) but still price paid meters. Do NOT return $0 for a compute app.
 - ⛔ `armSkuName` is case-sensitive — use `B1` not `b1`
-- ⛔ For services with empty `armSkuName` (Container Apps, Functions Consumption, ACR, Storage, Cosmos): use `filter`/`meterName` matching — a `sku` filter returns `[]`
+- ⛔ For services with empty `armSkuName` (Container Apps, Functions Flex Consumption, ACR, Storage, Cosmos): use `filter`/`meterName` matching — a `sku` filter returns `[]`
 - ⛔ **Monthly multiplier = each meter's `unitOfMeasure`** (`1 Hour`→×730, `1/Day`→×30 [ACR/registry, SQL DTU], `1 GB/Month`→×GB, `1 Second`→usage) — NEVER blanket ×730; applying ×730 to a `1/Day` meter overstates ~24×
 - ⛔ Use direct HTTP to `https://prices.azure.com/api/retail/prices` for all price lookups. Do NOT use `mcp_azure_mcp_pricing` — it was already tried inline and failed.
 - ⛔ Never hardcode dollar amounts — always query live prices
-- ⛔ If pricing API returns 400: verify `--sku` included. Free tiers: skip API
+- ⛔ If pricing API returns 400: verify `--sku` included in the query
 
 ## Token Budget
 

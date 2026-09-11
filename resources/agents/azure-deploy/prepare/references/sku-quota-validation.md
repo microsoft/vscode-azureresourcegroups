@@ -36,7 +36,7 @@ $sub = '{subscriptionId}'; $sku = '{sku}'
 @('{userRegion}','{alt1}','{alt2}','{alt3}') | ForEach-Object {
   $limit = az rest --method get --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.Web/locations/$_/providers/Microsoft.Quota/quotas/$sku?api-version=2023-02-01" --query "properties.limit.value" -o tsv 2>$null
   $used  = az rest --method get --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.Web/locations/$_/providers/Microsoft.Quota/usages/$sku?api-version=2023-02-01" --query "properties.usages.value" -o tsv 2>$null
-  # limit=0 with used=-1 is the API's "Free tier not offered here" sentinel — treat limit<=0 as BLOCKED and clamp negative usage so 0-(-1) does NOT become a false-positive 1.
+  # limit=0 with used=-1 is the API's "SKU not offered here" sentinel — treat limit<=0 as BLOCKED and clamp negative usage so 0-(-1) does NOT become a false-positive 1.
   $ln = if ($limit) { [int]$limit } else { $null }; $un = if ($used) { [int]$used } else { 0 }
   $avail = if ($null -eq $ln) { 'unknown' } elseif ($ln -le 0) { 0 } else { $ln - [math]::Max(0, $un) }
   Write-Host "$_ : $sku limit=$limit available=$avail"
@@ -48,26 +48,21 @@ $sub = '{subscriptionId}'; $sku = '{sku}'
 az rest --method get --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.App/locations/{region}/usages?api-version=2024-03-01" --query "value[?name.value=='ManagedEnvironmentCount'].{used:currentValue, limit:limit}" -o json
 ```
 
-**Static Web Apps:** No `Microsoft.Quota` provider — Free plan caps at ~10 apps/subscription (per docs; may vary, treat as guideline). Count existing Free apps:
-```powershell
-az staticwebapp list --query "length([?sku.name=='Free'])" -o tsv
-```
-At/near cap → treat SWA Free as UNAVAILABLE (no self-service increase — raises need a support request). Fall back per [After Checking](#after-checking).
+**Static Web Apps:** No `Microsoft.Quota` provider. SWA **Standard** is the floor (Free is never selected — see [sku-matrix.md](sku-matrix.md)); Standard has no per-subscription app cap to check. No quota gate needed.
 
 **Storage** — default limit 250 accounts/region. Rarely exhausted — skip programmatic check unless the plan requires multiple storage accounts.
 
 ### Interpret Results
 
-- `available > 0` → AVAILABLE. `available = 0` / `limit <= 0` → BLOCKED (a `limit=0`, `used=-1` response is the API sentinel for "Free tier not offered in this region" — the script clamps it so it does not read as available). 404/empty → fallback candidate.
+- `available > 0` → AVAILABLE. `available = 0` / `limit <= 0` → BLOCKED (a `limit=0`, `used=-1` response is the API sentinel for "SKU not offered in this region" — the script clamps it so it does not read as available). 404/empty → fallback candidate.
 - `az rest` fails → `quotaValidation: { verified: false, method: "unverifiable" }`.
 
 ### After Checking
 
 1. Only offer regions with **confirmed** capacity — "try anyway" on zero/unconfirmed quota is a known deploy failure.
-1b. **Free tier missing in requested region but present elsewhere** → present BOTH, ranked by cost: (a) free tier in nearest confirmed region ($0, recommended), (b) cheapest tier IN the requested region (show monthly cost + `assumptions[]` note). User picks — never silently relocate (region may be a data-residency/latency requirement).
-2. **Free SKU zero in ALL regions** → step down the fallback ladder to the **cheapest available** option (don't jump to a named tier — let live quota decide):
-   - Static-capable app → SWA Free, but only if its cap isn't reached (see **Static Web Apps** above).
-   - No free option left → cheapest available paid tier the app supports. This breaks the "free" promise — add an `assumptions[]` note stating why (e.g., "No F1 quota in {checkedRegions} and SWA Free cap reached").
+1b. **Floor SKU missing in requested region but present elsewhere** → present BOTH, ranked by cost: (a) the floor SKU (B1 / SWA Standard / Flex Consumption) in the nearest confirmed region, (b) the cheapest available SKU IN the requested region. Both show monthly cost + an `assumptions[]` note. User picks — never silently relocate (region may be a data-residency/latency requirement).
+2. **Floor SKU unavailable in ALL regions** → step down the fallback ladder to the **cheapest available** tier at or above the floor (never below B1 / SWA Standard / Flex Consumption; let live quota decide the exact SKU):
+   - No option at the floor → the cheapest available higher tier the app supports. Add an `assumptions[]` note stating why (e.g., "No B1 quota in {checkedRegions}; selected {sku}").
    - All tiers exhausted → **HALT**: specify region, switch compute type, request increase at portal, or cancel.
 3. Write `prepare-plan.json.quotaValidation`: `{ verified: true, method: "cli", verifiedRegion, verifiedSku, checkedRegions[], failedResources[] }`.
 

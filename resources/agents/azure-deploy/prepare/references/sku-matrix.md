@@ -16,10 +16,12 @@ Select SKU based on `context.json.intent.budget`. Cross-reference with `intent.s
 | Static Web Apps | Standard | Standard | Standard |
 | Service Bus | Basic | Standard | Premium |
 | Redis Cache | Basic C0 | Standard C1 | Premium P1 |
-| Functions | Consumption | Flex Consumption | Premium EP1 |
+| Functions | Flex Consumption | Flex Consumption | Premium EP1 |
 | Log Analytics | PerGB2018 | PerGB2018 | PerGB2018 (dedicated cluster) |
 
 > ⚠️ **Log Analytics `Free` SKU is deprecated.** ARM rejects it with some API versions and retention settings. Always use `PerGB2018` — first 5 GB/month is free anyway.
+
+> ⛔ **Functions floor is Flex Consumption — NOT Consumption or Elastic Premium.** The Consumption and Elastic Premium plans back `AzureWebJobsStorage` with Azure Files, which does **not** support managed-identity connections and therefore **requires `allowSharedKeyAccess` on the storage account** — banned by the managed-identity-only rule (and the KV workaround for the Files connection string is also banned). **Flex Consumption** supports identity-based `AzureWebJobsStorage` (`AzureWebJobsStorage__accountName` + `AzureWebJobsStorage__credential=managedidentity`), so it is the only Functions plan compatible with `allowSharedKeyAccess: false`. Never select Consumption/Elastic Premium — this is the same floor-raise as App Service F1→B1.
 
 ## Modifier Rules
 
