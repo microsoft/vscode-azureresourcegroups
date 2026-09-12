@@ -16,6 +16,7 @@ import {
     type DeployResultResource,
     type DeployResultStatus,
 } from './deployResultTypes';
+import { isJsonObject } from '../../shared/jsonUtils';
 
 type Json = Record<string, unknown>;
 
@@ -106,10 +107,6 @@ function isBackendUrl(url: string): boolean {
     return host.length > 0 && BACKEND_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
 }
 
-function isRecord(value: unknown): value is Json {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readString(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
@@ -160,7 +157,7 @@ function readEndpoints(value: unknown): DeployResultEndpoint[] {
     if (Array.isArray(value)) {
         const endpoints: DeployResultEndpoint[] = [];
         for (const entry of value) {
-            if (!isRecord(entry)) {
+            if (!isJsonObject(entry)) {
                 continue;
             }
             const url = readString(entry.url);
@@ -178,7 +175,7 @@ function readEndpoints(value: unknown): DeployResultEndpoint[] {
         return endpoints;
     }
 
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return [];
     }
 
@@ -192,7 +189,7 @@ function readEndpoints(value: unknown): DeployResultEndpoint[] {
             }
             continue;
         }
-        if (isRecord(raw)) {
+        if (isJsonObject(raw)) {
             const url = readString(raw.url);
             if (url.length > 0) {
                 endpoints.push({
@@ -251,7 +248,7 @@ function readCreatedResources(value: unknown): DeployResultResource[] {
 
     const resources: DeployResultResource[] = [];
     for (const entry of value) {
-        if (!isRecord(entry)) {
+        if (!isJsonObject(entry)) {
             continue;
         }
         const resourceId = readString(entry.id);
@@ -284,7 +281,7 @@ function readResources(plan: Json): DeployResultResource[] {
     }
 
     const map = plan.resources;
-    if (isRecord(map)) {
+    if (isJsonObject(map)) {
         const resources: DeployResultResource[] = [];
         for (const [key, raw] of Object.entries(map)) {
             const name = readString(raw);
@@ -298,7 +295,7 @@ function readResources(plan: Json): DeployResultResource[] {
     if (Array.isArray(plan.resourceResults) && plan.resourceResults.length > 0) {
         const resources: DeployResultResource[] = [];
         for (const entry of plan.resourceResults) {
-            if (!isRecord(entry)) {
+            if (!isJsonObject(entry)) {
                 continue;
             }
             const resourceId = readString(entry.resourceId);
@@ -355,7 +352,7 @@ function readInventoryResourceLists(value: unknown): { cleanup: DeployResultClea
     const cleanup: DeployResultCleanupResource[] = [];
     const review: DeployResultCleanupResource[] = [];
     for (const entry of value) {
-        if (!isRecord(entry)) {
+        if (!isJsonObject(entry)) {
             continue;
         }
         const classification = readString(entry.classification).toLowerCase();
@@ -394,13 +391,13 @@ function readInventoryResourceLists(value: unknown): { cleanup: DeployResultClea
 }
 
 function readHealthDetail(value: unknown): DeployResultHealthDetail | undefined {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return undefined;
     }
     const services: DeployResultHealthService[] = [];
     if (Array.isArray(value.services)) {
         for (const entry of value.services) {
-            if (!isRecord(entry)) {
+            if (!isJsonObject(entry)) {
                 continue;
             }
             const name = readString(entry.name);
@@ -429,10 +426,10 @@ function readHealthDetail(value: unknown): DeployResultHealthDetail | undefined 
 }
 
 function readNetworkPolicy(value: unknown): DeployResultNetworkPolicy | undefined {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return undefined;
     }
-    const basicPublishing = isRecord(value.basicPublishing) ? value.basicPublishing : undefined;
+    const basicPublishing = isJsonObject(value.basicPublishing) ? value.basicPublishing : undefined;
     const policy: DeployResultNetworkPolicy = {
         mainSite: readString(value.mainSite) || undefined,
         scmSite: readString(value.scmSite) || undefined,
@@ -455,14 +452,14 @@ function readHealingAttempts(value: unknown): DeployResultHealingAttempt[] {
 
     const attempts: DeployResultHealingAttempt[] = [];
     for (const [index, entry] of value.entries()) {
-        if (!isRecord(entry)) {
+        if (!isJsonObject(entry)) {
             continue;
         }
 
         let issue = readString(entry.issue);
         if (issue.length === 0 && Array.isArray(entry.errors)) {
             issue = entry.errors
-                .filter(isRecord)
+                .filter(isJsonObject)
                 .map(e => {
                     const detail = readString(e.detail);
                     const source = readString(e.source);
@@ -500,7 +497,7 @@ function readOrphanedResourceGroups(value: unknown): DeployResultOrphanedResourc
     }
     const groups: DeployResultOrphanedResourceGroup[] = [];
     for (const entry of value) {
-        if (!isRecord(entry)) {
+        if (!isJsonObject(entry)) {
             continue;
         }
         const name = readString(entry.name);
@@ -572,11 +569,11 @@ function buildCleanupCommand(resourceGroupName: string): string {
  */
 export function parseDeployResultJson(content: string): DeployResultData {
     const parsed: unknown = JSON.parse(content);
-    const plan: Json = isRecord(parsed) ? parsed : {};
+    const plan: Json = isJsonObject(parsed) ? parsed : {};
 
     // Timestamps live at the top level in emitted artifacts but under `duration`
     // in the documented schema.
-    const duration = isRecord(plan.duration) ? plan.duration : {};
+    const duration = isJsonObject(plan.duration) ? plan.duration : {};
     const startedUtc = readString(plan.startedUtc) || readString(duration.startedUtc);
     const completedUtc = readString(plan.completedUtc) || readString(duration.completedUtc);
 

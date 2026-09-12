@@ -101,6 +101,18 @@ suite('parsePreparePlanJson', () => {
             assert.strictEqual(plan.deploymentVariables, undefined);
         });
 
+        test('uses current defaults for valid JSON with a non-object root', () => {
+            for (const content of ['null', '[]', '"plan"', '42', 'true']) {
+                const plan = parsePreparePlanJson(content);
+
+                assert.deepStrictEqual(plan.services, []);
+                assert.deepStrictEqual(plan.resources, { headers: [], rows: [] });
+                assert.strictEqual(plan.costEstimate, undefined);
+                assert.strictEqual(plan.deploymentVariables, undefined);
+                assert.strictEqual(plan.locationCode, '');
+            }
+        });
+
         test('reports render issues for empty and service-less plans', () => {
             assert.strictEqual(getPreparePlanRenderIssue('  ', undefined), 'empty');
             assert.strictEqual(getPreparePlanRenderIssue('{ bad', undefined), 'invalidJson');
