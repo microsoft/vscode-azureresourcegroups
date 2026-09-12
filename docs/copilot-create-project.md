@@ -534,17 +534,6 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
    Mermaid in strict security mode.
 7. Add targeted tests for malformed roots, wrong field types, partial objects, traversal strings, unsafe
    links or tags, and other inputs that reach the changed sink.
-8. Check whether the artifact inventory in [Files & state](#files--state) changed, and update it when needed.
-
-### Audit history
-
-| Pull request | Concern |
-| --- | --- |
-| [#1836](https://github.com/microsoft/vscode-azureresourcegroups/pull/1836) | Requirements and pending-create JSON: validate object roots and consumed fields while preserving valid requirement entries. |
-| [#1837](https://github.com/microsoft/vscode-azureresourcegroups/pull/1837) | Preview manifest and slug confinement: reject malformed page records and path-unsafe slugs before joining preview paths. |
-| [#1835](https://github.com/microsoft/vscode-azureresourcegroups/pull/1835) | Package metadata: validate object roots and records, retain string-valued dependency and script entries, then use own-property checks. |
-| [#1833](https://github.com/microsoft/vscode-azureresourcegroups/pull/1833) | Deployment JSON: narrow deployment artifact roots and fields before views and telemetry consume them. |
-| [#1834](https://github.com/microsoft/vscode-azureresourcegroups/pull/1834) | Local debug-plan rendering and Mermaid: render plan text with React, constrain links and tags, and use strict Mermaid security. |
 
 ---
 
