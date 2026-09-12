@@ -14,93 +14,7 @@ import './styles/scaffoldPlanView.scss';
 import { type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
-
-const editableOptions: Record<string, string[]> = {
-    'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
-    'Runtime': ['Node', 'Deno', 'Bun', 'CPython', 'PyPy', '.NET'],
-    'Backend': ['Azure Functions v4 (Node.js v4 model)', 'Express.js', 'Fastify', 'Flask', 'FastAPI', 'Spring Boot', 'ASP.NET Core'],
-    'Frontend': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None'],
-    'Framework': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor'],
-    'Package Manager': ['npm', 'yarn', 'pnpm', 'pip', 'poetry', 'uv', 'dotnet (NuGet)'],
-    'Test Runner': ['vitest', 'jest', 'mocha', 'pytest', 'unittest', 'xUnit', 'NUnit', 'MSTest'],
-};
-
-// Fields whose dropdown choices depend on the selected Language. When the user
-// changes the Language dropdown, each of these cells is reset to the language's
-// default (the first entry) if its current value isn't valid for the new
-// language (see cascade in handleTableCellChange). The first entry per language
-// is the recommended/default choice.
-const languageDependentOptions: Record<string, Record<string, string[]>> = {
-    'Runtime': {
-        'TypeScript': ['Node', 'Deno', 'Bun'],
-        'JavaScript': ['Node', 'Deno', 'Bun'],
-        'Python': ['CPython', 'PyPy'],
-        'C# (.NET)': ['.NET'],
-    },
-    'Frontend': {
-        'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'JavaScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'Python': ['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'C# (.NET)': ['Blazor', 'React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-    },
-    'Framework': {
-        'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte'],
-        'JavaScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte'],
-        'Python': ['React + Vite', 'Vue + Vite', 'Svelte'],
-        'C# (.NET)': ['Blazor', 'React + Vite', 'Vue + Vite'],
-    },
-    'Package Manager': {
-        'TypeScript': ['npm', 'pnpm', 'yarn'],
-        'JavaScript': ['npm', 'pnpm', 'yarn'],
-        'Python': ['pip', 'poetry', 'uv'],
-        'C# (.NET)': ['dotnet (NuGet)'],
-    },
-    'Test Runner': {
-        'TypeScript': ['vitest', 'jest', 'mocha'],
-        'JavaScript': ['vitest', 'jest', 'mocha'],
-        'Python': ['pytest', 'unittest'],
-        'C# (.NET)': ['xUnit', 'NUnit', 'MSTest'],
-    },
-};
-
-// Options that are officially supported. Anything else is offered as a
-// convenience but flagged with a soft "not officially supported" warning.
-const fullySupportedOptions: Record<string, Set<string>> = {
-    'Runtime': new Set(['Node', 'CPython', '.NET']),
-    'Frontend': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None']),
-    'Framework': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor']),
-    'Package Manager': new Set(['npm', 'pnpm', 'pip', 'poetry', 'dotnet (NuGet)']),
-    'Test Runner': new Set(['vitest', 'jest', 'mocha', 'pytest', 'xUnit', 'NUnit', 'MSTest']),
-};
-
-// Language choices allowed in frontend service sections. Frontends are always
-// JavaScript or TypeScript — Python and C# backends can pair with a JS/TS
-// frontend, but the frontend section itself must not offer those languages.
-const frontendLanguageOptions = ['JavaScript', 'TypeScript'];
-
-// Returns the dropdown options for a given field, narrowing to the language's
-// choices when the field is language-dependent.
-function optionsForField(field: string, language: string | undefined, isFrontend?: boolean): string[] | undefined {
-    if (field === 'Language' && isFrontend) {
-        return frontendLanguageOptions;
-    }
-    const byLanguage = languageDependentOptions[field];
-    if (byLanguage) {
-        const key = language?.trim();
-        return (key && byLanguage[key]) || editableOptions[field];
-    }
-    return editableOptions[field];
-}
-
-// True when a section is an editable "service stack" section — i.e. it contains
-// a table with a Language row. Each service (backend, frontend, worker, …) gets
-// its own stack section, and the count is dynamic, so we detect them by shape
-// rather than by a fixed section number.
-function isServiceStackSection(section: ScaffoldPlanSection): boolean {
-    return (section.content ?? []).some(
-        c => c.type === 'table' && c.rows.some(r => r[0]?.trim() === 'Language'),
-    );
-}
+import { getServiceStackKind, isFullySupportedOption, isServiceStackSection, languageDependentFields, optionsForField, type ServiceStackKind } from './utils/scaffoldPlanTechnologyOptions';
 
 
 const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
@@ -391,6 +305,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             return;
         }
 
+        const serviceKind = getServiceStackKind(plan.sections[sectionIdx]);
         const field = content.rows[rowIdx][0];
         applyCellChange(content, sectionIdx, contentIdx, rowIdx, colIdx, value);
 
@@ -401,14 +316,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         // (NuGet) and vitest → xUnit. Each service stack table is self-contained
         // so the lookup stays within this table.
         if (field?.trim() === 'Language') {
-            for (const dependentField of Object.keys(languageDependentOptions)) {
+            for (const dependentField of languageDependentFields) {
                 const depRowIdx = content.rows.findIndex(r => r[0]?.trim() === dependentField);
                 if (depRowIdx < 0) {
                     continue;
                 }
-                // Only non-`Language` fields cascade here, so `isFrontend` never
-                // narrows the result — pass undefined deliberately.
-                const validOptions = optionsForField(dependentField, value) ?? [];
+                const validOptions = optionsForField(dependentField, value, serviceKind) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
                 if (validOptions.length > 0 && !validOptions.includes(currentValue)) {
                     applyCellChange(content, sectionIdx, contentIdx, depRowIdx, colIdx, validOptions[0]);
@@ -866,15 +779,10 @@ interface SectionCardProps {
     onTableCellChange: (sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => void;
 }
 
-// True when a section title indicates a frontend service (e.g. "Frontend — Web App").
-function isFrontendSection(section: ScaffoldPlanSection): boolean {
-    return /\bfrontend\b/i.test(section.title);
-}
-
 const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellChange }: SectionCardProps): JSX.Element => {
     const [expanded, setExpanded] = useState(false);
     const isStack = isServiceStackSection(section);
-    const isFrontend = isFrontendSection(section);
+    const serviceKind = getServiceStackKind(section);
     const previewLanguage = previewBackendLanguageForSection(section);
 
     return (
@@ -903,7 +811,7 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
                         editedCells={editedCells}
                         onTableCellChange={onTableCellChange}
                         collapsedRows={isStack && !expanded ? collapsiblePlanRowLabels : undefined}
-                        isFrontend={isFrontend}
+                        serviceKind={serviceKind}
                     />
                 ))}
             </div>
@@ -1167,12 +1075,11 @@ interface ContentBlockProps {
     editedCells?: Set<CellKey>;
     /** Row labels to hide (collapsed state). When undefined, all rows are shown. */
     collapsedRows?: Set<string>;
-    /** When true, restricts Language choices to JavaScript/TypeScript. */
-    isFrontend?: boolean;
+    serviceKind: ServiceStackKind;
     onTableCellChange: (sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => void;
 }
 
-const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, collapsedRows, isFrontend, onTableCellChange }: ContentBlockProps): JSX.Element => {
+const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, collapsedRows, serviceKind, onTableCellChange }: ContentBlockProps): JSX.Element => {
     switch (item.type) {
         case 'keyValue':
             return (
@@ -1198,22 +1105,16 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                     <tr key={ri}>
                                         {row.map((cell, ci) => {
                                             const componentName = row[0];
-                                            // Language-dependent fields (Runtime, Framework,
-                                            // Package Manager, Test Runner) derive their choices
-                                            // from the Language row in this same service table so
-                                            // each service narrows independently.
-                                            const language = item.rows.find(r => r[0]?.trim() === 'Language')?.[ci];
+                                            const usesLanguageRow = item.rows.some(tableRow => tableRow[0]?.trim() === 'Language');
+                                            const language = item.rows.find(tableRow => tableRow[0]?.trim() === 'Language')?.[ci];
                                             const options = ci > 0
-                                                ? optionsForField(componentName?.trim(), language, isFrontend)
+                                                ? optionsForField(componentName?.trim(), language, serviceKind, usesLanguageRow)
                                                 : undefined;
                                             const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
-                                            // Soft warning when an option outside the officially
-                                            // supported set is picked (e.g. Bun runtime, yarn,
-                                            // Next.js). Informational only — doesn't block.
-                                            const supportedSet = ci > 0 ? fullySupportedOptions[componentName?.trim()] : undefined;
-                                            const showSupportWarning = supportedSet !== undefined
-                                                && cell
-                                                && !supportedSet.has(cell.trim());
+                                            const isFullySupported = ci > 0 && cell
+                                                ? isFullySupportedOption(componentName, cell, serviceKind, usesLanguageRow)
+                                                : undefined;
+                                            const showSupportWarning = isFullySupported === false;
                                             return (
                                                 <td key={ci} className={isEdited ? 'editedCell' : undefined}>
                                                     {options ? (
