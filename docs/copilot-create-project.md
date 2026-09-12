@@ -247,9 +247,9 @@ and dependencies, and writes `.azure/vscode-debug-plan.md`. After you approve, *
 produces the debugging artifacts — `docker-compose` for emulators, VS Code `launch.json` / `tasks.json`, and
 API tests — then opens the **Debug Next Steps** view. Like the plan preview, the debug plan's **Prerequisites**
 section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
-plan markdown. The view escapes plan text before rendering it, permits only attribute-free `<details>`,
-`<summary>`, and `<br>` presentation tags, and creates links only for `http`, `https`, or `mailto` URLs.
-Mermaid diagrams use strict security mode.
+plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
+attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
+`https`, or `mailto` URLs. Mermaid diagrams use strict security mode.
 
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.

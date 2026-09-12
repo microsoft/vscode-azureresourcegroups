@@ -40,13 +40,13 @@ import {
     type JSX,
 } from "react";
 import { classifyInstalledForRow, InstalledChip } from "./components/InstalledChip";
+import { InlineMarkdown } from "./components/InlineMarkdown";
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
     isLimitedSupportDataStore,
     limitedSupportWarningMessage,
 } from "./utils/emulatorSupport";
-import { formatInlineMarkdown } from "./utils/formatInlineMarkdown";
 import {
     findColumnIndex,
     isChecked,
@@ -794,12 +794,9 @@ const ContentBlock = ({
             return <BlockquoteBlock text={item.text} />;
         case "paragraph":
             return (
-                <p
-                    className="paragraph"
-                    dangerouslySetInnerHTML={{
-                        __html: formatInlineMarkdown(item.text),
-                    }}
-                />
+                <p className="paragraph">
+                    <InlineMarkdown text={item.text} />
+                </p>
             );
         case "subsection":
             return (
@@ -860,12 +857,9 @@ const DataTable = ({
                     <tr>
                         {headers.map((h, hi) =>
                             columnHidden(hi) ? null : (
-                                <th
-                                    key={hi}
-                                    dangerouslySetInnerHTML={{
-                                        __html: formatInlineMarkdown(h),
-                                    }}
-                                />
+                                <th key={hi}>
+                                    <InlineMarkdown text={h} />
+                                </th>
                             ),
                         )}
                         {isPrereq && <th key="install">Install</th>}
@@ -894,13 +888,9 @@ const DataTable = ({
                                         return (
                                             <td key={ci}>
                                                 <span className="supportWarningCell">
-                                                    <span
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: formatInlineMarkdown(
-                                                                cell,
-                                                            ),
-                                                        }}
-                                                    />
+                                                    <span>
+                                                        <InlineMarkdown text={cell} />
+                                                    </span>
                                                     <Tooltip
                                                         relationship="label"
                                                         content={warningMessage}
@@ -930,12 +920,9 @@ const DataTable = ({
                                         );
                                     }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInlineMarkdown(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                                 {isPrereq && (
@@ -1046,12 +1033,9 @@ const GenerateCheckboxTable = ({
                 <thead>
                     <tr>
                         {table.headers.map((h, hi) => (
-                            <th
-                                key={hi}
-                                dangerouslySetInnerHTML={{
-                                    __html: formatInlineMarkdown(h),
-                                }}
-                            />
+                            <th key={hi}>
+                                <InlineMarkdown text={h} />
+                            </th>
                         ))}
                     </tr>
                 </thead>
@@ -1079,12 +1063,9 @@ const GenerateCheckboxTable = ({
                                         );
                                     }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInlineMarkdown(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                             </tr>
@@ -1165,19 +1146,17 @@ const MermaidBlock = ({
 const BulletListBlock = ({ items }: { items: string[] }): JSX.Element => (
     <ul className="bulletList">
         {items.map((item, i) => (
-            <li
-                key={i}
-                dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(item) }}
-            />
+            <li key={i}>
+                <InlineMarkdown text={item} />
+            </li>
         ))}
     </ul>
 );
 
 const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
-    <div
-        className="blockquote"
-        dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(text) }}
-    />
+    <div className="blockquote">
+        <InlineMarkdown text={text} />
+    </div>
 );
 
 const SubsectionBlock = ({
