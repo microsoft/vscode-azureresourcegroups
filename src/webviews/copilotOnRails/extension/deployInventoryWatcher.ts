@@ -8,6 +8,7 @@ import * as vscode from "vscode";
 import { createProjectPlanFileWatcher, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { captureInventory, resolveSubscription, snapshotResourceIds } from "../../../utils/copilotOnRails/deploymentInventoryCapture";
 import { CreatedResource, OrphanedResourceGroup } from "../../../utils/copilotOnRails/deploymentInventory";
+import { isJsonObject } from "../shared/jsonUtils";
 
 /**
  * Extension-owned safety net that guarantees the deterministic deployment inventory is computed for
@@ -104,10 +105,10 @@ async function readDeployResultFields(uri: vscode.Uri): Promise<DeployResultFiel
     let raw: Record<string, unknown>;
     try {
         const parsed: unknown = JSON.parse(await AzExtFsExtra.readFile(uri));
-        if (typeof parsed !== 'object' || parsed === null) {
+        if (!isJsonObject(parsed)) {
             return undefined;
         }
-        raw = parsed as Record<string, unknown>;
+        raw = parsed;
     } catch {
         // Momentary partial write or invalid JSON; a later change event will re-trigger.
         return undefined;

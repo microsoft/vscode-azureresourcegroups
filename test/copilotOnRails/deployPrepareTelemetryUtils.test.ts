@@ -42,7 +42,7 @@ suite('deployPrepareTelemetryUtils', () => {
     });
 
     test('reports invalid JSON without exposing parser errors', () => {
-        for (const content of ['{"private@example.com":', 'null', '[]']) {
+        for (const content of ['{"private@example.com":', 'null', '[]', '"plan"', '42', 'true']) {
             assert.deepStrictEqual(getDeployArtifactTelemetry('prepare-plan.json', content), { parsedOk: false });
         }
     });
