@@ -1,0 +1,27 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-go-unsupported-fidelity",
+    "prompt": "Build a Go HTTP API for tracking tickets, backed by PostgreSQL.",
+    "baselinePrompt": "Create a Go HTTP service for tracking tickets, backed by PostgreSQL. Expose health and list endpoints, and include the module file needed to build and run it.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "none",
+        "backend": "go",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ]
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": false,
+        "test": false,
+        "lint": "skip",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

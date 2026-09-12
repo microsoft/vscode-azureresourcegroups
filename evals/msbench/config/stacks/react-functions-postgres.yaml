@@ -1,0 +1,102 @@
+# The suite as it exists today, written down as data for the first time.
+#
+# Every stimulus we run is this shape — React frontend, Azure Functions backend,
+# a relational store — and none of them said so anywhere a tool could read. That
+# is why all five runtime-* gates have been red on every run and nobody could
+# point at the one-line cause.
+#
+# This file changes no run. It exists so the second stack has something to differ
+# from, and so the `func` problem is stated in a place that can refuse things.
+
+schemaVersion: 1
+id: react-functions-postgres
+name: React frontend with an Azure Functions API and PostgreSQL
+ecosystem: node
+
+# Mirrors config/stimuli/photo-app-requirements.yaml, the default stimulus, word
+# for word in substance. Note what it does NOT ask for: a health endpoint, or a
+# list/create route. That silence is deliberate and is reflected in `project:`
+# below — declaring a contract the prompt never asked for would grade the agent
+# against a requirement nobody gave it.
+prompt: |
+  I'd like to create an app where you can upload photos and they get stored
+  with metadata like who uploaded them and when. I want a nice React frontend
+  and an Azure Functions backend with PostgreSQL for the data. Make it with
+  full test coverage.
+
+project:
+  frontend: spa
+  api: http
+  datastore: postgres
+  hosting: functions
+  # healthPath and collectionRoute are deliberately absent: the prompt does not
+  # ask for either, so the gates that look for them have nothing to grade here.
+
+runtime:
+  # `func` is listed even though it is missing, which is the point. Listing it is
+  # what makes the container check notice, and what makes the gap below required
+  # rather than optional.
+  binaries: [node, npm, func]
+  # No `start:` block. Rungs 1 and 2 of the discovery chain in
+  # src/runtime/runtimeTarget.ts (launch.json, then package.json `scripts.start`)
+  # answer correctly for a Node project, and a declared start command here would
+  # have to guess the directory layout the agent picks — replacing working
+  # discovery with an assumption. Rung 0 earns its keep on stacks where rungs 1
+  # and 2 structurally cannot answer, which means the non-Node ones.
+
+knownGaps:
+  # The 0-for-N story, in data. These three gates are wired (the project has a
+  # frontend and an app to start), they have a real question to ask, and they
+  # cannot ask it because the Functions host is not in the container. They stay
+  # red on purpose: "we are not testing something we claim to test" is true, and
+  # a green here would be a lie that no later report could undo.
+  # All five runtime gates, not three. The original list named only the gates
+  # that were wired at the time — and two of them were dark because the
+  # runtime-health and runtime-crud rows in gates.yaml each required the
+  # declaration they consume (#1736). Corrected together, because a knownGaps
+  # list that faithfully tracks a broken derivation is worth less than no list:
+  # it makes the wrong wiring look accounted for.
+  - gates: [runtime-app-starts, runtime-health, runtime-crud, runtime-frontend, runtime-frontend-api]
+    reason: functionsHostUnavailable
+    binary: func
+    tracking: >-
+      config/phases/local.yaml installs azure-functions-core-tools in the
+      preamble, fail-soft. Run 2026082682123151 measured it for the first time
+      and it FAILED with npm E401 "Unable to authenticate" — the container's npm
+      resolves through an authenticated registry this process has no token for.
+      The preamble now retries against the public registry explicitly.
+
+      SUPERSEDED for runs on the custom image. container/ builds an image with
+      func 4.14.0 baked in, and run 2026082875609243 started the Functions host
+      from it: runtime-app-starts PASSED, and the remaining four gates stopped
+      reporting functionsHostUnavailable entirely. runtime-health then failed on
+      a real product finding (the endpoint registers, is invoked, and never
+      returns), while runtime-frontend and runtime-frontend-api report
+      frontendDevServerUnsupported and runtime-crud reports
+      datastoreRequiresContainer — three different, honest reasons.
+
+      The gap declaration STAYS, because it is still correct for the stock image
+      that a run gets unless its dataset names our registry, and this file cannot
+      express "gap on one image, not on another". Clearing it would make a
+      default-image run red for an undeclared reason. Revisit if the custom image
+      becomes the default, not before.
+
+# ## Why this stack drives the local phase
+#
+# Because the `approved-fullstack` seed *is* this stack. That seed's plan document
+# describes "a React frontend, an Azure Functions HTTP backend, and a PostgreSQL
+# database ... attachments are held in Blob Storage", which is frontend=spa,
+# api=http, datastore=postgres, hosting=functions — this file, line for line. It
+# was written for the hand-written local-dev stimuli, which are Functions-shaped
+# for the same reason.
+#
+# That matters because a seed carries project *content*, not just turn shape. A
+# stack whose declaration and whose seeded plan disagree scaffolds one thing and
+# grades another: `react-express-file` was pointed at this phase first, and its
+# runtime gates reported `functionsHostUnavailable` on an Express stack, because
+# the workspace it was handed was a Functions project.
+#
+# So this is also the stack that can finally test the custom container image. The
+# `knownGaps` entry below exists precisely because `func` was unavailable, and the
+# image built in `container/` is what changes that — see the tracking note.
+phases: [plan, local]

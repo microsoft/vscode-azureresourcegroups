@@ -1,0 +1,128 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-react-functions-postgres",
+    "prompt": "Build a customer support ticket application with a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users should create, assign, comment on, and close tickets.",
+    "baselinePrompt": "Build a complete customer support ticket application using a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users must be able to create, assign, comment on, and close tickets. Implement all frontend, backend, and configuration code, comprehensive automated tests for the ticket workflows, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "functions",
+        "database": "postgres",
+        "auth": "mock",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["PostgreSQL"],
+        "auth": "Mock auth middleware"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "compound": true,
+            "debugParity": {
+                "target": "backend",
+                "sourceGlob": "**/src/utils/http.ts",
+                "lineIncludes": "const start = Date.now()",
+                "triggerUrl": "http://127.0.0.1:7071/api/health",
+                "timeoutSeconds": 180
+            },
+            "probes": [
+                {
+                    "name": "ticket API health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "ticket application browser",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "bodyIncludes": "root",
+                    "browser": {
+                        "expectedText": "ticket",
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        },
+                        "actions": [
+                            {
+                                "kind": "click",
+                                "selector": "Create ticket",
+                                "selectorType": "role",
+                                "role": "button"
+                            },
+                            {
+                                "kind": "fill",
+                                "selector": "Subject",
+                                "selectorType": "label",
+                                "value": "Browser acceptance ticket"
+                            },
+                            {
+                                "kind": "fill",
+                                "selector": "Requester",
+                                "selectorType": "label",
+                                "value": "Evaluation User"
+                            },
+                            {
+                                "kind": "fill",
+                                "selector": "Email",
+                                "selectorType": "label",
+                                "value": "evaluation@example.com"
+                            },
+                            {
+                                "kind": "fill",
+                                "selector": "Description",
+                                "selectorType": "label",
+                                "value": "Created by the evaluator to verify the full-stack ticket journey."
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Create ticket",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "body",
+                                "value": "Browser acceptance ticket"
+                            },
+                            {
+                                "kind": "visible",
+                                "selector": "text=Ticket details"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": ["backend", "frontend"],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "body",
+                                    "value": "Browser acceptance ticket"
+                                },
+                                {
+                                    "kind": "visible",
+                                    "selector": "text=Ticket details"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

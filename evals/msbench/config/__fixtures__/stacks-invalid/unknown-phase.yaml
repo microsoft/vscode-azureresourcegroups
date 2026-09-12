@@ -1,0 +1,19 @@
+# expect: stackPhaseUnknown
+# Names a phase with no config/phases/<p>.yaml. Caught here rather than after the
+# config has been built and submitted.
+schemaVersion: 1
+id: unknown-phase
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan, deploy]

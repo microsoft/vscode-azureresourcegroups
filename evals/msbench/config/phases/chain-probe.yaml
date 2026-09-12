@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `chain-probe` — harness mechanics only. The product is not under test.
+#
+# Sibling of `probe-smoke`, and for the same reason: it answers a question about
+# the *harness* without paying for a product run to do it. The question here is
+# whether `promptSteps[].chatMode` is honoured by the runner, and what it does to
+# the conversation when it is.
+#
+# WHY THIS PHASE SETS A TOP-LEVEL chatMode AND probe-smoke DOES NOT
+#
+# `probe-smoke` deliberately sets none, so no product agent loads and the run
+# stays near-free. This probe cannot do that: the thing under test IS the
+# per-step `chatMode` override, and an override needs something to override.
+#
+# The two modes named by the stimulus are real product agents, so the agent
+# definitions have to be on disk for the custom modes to resolve — hence the
+# same VSIX-unpack seeding the `plan` phase does. Without it, an unresolved
+# custom mode silently opens the default Agent (see `launchAgentChat` in
+# src/commands/copilotOnRails/openChatWithAgent.ts), which would look exactly
+# like "the runner ignored chatMode" while meaning something completely
+# different. That ambiguity is the one this probe exists to remove, so it must
+# not be reintroduced by the setup.
+#
+# The prompts still ask the agents to do nothing, so this stays cheap: what is
+# being measured is which agent answers and what it can see, not what it builds.
+#
+# snapshotWorkspace is left at its default. Nothing here asserts on `files`, and
+# the run writes no artifacts worth snapshotting either way.
+
+chatMode: azure-project-plan
+
+# Seed the agent definitions out of the VSIX, exactly as the `plan` phase does.
+# Copied rather than shared because a phase file is the unit a stimulus selects;
+# see config/phases/plan.yaml for the reasoning about keeping instructions in
+# step with the build under test.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/

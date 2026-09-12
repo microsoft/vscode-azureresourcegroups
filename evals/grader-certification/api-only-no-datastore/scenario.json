@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-api-only-no-datastore",
+    "prompt": "Build a stateless currency conversion API with no database and no UI \u2014 just REST endpoints that convert between currencies using in-memory rates.",
+    "baselinePrompt": "Create a stateless currency conversion API. It exposes REST endpoints to list supported currencies and convert an amount between two of them, using rates held in memory. There is no database and no browser UI. Include build, test and lint scripts, a local run configuration, and the deployment files needed to host it.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "node",
+        "database": "none",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "No datastore required"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

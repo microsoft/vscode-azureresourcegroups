@@ -1,0 +1,82 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import * as vscode from "vscode";
+import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { type LocalPlanData, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
+import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
+import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
+
+const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
+    createController: (data, uri) => {
+        closeLoadingView();
+        return new LocalPlanViewController(data, uri);
+    },
+    updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
+});
+
+export function isLocalPlanViewOpen(): boolean {
+    return host.isOpen;
+}
+
+export function openLocalPlanView(uri: vscode.Uri): void {
+    void openLocalPlanViewAsync(uri);
+}
+
+export function openLocalPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    host.show(tryParseLocalPlan(content, sourceFileUri), sourceFileUri);
+}
+
+function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefined): LocalPlanData {
+    let parsed: LocalPlanData | undefined;
+    let errorMessage: string | undefined;
+    try {
+        parsed = parseLocalDebugPlanMarkdown(content);
+    } catch (err) {
+        errorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    if (errorMessage || !parsed || parsed.sections.length === 0) {
+        return {
+            title: parsed?.title ?? 'Local Development Plan',
+            status: parsed?.status ?? 'Unknown',
+            executionMode: parsed?.executionMode ?? 'Unknown',
+            headerNote: parsed?.headerNote ?? '',
+            sections: parsed?.sections ?? [],
+            parseError: buildParseError(
+                errorMessage ?? vscode.l10n.t("The plan file couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+                sourceFileUri,
+            ),
+        };
+    }
+    return parsed;
+}
+
+export async function openLocalPlanViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
+    const selected = await pickWorkspaceFile(
+        DEBUG_PLAN_FILE_GLOB,
+        vscode.l10n.t('No local plan markdown files found in the workspace.'),
+    );
+    if (selected) {
+        await openLocalPlanViewAsync(selected);
+    }
+}
+
+async function openLocalPlanViewAsync(uri: vscode.Uri): Promise<void> {
+    openLocalPlanViewWithContent(await readFileText(uri), uri);
+    host.setWatcher(watchSingleFile(uri, () => void reloadLocalPlan(uri)));
+}
+
+async function reloadLocalPlan(uri: vscode.Uri): Promise<void> {
+    try {
+        openLocalPlanViewWithContent(await readFileText(uri), uri);
+    } catch {
+        // File may have been deleted or be momentarily unavailable; ignore.
+    }
+}

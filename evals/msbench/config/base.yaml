@@ -1,0 +1,182 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Shared preamble for every stimulus.
+#
+# `build-config.ts <stimulus>` concatenates this file with one file from
+# `stimuli/` to produce `assets/user-overrides.yaml`, which is the LAST of three
+# config layers (base -> benchmark instance -> user overrides, see
+# scripts/run-agent.sh in microsoft/vscode-copilot-evaluation). Merging is a
+# shallow Object.assign, so the stimulus's `promptSteps` wholly replace those of
+# whichever instance we borrow — that is what lets us reuse the `say_hello`
+# container image rather than publishing one of our own.
+#
+# `installExtensions` is the exception: it concatenates and de-dupes by id across
+# layers, so our extension installs alongside github.copilot-chat.
+#
+# Why the split: run-agent.sh hardcodes `cp "$PWD/user-overrides.yaml"`, so the
+# agent will only ever read that one filename and a stimulus cannot be selected
+# with a flag. And `promptSteps` feeds a *single* chat session, so the four
+# stimuli cannot be stacked into one file either — a later stimulus would see
+# the requirements.json an earlier one wrote, and `no-premature-plan` would fail
+# spuriously. One run per stimulus is therefore forced; keeping the preamble
+# here means the VSIX path and the agent-seeding script have exactly one
+# definition instead of four copies drifting apart.
+#
+# Run it with ./run.sh — see README.md.
+
+# Also the queueing key. CES serialises runs sharing the same (model, endpoint tag),
+# and the model half of that key is read from here: `--model .` makes the vscode
+# plugin resolve the model from this block rather than from the CLI flag. Changing
+# `id` therefore moves our runs into a different queue — see README.md, "Run queueing".
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+# Set explicitly because the defaults (6300 / 2700 / 300) are sized for a
+# single-turn run, and the end-to-end chain is not one.
+#
+# NOTE: these are the *in-config* timeouts, enforced by the agent and the
+# platform runner. They are unrelated to `msbench-cli run --timeout`, which is a
+# purely local wait — see README.md, "Timeouts". Do not add that flag.
+timeouts:
+  # describe -> requirements -> plan -> scaffold -> build -> run -> debug, all in
+  # ONE chat session. The schema default of 6300 is a per-turn budget, not a
+  # budget for the chain.
+  #
+  # Budget, NOT an independent knob. The agent clock starts *after* the job clock
+  # (container pull, VS Code + VSIX install, workspace setup, the `script:`
+  # preamble all precede the first turn), so agentSeconds must leave room for
+  # both that head start and the grace period below — otherwise the job is killed
+  # first, the agent timeout never fires, runnerGraceSeconds never runs, and
+  # nothing is flushed on exactly the runs that need diagnosing:
+  #
+  #   7200s runner cap - 30m setup allowance - 15m grace => 4500s agent
+  #
+  # BOTH terms are measured, which is the difference from the value this replaces.
+  #
+  # The 7200s cap: every instance runlog prints `Using timeout of 7200 seconds`
+  # before the agent starts, identical in all 30 cached runs — across three days,
+  # four models (claude-sonnet-4.5, gpt-5, gpt-4.1, gpt-5.6) and multi-instance
+  # dispatches. Identical values across different payloads is what rules out its
+  # being set per dispatch.
+  #
+  # The setup allowance: measured as `timestamps.initialized` to the first agent
+  # step, over 23 usable cached runs (2 excluded — their own metadata reports
+  # completed before initialized, so `initialized` there is a re-download, not a
+  # run start).
+  #
+  #   one extension   n=17   min 147.9s   median 171.1s   max 233.2s
+  #   two extensions  n=6    min 182.5s   median 195.5s   max 896.6s
+  #
+  # Two extensions is the current configuration: since #1720, base.yaml installs
+  # the debug probe alongside the product VSIX on every run. It costs about
+  # +24s on the median — NOT the +715s a first reading of the maximum suggests.
+  #
+  # 30m is 2.0x the observed max, and the reason is that maximum rather than any
+  # growth trend. `debug-probe-smoke` (2026082620311350) took 896.6s, 4.6x the
+  # two-extension median, and the cause is UNKNOWN. It is not the second
+  # extension: the five later two-extension runs took 182-216s. It is not a cold
+  # image pull: the full runlog shows both it and its successor pulling every
+  # layer. It was the first probe run, which is suggestive of a one-off, but that
+  # is a correlation with n=1 and not an explanation.
+  #
+  # An unexplained 4.6x excursion is a better argument for headroom than a known
+  # cost would be, because a known cost can be budgeted and an unpredictable one
+  # can only be absorbed. Sizing to the median would have been beaten by an
+  # already-observed run.
+  #
+  # Erring LOW here is the safe direction and that is why the headroom is
+  # generous. Too low: the agent timeout fires, grace runs, artifacts flush, the
+  # run is diagnosable. Too high: the job is killed first and nothing is flushed
+  # at all. Those are not symmetric.
+  #
+  # This previously read 18000 (5h), derived from an *assumed* 6h GitHub-hosted
+  # runner cap — 4x the real budget. The first version of this fix read 5400,
+  # derived from the measured cap but an *assumed* 15m setup, which left exactly
+  # zero margin. See README.md, "Timeouts".
+  agentSeconds: 4500 # 75m
+  # The trap. This is not agent inactivity — it fires only when the agent trace,
+  # the CAPI proxy log, the Copilot Chat log AND workspace file activity are all
+  # quiet. `npm install`, `azd provision`, a build or a test suite produce none
+  # of those four for minutes at a time, so a perfectly healthy run gets killed
+  # for looking idle. Quiet is not the same as stuck.
+  #
+  # 2700 is the schema default, chosen rather than derived — but it is not
+  # unexamined. The longest gap between agent steps in any successful cached run
+  # is 211.8s (`2026082614813342`); `scaffold-fullstack`, which runs a real
+  # `npm install` and build, peaks at 82.4s. Those gaps are an UPPER bound on
+  # all-four-quiet, since file activity continues during a step gap, so 2700
+  # sits at least 12.7x above anything observed.
+  #
+  # It must also stay strictly below agentSeconds. At the previous 5400 it would
+  # have equalled it, and a stall could never have fired before the agent budget
+  # expired — an inert timeout that reads as protection.
+  #
+  # Revisit when the deploy gate lands: `azd provision` is the one step plausibly
+  # quiet for tens of minutes, and it has never been measured here.
+  stallSeconds: 2700 # 45m
+  # Time the outer runner allows for cleanup after the agent timeout. A long
+  # session has far more to flush than a 5-step one (screen recording,
+  # trajectory, session.sqlite), and a truncated artifact is an unreadable
+  # result — the run cost is paid either way, so buy the flush.
+  runnerGraceSeconds: 900 # 15m
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    # Container path. Everything under ./assets is copied to /agent/assets, and
+    # unlike a benchmark config this path is NOT rewritten, so it is hardcoded.
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+  # The debug probe (evals/debug-probe). Test-only, never shipped to users: it
+  # drives the generated project to a breakpoint so a gate can assert that F5
+  # actually works, rather than that launch.json merely parses.
+  #
+  # This second entry is the whole reason `installExtensions` concatenating
+  # across layers matters. It is inert unless the workspace contains a
+  # `debug-probe.json`, so it is safe on every run — a stimulus opts in by
+  # writing that file, and every other stimulus is unaffected.
+  - id: ms-azuretools.cor-debug-probe
+    mode: vsix
+    path: /agent/assets/extensions/cor-debug-probe.vsix
+  # The Azure Functions extension, from the marketplace rather than a VSIX because
+  # we do not build it — this is the shipping one a developer would have.
+  #
+  # It is here for exactly one reason: it provides the `func` TASK TYPE. A generated
+  # Functions project's launch configuration declares
+  # `preLaunchTask: "func: host start"` with `"type": "func"`, and without the
+  # provider that task cannot run, nothing opens the inspector port, and
+  # `debug-breakpoint` reported `appFailedToStart` — exit 1, blaming the product for
+  # a project it generated correctly.
+  #
+  # Measured, on grader-certification/stage-local-dev, with the extension installed
+  # into an isolated extensions dir:
+  #
+  #     preLaunchTask "func: host start" resolves in this environment   <- was: cannot resolve
+  #
+  # The agent's own `.azure/vscode-debug-plan.md` lists this extension as a
+  # prerequisite, so installing it makes the eval environment match the environment
+  # the plan is written for rather than granting the product a favour.
+  #
+  # ── Ordering is load-bearing, and this entry MUST stay last ──────────────────
+  #
+  # `ms-azuretools.vscode-azurefunctions` DEPENDS ON
+  # `ms-azuretools.vscode-azureresourcegroups` — the extension under test — and
+  # installing it pulls that dependency from the marketplace. Installed the wrong way
+  # round, the marketplace build would replace the VSIX we are evaluating and every
+  # run would silently grade a shipped release instead of the change under test.
+  #
+  # Verified rather than assumed: with the dependency already present, VS Code leaves
+  # it alone. Installing 0.12.0 first and then this extension leaves 0.12.0 on disk,
+  # not the marketplace version. Our VSIX is the first entry above, so it is always
+  # in place before this runs. Do not reorder these.
+  #
+  # `func` itself is a separate dependency and is NOT provided by this: it is a CLI,
+  # installed by the phase preamble and present in the custom image (msbench-1.1.0).
+  # Both are needed, and on the stock image the gate still declines rather than
+  # inventing a verdict.
+  - id: ms-azuretools.vscode-azurefunctions
+    mode: marketplace
+
+# The Vally executor approves every permission request. Without this the
+# webview-opening tools block on a confirmation nothing can answer.
+dangerouslyAutoApproveAllToolCalls: true

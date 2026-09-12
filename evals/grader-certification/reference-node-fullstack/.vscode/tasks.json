@@ -1,0 +1,46 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "install",
+            "type": "shell",
+            "command": "npm ci --ignore-scripts",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            }
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "npm run build",
+            "dependsOn": "install",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            }
+        },
+        {
+            "label": "prepare",
+            "type": "shell",
+            "command": "node -e \"process.exit(0)\"",
+            "dependsOn": "build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            }
+        }
+    ]
+}

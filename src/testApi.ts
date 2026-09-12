@@ -11,6 +11,15 @@ import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 import { SubscriptionItem } from "./tree/azure/SubscriptionItem";
+import type {
+    CloseAccessInput,
+    CloseAccessOutcome,
+    MigrationFirewallOperations,
+    OpenAccessInput,
+    OpenAccessOutcome,
+    ReconcileResult,
+} from "./utils/copilotOnRails/migrationFirewallAccess";
+import type { MigrationAccessLease } from "./utils/copilotOnRails/migrationFirewallRules";
 
 /**
  * Test-only API for accessing internal extension state.
@@ -91,5 +100,24 @@ export interface TestApi {
          * Checks if a resource group exists
          */
         resourceGroupExists(context: IActionContext, node: SubscriptionItem, rgName: string): Promise<boolean>;
+
+        /**
+         * Bridge to the temporary migration firewall exception, for tests.
+         *
+         * Needed because the tests run against the bundled extension while importing from `src/`
+         * would give them a second, unrelated module instance whose `ext.context` is undefined.
+         * The firewall feature's guarantees (fail closed on unverified network posture, never lose
+         * a lease, always name a stranded rule) are exactly the ones that need driving end to end,
+         * so they are reached through the running instance like every other internal here.
+         */
+        migrationFirewall: {
+            /** Injects a fake for the two ARM calls the feature makes. Pass undefined to restore. */
+            setOverrideOperations(operations: MigrationFirewallOperations | undefined): void;
+            readLeases(): MigrationAccessLease[];
+            clearLeases(): Promise<void>;
+            open(context: IActionContext, input: OpenAccessInput): Promise<OpenAccessOutcome>;
+            close(context: IActionContext, input: CloseAccessInput): Promise<CloseAccessOutcome>;
+            reconcile(context: IActionContext): Promise<ReconcileResult>;
+        };
     };
 }

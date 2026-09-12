@@ -1,0 +1,24 @@
+# expect: stackKnownGapBinaryPresent
+# The slow failure this schema is most afraid of: a gap that was true once. The
+# binary is in the container now, but the entry still explains away every red the
+# gate produces — suppressing a real failure for as long as nobody rereads it.
+schemaVersion: 1
+id: stale-gap-binary-present
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps:
+  - gates: [runtime-app-starts]
+    reason: ecosystemNotSupported
+    binary: node
+    tracking: stale — node has been present all along
+phases: [plan]

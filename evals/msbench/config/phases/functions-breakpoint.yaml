@@ -1,0 +1,125 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `functions-breakpoint` — infrastructure only, like `debug-breakpoint`.
+#
+# Same question as `debug-breakpoint`, asked of the stack that matters: can a
+# debugger reach a breakpoint in an **Azure Functions** project inside this
+# container? The agent does nothing; the product is not under test.
+#
+# `debug-breakpoint` answers that for a plain Node app that launches its own
+# process. Every project the scaffold agent emits is a Functions app whose launch
+# configuration is `request: attach` behind `preLaunchTask: "func: host start"` —
+# a different code path end to end, and the one that produced a fabricated
+# `appFailedToStart` until the preflight was narrowed. So a green there says
+# nothing about here.
+#
+# The fixture is `evals/grader-certification/stage-local-dev`, staged by run.sh:
+# the harvested scaffold from run 2026083170541011 plus the `.vscode/**` its own
+# `.azure/vscode-debug-plan.md` specifies.
+#
+# ── Everything below is a prerequisite the TASK CHAIN would otherwise have to do ──
+#
+# The configuration's task chain is `func: host start` -> `api: build` -> `install`.
+# Left to itself that means an npm install and a TypeScript build inside the probe
+# budget, on a cold container, before anything can listen. Doing it here instead
+# is not cheating: it is the difference between measuring "can this project be
+# debugged" and measuring "does npm finish in 180 seconds". The tasks still run —
+# they just find their work already done.
+#
+# NOTE: `exitWhenDone` is deliberately absent from the spec below, for the same
+# reason as in debug-breakpoint.yaml: the probe quitting VS Code mid-run would
+# take the eval down with it.
+
+script: |
+  set -eux
+  cp -R /agent/assets/fixtures/stage-local-dev/. /workspace/
+
+  # ── Emulators ───────────────────────────────────────────────────────────────
+  #
+  # Lifted from config/phases/local.yaml, and fail-soft for the same reason: a
+  # preamble that dies takes the whole run with it, and a missing emulator should
+  # cost a stood-down gate rather than a lost run.
+  #
+  # They matter more here than elsewhere. The health handler this run breaks in
+  # calls `database.healthCheck()` and `storage.healthCheck()`, so with neither
+  # emulator up it takes its `unhealthy` branch — a different line from the one
+  # the breakpoint sits on. The breakpoint is therefore placed on a statement that
+  # runs on EVERY request (see the spec below) rather than on the healthy branch,
+  # so a stopped emulator degrades the result honestly instead of silently making
+  # the breakpoint unreachable.
+  [ -s /opt/nvm/nvm.sh ] && . /opt/nvm/nvm.sh >/dev/null 2>&1 || true
+  if command -v azurite >/dev/null 2>&1; then
+    mkdir -p /tmp/azurite
+    nohup azurite --silent --skipApiVersionCheck \
+      --location /tmp/azurite \
+      --blobHost 127.0.0.1 --queueHost 127.0.0.1 --tableHost 127.0.0.1 \
+      >/tmp/azurite.log 2>&1 &
+    for _ in $(seq 1 20); do
+      if (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; then break; fi
+      sleep 1
+    done
+    (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1 \
+      && echo "azurite: listening on 127.0.0.1:10000" \
+      || echo "azurite: FAILED to listen"
+  else
+    echo "azurite: not installed (stock image)"
+  fi
+
+  if command -v pg_ctlcluster >/dev/null 2>&1 && [ -f /etc/cor-pg-version ]; then
+    PG_VERSION="$(cat /etc/cor-pg-version)"
+    pg_ctlcluster "$PG_VERSION" main start || echo "postgres: start reported a failure"
+    for _ in $(seq 1 20); do
+      if su postgres -c "pg_isready -q" >/dev/null 2>&1; then break; fi
+      sleep 1
+    done
+    if su postgres -c "pg_isready -q" >/dev/null 2>&1; then
+      su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='taskuser'\"" | grep -q 1 \
+        || su postgres -c "psql -c \"CREATE ROLE taskuser LOGIN PASSWORD 'taskpassword' SUPERUSER\"" || true
+      su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='tasktracker'\"" | grep -q 1 \
+        || su postgres -c "createdb -O taskuser tasktracker" || true
+      echo "postgres: ready on 127.0.0.1:5432"
+    else
+      echo "postgres: FAILED to become ready"
+    fi
+  else
+    echo "postgres: not installed (stock image)"
+  fi
+
+  # ── func, and the build the task chain expects ──────────────────────────────
+  if command -v func >/dev/null 2>&1; then
+    echo "func already present: $(func --version 2>&1 | tail -1)"
+  else
+    npm install -g azure-functions-core-tools@4 --unsafe-perm true \
+      || npm install -g azure-functions-core-tools@4 --unsafe-perm true --registry https://registry.npmjs.org/ \
+      || echo "func install FAILED; the probe will decline rather than invent a verdict"
+  fi
+  command -v func >/dev/null 2>&1 && func --version 2>&1 | tail -1 || echo "func: still unavailable"
+
+  cd /workspace
+  npm install --no-audit --no-fund || echo "npm install FAILED"
+  npm run build --workspace=services/shared || echo "shared build FAILED"
+  npm run build --workspace=services/functions || echo "functions build FAILED"
+  ls -la /workspace/services/functions/dist 2>&1 | head -20 || echo "no dist/ — func will have nothing to serve"
+
+  # Written AFTER the project is in place, for the ordering reason recorded in
+  # debug-breakpoint.yaml.
+  #
+  # The breakpoint is on `getServices()`, not on `status = 'healthy'`. Both are in
+  # the health handler, but the second only executes when BOTH emulators answer,
+  # so a stopped emulator would make the breakpoint unreachable and the verdict
+  # would read as "the debugger cannot stop here" rather than "the datastore is
+  # down". The first statement of the handler runs on every request and is the
+  # honest place to ask whether execution arrives at all.
+  cat > /workspace/debug-probe.json <<'JSON'
+  {
+    "launchConfig": "Task Tracker API (debug)",
+    "breakpoint": {
+      "glob": "services/functions/src/functions/*.ts",
+      "pattern": "const \\{ database, storage \\} = getServices\\(\\)"
+    },
+    "trigger": { "url": "http://127.0.0.1:7071/api/health" },
+    "timeoutMs": 240000
+  }
+  JSON
+  ls -la /workspace
+  cat /workspace/debug-probe.json

@@ -1,0 +1,7 @@
+{
+    "name": "@app/shared",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "src/types.ts"
+}

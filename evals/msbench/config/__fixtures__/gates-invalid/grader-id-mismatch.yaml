@@ -1,0 +1,10 @@
+# expect: gateGraderIdMismatch
+# id and grader disagree, so run history and certification results cannot be joined — one gate silently becomes two partial records.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-project-plan.ts
+    summary: mismatched
+    phases: [plan]
+    requires: {}

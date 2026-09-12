@@ -1,0 +1,15 @@
+{
+    "name": "cor-grader-reference-node-postgres",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "build": "node --check src/server.js && node --check public/app.js",
+        "start": "node src/server.js"
+    },
+    "dependencies": {
+        "pg": "^8.13.1"
+    },
+    "engines": {
+        "node": ">=22"
+    }
+}

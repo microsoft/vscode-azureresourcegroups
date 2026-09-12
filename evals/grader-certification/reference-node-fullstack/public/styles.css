@@ -1,0 +1,41 @@
+:root {
+    color: #1b1b1b;
+    background: #f7f9fc;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+}
+
+main {
+    max-width: 42rem;
+    margin: 4rem auto;
+    padding: 2rem;
+    background: #ffffff;
+    border: 1px solid #c5ced8;
+    border-radius: 0.75rem;
+}
+
+form {
+    display: grid;
+    gap: 0.75rem;
+}
+
+input,
+button {
+    min-height: 2.75rem;
+    font: inherit;
+}
+
+button {
+    color: #ffffff;
+    background: #1479c9;
+    border: 0;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+li {
+    margin-block: 0.75rem;
+}

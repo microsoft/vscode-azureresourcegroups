@@ -1,0 +1,55 @@
+# Stimulus `scheduled-nightly-report`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# Every existing stimulus asks for something a person interacts with. This one
+# asks for something nobody looks at: a job that wakes up, does work, and goes
+# back to sleep. That single difference reaches two things the suite has never
+# tested.
+#
+# First, a service with no HTTP endpoint. The deploy artifact contract in
+# deploy-checklist-template.md expects every code-hosting service to appear in
+# `deploy-result.json.endpoints[]`, and a timer-triggered function is the
+# ordinary, correct case where that does not hold. Whether the product handles
+# it or quietly reports a partial deploy is currently unknown.
+#
+# Second, "no UI" as an *inference* rather than an instruction. The one existing
+# no-frontend stimulus (`api-only-inventory`) is told "Just the API, no UI
+# needed" in the prompt. Here nothing says it — the absence of a frontend has to
+# be derived from what the app is. That is the harder and more realistic claim,
+# and it is why the same `--assert-no-frontend` flag means something different
+# in this file than it does there.
+
+promptSteps:
+  - text: |
+      Every night I need something that pulls yesterday's sales numbers out of
+      our database, builds a summary, and emails it to the leadership team.
+      It just needs to run on a schedule — nobody's going to open it.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Nothing in the prompt says "no UI" — it has to be inferred from "nobody's
+      # going to open it". A scaffolded React app here is wasted infrastructure.
+      - comment: requirements.json should infer that a scheduled job needs no frontend
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-no-frontend
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      - comment: Triage; which question ids did the agent capture?
+        exec: 'grep -o "\"id\": *\"[^\"]*\"" .azure/requirements.json 2>/dev/null | head -40'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

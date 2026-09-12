@@ -1,0 +1,20 @@
+# expect: stackBinaryUnknown
+# Requires something container.yaml says nothing about. An unlisted binary is an
+# unanswered question, and the whole point is that it gets answered before a run
+# rather than during one.
+schemaVersion: 1
+id: unknown-binary
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm, rustc]
+knownGaps: []
+phases: [plan]

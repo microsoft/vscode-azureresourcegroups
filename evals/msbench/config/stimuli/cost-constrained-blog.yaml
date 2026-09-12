@@ -1,0 +1,63 @@
+# Stimulus `cost-constrained-blog`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# Cost is heavily contracted and never pressured. `prepare-schemas.ts` requires
+# a `costEstimate`, a `rejectedAlternatives` list, and the
+# `f1Viable` / `f1BlockReason` pair that has to move together;
+# `dependency-compatibility.md` makes native modules change the SKU choice
+# between F1 and B1. Not one existing prompt gives the planner a reason to
+# prefer the cheap option, so the entire free-tier path is chosen — if it is
+# ever chosen — without anything asking for it.
+#
+# ## Why the assertion here is only the schema contract
+#
+# `costEstimate` lives in `prepare-plan.json`, which is written by the prepare
+# phase. This suite has no prepare phase: the phase files are plan, scaffold,
+# local, deploy-scaffold, chain-probe, probe-smoke and debug-breakpoint. So
+# there is no artifact in this run that can carry a cost claim, and any
+# cost assertion written here today would be asserting against a file that is
+# never produced.
+#
+# Rather than write a green-forever check, the cost triage below is recorded and
+# not asserted — the same `assertZeroExitCode: false` shape the fingerprint uses.
+# The first run of this stimulus answers the question the assertion needs:
+# does the planner record budget pressure anywhere in `requirements.json`?
+# If it does, that becomes a real flag. If it does not, this file is the
+# evidence that cost cannot be graded before a prepare phase exists.
+
+promptSteps:
+  - text: |
+      I want to put a small personal blog online — just me posting occasionally,
+      maybe a hundred visitors a month. I'm paying for this myself so keep it as
+      cheap as you possibly can. Free would be ideal.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Wording is pinned to photo-app-requirements.yaml: same exec means same
+      # gate, and the comment is that gate's only identifier in stored results.
+      - comment: requirements.json satisfies the requirements contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # Recorded, not asserted. Decides whether budget pressure is gradeable at
+      # the plan phase at all, or only once a prepare phase exists.
+      - comment: Triage; did the planner record any cost or tier signal?
+        exec: 'grep -io "free\|cost\|budget\|tier\|sku\|f1\|b1" .azure/requirements.json 2>/dev/null | sort | uniq -c | head -20'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

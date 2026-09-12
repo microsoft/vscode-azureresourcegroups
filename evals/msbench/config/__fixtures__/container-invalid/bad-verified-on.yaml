@@ -1,0 +1,6 @@
+# expect: containerInventoryVerifiedOn
+# A date nobody can compare against a run date is not a verification record.
+schemaVersion: 1
+verifiedOn: last Tuesday
+binaries:
+  node: { status: present, evidence: measured }

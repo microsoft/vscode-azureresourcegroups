@@ -1,0 +1,19 @@
+# expect: stackPromptNamesRails
+# The prompt describes the machinery instead of the app, so the baseline arm —
+# plain Copilot, no guided flow — could not reuse it without a rewrite per stack.
+schemaVersion: 1
+id: prompt-names-rails
+name: Fixture
+ecosystem: node
+prompt: |
+  Build a warehouse inventory API. Start by writing requirements.json, then
+  generate project-plan.md and scaffold from it.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan]

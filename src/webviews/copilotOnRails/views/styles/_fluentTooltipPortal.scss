@@ -1,0 +1,13 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+// Fluent UI's Tooltip is portal-mounted on document.body and needs explicit
+// VS Code tokens for contrast and legibility.
+.fui-Tooltip__content {
+    background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background)) !important;
+    color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-editorWidget-border, var(--vscode-widget-border))) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}

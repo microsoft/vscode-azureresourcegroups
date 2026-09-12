@@ -1,0 +1,19 @@
+# expect: stackEcosystemBinaryMissing
+# Declares a Python ecosystem without requiring python3, hiding the stack's most
+# basic requirement from the one check meant to run before money is spent.
+schemaVersion: 1
+id: ecosystem-binary-missing
+name: Fixture
+ecosystem: python
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [curl]
+knownGaps: []
+phases: [plan]

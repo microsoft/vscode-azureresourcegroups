@@ -1,0 +1,21 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-node-multiservice-fidelity",
+    "prompt": "Build a ticket tracker with a browser UI, an HTTP API and a background worker that processes queued work.",
+    "baselinePrompt": "Create a ticket tracker as three services: a React browser UI, an HTTP API backed by PostgreSQL, and a background worker that consumes a storage queue. Include build, test and lint configuration for each service.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "node",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": false,
+        "test": false,
+        "lint": "skip",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

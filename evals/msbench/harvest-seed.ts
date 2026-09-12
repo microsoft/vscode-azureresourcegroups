@@ -1,0 +1,535 @@
+#!/usr/bin/env node
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/**
+ * Promote a finished plan-phase run's `.azure/project-plan.md` into the scaffold seed,
+ * and report when that seed has gone stale.
+ *
+ *   node harvest-seed.ts 2026082614813342     # harvest a real plan from a real run
+ *   node harvest-seed.ts --check              # is the harvested seed still current?
+ *
+ * ── The problem this closes ────────────────────────────────────────────────────────
+ *
+ * The scaffold and local-dev phases need an approved `.azure/project-plan.md` on disk
+ * before turn 0, and until now it was a checked-in fixture. `stage-workspace.ts`
+ * documents the objection to that, quoting the design that rejected it first:
+ *
+ *   > Checking one in makes that document a second source of truth: edit the planner's
+ *   > template and the stored copy still describes the old shape, so the scaffold graders
+ *   > keep passing against a plan no agent would emit.
+ *
+ * The objection is bounded rather than answered — the plan is an *input, not an expected
+ * answer*, so a stale one makes scaffold trials fail **loudly** and cannot make a broken
+ * scaffolder look green. Fail-safe, not fail-open.
+ *
+ * But one thing was given up outright: the original `harvest-seed.mjs` had a `--check`
+ * that reported seed freshness and exited 1 when stale, and **nothing replaced it**. So
+ * the fixture could drift from what the planner emits with no symptom but an expensive,
+ * confusing red run. This restores both halves — the harvest and the check.
+ *
+ * ── Why the check is free, and why it hashes the agent rather than the plan ─────────
+ *
+ * A plan's shape is determined by the planner's instructions. So "is this stored plan
+ * still representative?" is really "have the planner's instructions changed since it was
+ * captured?" — and that is answerable locally, with no run, no model and no network.
+ *
+ * Harvesting records `agent-assets.lock.json`'s `agentAssetsHash` alongside the document;
+ * `--check` compares it against the lock today. See `seed-store.ts` for why the lock is
+ * read rather than recomputed.
+ *
+ * Note that this over-triggers slightly — the hash covers the planner's whole asset tree,
+ * so an edit that cannot change the plan's shape still marks the seed stale. That is the
+ * intended direction. Missing a real drift is fail-open; re-harvesting unnecessarily
+ * costs one free extraction.
+ *
+ * ── Exit codes ─────────────────────────────────────────────────────────────────────
+ *
+ *   0 — the harvested seed is current
+ *   1 — the harvested seed is stale: the planner's assets changed since it was captured
+ *   2 — nothing has been harvested, so the checked-in fixture is in use and its
+ *       freshness is *unknown*
+ *   3 — the tool itself could not run
+ *
+ * Exit 2 is deliberately neither 0 nor 1, for the reason #1747 settled for gates: a check
+ * that never ran is not the same as a check that passed, and collapsing them is how "we
+ * could not tell" starts reading as "it passed". It is separate from 1 because the two
+ * want different actions — 1 means re-harvest, 2 means nobody has started.
+ *
+ * Runs straight off source via Node's built-in type stripping — no build step. Needs
+ * `--disable-warning=ExperimentalWarning` for `node:sqlite`; `npm run seed:harvest` and
+ * `npm run seed:check` pass it.
+ */
+
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { findInstances, matchesInstance, MsBenchToolError, resolveExtraction, venvBinDir, type Instance } from './extraction.ts';
+import {
+    checkFreshness, currentAgentAssetsHash, EXIT_FRESH, EXIT_NOT_HARVESTED, EXIT_STALE, EXIT_TOOL_ERROR,
+    freshnessOf, HARVESTED_PLAN, PROVENANCE_PATH, writeSeed, type Freshness, type Provenance,
+} from './seed-store.ts';
+
+/** Anchored to the `.azure/` directory so a stray `docs/project-plan.md` cannot match. */
+const PLAN_PATH = '.azure/project-plan.md';
+
+const USAGE = `Promote a plan-phase run's .azure/project-plan.md into the scaffold seed.
+
+Usage:
+  node harvest-seed.ts <run-id> [--instance <id>]
+  node harvest-seed.ts <run-id> --extracted <dir>
+  node harvest-seed.ts --check
+
+Options:
+  --instance <id>   Pick one instance when the run holds several.
+  --extracted <dir> Harvest from an already-extracted directory instead of
+                    downloading. The run id is still required, because
+                    provenance that cannot name its run is not auditable.
+  --extract-dir <d> Where to extract (default: evals/msbench/.regrade/<run-id>).
+                    Use a short path on Windows: these archives contain ~290
+                    character log paths, and MAX_PATH is 260.
+  --check           Report whether the harvested seed is still current, and exit
+                    0 (fresh) / 1 (stale) / 2 (never harvested).
+  --self-test       Assert this tool's behaviour against synthetic extractions.
+                    Needs no credentials and touches no real seed.
+  -h, --help        Show this help.
+
+Harvesting requires \`msbench-cli\` on PATH; --check is purely local:
+  export PATH="$HOME/.msbench-venv/${venvBinDir()}:$PATH"`;
+
+// ---------------------------------------------------------------------------
+// Reporting
+// ---------------------------------------------------------------------------
+
+function reportFreshness(freshness: Freshness): number {
+    switch (freshness.state) {
+        case 'not-harvested':
+            console.log('Seed: not harvested.');
+            console.log(`  No ${PROVENANCE_PATH}, so the scaffold phase uses the checked-in fixture at`);
+            console.log('  evals/local-dev/fixtures/functions-postgres/.azure/project-plan.md.');
+            console.log('  That fixture is fail-safe, but its freshness is unknown. To fix that:');
+            console.log('    npm run seed:harvest -- <plan-run-id>');
+            return EXIT_NOT_HARVESTED;
+
+        case 'stale':
+            console.log('Seed: STALE.');
+            console.log(`  Harvested from run ${freshness.provenance.runId} at ${freshness.provenance.harvestedAt}`);
+            console.log(`    captured agentAssetsHash: ${freshness.provenance.agentAssetsHash}`);
+            console.log(`    current  agentAssetsHash: ${freshness.current}`);
+            console.log("  The planner's assets changed since this plan was captured, so it may describe");
+            console.log('  a shape the planner would no longer emit. Re-harvest from a run made against');
+            console.log('  the current agents.');
+            return EXIT_STALE;
+
+        case 'fresh':
+            console.log('Seed: current.');
+            console.log(`  Harvested from run ${freshness.provenance.runId} at ${freshness.provenance.harvestedAt}`);
+            console.log(`  agentAssetsHash ${freshness.provenance.agentAssetsHash} matches the lock.`);
+            return EXIT_FRESH;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Harvest
+// ---------------------------------------------------------------------------
+
+function selectInstance(root: string, wanted: string | undefined): Instance {
+    const { instances, incomplete } = findInstances(root);
+    // Two different causes, and the fix differs: the run's output blob never arrived, or
+    // the local extraction could not write every file. On Windows the second is the usual
+    // one and does not look like a path problem from here — the archives carry ~290
+    // character log paths and MAX_PATH is 260, so the unzip stops partway and
+    // `session.sqlite` is simply absent.
+    const describeIncomplete = incomplete.length
+        ? `\nInstances with no session.sqlite: ${incomplete.join(', ')}\n` +
+        '  Either the run produced no output blob, or the extraction could not write every\n' +
+        '  file. On Windows, retry somewhere short first: --extract-dir C:\\mb'
+        : '';
+
+    if (instances.length === 0) {
+        throw new MsBenchToolError(`No instance output found under ${root}.${describeIncomplete}`);
+    }
+
+    const candidates = wanted
+        ? instances.filter(instance => matchesInstance(instance.name, wanted))
+        : instances;
+
+    if (candidates.length === 0) {
+        throw new MsBenchToolError(
+            `No instance matches '${wanted}'. Available:\n` +
+            instances.map(instance => `  ${instance.name}`).join('\n') + describeIncomplete
+        );
+    }
+    // Refuse to guess. Picking the first of several would silently decide whose plan
+    // becomes the seed for everyone, and the provenance file would then record that
+    // accident as though it had been a deliberate choice.
+    if (candidates.length > 1) {
+        throw new MsBenchToolError(
+            `${candidates.length} instances match${wanted ? ` '${wanted}'` : ''}. Narrow with --instance:\n` +
+            candidates.map(instance => `  ${instance.name}`).join('\n')
+        );
+    }
+    return candidates[0];
+}
+
+/**
+ * Pull the run's final `.azure/project-plan.md` out of the `files` table.
+ *
+ * Highest `stepIndex` wins, which is the document as it stood when the run ended — the
+ * same rule `regrade.ts` uses to rebuild a whole workspace.
+ */
+function readPlanFromRun(instance: Instance): { path: string; content: string } {
+    const db = new DatabaseSync(instance.sqlitePath, { readOnly: true });
+    try {
+        const total = (db.prepare('SELECT COUNT(*) AS n FROM files').get() as { n: number }).n;
+        // "The table is empty" and "the agent wrote no plan" are different findings with
+        // different fixes, and an empty table makes every path query vacuously unhelpful.
+        // Saying which one happened is the difference between a five-minute fix and an
+        // afternoon.
+        if (total === 0) {
+            throw new MsBenchToolError(
+                `${instance.name}: the files table is empty.\n` +
+                'That means the run captured no workspace at all — a phase with\n' +
+                '`snapshotWorkspace: false`, or a run that produced nothing — rather than an agent\n' +
+                'that declined to write a plan. Harvest from a plan-phase run.'
+            );
+        }
+
+        const rows = db.prepare('SELECT path, content, stepIndex FROM files ORDER BY stepIndex ASC, id ASC')
+            .all() as { path: string; content: string; stepIndex: number }[];
+
+        const latest = new Map<string, string>();
+        for (const row of rows) {
+            latest.set(row.path, row.content);
+        }
+
+        const matches = [...latest].filter(([path]) => path === PLAN_PATH || path.endsWith(`/${PLAN_PATH}`));
+        if (matches.length === 0) {
+            throw new MsBenchToolError(
+                `${instance.name}: no ${PLAN_PATH} among the ${latest.size} file(s) the agent wrote.\n` +
+                'The run reached the agent but it never produced a plan, so there is nothing to\n' +
+                'promote. Harvest from a run whose plan assertion passed.'
+            );
+        }
+        if (matches.length > 1) {
+            throw new MsBenchToolError(
+                `${instance.name}: ${matches.length} candidate plans, so which one is the seed is ambiguous:\n` +
+                matches.map(([path]) => `  ${path}`).join('\n')
+            );
+        }
+
+        const [path, content] = matches[0];
+        return { path, content };
+    } finally {
+        db.close();
+    }
+}
+
+/**
+ * Fail here rather than at staging time.
+ *
+ * `stage-workspace.ts` derives both seeds by rewriting the single `**Status**:` line, and
+ * asserts there is exactly one to rewrite — because a silent no-op there turns the
+ * unapproved stimulus into a duplicate of the approved one that still reports green. A
+ * harvested document that cannot satisfy that guard has to be rejected now, on a
+ * developer machine, rather than when a paid run is already staging.
+ */
+function assertPlanIsUsable(content: string, source: string): void {
+    const matches = content.match(/^\*\*Status\*\*:\s*(.+)$/gm) ?? [];
+    if (matches.length !== 1) {
+        throw new MsBenchToolError(
+            `The harvested plan has ${matches.length} '**Status**: ...' lines; exactly one is required.\n` +
+            `  source: ${source}\n` +
+            'Both seed recipes are produced by rewriting that line, so a document without exactly\n' +
+            'one of them would make scaffold-unapproved-plan a silent duplicate of\n' +
+            'scaffold-fullstack that still reports green while testing nothing.'
+        );
+    }
+}
+
+function harvest(runId: string, wanted: string | undefined, extractedDir: string | undefined, extractDir: string | undefined): void {
+    const root = resolveExtraction({ runId, instance: wanted, extractedDir, extractDir });
+    const instance = selectInstance(root, wanted);
+    const { path, content } = readPlanFromRun(instance);
+    assertPlanIsUsable(content, `${instance.name} ${path}`);
+
+    const provenance: Provenance = {
+        runId,
+        instance: instance.name,
+        harvestedAt: new Date().toISOString(),
+        agentAssetsHash: currentAgentAssetsHash(),
+        sourcePath: path,
+    };
+    writeSeed(content, provenance);
+
+    console.log(`Harvested ${path} from ${instance.name}`);
+    console.log(`  -> ${HARVESTED_PLAN} (${content.length} bytes)`);
+    console.log(`  -> ${PROVENANCE_PATH}`);
+    console.log(`  agentAssetsHash ${provenance.agentAssetsHash}`);
+    console.log('');
+    console.log('The scaffold and local-dev phases now seed from real planner output.');
+    console.log('Commit both files: a seed only helps CI if it travels with the repository.');
+}
+
+// ---------------------------------------------------------------------------
+// Self-test
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert this tool's behaviour against synthetic extractions. Run with
+ * `node harvest-seed.ts --self-test`.
+ *
+ * The real link — harvesting a genuine plan out of a genuine MSBench run — needs
+ * `msbench-cli` and an Azure identity, so it cannot run in PR CI. What *can* run is
+ * everything between the `files` table and the seed on disk, which is where all the
+ * decisions live. A synthetic `session.sqlite` is a faithful stand-in for that half:
+ * `regrade.ts` documents the schema this reads, and the rows here are the same shape.
+ *
+ * It matters that the failure cases are covered rather than just the happy path. Four of
+ * the five assertions below are about *distinguishing* failures that would otherwise
+ * arrive as the same confusing red run — an empty table and an agent that wrote no plan
+ * are one keystroke apart in the query and a day apart in the diagnosis.
+ *
+ * Nothing here touches the real `seeds/` directory: the harvest pieces are called
+ * individually rather than through `harvest()`, and the freshness states go through the
+ * pure `freshnessOf`.
+ */
+function selfTest(): number {
+    const failures: string[] = [];
+    const root = mkdtempSync(join(tmpdir(), 'harvest-seed-selftest-'));
+
+    const check = (name: string, run: () => void): void => {
+        try {
+            run();
+            console.log(`  ok    ${name}`);
+        } catch (error) {
+            failures.push(name);
+            console.log(`  FAIL  ${name}`);
+            console.log(`          ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
+        }
+    };
+
+    /** Build one synthetic extraction and return the instance inside it. */
+    const build = (name: string, rows: [string, string, number][]): Instance => {
+        const dir = join(root, name);
+        const vsc = join(dir, `vscbench.eval.x86_64.${name}-output`, 'output', 'vsc-output');
+        mkdirSync(vsc, { recursive: true });
+        const db = new DatabaseSync(join(vsc, 'session.sqlite'));
+        db.exec('CREATE TABLE files (id INTEGER PRIMARY KEY, path TEXT, content TEXT, stepIndex INTEGER)');
+        const insert = db.prepare('INSERT INTO files (path, content, stepIndex) VALUES (?, ?, ?)');
+        for (const [path, content, stepIndex] of rows) {
+            insert.run(path, content, stepIndex);
+        }
+        db.close();
+        return selectInstance(dir, undefined);
+    };
+
+    const expectThrows = (fragment: string, run: () => void): void => {
+        let message: string | undefined;
+        try {
+            run();
+        } catch (error) {
+            message = error instanceof Error ? error.message : String(error);
+        }
+        if (message === undefined) {
+            throw new Error(`expected a failure mentioning ${JSON.stringify(fragment)}, but it succeeded`);
+        }
+        if (!message.includes(fragment)) {
+            throw new Error(`expected ${JSON.stringify(fragment)}, got: ${message.split('\n')[0]}`);
+        }
+    };
+
+    try {
+        console.log('Harvest');
+
+        check('the last write of the plan wins, not the first', () => {
+            const instance = build('supersede', [
+                ['.azure/project-plan.md', '**Status**: Planning\n\nearly draft\n', 0],
+                ['.azure/project-plan.md', '**Status**: Planning\n\nfinal\n', 1],
+            ]);
+            const { content } = readPlanFromRun(instance);
+            if (!content.includes('final') || content.includes('early draft')) {
+                throw new Error(`took the wrong revision: ${JSON.stringify(content)}`);
+            }
+        });
+
+        // `snapshotWorkspace: false` and "the agent declined to write a plan" are the two
+        // findings this pair keeps apart. Both would otherwise read as "no plan found".
+        check('an empty files table is reported as a captured-nothing run', () => {
+            const instance = build('empty', []);
+            expectThrows('the files table is empty', () => readPlanFromRun(instance));
+        });
+
+        check('a run that wrote files but no plan says so differently', () => {
+            const instance = build('noplan', [['.azure/requirements.json', '{}', 0]]);
+            expectThrows('no .azure/project-plan.md among the', () => readPlanFromRun(instance));
+        });
+
+        check('two candidate plans are refused rather than guessed between', () => {
+            const instance = build('ambiguous', [
+                ['.azure/project-plan.md', '**Status**: Planning\n', 0],
+                ['nested/.azure/project-plan.md', '**Status**: Planning\n', 0],
+            ]);
+            expectThrows('candidate plans', () => readPlanFromRun(instance));
+        });
+
+        // Without this the seed pair silently stops discriminating: both members would
+        // carry the same status and `scaffold-unapproved-plan` becomes a copy of
+        // `scaffold-fullstack` that still reports green.
+        check('a plan with no status line is rejected at harvest, not at staging', () => {
+            expectThrows("'**Status**: ...' lines", () => assertPlanIsUsable('# Plan\n\nno status\n', 'synthetic'));
+        });
+
+        check('a plan with two status lines is rejected too', () => {
+            expectThrows("'**Status**: ...' lines", () =>
+                assertPlanIsUsable('**Status**: Approved\n**Status**: Planning\n', 'synthetic'));
+        });
+
+        console.log('\nFreshness');
+
+        const provenance: Provenance = {
+            runId: '2026082614813342',
+            instance: 'vscbench.eval.x86_64.plan',
+            harvestedAt: '2026-08-26T00:00:00.000Z',
+            agentAssetsHash: 'a'.repeat(64),
+            sourcePath: '.azure/project-plan.md',
+        };
+
+        check('a matching hash is fresh', () => {
+            const state = freshnessOf(provenance, 'a'.repeat(64)).state;
+            if (state !== 'fresh') {
+                throw new Error(`expected fresh, got ${state}`);
+            }
+        });
+
+        check('a changed hash is stale, and not merely unknown', () => {
+            const state = freshnessOf(provenance, 'b'.repeat(64)).state;
+            if (state !== 'stale') {
+                throw new Error(`expected stale, got ${state}`);
+            }
+        });
+
+        // The distinction #1747 settled: never-run is not the same as passed.
+        check('no provenance is not-harvested, which is neither fresh nor stale', () => {
+            const state = freshnessOf(null, 'a'.repeat(64)).state;
+            if (state !== 'not-harvested') {
+                throw new Error(`expected not-harvested, got ${state}`);
+            }
+        });
+
+        check('the three states map to three different exit codes', () => {
+            const codes = new Set([EXIT_FRESH, EXIT_STALE, EXIT_NOT_HARVESTED]);
+            if (codes.size !== 3) {
+                throw new Error('freshness states share an exit code, so a caller cannot tell them apart');
+            }
+        });
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+
+    if (failures.length) {
+        console.error(`\n${failures.length} harvest-seed case(s) failed.`);
+        return EXIT_TOOL_ERROR;
+    }
+    console.log('\nPASS: harvest-seed self-test.');
+    return EXIT_FRESH;
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+function main(): number {
+    const argv = process.argv.slice(2);
+    let runId: string | undefined;
+    let instance: string | undefined;
+    let extractedDir: string | undefined;
+    let extractDir: string | undefined;
+    let check = false;
+    let selfTestOnly = false;
+
+    for (let index = 0; index < argv.length; index++) {
+        const arg = argv[index];
+        switch (arg) {
+            case '-h': case '--help':
+                console.log(USAGE);
+                return EXIT_FRESH;
+            case '--self-test':
+                selfTestOnly = true;
+                break;
+            case '--check':
+                check = true;
+                break;
+            case '--instance': {
+                const value = argv[++index];
+                if (value === undefined) {
+                    throw new MsBenchToolError('--instance needs a value');
+                }
+                instance = value;
+                break;
+            }
+            case '--extracted': {
+                const value = argv[++index];
+                if (value === undefined) {
+                    throw new MsBenchToolError('--extracted needs a value');
+                }
+                extractedDir = value;
+                break;
+            }
+            case '--extract-dir': {
+                const value = argv[++index];
+                if (value === undefined) {
+                    throw new MsBenchToolError('--extract-dir needs a value');
+                }
+                extractDir = value;
+                break;
+            }
+            default:
+                if (arg.startsWith('-')) {
+                    throw new MsBenchToolError(`Unknown option ${arg}\n\n${USAGE}`);
+                }
+                if (runId) {
+                    throw new MsBenchToolError(`Unexpected second run id '${arg}'`);
+                }
+                runId = arg;
+        }
+    }
+
+    if (selfTestOnly) {
+        if (runId || check) {
+            throw new MsBenchToolError('--self-test runs alone.');
+        }
+        return selfTest();
+    }
+
+    if (check) {
+        if (runId) {
+            throw new MsBenchToolError('--check reports on the stored seed and takes no run id.');
+        }
+        return reportFreshness(checkFreshness());
+    }
+
+    // Required even with `--extracted`. The provenance file's whole job is to say which
+    // run a seed came from, and one that recorded a local directory path instead would
+    // be unauditable on any other machine.
+    if (!runId) {
+        throw new MsBenchToolError(`Give a run id to harvest, or --check.\n\n${USAGE}`);
+    }
+    harvest(runId, instance, extractedDir, extractDir);
+    return EXIT_FRESH;
+}
+
+// Only when run directly — importing this module must not extract a run as a side effect.
+// `stage-workspace.ts` deliberately imports `seed-store.ts` instead of this file, so that
+// staging never pulls in `node:sqlite`.
+if (process.argv[1] && resolve(process.argv[1]) === import.meta.filename) {
+    try {
+        process.exit(main());
+    } catch (error) {
+        console.error(error instanceof MsBenchToolError ? error.message : error instanceof Error ? (error.stack ?? error.message) : String(error));
+        process.exit(EXIT_TOOL_ERROR);
+    }
+}

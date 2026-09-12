@@ -1,0 +1,293 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+// Styles for the UI Preview card rendered inside .scaffoldPlanView. The
+// outer chrome uses VS Code theme variables so the card always feels native;
+// the inner viewport uses `--preview-*` custom properties driven by the
+// parsed Color Palette so the wireframe reflects the user's design tokens.
+.scaffoldPlanView .uiPreviewCard {
+    --preview-surface: #f6f6f6;
+    --preview-text: #1f1f1f;
+    --preview-primary: #0078d4;
+    --preview-on-primary: #ffffff;
+    --preview-accent: #5c2d91;
+    --preview-on-accent: #ffffff;
+    --preview-muted: #767676;
+    --preview-border: #d0d0d0;
+    --preview-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .uiPreviewCard__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 0;
+        // Allow the component-library badge to wrap to a new line at high
+        // zoom levels rather than overlapping the "UI Preview" heading.
+        flex-wrap: wrap;
+        row-gap: 8px;
+
+        h2 {
+            margin: 0;
+            min-width: 0;
+            flex: 0 1 auto;
+            word-break: break-word;
+        }
+
+        // Fluent UI Badge — keep the full label visible at all zoom levels
+        // instead of being truncated by its default fixed width / ellipsis.
+        .fui-Badge {
+            height: auto;
+            min-height: 20px;
+            max-width: 100%;
+            white-space: normal;
+            text-align: left;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+    }
+
+    .uiPreviewCard__chip {
+        font-size: 0.7em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+    }
+
+    .uiPreviewCard__styleDirection {
+        margin: 0;
+        font-size: 0.8em;
+        line-height: 1.4;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .uiPreviewCard__tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-bottom: 2px;
+    }
+
+    .uiPreviewCard__tab {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-widget-border);
+        color: var(--vscode-foreground);
+        font-size: 0.8em;
+        font-weight: 600;
+        padding: 5px 12px;
+        cursor: pointer;
+        border-radius: 999px;
+        transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+
+        // Leading dot makes the pills read as clickable navigation items.
+        &::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--vscode-descriptionForeground);
+        }
+
+        &:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+            border-color: var(--vscode-focusBorder, var(--vscode-button-background));
+            color: var(--vscode-foreground);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        &.uiPreviewCard__tab--active {
+            background: var(--vscode-button-background);
+            border-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+
+            &::before {
+                background: var(--vscode-button-foreground);
+            }
+        }
+    }
+
+    // -------- Preview frame --------
+    .uiPreviewCard__frame {
+        position: relative;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--preview-surface);
+        color: var(--preview-text);
+        font-family: var(--preview-font);
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    }
+
+    .uiPreviewCard__viewport {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        min-height: 280px;
+        background: var(--preview-surface);
+        color: var(--preview-text);
+        font-family: var(--preview-font);
+    }
+
+    // -------- Iframe-hosted preview --------
+    // The preview body is now a sandboxed iframe loaded with planner-generated
+    // HTML/CSS via `srcDoc`. The iframe sets its own background, so we don't
+    // restyle internals here — only sizing.
+    .uiPreviewCard__iframe {
+        width: 100%;
+        min-height: 620px;
+        border: 0;
+        display: block;
+        background: var(--vscode-editor-background);
+    }
+
+    .uiPreviewCard__loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 620px;
+        background: var(--vscode-editorWidget-background);
+        color: var(--vscode-descriptionForeground);
+    }
+
+    // -------- Preview toolbar (page tabs + Edit box) --------
+    .uiPreviewCard__previewBar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .uiPreviewCard__tabsSpacer {
+        flex: 1;
+    }
+
+    // The Edit button sits in its own box, visually separated from the page
+    // tabs list, and stays pinned to the end of the preview toolbar.
+    .uiPreviewCard__editBox {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        padding-left: 12px;
+        border-left: 1px solid var(--vscode-widget-border);
+    }
+
+    // -------- Color picker --------
+    .uiPreviewCard__paletteRow {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-top: 4px;
+    }
+
+    .uiPreviewCard__paletteLabel {
+        font-size: 0.72em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .uiPreviewCard__paletteHint {
+        margin: 0 0 4px;
+        font-size: 0.78em;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .uiPreviewCard__paletteList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+    }
+
+    .uiPreviewCard__paletteItem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        padding: 6px 10px;
+    }
+
+    .uiPreviewCard__colorInput {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 6px;
+        background: transparent;
+        cursor: pointer;
+
+        &::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        &::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        &::-moz-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    }
+
+    .uiPreviewCard__paletteText {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        cursor: pointer;
+    }
+
+    .uiPreviewCard__paletteName {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .uiPreviewCard__paletteHex {
+        font-size: 0.72em;
+        font-family: var(--vscode-editor-font-family, monospace);
+        color: var(--vscode-descriptionForeground);
+    }
+}

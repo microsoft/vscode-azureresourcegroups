@@ -1,0 +1,51 @@
+# Stimulus `ai-chatbot-documents`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# The most common thing a user asks for that this suite has never asked for.
+# All five existing plan stimuli are CRUD or static: task app, photo app,
+# inventory API, order processing, unit converter. None of them reaches an
+# AI service at all, so every mapping decision on that path — Azure OpenAI,
+# a retrieval store, where the source documents live — is unexercised.
+#
+# The assertion is deliberately the *storage* claim rather than the model
+# choice. "Which AI service" is a moving product judgement and would make this
+# stimulus a thermometer for Azure's naming; "the PDFs have to be stored
+# somewhere durable" is a structural consequence of the prompt that holds
+# regardless of which model gets picked. `--assert-blob-storage` already
+# expresses exactly that and needs no new grader flag.
+
+promptSteps:
+  - text: |
+      I want an internal chatbot that can answer questions about our company
+      policies. We have a few hundred PDFs and Word docs that people need to
+      search through. Staff should be able to ask it questions in plain English
+      and get an answer with a link to the source document.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # The documents are the whole point of the app; they need somewhere durable
+      # to live. A plan that never names a document store has not planned this app.
+      - comment: requirements.json should place the source documents in Blob Storage
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-blob-storage
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      - comment: Triage; which question ids did the agent capture?
+        exec: 'grep -o "\"id\": *\"[^\"]*\"" .azure/requirements.json 2>/dev/null | head -40'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

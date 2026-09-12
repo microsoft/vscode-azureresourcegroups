@@ -1,0 +1,215 @@
+{
+  "schemaVersion": "2",
+  "generatedAt": "2026-07-21T00:00:00.000Z",
+  "mode": "NEW",
+  "summary": "A personal in-office attendance compliance application with interactive calendar tracking, configurable day-per-period targets, and future planning. It includes a web frontend and a persistent API-backed data store.",
+  "workspaceSignals": {
+    "decision": "NEW",
+    "decisionReason": "The workspace contains no application source, manifests, or Azure Functions configuration.",
+    "detectedFiles": []
+  },
+  "services": [
+    {
+      "id": "attendance-api",
+      "label": "Attendance Compliance API",
+      "role": "backend",
+      "root": "./api"
+    },
+    {
+      "id": "attendance-web",
+      "label": "Attendance Compliance Web App",
+      "role": "frontend",
+      "root": "./web"
+    }
+  ],
+  "questions": [
+    {
+      "id": "attendance-api:language",
+      "category": "service",
+      "question": "Which programming language for Attendance Compliance API?",
+      "header": "Language",
+      "answer": "TypeScript",
+      "status": "confirmed",
+      "rationale": "TypeScript provides a shared type model with the planned frontend.",
+      "options": [
+        {
+          "label": "TypeScript",
+          "description": "Node.js and TypeScript on Azure Functions"
+        },
+        {
+          "label": "Python",
+          "description": "Python on Azure Functions"
+        },
+        {
+          "label": "C# (.NET)",
+          "description": "Isolated worker on .NET 10"
+        }
+      ],
+      "recommendedChoice": "TypeScript",
+      "multiSelect": false,
+      "allowFreeformInput": false,
+      "serviceId": "attendance-api"
+    },
+    {
+      "id": "attendance-api:features",
+      "category": "service",
+      "question": "Describe the features or API routes for Attendance Compliance API.",
+      "header": "Features",
+      "answer": "Create and update attendance policies with X required office days over a Y-week period; record office days; retrieve calendar and compliance summaries; create future attendance plans; compare planned and actual compliance over time.",
+      "status": "confirmed",
+      "rationale": "Distilled from the user's requested attendance entry, calendar tracking, compliance monitoring, and planning mode.",
+      "recommendedChoice": "Create and update attendance policies with X required office days over a Y-week period; record office days; retrieve calendar and compliance summaries; create future attendance plans; compare planned and actual compliance over time.",
+      "multiSelect": false,
+      "serviceId": "attendance-api"
+    },
+    {
+      "id": "attendance-web:language",
+      "category": "service",
+      "question": "Which programming language for Attendance Compliance Web App?",
+      "header": "Language",
+      "answer": "TypeScript",
+      "status": "confirmed",
+      "rationale": "TypeScript supports reliable calendar and API data models.",
+      "options": [
+        {
+          "label": "TypeScript",
+          "description": "Type-safe frontend application"
+        },
+        {
+          "label": "JavaScript",
+          "description": "Plain JavaScript frontend application"
+        }
+      ],
+      "recommendedChoice": "TypeScript",
+      "multiSelect": false,
+      "allowFreeformInput": false,
+      "serviceId": "attendance-web"
+    },
+    {
+      "id": "attendance-web:framework",
+      "category": "service",
+      "question": "Which frontend framework for Attendance Compliance Web App?",
+      "header": "Framework",
+      "answer": "React + Vite",
+      "status": "confirmed",
+      "rationale": "React provides a mature component ecosystem for interactive calendar and planning views.",
+      "options": [
+        {
+          "label": "React + Vite",
+          "description": "React single-page application with Vite"
+        },
+        {
+          "label": "Vue + Vite",
+          "description": "Vue single-page application with Vite"
+        },
+        {
+          "label": "Angular",
+          "description": "Angular application"
+        },
+        {
+          "label": "Svelte",
+          "description": "Svelte application with Vite"
+        }
+      ],
+      "recommendedChoice": "React + Vite",
+      "multiSelect": false,
+      "allowFreeformInput": true,
+      "serviceId": "attendance-web"
+    },
+    {
+      "id": "attendance-web:features",
+      "category": "service",
+      "question": "Describe the features or API routes for Attendance Compliance Web App.",
+      "header": "Features",
+      "answer": "Interactive monthly calendar to mark in-office days; policy setup for X days across Y weeks; current and historical compliance progress; future planning mode; planned versus actual tracking; responsive dashboard.",
+      "status": "confirmed",
+      "rationale": "Distilled from the user's requested interactive calendar, compliance tracking, and future planning mode.",
+      "recommendedChoice": "Interactive monthly calendar to mark in-office days; policy setup for X days across Y weeks; current and historical compliance progress; future planning mode; planned versus actual tracking; responsive dashboard.",
+      "multiSelect": false,
+      "serviceId": "attendance-web"
+    },
+    {
+      "id": "dataStores",
+      "category": "data",
+      "question": "Which data stores does your app need?",
+      "header": "Data Stores",
+      "answer": [
+        "Blob Storage",
+        "PostgreSQL"
+      ],
+      "status": "confirmed",
+      "rationale": "PostgreSQL is suited to policies, attendance entries, and period calculations; Blob Storage is required by the recommended Azure Functions backend.",
+      "options": [
+        {
+          "label": "Blob Storage",
+          "description": "Store files and images"
+        },
+        {
+          "label": "Queue Storage",
+          "description": "Async message queue"
+        },
+        {
+          "label": "PostgreSQL",
+          "description": "Relational database"
+        },
+        {
+          "label": "CosmosDB",
+          "description": "NoSQL document database"
+        },
+        {
+          "label": "Redis",
+          "description": "In-memory cache"
+        },
+        {
+          "label": "Azure SQL",
+          "description": "Managed SQL Server"
+        }
+      ],
+      "recommendedChoice": [
+        "Blob Storage",
+        "PostgreSQL"
+      ],
+      "multiSelect": true,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "auth",
+      "category": "auth",
+      "question": "Does your app need authentication?",
+      "header": "Authentication",
+      "answer": "Microsoft Entra ID",
+      "status": "confirmed",
+      "rationale": "Attendance records are personal and workforce-oriented, so organizational sign-in is the likely fit.",
+      "options": [
+        {
+          "label": "No auth",
+          "description": "Public app, no login required"
+        },
+        {
+          "label": "Mock auth middleware",
+          "description": "Testable local identity without an external provider"
+        },
+        {
+          "label": "Microsoft Entra ID",
+          "description": "Workforce identity with organizational sign-in"
+        },
+        {
+          "label": "Microsoft Entra External ID",
+          "description": "Customer identity with sign-up and social logins"
+        },
+        {
+          "label": "Auth0",
+          "description": "Third-party identity provider"
+        },
+        {
+          "label": "Clerk",
+          "description": "Drop-in user management"
+        }
+      ],
+      "recommendedChoice": "Microsoft Entra ID",
+      "multiSelect": false,
+      "allowFreeformInput": true
+    }
+  ],
+  "executionMode": "guided"
+}

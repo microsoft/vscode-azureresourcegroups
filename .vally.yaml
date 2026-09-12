@@ -1,0 +1,20 @@
+# Vally project configuration
+#
+# `paths.results` is an *output* directory, created on demand and gitignored, so
+# it is correctly absent from a clean checkout. Every other path here is an input
+# and must exist — a path that points at nothing lints clean and silently
+# contributes no evals, which is worse than a missing-file error.
+#
+# No `environments.mcpServers` entry. The workflow-tools stand-in existed for the
+# headless SDK runner, which has been deleted — the agent now runs on MSBench
+# against the extension's real in-process MCP server. The `workflow-tools-*` tool
+# names in the specs below are the names Vally matches against a trajectory, and
+# do not require a server to be declared here.
+paths:
+  evals: [evals]
+  results: results
+
+suites:
+  project-plan:
+    description: azure-project-plan agent contracts
+    evals: ["evals/project-plan/**"]
