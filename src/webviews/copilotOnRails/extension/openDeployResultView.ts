@@ -4,20 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, createProjectPlanFileWatcher, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
 import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
+import { disarmDeployProgressWatcher } from "./deployProgressWatcher";
 import { closeLoadingView } from "./openLoadingView";
+import { parseDeployResultStatus } from "./utils/deployProgressSteps";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeployResultData, DeployResultViewController>({
-    createController: (data, uri) => {
-        closeLoadingView();
-        return new DeployResultViewController(data, uri);
-    },
+    createController: (data, uri) => new DeployResultViewController(data, uri),
     updateController: (controller, data, uri) => controller.updateDeployResultData(data, uri),
 });
 
@@ -30,6 +29,8 @@ export function openDeployResultView(uri: vscode.Uri): void {
 }
 
 export function openDeployResultViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    disarmDeployProgressWatcher();
+    closeLoadingView();
     host.show(tryParseDeployResult(content, sourceFileUri), sourceFileUri);
 }
 
@@ -171,6 +172,8 @@ async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
     // Render first, then wait for inventory so handoff telemetry reads the completed artifact.
     // The file watcher updates the visible view when capture finishes.
     openDeployResultViewWithContent(await readFileText(uri), uri);
+    surfacedDeployResults.add(uri.toString());
+
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
     await ensureDeployInventoryCaptured(uri);
 }
@@ -180,5 +183,60 @@ async function reloadDeployResult(uri: vscode.Uri): Promise<void> {
         openDeployResultViewWithContent(await readFileText(uri), uri);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
+    }
+}
+
+/**
+ * Files this window has already surfaced the results view for, so a view the user deliberately
+ * closed is never forced back open by a later write to the same artifact (the inventory safety net
+ * in {@link ensureDeployInventoryCaptured} writes to it after the deploy finishes).
+ */
+const surfacedDeployResults = new Set<string>();
+
+/**
+ * Forget which artifacts have been surfaced, so the next deployment gets its own auto-open.
+ *
+ * Deploy results are not always written to a fresh path — a repeat deployment can overwrite
+ * `.azure/deploy-result.json` in place — so without this reset the first deployment in a window
+ * would permanently suppress the safety net for every later one.
+ */
+export function resetSurfacedDeployResults(): void {
+    surfacedDeployResults.clear();
+}
+
+/**
+ * Auto-open the Deployment Results view once `deploy-result.json` reaches a terminal status.
+ *
+ * The deploy agent is required to call `open_deploy_result_view` when the deploy phase ends, but an
+ * LLM tool call is never a hard guarantee — and the deployment progress view shown since plan
+ * approval only stands down when this view takes over. Without this net a skipped tool call would
+ * leave the user watching a spinner for a deployment that already finished.
+ *
+ * Only terminal writes open the view: the artifact is first created with `status: "in-progress"`,
+ * which must not pop a half-empty results view mid-deploy.
+ */
+export function registerDeployResultAutoOpen(context: vscode.ExtensionContext): void {
+    const handle = async (uri: vscode.Uri): Promise<void> => {
+        if (surfacedDeployResults.has(uri.toString())) {
+            return;
+        }
+        let status: string | undefined;
+        try {
+            status = parseDeployResultStatus(await readFileText(uri));
+        } catch {
+            // Momentary partial write; a later change event re-triggers this check.
+            return;
+        }
+        if (status !== 'succeeded' && status !== 'failed') {
+            return;
+        }
+        await openDeployResultViewAsync(uri);
+    };
+
+    for (const glob of DEPLOY_RESULT_FILE_GLOBS) {
+        const watcher = createProjectPlanFileWatcher(glob);
+        watcher.onDidCreate((uri) => void handle(uri));
+        watcher.onDidChange((uri) => void handle(uri));
+        context.subscriptions.push(watcher);
     }
 }

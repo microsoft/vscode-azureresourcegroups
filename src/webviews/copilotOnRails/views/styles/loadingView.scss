@@ -40,6 +40,182 @@
     cursor: pointer;
 }
 
+// Stand-in for the spinner while the pipeline is blocked on the user. Mirrors the spinner's
+// icon-above-label layout so the card doesn't reflow when the deploy gate is answered.
+.loadingView .awaitingInputHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.loadingView .awaitingInputIcon {
+    font-size: 44px;
+    color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-charts-yellow));
+}
+
+.loadingView .awaitingInputTitle {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.loadingView .loadingSteps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 4px 0 0;
+    padding: 14px 16px;
+    list-style: none;
+    text-align: left;
+    // The rest of the card is centred text, so a bare left-aligned list reads as misaligned
+    // against it. Framing the checklist as its own panel — fixed width, centred in the card —
+    // makes the left alignment deliberate and stops the block shifting as resources stream in.
+    box-sizing: border-box;
+    width: 100%;
+    // 520px fits essentially every generated resource name without truncating; going wider buys
+    // nothing but makes the panel unwieldy next to the centred copy above it.
+    max-width: 520px;
+    border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+    border-radius: 6px;
+    background: var(--vscode-editorWidget-background, var(--vscode-textBlockQuote-background));
+}
+
+.loadingView .loadingStep {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.9em;
+    line-height: 1.4;
+    color: var(--vscode-descriptionForeground);
+}
+
+// The running step is the one the user cares about, so give it full-contrast text
+// while completed and not-yet-started steps stay recessive.
+.loadingView .loadingStep.active {
+    color: var(--vscode-foreground);
+    font-weight: 600;
+}
+
+.loadingView .loadingStep.done .stepLabel {
+    text-decoration: none;
+}
+
+.loadingView .loadingStep.pending {
+    opacity: 0.65;
+}
+
+.loadingView .loadingStep .stepMarker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 16px;
+    height: 20px;
+}
+
+.loadingView .stepMarkerIcon {
+    font-size: 16px;
+}
+
+.loadingView .stepMarkerIcon.done {
+    color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+}
+
+.loadingView .stepMarkerIcon.failed {
+    color: var(--vscode-testing-iconFailed, var(--vscode-errorForeground));
+}
+
+.loadingView .stepMarkerDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--vscode-descriptionForeground);
+}
+
+.loadingView .stepText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    // Fill the panel so the resource count can sit against the right edge.
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.loadingView .loadingStep > .stepText > .stepLabel {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.loadingView .stepSummary {
+    // Right-align the count against the panel edge rather than trailing the label, so it stays
+    // put as the numbers change instead of sliding with the label width.
+    margin-left: auto;
+    flex: 0 0 auto;
+    font-size: 0.85em;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+}
+
+// Live per-resource list under "Provisioning Azure resources". Kept visually quieter than the
+// top-level steps so the pipeline stage stays the primary reading line.
+.loadingView .loadingSubSteps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 4px 0 2px;
+    padding: 0;
+    list-style: none;
+    font-weight: 400;
+}
+
+.loadingView .loadingSubStep {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.loadingView .loadingSubStep .stepLabel {
+    flex: 0 0 auto;
+}
+
+// The resource's actual ARM name. Recessive next to the resource type, and allowed to truncate:
+// generated names are long and the type is the part worth reading.
+.loadingView .loadingSubStep .stepNote {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.75;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loadingView .loadingSubStep .stepMarker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 16px;
+    // The row aligns on the text baseline, so nudge the marker back onto the text's optical centre.
+    align-self: center;
+}
+
+.loadingView .loadingSubStep .stepMarkerIcon {
+    font-size: 13px;
+}
+
+.loadingView .loadingSubStep.active {
+    color: var(--vscode-foreground);
+}
+
 .loadingView .loadingFooter {
     display: flex;
     justify-content: center;

@@ -31,6 +31,7 @@ function mockService(resources: GenericResource[], operations: DeploymentOperati
     return {
         listResources: async () => resources,
         listResourceGroups: async () => [],
+        listDeployments: async () => ({ deployments: [] }),
         listDeploymentOperations: async () => ({ operations }),
     };
 }
@@ -40,6 +41,7 @@ function unreadableOperationsService(resources: GenericResource[], unavailable: 
     return {
         listResources: async () => resources,
         listResourceGroups: async () => [],
+        listDeployments: async () => ({ deployments: [] }),
         listDeploymentOperations: async () => ({ operations: [], unavailable }),
     };
 }
@@ -147,6 +149,7 @@ suite('captureInventory', () => {
         const service: AzureResourcesService = {
             listResources: async () => [resource(targetApp, 'app1', 'Microsoft.Web/sites')],
             listResourceGroups: async () => [],
+            listDeployments: async () => ({ deployments: [] }),
             listDeploymentOperations: async (_c, _s, _name, resourceGroupName) =>
                 resourceGroupName ? { operations: [deploymentTarget(targetApp, 'Succeeded')] } : { operations: [] },
         };
