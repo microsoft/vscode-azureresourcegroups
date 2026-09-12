@@ -6,15 +6,18 @@
 const allowedLinkProtocol = /^(?:https?|mailto):/i;
 
 export function formatInlineMarkdown(text: string): string {
+    // Escape the whole plan value before adding back the formatting we control.
     return escapeHtml(text.trim())
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        // Reject protocols such as javascript: that can execute when clicked.
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, href: string) =>
             allowedLinkProtocol.test(href)
                 ? `<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`
                 : label,
         )
+        // Restore exact plan-contract tags only, leaving attributes escaped.
         .replace(/&lt;(details|\/details|summary|\/summary|br)&gt;/g, '<$1>')
         .replace(
             /\u26A0\uFE0F?/g,
@@ -23,7 +26,9 @@ export function formatInlineMarkdown(text: string): string {
 }
 
 function escapeHtml(text: string): string {
+    // Encode markup delimiters and quotes so raw HTML stays visible text.
     return text
+        // Escape ampersands first so these new entities are not escaped again.
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
