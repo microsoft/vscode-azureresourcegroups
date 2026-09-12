@@ -46,6 +46,7 @@ import {
     isLimitedSupportDataStore,
     limitedSupportWarningMessage,
 } from "./utils/emulatorSupport";
+import { formatInlineMarkdown } from "./utils/formatInlineMarkdown";
 import {
     findColumnIndex,
     isChecked,
@@ -58,7 +59,7 @@ import { getPrerequisiteInstallLink } from "./utils/prerequisiteInstallLinks";
 mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
-    securityLevel: "loose",
+    securityLevel: "strict",
     fontSize: 11,
     flowchart: {
         nodeSpacing: 15,
@@ -796,7 +797,7 @@ const ContentBlock = ({
                 <p
                     className="paragraph"
                     dangerouslySetInnerHTML={{
-                        __html: formatInline(item.text),
+                        __html: formatInlineMarkdown(item.text),
                     }}
                 />
             );
@@ -862,7 +863,7 @@ const DataTable = ({
                                 <th
                                     key={hi}
                                     dangerouslySetInnerHTML={{
-                                        __html: formatInline(h),
+                                        __html: formatInlineMarkdown(h),
                                     }}
                                 />
                             ),
@@ -895,7 +896,7 @@ const DataTable = ({
                                                 <span className="supportWarningCell">
                                                     <span
                                                         dangerouslySetInnerHTML={{
-                                                            __html: formatInline(
+                                                            __html: formatInlineMarkdown(
                                                                 cell,
                                                             ),
                                                         }}
@@ -932,7 +933,7 @@ const DataTable = ({
                                         <td
                                             key={ci}
                                             dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
+                                                __html: formatInlineMarkdown(cell),
                                             }}
                                         />
                                     );
@@ -1048,7 +1049,7 @@ const GenerateCheckboxTable = ({
                             <th
                                 key={hi}
                                 dangerouslySetInnerHTML={{
-                                    __html: formatInline(h),
+                                    __html: formatInlineMarkdown(h),
                                 }}
                             />
                         ))}
@@ -1081,7 +1082,7 @@ const GenerateCheckboxTable = ({
                                         <td
                                             key={ci}
                                             dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
+                                                __html: formatInlineMarkdown(cell),
                                             }}
                                         />
                                     );
@@ -1166,7 +1167,7 @@ const BulletListBlock = ({ items }: { items: string[] }): JSX.Element => (
         {items.map((item, i) => (
             <li
                 key={i}
-                dangerouslySetInnerHTML={{ __html: formatInline(item) }}
+                dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(item) }}
             />
         ))}
     </ul>
@@ -1175,7 +1176,7 @@ const BulletListBlock = ({ items }: { items: string[] }): JSX.Element => (
 const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
     <div
         className="blockquote"
-        dangerouslySetInnerHTML={{ __html: formatInline(text) }}
+        dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(text) }}
     />
 );
 
@@ -1214,37 +1215,3 @@ const SubsectionBlock = ({
         </div>
     );
 };
-
-function formatInline(text: string): string {
-    return (
-        escapeHtml(text.trim())
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-            .replace(
-                /\[([^\]]+)\]\(([^)]+)\)/g,
-                '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
-            )
-            // Restore a small whitelist of presentational HTML tags that the agent
-            // emits inside table cells (collapsible endpoint lists, line breaks).
-            .replace(
-                /&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi,
-                "<$1$2>",
-            )
-            // Swap the warning emoji for the themed amber warning codicon so it
-            // matches the rest of the UI instead of the OS emoji glyph.
-            .replace(
-                /\u26A0\uFE0F?/g,
-                '<span class="codicon codicon-warning warningIcon" aria-hidden="true"></span>',
-            )
-    );
-}
-
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}
