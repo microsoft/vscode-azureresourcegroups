@@ -34,6 +34,7 @@ the work as it happens.
   - [The agents](#the-agents)
   - [The MCP tools](#the-mcp-tools)
   - [Files & state](#files--state)
+  - [Safe parsing and rendering](#safe-parsing-and-rendering)
 - [Part 5 — Support & triage runbook](#part-5--support--triage-runbook)
   - [Report an issue](#report-an-issue)
   - [Inspect diagnostics](#inspect-diagnostics)
@@ -460,6 +461,90 @@ The agent prefers routes that need no network change at all: running the migrati
 app (`az containerapp exec`, `az webapp ssh`), then a one‑shot job in the same environment. The
 firewall rule is a last resort, and it is never widened beyond a single address — see
 [`cor-references/migration-access.md`](../resources/agents/azure-deploy/cor-references/migration-access.md).
+
+## Safe parsing and rendering
+
+This section is the security contract for code that reads or renders the artifacts above.
+
+### Trust boundary
+
+**SDL requirement.** Treat `.azure/*`, `.azure/.preview-temp/*`,
+`.copilot-azure/sessions/*`, and workspace `package.json` files as untrusted input. Agents may write these
+files, and users and other workspace tools can edit them. A reader can also observe a partial write. Validate
+data before it influences a path, URL, command, process, file operation, HTML node, or SVG node.
+
+**Design assumptions.** Artifacts belong to the current workspace and may be incomplete while an agent is
+working. Readers may preserve fields that are already valid, but they must not infer that the rest of the
+document is trustworthy.
+
+**Residual risk.** Runtime shape checks do not make a string safe for every later use. Validate again for the
+specific sink. A future deserializer, renderer, or URL handler can introduce a new execution path even when
+the current JSON parsing step is data-only.
+
+### JSON parsing and partial artifacts
+
+Safe deserialization and safe downstream use are separate checks.
+
+Use plain, one-argument `JSON.parse(text)`. This operation is data-only. JSON content cannot supply or invoke
+a reviver; application code would have to pass the optional second argument. Do not add a reviver without a
+separate security review.
+
+Assign the parse result to `unknown`. Narrow the root and every consumed field with runtime checks before use.
+A TypeScript cast only changes the compiler's view and does not validate runtime data.
+
+Malformed JSON follows the caller's existing error or retry path. For valid JSON with an incomplete object,
+preserve valid fields and ignore or default invalid fields according to the artifact contract. Filtering an
+invalid array entry must not discard its valid siblings. Never silently coerce an object to a string, which
+can turn unsupported input into text such as `[object Object]`.
+
+### Paths and package metadata
+
+Validate every artifact-supplied path part before passing it to `Uri.joinPath`, `path.join`, or another file
+API. Preview page slugs use kebab case and must match `[a-z0-9]+(?:-[a-z0-9]+)*`. A value such as
+`../outside` must fail validation before the code constructs `<slug>.html`; joining first would let the
+artifact escape the preview directory.
+
+When reading a workspace `package.json`, require an object root. Accept `dependencies`, `devDependencies`,
+and `scripts` only when they are objects whose values are all strings. When key presence changes behavior,
+use an own-property check such as `Object.hasOwn(record, key)` rather than reading through the prototype
+chain.
+
+### Markdown, HTML, and SVG
+
+Prefer a small parsed node model and React nodes for agent-written Markdown. Do not use
+`dangerouslySetInnerHTML` for plan text. Allowlist link protocols before creating anchors. The local debug
+plan currently allows `http`, `https`, and `mailto`. Restore only the tags required by the plan contract,
+currently attribute-free `<details>`, `<summary>`, and `<br>` tags. Leave unknown or attribute-bearing HTML
+as text.
+
+Mermaid output is still generated SVG inserted into the document. Initialize Mermaid with
+`securityLevel: "strict"` before rendering and keep that setting in place before inserting its SVG.
+
+### Repeatable audit checklist
+
+1. Find every JSON parse, file read, and deserializer used by the changed flow.
+2. Confirm each `JSON.parse` call has one argument and no reviver. Review deserializer dependencies for code
+   execution or unsafe object construction.
+3. Parse into `unknown`, validate the root, and narrow every consumed field at runtime.
+4. Check malformed JSON follows the existing error or retry path. Check incomplete objects preserve valid
+   fields without coercing invalid values.
+5. Trace artifact values into path construction, shell or process calls, file operations, and URLs. Apply
+   sink-specific validation and confinement.
+6. Trace artifact text into HTML and SVG sinks. Prefer React nodes, allowlist protocols and tags, and keep
+   Mermaid in strict security mode.
+7. Add targeted tests for malformed roots, wrong field types, partial objects, traversal strings, unsafe
+   links or tags, and other inputs that reach the changed sink.
+8. Check whether the artifact inventory in [Files & state](#files--state) changed, and update it when needed.
+
+### Audit history
+
+| Pull request | Concern |
+| --- | --- |
+| [#1836](https://github.com/microsoft/vscode-azureresourcegroups/pull/1836) | Requirements and pending-create JSON: validate object roots and consumed fields while preserving valid requirement entries. |
+| [#1837](https://github.com/microsoft/vscode-azureresourcegroups/pull/1837) | Preview manifest and slug confinement: reject malformed page records and path-unsafe slugs before joining preview paths. |
+| [#1835](https://github.com/microsoft/vscode-azureresourcegroups/pull/1835) | Package metadata: validate object roots and string-valued dependency and script records, then use own-property checks. |
+| [#1833](https://github.com/microsoft/vscode-azureresourcegroups/pull/1833) | Deployment JSON: narrow deployment artifact roots and fields before views and telemetry consume them. |
+| [#1834](https://github.com/microsoft/vscode-azureresourcegroups/pull/1834) | Local debug-plan rendering and Mermaid: render plan text with React, constrain links and tags, and use strict Mermaid security. |
 
 ---
 

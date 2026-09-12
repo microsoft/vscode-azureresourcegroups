@@ -27,6 +27,11 @@ Update the matching section of `docs/copilot-create-project.md` when you:
 | Change what diagnostics capture, or the Report Issue / Inspect Diagnostics behavior | Support & triage runbook, including the "What the diagnostics contain (privacy)" section |
 | Change the launch / resume / empty-folder / autopilot flow | Launching, Resuming a session, and Autopilot mode |
 
+**Security rule:** when CoR code starts reading a new agent or workspace artifact, consumes a new field,
+constructs a path, command, or URL from artifact data, or renders artifact text as HTML or SVG, follow and
+update [Safe parsing and rendering](../../docs/copilot-create-project.md#safe-parsing-and-rendering). Also
+update **Files & state** when the artifact inventory changes.
+
 ## New or changed UI — flag screenshots to re-capture
 
 Screenshots are captured by hand and stored separately, so the agent can't re-shoot them. When your change
