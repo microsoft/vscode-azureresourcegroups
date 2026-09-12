@@ -504,10 +504,10 @@ API. Preview page slugs use kebab case and must match `[a-z0-9]+(?:-[a-z0-9]+)*`
 `../outside` must fail validation before the code constructs `<slug>.html`; joining first would let the
 artifact escape the preview directory.
 
-When reading a workspace `package.json`, require an object root. Accept `dependencies`, `devDependencies`,
-and `scripts` only when they are objects whose values are all strings. When key presence changes behavior,
-use an own-property check such as `Object.hasOwn(record, key)` rather than reading through the prototype
-chain.
+When reading a workspace `package.json`, require an object root. Require `dependencies`, `devDependencies`,
+and `scripts` to be object records when present. Preserve entries whose values are strings and drop entries
+with other value types. When key presence changes behavior, use an own-property check such as
+`Object.hasOwn(record, key)` rather than reading through the prototype chain.
 
 ### Markdown, HTML, and SVG
 
@@ -542,7 +542,7 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
 | --- | --- |
 | [#1836](https://github.com/microsoft/vscode-azureresourcegroups/pull/1836) | Requirements and pending-create JSON: validate object roots and consumed fields while preserving valid requirement entries. |
 | [#1837](https://github.com/microsoft/vscode-azureresourcegroups/pull/1837) | Preview manifest and slug confinement: reject malformed page records and path-unsafe slugs before joining preview paths. |
-| [#1835](https://github.com/microsoft/vscode-azureresourcegroups/pull/1835) | Package metadata: validate object roots and string-valued dependency and script records, then use own-property checks. |
+| [#1835](https://github.com/microsoft/vscode-azureresourcegroups/pull/1835) | Package metadata: validate object roots and records, retain string-valued dependency and script entries, then use own-property checks. |
 | [#1833](https://github.com/microsoft/vscode-azureresourcegroups/pull/1833) | Deployment JSON: narrow deployment artifact roots and fields before views and telemetry consume them. |
 | [#1834](https://github.com/microsoft/vscode-azureresourcegroups/pull/1834) | Local debug-plan rendering and Mermaid: render plan text with React, constrain links and tags, and use strict Mermaid security. |
 
