@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { azureProjectFocusCommandId } from '../../../constants';
+import { isJsonObject } from '../shared/jsonUtils';
 
 /**
  * Creating a project requires an empty folder. When the user starts the flow in a
@@ -74,8 +75,12 @@ async function consumePendingCreateMarker(): Promise<boolean> {
 
 function parseCreatedAt(raw: Uint8Array): number | undefined {
     try {
-        const parsed = JSON.parse(Buffer.from(raw).toString('utf-8')) as Partial<PendingCreateMarker>;
-        return typeof parsed.createdAt === 'number' ? parsed.createdAt : undefined;
+        const parsed: unknown = JSON.parse(Buffer.from(raw).toString('utf-8'));
+        if (!isJsonObject(parsed)) {
+            return undefined;
+        }
+
+        return typeof parsed.createdAt === 'number' && Number.isFinite(parsed.createdAt) ? parsed.createdAt : undefined;
     } catch {
         return undefined;
     }
