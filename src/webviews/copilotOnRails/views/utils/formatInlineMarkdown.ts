@@ -6,7 +6,8 @@
 const allowedLinkProtocol = /^(?:https?|mailto):/i;
 
 export function formatInlineMarkdown(text: string): string {
-    // Escape the whole plan value before adding back the formatting we control.
+    // Escape agent-written HTML first so scripts and event-handler attributes stay text.
+    // The replacements below then add back only the formatting this view controls.
     return escapeHtml(text.trim())
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
