@@ -5,6 +5,11 @@
 
 const allowedLinkProtocol = /^(?:https?|mailto):/i;
 
+/**
+ * Converts inline debug-plan Markdown to safe HTML for LocalPlanView's HTML insertion points.
+ * It escapes raw HTML, formats inline code, bold, emphasis and safe links, restores exact plan tags,
+ * and replaces warning emoji with themed icon markup.
+ */
 export function formatInlineMarkdown(text: string): string {
     // Escape agent-written HTML first so scripts and event-handler attributes stay text.
     // The replacements below then add back only the formatting this view controls.
