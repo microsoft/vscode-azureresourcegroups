@@ -520,7 +520,7 @@ as text.
 Mermaid output is still generated SVG inserted into the document. Initialize Mermaid with
 `securityLevel: "strict"` before rendering and keep that setting in place before inserting its SVG.
 
-### Repeatable audit checklist
+### Audit Checklist
 
 1. Find every JSON parse, file read, and deserializer used by the changed flow.
 2. Confirm each `JSON.parse` call has one argument and no reviver. Review deserializer dependencies for code
