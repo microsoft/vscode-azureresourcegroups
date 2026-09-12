@@ -5,22 +5,11 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
+import { parsePreviewManifest, type PreviewManifest } from '../../shared/previewManifest';
 import { type PreviewPage, type PreviewStatus } from "../../views/utils/parseScaffoldPlanMarkdown";
 
 /** Workspace-relative path of the per-page HTML preview folder written by the planner agent. */
 export const PREVIEW_FOLDER_RELATIVE_PATH = path.join('.azure', '.preview-temp');
-
-interface ManifestPage {
-    slug: string;
-    title?: string;
-    route?: string;
-    status?: 'pending' | 'ready';
-}
-
-interface Manifest {
-    previewStatus?: PreviewStatus;
-    pages?: ManifestPage[];
-}
 
 export interface PreviewPagesResult {
     pages: PreviewPage[];
@@ -45,7 +34,7 @@ export interface PreviewPagesResult {
  */
 export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<PreviewPagesResult> {
     const manifest = await readManifest(previewFolderUri);
-    if (!manifest?.pages?.length) {
+    if (!manifest?.pages.length) {
         return { pages: [], previewStatus: manifest?.previewStatus };
     }
 
@@ -53,12 +42,6 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
 
     const pages: PreviewPage[] = [];
     for (const entry of manifest.pages) {
-        if (!entry.slug) {
-            continue;
-        }
-        const title = entry.title ?? entry.slug;
-        const route = entry.route ?? `/${entry.slug}`;
-
         // File presence is the source of truth — always attempt the read, never
         // gate it on the manifest's `status`. A non-empty HTML file means the
         // page is ready even if the agent never flipped `status` to `"ready"`.
@@ -68,29 +51,25 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
         if (rawHtml && rawHtml.trim().length > 0) {
             pages.push({
                 slug: entry.slug,
-                title,
-                route,
+                title: entry.title,
+                route: entry.route,
                 status: 'ready',
                 html: preparePreviewHtml(rawHtml, themeCss),
             });
         } else {
-            pages.push({ slug: entry.slug, title, route, status: 'pending' });
+            pages.push({ slug: entry.slug, title: entry.title, route: entry.route, status: 'pending' });
         }
     }
     return { pages, previewStatus: manifest.previewStatus };
 }
 
-async function readManifest(previewFolderUri: vscode.Uri): Promise<Manifest | undefined> {
+async function readManifest(previewFolderUri: vscode.Uri): Promise<PreviewManifest | undefined> {
     const manifestUri = vscode.Uri.joinPath(previewFolderUri, 'manifest.json');
     const text = await readOptionalText(manifestUri);
     if (!text) {
         return undefined;
     }
-    try {
-        return JSON.parse(text) as Manifest;
-    } catch {
-        return undefined;
-    }
+    return parsePreviewManifest(text);
 }
 
 async function readOptionalText(uri: vscode.Uri): Promise<string | undefined> {
