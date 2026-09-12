@@ -183,7 +183,10 @@ For apps with a UI, the preview also renders one **UI Preview** card per screen 
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
 
-Technology dropdowns in each service card follow that service's role and language. API and worker cards offer backend frameworks such as Azure Functions, while web app cards offer frontend frameworks.
+Technology dropdowns follow each service's role and language across both supported plan layouts: per-service
+`Framework` rows and the earlier combined `Backend` / `Frontend` rows. API and worker cards offer backend
+frameworks such as Azure Functions, while web app cards offer frontend frameworks. The view shows a warning
+below a selected technology when the scaffold agent has limited support for it.
 
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link

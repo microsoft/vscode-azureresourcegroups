@@ -163,7 +163,7 @@ export function isFullySupportedOption(
     }
     if (normalizedField === 'Framework') {
         if (serviceKind === 'backend') {
-            return isBackendFramework(value);
+            return isAzureFunctionsFramework(value);
         }
         if (serviceKind === 'frontend') {
             return fullySupportedOptions.Frontend.has(value.trim());
@@ -185,7 +185,12 @@ function classifyRoleText(value: string): Exclude<ServiceStackKind, 'unknown'> |
 }
 
 function isBackendFramework(value: string): boolean {
-    return /^(azure functions?(?:\b.*)?|express(?:\.js)?|fastify|flask|fastapi|spring boot|asp\.net core)$/i.test(value.trim());
+    return isAzureFunctionsFramework(value)
+        || /^(express(?:\.js)?|fastify|flask|fastapi|spring boot|asp\.net core)$/i.test(value.trim());
+}
+
+function isAzureFunctionsFramework(value: string): boolean {
+    return /^azure functions?(?:\b.*)?$/i.test(value.trim());
 }
 
 function isFrontendFramework(value: string): boolean {

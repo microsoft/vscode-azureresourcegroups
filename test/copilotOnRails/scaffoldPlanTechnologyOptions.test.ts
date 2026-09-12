@@ -43,6 +43,16 @@ suite('scaffold plan technology options', () => {
         assert.deepStrictEqual(optionsForField('Framework', 'C# (.NET)', kind), ['Azure Functions', 'ASP.NET Core']);
     });
 
+    test('marks non-Functions backend frameworks as limited support', () => {
+        for (const framework of ['Express', 'Express.js', 'Fastify', 'FastAPI', 'Flask', 'Spring Boot', 'ASP.NET Core']) {
+            const section = serviceSection(`Orders API \u2014 ${framework}`, 'TypeScript', framework);
+            const kind = getServiceStackKind(section);
+
+            assert.strictEqual(kind, 'backend');
+            assert.strictEqual(isFullySupportedOption('Framework', framework, kind), false);
+        }
+    });
+
     test('preserves legacy Backend and Frontend row choices', () => {
         const section = legacyStackSection();
         const kind = getServiceStackKind(section);
