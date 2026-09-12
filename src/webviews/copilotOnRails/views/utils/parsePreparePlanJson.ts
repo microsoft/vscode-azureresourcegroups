@@ -12,6 +12,7 @@ import {
     type DeploymentPlanService,
     type DeploymentPlanTable,
 } from './deploymentPlanTypes';
+import { isJsonObject } from '../../shared/jsonUtils';
 
 /**
  * Friendly labels for the `services[].name` tokens emitted by the prepare phase.
@@ -61,7 +62,7 @@ export function isPreparePlanJson(content: string): boolean {
     }
     try {
         const parsed: unknown = JSON.parse(trimmed);
-        if (!isRecord(parsed)) {
+        if (!isJsonObject(parsed)) {
             return false;
         }
         return 'services' in parsed || 'costEstimate' in parsed || 'naming' in parsed;
@@ -79,7 +80,7 @@ export function isPreparePlanJson(content: string): boolean {
  */
 export function parsePreparePlanJson(content: string): DeploymentPlanData {
     const raw: unknown = JSON.parse(content);
-    const plan = isRecord(raw) ? raw : {};
+    const plan = isJsonObject(raw) ? raw : {};
 
     const services = readServices(plan.services);
     const deploymentVariables = readDeploymentVariables(plan.deploymentVariables);
@@ -163,7 +164,7 @@ function readServices(value: unknown): DeploymentPlanService[] {
 }
 
 function readCostEstimate(value: unknown): DeploymentPlanCostEstimate | undefined {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return undefined;
     }
     const breakdown: DeploymentPlanCostBreakdownItem[] = readArray(value.breakdown).map(entry => ({
@@ -194,7 +195,7 @@ function readRecommendations(value: unknown): DeploymentPlanRecommendation[] | u
 }
 
 function readDeploymentVariables(value: unknown): DeploymentPlanDeploymentVariables | undefined {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return undefined;
     }
     return {
@@ -207,12 +208,8 @@ function readDeploymentVariables(value: unknown): DeploymentPlanDeploymentVariab
 
 //#region Primitive readers
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readArray(value: unknown): Record<string, unknown>[] {
-    return Array.isArray(value) ? value.filter(isRecord) : [];
+    return Array.isArray(value) ? value.filter(isJsonObject) : [];
 }
 
 function readString(value: unknown): string | undefined {
