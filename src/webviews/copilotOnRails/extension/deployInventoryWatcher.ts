@@ -37,7 +37,7 @@ const disposables: vscode.Disposable[] = [];
 
 /** In-flight guards so overlapping create/change events can't double-snapshot or double-capture a session. */
 const baseliningSessions = new Set<string>();
-const capturingSessions = new Set<string>();
+const capturingSessions = new Map<string, Promise<void>>();
 
 interface DeployResultFields {
     sessionId: string;
@@ -68,9 +68,8 @@ function disposeWatcher(): void {
 }
 
 /**
- * View-path guarantee: ensure the terminal inventory has been captured for the given
- * `deploy-result.json` before it is displayed. No-op when the file isn't terminal yet or the
- * inventory is already present.
+ * Wait for terminal inventory capture, including capture already started by the file watcher.
+ * No-op when the file isn't terminal yet or the inventory is already present.
  */
 export async function ensureDeployInventoryCaptured(uri: vscode.Uri): Promise<void> {
     await handleDeployResultFile(uri);
@@ -153,6 +152,21 @@ async function ensureBaselineCaptured(context: IActionContext, fields: DeployRes
 }
 
 async function ensureInventoryCaptured(context: IActionContext, uri: vscode.Uri, fields: DeployResultFields): Promise<void> {
+    const existing = capturingSessions.get(fields.sessionId);
+    if (existing) {
+        await existing;
+        return;
+    }
+    const capture = captureMissingInventory(context, uri, fields);
+    capturingSessions.set(fields.sessionId, capture);
+    try {
+        await capture;
+    } finally {
+        capturingSessions.delete(fields.sessionId);
+    }
+}
+
+async function captureMissingInventory(context: IActionContext, uri: vscode.Uri, fields: DeployResultFields): Promise<void> {
     const context$ = extensionContext;
     if (!context$) {
         return;
@@ -165,42 +179,34 @@ async function ensureInventoryCaptured(context: IActionContext, uri: vscode.Uri,
         await context$.workspaceState.update(capturedKey(fields.sessionId), true);
         return;
     }
-    if (capturingSessions.has(fields.sessionId)) {
+    const subscription = await resolveSubscription(fields.subscriptionId);
+    if (!subscription) {
+        // Signed out - leave uncaptured so a later event (or view open) retries once signed in.
         return;
     }
-    capturingSessions.add(fields.sessionId);
-    try {
-        const subscription = await resolveSubscription(fields.subscriptionId);
-        if (!subscription) {
-            // Signed out — leave uncaptured so a later event (or view open) retries once signed in.
-            return;
-        }
-        const baseline = context$.workspaceState.get<string[]>(baselineKey(fields.sessionId));
-        const expectedResourceGroup = fields.resourceGroupName || undefined;
-        const result = await captureInventory(context, subscription, {
-            expectedResourceGroup,
-            deploymentNames: fields.deploymentNames,
-            resourceGroups: expectedResourceGroup ? [expectedResourceGroup] : undefined,
-            baseline,
-        });
+    const baseline = context$.workspaceState.get<string[]>(baselineKey(fields.sessionId));
+    const expectedResourceGroup = fields.resourceGroupName || undefined;
+    const result = await captureInventory(context, subscription, {
+        expectedResourceGroup,
+        deploymentNames: fields.deploymentNames,
+        resourceGroups: expectedResourceGroup ? [expectedResourceGroup] : undefined,
+        baseline,
+    });
 
-        context.telemetry.properties.targetsUnavailable = String(result.targetsUnavailable === true);
-        if (result.targetsUnavailable) {
-            context.telemetry.properties.targetsUnavailableReason = result.targetsUnavailableReason ?? 'error';
-            // The enclosing handler suppresses successful telemetry (it runs on every file event);
-            // this is exactly the case worth measuring, so let this one through.
-            context.telemetry.suppressIfSuccessful = false;
-            // Attribution failed, so there is no cleanup list to write — only the fact that the
-            // inventory could not be verified. Writing an unattributed "orphaned" list here would
-            // put delete commands next to resources that may be the working deployment.
-            await writeUnverifiedInventoryIntoFile(uri, fields.raw, result.createdResources, result.targetsUnavailableReason ?? 'error');
-        } else {
-            await writeInventoryIntoFile(uri, fields.raw, result.createdResources, result.orphanedResourceGroups, expectedResourceGroup);
-        }
-        await context$.workspaceState.update(capturedKey(fields.sessionId), true);
-    } finally {
-        capturingSessions.delete(fields.sessionId);
+    context.telemetry.properties.targetsUnavailable = String(result.targetsUnavailable === true);
+    if (result.targetsUnavailable) {
+        context.telemetry.properties.targetsUnavailableReason = result.targetsUnavailableReason ?? 'error';
+        // The enclosing handler suppresses successful telemetry (it runs on every file event);
+        // this is exactly the case worth measuring, so let this one through.
+        context.telemetry.suppressIfSuccessful = false;
+        // Attribution failed, so there is no cleanup list to write - only the fact that the
+        // inventory could not be verified. Writing an unattributed "orphaned" list here would
+        // put delete commands next to resources that may be the working deployment.
+        await writeUnverifiedInventoryIntoFile(uri, fields.raw, result.createdResources, result.targetsUnavailableReason ?? 'error');
+    } else {
+        await writeInventoryIntoFile(uri, fields.raw, result.createdResources, result.orphanedResourceGroups, expectedResourceGroup);
     }
+    await context$.workspaceState.update(capturedKey(fields.sessionId), true);
 }
 
 /**
