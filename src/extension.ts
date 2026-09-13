@@ -25,6 +25,9 @@ import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
+import { openScaffoldNextStepsViewTool } from './chat/tools/copilotOnRails/openScaffoldNextStepsViewTool';
+import { getLoopbackPrototypeDefinition, registerLoopbackPrototype, stopLoopbackPrototype } from './chat/tools/experimentalLoopback/registerLoopbackPrototype';
+import { createPrototypeToolRegistrar, markerCommandId } from './chat/tools/experimentalLoopback/toolCatalog';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -68,6 +71,7 @@ import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/e
 import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
+import { isScaffoldNextStepsViewOpen } from './webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
@@ -147,12 +151,37 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
-        registerMcpHttpProvider(context, {
-            id: mcpServerId,
-            serverLabel: mcpServerLabel,
-            serverVersion: ext.version,
-            registerTools: (server) => registerMcpTools(server),
-        });
+        const experimentalHttp = await registerLoopbackPrototype(context, createPrototypeToolRegistrar({
+            isTrusted: () => vscode.workspace.isTrusted && !vscode.env.remoteName
+                && vscode.workspace.workspaceFolders?.length === 1
+                && vscode.workspace.workspaceFolders[0].uri.scheme === 'file',
+            marker: async () => {
+                const marker = await vscode.commands.executeCommand<string>(markerCommandId);
+                if (!marker) {
+                    throw new Error('Prototype marker command returned no result');
+                }
+                return marker;
+            },
+            nextSteps: async execution => {
+                const result = await openScaffoldNextStepsViewTool.execute(undefined, {
+                    signal: execution.mcpReq.signal,
+                    requestId: execution.mcpReq.id,
+                    sessionId: execution.sessionId,
+                });
+                if (!isScaffoldNextStepsViewOpen() || result?.message !== 'Opened the Next Steps view.') {
+                    throw new Error('Scaffold Next Steps view did not open');
+                }
+                return { message: 'Opened the Next Steps view.' };
+            },
+        }), ext.version);
+        if (!experimentalHttp) {
+            registerMcpHttpProvider(context, {
+                id: mcpServerId,
+                serverLabel: mcpServerLabel,
+                serverVersion: ext.version,
+                registerTools: (server) => registerMcpTools(server),
+            });
+        }
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is
         // the guarantee the deploy agent's instructions cannot make: it runs regardless of how the
@@ -323,6 +352,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getFocusViewTreeDataProvider: () => ext.focusViewTreeDataProvider,
                 },
                 testing: {
+                    experimentalMcpHttp: {
+                        getDefinition: getLoopbackPrototypeDefinition,
+                        isNextStepsViewOpen: isScaffoldNextStepsViewOpen,
+                    },
                     setOverrideAzureServiceFactory: (factory) => {
                         ext.testing.overrideAzureServiceFactory = factory;
                     },
@@ -374,7 +407,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     );
 }
 
-export function deactivate(): void {
-    ext.diagnosticWatcher?.dispose();
-    void disableAutopilot();
+export async function deactivate(): Promise<void> {
+    try {
+        await stopLoopbackPrototype();
+    } finally {
+        ext.diagnosticWatcher?.dispose();
+        void disableAutopilot();
+    }
 }

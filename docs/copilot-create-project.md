@@ -410,6 +410,14 @@ silently so a stale copy can't make an agent follow outdated steps.
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
 ("Copilot Azure Resources Extension Tools"). Agents call them to open views and trigger the next stage.
 
+Development builds also contain an opt-in [authenticated loopback HTTP prototype](../src/chat/tools/experimentalLoopback/README.md).
+It is off by default and does not alter this pipeline or the normal private IPC registration.
+An explicitly approved test window exposes only `experimental_loopback_instance_marker` and
+`open_scaffold_next_steps_view`. The development-only commands **Azure: Enable MCP HTTP Prototype**
+and **Azure: Stop MCP HTTP Prototype** start/revoke that window's short-lived listener.
+Do not use this two-tool catalog for the full CoR workflow. The linked guide covers isolated launch,
+account-independent extension tests, manual Copilot checks, and credential handling.
+
 | Tool | Effect |
 | --- | --- |
 | `open_requirements_view` | Opens the Requirements view. |
