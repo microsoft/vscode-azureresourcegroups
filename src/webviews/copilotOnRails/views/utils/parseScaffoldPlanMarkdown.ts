@@ -550,6 +550,15 @@ export function findKeyValue(section: ScaffoldPlanSection, key: string): string 
     return undefined;
 }
 
-//#endregion
+export function isBackendServiceSection(section: ScaffoldPlanSection): boolean {
+    return section.content.some(content =>
+        content.type === 'table' && content.rows.some(row => row[0]?.trim() === 'Runtime'),
+    );
+}
 
+export function isAzureFunctionsFramework(value: string): boolean {
+    return /^azure functions?(?:\b.*)?$/i.test(value.trim());
+}
+
+//#endregion
 

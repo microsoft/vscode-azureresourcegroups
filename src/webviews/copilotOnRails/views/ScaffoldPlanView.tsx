@@ -11,10 +11,9 @@ import { classifyInstalledForRow, InstalledChip } from './components/InstalledCh
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { isAzureFunctionsFramework, isBackendServiceSection, type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
-import { isAzureFunctionsFramework, isBackendServiceSection } from './utils/scaffoldPlanTechnologyOptions';
 
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],

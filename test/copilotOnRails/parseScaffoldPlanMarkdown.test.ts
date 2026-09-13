@@ -11,6 +11,8 @@ import {
     findKeyValue,
     findSection,
     findTable,
+    isAzureFunctionsFramework,
+    isBackendServiceSection,
     parseScaffoldPlanMarkdown,
     type ScaffoldPlanData,
     type ScaffoldPlanSection,
@@ -60,6 +62,11 @@ suite('parseScaffoldPlanMarkdown', () => {
             assert.strictEqual(table.rows.find((r) => r[0] === 'Orchestration')?.[1], 'docker-compose');
         });
 
+        test('distinguishes backend and frontend service sections by table shape', () => {
+            assert.strictEqual(isBackendServiceSection(getSection(parsedPlan, 'Attendance Compliance API')), true);
+            assert.strictEqual(isBackendServiceSection(getSection(parsedPlan, 'Attendance Compliance Web App')), false);
+        });
+
         test('finds a keyValue from the overview section', () => {
             const section = getSection(parsedPlan, 'Project Overview');
             assert.strictEqual(findKeyValue(section, 'App Type'), 'SPA + API');
@@ -99,6 +106,12 @@ suite('parseScaffoldPlanMarkdown', () => {
     test('findColumnIndex matches a case-insensitive substring by default', () => {
         assert.strictEqual(findColumnIndex(['Tool', 'Installed', 'Version'], 'install'), 1);
         assert.strictEqual(findColumnIndex(['Tool', 'Installed'], 'runtime'), -1);
+    });
+
+    test('recognizes Azure Functions framework labels', () => {
+        assert.strictEqual(isAzureFunctionsFramework('Azure Functions'), true);
+        assert.strictEqual(isAzureFunctionsFramework('Azure Functions v4 (Node.js v4 model)'), true);
+        assert.strictEqual(isAzureFunctionsFramework('Express'), false);
     });
 });
 
