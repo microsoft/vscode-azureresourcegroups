@@ -148,6 +148,12 @@
         },
         "commands": [
             {
+                "command": "copilotOnRails.pairMcpStdioPrototype",
+                "title": "%copilotOnRails.pairMcpStdioPrototype%",
+                "category": "Azure",
+                "enablement": "azureResources.mcpStdioPrototype"
+            },
+            {
                 "command": "copilotOnRails.inspectDiagnostics",
                 "title": "%copilotOnRails.inspectDiagnostics%",
                 "category": "Azure"
@@ -725,6 +731,10 @@
             ],
             "commandPalette": [
                 {
+                    "command": "copilotOnRails.pairMcpStdioPrototype",
+                    "when": "azureResources.mcpStdioPrototype"
+                },
+                {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
                 },
@@ -1023,6 +1033,10 @@
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
+        "test:mcp-stdio": "npm run build:esbuild && node --import tsx test/mcpStdio/run.mts",
+        "test:mcp-stdio:extension": "npm run build && node --import tsx test/mcpStdio/launch.mts --test",
+        "prototype:mcp-stdio": "npm run build && node --import tsx test/mcpStdio/launch.mts",
+        "prototype:mcp-stdio:companion": "npm run build && node --import tsx test/mcpStdio/launch.mts --companion",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor",
         "eval:drift": "node evals/check-agent-drift.ts",
@@ -1035,6 +1049,7 @@
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
         "@microsoft/vscode-azext-eng": "^1.1.0-alpha.1",
+        "@modelcontextprotocol/client": "2.0.0-beta.4",
         "@modelcontextprotocol/server": "^2.0.0-beta.4",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
@@ -1050,6 +1065,7 @@
         "esbuild-plugin-copy": "*",
         "mermaid": "^11.15.0",
         "sass": "~1.79.6",
+        "tsx": "^4.22.4",
         "typescript-eslint": "^8.61.1"
     },
     "dependencies": {
@@ -1065,6 +1081,7 @@
         "jsonc-parser": "^2.2.1",
         "semver": "^7.7.3",
         "uuid": "^14.0.0",
+        "undici": "^7.16.0",
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7",
         "ws": "^8.21.0",

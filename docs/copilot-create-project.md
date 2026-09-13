@@ -407,6 +407,15 @@ silently so a stale copy can't make an agent follow outdated steps.
 
 ## The MCP tools
 
+This prototype branch always registers the stdio provider during activation.
+Use **Launch Extension** with F5, or `npm run prototype:mcp-stdio` for an isolated
+profile. It replaces the catalog below with only `cor_stdio_probe` and the existing
+`open_scaffold_next_steps_view` in this branch.
+The probe invokes the fixed `copilotOnRails.mcpStdioProbe` command and returns an
+opaque window marker and effect count. It cannot accept a command ID.
+See [the prototype reproduction guide](mcp-stdio-prototype.md) for activation,
+pairing, runtime requirements, expiry, and test limitations. It is not a full CoR pipeline.
+
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
 ("Copilot Azure Resources Extension Tools"). Agents call them to open views and trigger the next stage.
 
@@ -625,6 +634,9 @@ Collect before escalating a bug:
 | Report Issue | `copilotOnRails.reportIssue` |
 | Inspect Copilot on Rails Diagnostics | `copilotOnRails.inspectDiagnostics` |
 | Refresh (Azure Project view) | `azureProject.refresh` |
+| Pair This Window with MCP Stdio Prototype | `copilotOnRails.pairMcpStdioPrototype` |
+| Fixed harmless probe, internal to the prototype | `copilotOnRails.mcpStdioProbe` |
+| Non-secret status counters, internal to the prototype | `copilotOnRails.mcpStdioPrototypeStatus` |
 
 ## Agents & instruction folders
 
