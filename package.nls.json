@@ -1,4 +1,5 @@
 {
+    "copilotOnRails.pairMcpStdioPrototype": "Pair This Window with MCP Stdio Prototype",
     "azureResourceGroups.cloudShellBash": "Azure Cloud Shell (Bash)",
     "azureResourceGroups.cloudShellPowerShell": "Azure Cloud Shell (PowerShell)",
     "azureResourceGroups.uploadToCloudShell": "Upload to Cloud Shell",

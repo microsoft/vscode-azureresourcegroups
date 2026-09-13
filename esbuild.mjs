@@ -17,6 +17,10 @@ const finalConfig = {
             in: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
             out: 'cloudConsoleLauncher',
         },
+        {
+            in: './src/mcp/stdioPrototype/bridge.ts',
+            out: 'mcpStdioBridge',
+        },
     ],
     // Disable code splitting to avoid VS Code extension loading issues (see #1352)
     splitting: false,

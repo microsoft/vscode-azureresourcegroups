@@ -7,7 +7,6 @@
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { registerMcpHttpProvider } from '@microsoft/vscode-inproc-mcp/vscode';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -24,7 +23,6 @@ import { registerWorkspaceResourceProvider } from './api/compatibility/registerW
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
-import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -34,11 +32,12 @@ import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteR
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
-import { azureProjectId, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
+import { azureProjectId, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
+import { registerStdioPrototype } from './mcp/stdioPrototype/register';
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { TestApi } from './testApi';
@@ -151,12 +150,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
-        registerMcpHttpProvider(context, {
-            id: mcpServerId,
-            serverLabel: mcpServerLabel,
-            serverVersion: ext.version,
-            registerTools: (server) => registerMcpTools(server),
-        });
+        await registerStdioPrototype(context);
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is
         // the guarantee the deploy agent's instructions cannot make: it runs regardless of how the
