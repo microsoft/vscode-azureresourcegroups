@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1000" viewBox="0 0 1030 1000" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Current Local: separate registry and MCP client lanes</title>
+  <desc id="desc">Local uses five participating roles: Copilot Chat, VS Code MCP registry, VS Code MCP client, MCP server, and the VS Code extension. Extension activation registers the provider with the registry. Before connecting, the VS Code client triggers provider resolution, which starts the private server and returns its URI and credential. Named tool calls then reach the extension command handler.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:23px;font-weight:700}.name{font-size:16px;font-weight:700}.small{font-size:12px;fill:#53657d}.section{font-size:13px;font-weight:700;fill:#53657d;letter-spacing:1px}.note{fill:#a64200;font-weight:700}.lane{stroke:#b7c6d8;stroke-dasharray:4 5}.setup{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 4;fill:none}.call{stroke:#087f5b;stroke-width:2;fill:none}.result{stroke:#087f5b;stroke-width:2;stroke-dasharray:3 4;fill:none}</style>
+  <rect width="1030" height="1000" fill="#fff"/>
+  <text x="25" y="35" class="title">Current implementation: Local</text>
+  <text x="25" y="61">The registry keeps definitions. VS Code's MCP client resolves the endpoint, connects and calls tools.</text>
+  <rect x="615" y="86" width="390" height="865" rx="12" fill="#f1f7ff" stroke="#c5daf4"/>
+  <text x="810" y="108" text-anchor="middle" class="small">SERVER + HANDLERS SHARE THE EXTENSION HOST</text>
+  <rect x="20" y="125" width="160" height="90" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
+  <text x="100" y="155" text-anchor="middle" class="name">Copilot Chat</text>
+  <text x="100" y="181" text-anchor="middle" class="small">UI using Local</text>
+  <rect x="210" y="125" width="180" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="300" y="150" text-anchor="middle" class="name">VS Code</text>
+  <text x="300" y="171" text-anchor="middle" class="name">MCP registry</text>
+  <text x="300" y="197" text-anchor="middle" class="small">Server definitions</text>
+  <rect x="415" y="125" width="180" height="90" rx="8" fill="#e5f6ee" stroke="#83b99e"/>
+  <text x="505" y="150" text-anchor="middle" class="name">VS Code</text>
+  <text x="505" y="171" text-anchor="middle" class="name">MCP client</text>
+  <text x="505" y="197" text-anchor="middle" class="small">USED: connects + calls</text>
+  <rect x="630" y="125" width="150" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="705" y="155" text-anchor="middle" class="name">MCP server</text>
+  <text x="705" y="181" text-anchor="middle" class="small">In-process library</text>
+  <rect x="820" y="125" width="170" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="905" y="155" text-anchor="middle" class="name">VS Code extension</text>
+  <text x="905" y="181" text-anchor="middle" class="small">Activation + commands</text>
+  <path d="M100 215V940 M300 215V940 M505 215V940 M705 215V940 M905 215V940" class="lane"/>
+  <text x="25" y="242" class="section">SETUP: REGISTRATION, THEN CLIENT CONNECTION</text>
+  <path d="M905 276H300" class="setup"/>
+  <text x="602" y="264" text-anchor="middle">Activation: register MCP provider + tool-registration callback</text>
+  <path d="M300 318H905" class="setup"/>
+  <text x="602" y="306" text-anchor="middle">Request declaration: provideMcpServerDefinitions</text>
+  <path d="M905 360H300" class="setup"/>
+  <text x="602" y="348" text-anchor="middle">Initial declaration: http://invalid.invalid</text>
+  <path d="M300 402H505" class="setup"/>
+  <text x="402" y="390" text-anchor="middle">Definition available to client</text>
+  <path d="M505 446H905" class="setup"/>
+  <text x="705" y="433" text-anchor="middle">Invoke resolveMcpServerDefinition before connecting</text>
+  <path d="M905 488H705" class="setup"/>
+  <text x="805" y="476" text-anchor="middle">Start private listener</text>
+  <path d="M705 530H905" class="setup"/>
+  <text x="805" y="518" text-anchor="middle">Live socket URI + nonce</text>
+  <path d="M905 572H505" class="setup"/>
+  <text x="705" y="560" text-anchor="middle">S1 Resolved URI + authentication header</text>
+  <path d="M505 614H705" class="setup"/>
+  <text x="605" y="594" text-anchor="middle">S2 Initialize / tools/list</text>
+  <text x="605" y="609" text-anchor="middle" class="small">Authenticated private HTTP</text>
+  <text x="25" y="651" class="section">TOOL CALL: VS CODE'S MCP CLIENT OWNS THIS CONNECTION</text>
+  <path d="M100 687H505" class="call"/>
+  <text x="302" y="675" text-anchor="middle">Local routes the selected tool call</text>
+  <path d="M505 729H705" class="call"/>
+  <text x="605" y="717" text-anchor="middle">S2 MCP tools/call + nonce</text>
+  <path d="M705 771H905" class="call"/>
+  <text x="805" y="759" text-anchor="middle">Dispatch named tool</text>
+  <rect x="813" y="789" width="185" height="66" rx="7" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="905" y="811" text-anchor="middle" class="note">S3 Extension handler</text>
+  <text x="905" y="831" text-anchor="middle">Named handler effect</text>
+  <text x="905" y="847" text-anchor="middle" class="small">Approval checks vary by tool</text>
+  <path d="M905 879H705 M705 905H505 M505 931H100" class="result"/>
+  <text x="805" y="873" text-anchor="middle" class="small">Result</text>
+  <text x="605" y="899" text-anchor="middle" class="small">MCP result</text>
+  <text x="302" y="925" text-anchor="middle" class="small">Response in Chat</text>
+  <g id="arrowheads">
+    <g fill="#2563eb">
+      <polygon points="300,276 312,270 312,282"/>
+      <polygon points="905,318 893,312 893,324"/>
+      <polygon points="300,360 312,354 312,366"/>
+      <polygon points="505,402 493,396 493,408"/>
+      <polygon points="905,446 893,440 893,452"/>
+      <polygon points="705,488 717,482 717,494"/>
+      <polygon points="905,530 893,524 893,536"/>
+      <polygon points="505,572 517,566 517,578"/>
+      <polygon points="705,614 693,608 693,620"/>
+    </g>
+    <g fill="#087f5b">
+      <polygon points="505,687 493,681 493,693"/>
+      <polygon points="705,729 693,723 693,735"/>
+      <polygon points="905,771 893,765 893,777"/>
+      <polygon points="705,879 717,873 717,885"/>
+      <polygon points="505,905 517,899 517,911"/>
+      <polygon points="100,931 112,925 112,937"/>
+    </g>
+  </g>
+  <text x="25" y="978" class="small">Blue: setup. Green: calls/results. S1 credential delivery; S2 nonce + Unix directory 0700; S3 in-process checks, not an endpoint.</text>
+</svg>

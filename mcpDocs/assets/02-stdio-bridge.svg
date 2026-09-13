@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1230" height="1170" viewBox="0 0 1230 1170" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Current stdio bridge implementation</title>
+  <desc id="desc">During activation in a trusted local workspace, registerStdioPrototype starts one private package listener and checks readiness before registering the provider with its ready stdio definition. VS Code's registry forwards that launch metadata to Copilot's runtime MCP client. The client spawns one bundled bridge with VS Code's executable in Node mode. Stdio messages are relayed as authenticated HTTP over a Unix socket. Named command and webview handlers stay in the extension host. The original real Copilot trial used standalone Node; follow-up proved the current executable with Local and Copilot sequentially using the same definition and listener. This diagram shows only the Copilot path.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:23px;font-weight:700}.name{font-size:16px;font-weight:700}.small{font-size:12px;fill:#42546c}.section{font-size:13px;font-weight:700;fill:#42546c;letter-spacing:1px}.security{fill:#934100;font-weight:700}.lane{stroke:#b7c6d8;stroke-dasharray:4 5}.setup{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 4;fill:none}.call{stroke:#087f5b;stroke-width:2;fill:none}.result{stroke:#087f5b;stroke-width:2;stroke-dasharray:3 4;fill:none}</style>
+  <rect width="1230" height="1170" fill="#fff"/>
+  <text x="25" y="35" class="title">2. Stdio bridge: private server reuse, one added child</text>
+  <text x="25" y="61">Current VS Code-owned child passed Local and Copilot sequentially. Copilot path shown; original trial used standalone Node.</text>
+  <rect x="615" y="86" width="180" height="991" rx="12" fill="#fff8eb" stroke="#e7c991"/>
+  <text x="705" y="108" text-anchor="middle" class="small">ONE BRIDGE PROCESS</text>
+  <rect x="815" y="86" width="390" height="991" rx="12" fill="#f1f7ff" stroke="#c5daf4"/>
+  <text x="1010" y="108" text-anchor="middle" class="small">SERVER + HANDLERS SHARE THE EXTENSION HOST</text>
+  <rect x="20" y="125" width="160" height="90" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
+  <text x="100" y="155" text-anchor="middle" class="name">Copilot Chat</text>
+  <text x="100" y="181" text-anchor="middle" class="small">UI using Copilot</text>
+  <rect x="210" y="125" width="180" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="300" y="150" text-anchor="middle" class="name">VS Code</text>
+  <text x="300" y="171" text-anchor="middle" class="name">MCP registry</text>
+  <text x="300" y="197" text-anchor="middle" class="small">Server definitions</text>
+  <rect x="415" y="125" width="180" height="90" rx="8" fill="#e5f6ee" stroke="#83b99e"/>
+  <text x="505" y="150" text-anchor="middle" class="name">Copilot runtime</text>
+  <text x="505" y="171" text-anchor="middle" class="name">MCP client</text>
+  <text x="505" y="197" text-anchor="middle" class="small">Owns the MCP connection</text>
+  <rect x="630" y="125" width="150" height="90" rx="8" fill="#ffedc8" stroke="#d9b469"/>
+  <text x="705" y="155" text-anchor="middle" class="name">Stdio bridge</text>
+  <text x="705" y="181" text-anchor="middle" class="small">VS Code-owned Node</text>
+  <rect x="830" y="125" width="150" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="905" y="155" text-anchor="middle" class="name">MCP server</text>
+  <text x="905" y="181" text-anchor="middle" class="small">In-process library</text>
+  <rect x="1020" y="125" width="170" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="1105" y="155" text-anchor="middle" class="name">VS Code extension</text>
+  <text x="1105" y="181" text-anchor="middle" class="small">Activation + handlers</text>
+  <path d="M100 215V1065 M300 215V1065 M505 215V1065 M705 215V1065 M905 215V1065 M1105 215V1065" class="lane"/>
+  <text x="25" y="242" class="section">SETUP: REGISTRY METADATA, THEN A CLIENT-OWNED CONNECTION</text>
+  <rect x="835" y="242" width="355" height="45" rx="7" fill="#f3f5f8" stroke="#c6d0df"/>
+  <text x="1012" y="260" text-anchor="middle" class="security">Activation: registerStdioPrototype begins</text>
+  <text x="1012" y="278" text-anchor="middle" class="small">Trusted local workspace; no prototype flag</text>
+  <path d="M1105 320H905" class="setup"/>
+  <text x="1005" y="300" text-anchor="middle">Start package listener</text>
+  <text x="1005" y="315" text-anchor="middle" class="small">Register two named tools</text>
+  <path d="M905 364H1105" class="setup"/>
+  <text x="1005" y="344" text-anchor="middle">Ready URI + nonce</text>
+  <text x="1005" y="359" text-anchor="middle" class="small">Authenticated readiness checked</text>
+  <path d="M1105 408H300" class="setup"/>
+  <text x="702" y="396" text-anchor="middle">S1 Register provider with ready stdio definition + environment lease</text>
+  <path d="M300 452H505" class="setup"/>
+  <text x="402" y="432" text-anchor="middle">Host forwards metadata</text>
+  <text x="402" y="447" text-anchor="middle" class="small">Generated configuration</text>
+  <path d="M505 496H705" class="setup"/>
+  <text x="605" y="476" text-anchor="middle">Spawn bundled bridge</text>
+  <text x="605" y="491" text-anchor="middle" class="small">process.execPath in Node mode</text>
+  <path d="M705 540H905" class="setup"/>
+  <text x="805" y="520" text-anchor="middle">Initialize backend + nonce</text>
+  <text x="805" y="535" text-anchor="middle" class="small">HTTP over private Unix socket</text>
+  <rect x="630" y="567" width="560" height="78" rx="7" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="647" y="590" class="security">S2 Stdio: protocol-only stdout, frame bounds, cancellation</text>
+  <text x="647" y="613">server/discover: -32601 allows genuine backend initialize fallback</text>
+  <text x="647" y="635">S3 Private HTTP: nonce, owner-only directory, backend-instance check</text>
+  <text x="25" y="684" class="section">TOOL CALL: NAMED MCP TOOLS, NO GENERAL COMMAND DISPATCHER</text>
+  <path d="M100 720H505" class="call"/>
+  <text x="302" y="708" text-anchor="middle">User request and scoped tool approval</text>
+  <path d="M505 764H705" class="call"/>
+  <text x="605" y="744" text-anchor="middle">S2 MCP tools/call</text>
+  <text x="605" y="759" text-anchor="middle" class="small">stdin / stdout</text>
+  <path d="M705 808H905" class="call"/>
+  <text x="805" y="788" text-anchor="middle">S3 Forward MCP + nonce</text>
+  <text x="805" y="803" text-anchor="middle" class="small">No TCP listener</text>
+  <path d="M905 852H1105" class="call"/>
+  <text x="1005" y="840" text-anchor="middle">Dispatch named tool</text>
+  <rect x="835" y="875" width="355" height="73" rx="7" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="1012" y="898" text-anchor="middle" class="security">S4 In-process execution checks</text>
+  <text x="1012" y="920" text-anchor="middle">Trust, workspace, strict arguments</text>
+  <text x="1012" y="940" text-anchor="middle" class="small">Fixed marker command or existing Next Steps handler</text>
+  <path d="M1105 970H905 M905 997H705 M705 1024H505 M505 1051H100" class="result"/>
+  <text x="1005" y="964" text-anchor="middle" class="small">Result</text>
+  <text x="805" y="991" text-anchor="middle" class="small">MCP result</text>
+  <text x="605" y="1018" text-anchor="middle" class="small">MCP result</text>
+  <text x="302" y="1045" text-anchor="middle" class="small">Response in Chat; webview remains in VS Code</text>
+  <g id="arrowheads" fill="#2563eb">
+    <polygon points="905,320 917,314 917,326"/>
+    <polygon points="1105,364 1093,358 1093,370"/>
+    <polygon points="300,408 312,402 312,414"/>
+    <polygon points="505,452 493,446 493,458"/>
+    <polygon points="705,496 693,490 693,502"/>
+    <polygon points="905,540 893,534 893,546"/>
+    <g fill="#087f5b">
+      <polygon points="505,720 493,714 493,726"/>
+      <polygon points="705,764 693,758 693,770"/>
+      <polygon points="905,808 893,802 893,814"/>
+      <polygon points="1105,852 1093,846 1093,858"/>
+      <polygon points="905,970 917,964 917,976"/>
+      <polygon points="705,997 717,991 717,1003"/>
+      <polygon points="505,1024 517,1018 517,1030"/>
+      <polygon points="100,1051 112,1045 112,1057"/>
+    </g>
+  </g>
+  <text x="25" y="1103">S1 Protect executable, environment and retained credentials. S3 Unix directory mode 0700; one-hour connection lease.</text>
+  <text x="25" y="1126">The lease is not per-chat identity or human consent. S4 is an extension-side control, not a network endpoint.</text>
+  <text x="25" y="1151" class="small">Blue: setup. Green: calls. Dotted green: results. One child bridges transports; the registry carries no MCP requests.</text>
+</svg>
