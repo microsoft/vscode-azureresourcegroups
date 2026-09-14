@@ -3,27 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/**
- * Local rather than imported from `../../shared/jsonUtils`, and that is a constraint rather
- * than a preference.
- *
- * This file is a **shared contract**: `evals/src/artifacts/requirements.ts` and
- * `evals/graders/validate-requirements.ts` import it directly so the grader and the webview
- * parse requirements by the same code and cannot drift. The evals run off source through
- * Node's type stripping, which resolves real files on disk and cannot infer an extension —
- * while the extension build type-checks this file under a project that emits, where a `.ts`
- * specifier is rejected outright (TS5097). There is no spelling of a relative import that
- * satisfies both, so this file's import graph has to stay empty.
- *
- * That invariant used to hold by accident: none of the three `parse*.ts` files the evals
- * load had any imports at all. #1833 added `isJsonObject` here from `shared/jsonUtils`, every
- * build stayed green, and `npm run certify` went red on `feat/CoR` with ERR_MODULE_NOT_FOUND.
- * `evals/msbench/check-clean-machine.ts` is what names it; run `npm run clean-machine:check`
- * before assuming an import here is free.
- */
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isJsonObject } from '../../shared/jsonUtils.ts';
 
 export type RequirementsAnswer = string | number | boolean | string[] | null;
 

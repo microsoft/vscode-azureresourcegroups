@@ -116,6 +116,14 @@
       ]
     },
     {
+      "id": "reference-iac-deployed",
+      "path": "evals/grader-certification/reference-iac-deployed",
+      "description": "The same clean Bicep scaffold as reference-iac-bicep, plus the deploy-result.json a completed deploy phase leaves behind. Exists so the no-template mutation can be run against a workspace that actually provisioned: with a deploy record present, a missing template is no longer an out-of-scope scenario but an agent that created Azure resources imperatively, and the two must not share a verdict.",
+      "offlineValidators": [
+        "iac-compiles"
+      ]
+    },
+    {
       "id": "safety-boundaries-clean",
       "path": "evals/grader-certification/safety-boundaries-clean",
       "description": "A small project that crosses no safety boundary and contains the things that most look like one: Azurite's published emulator connection string in .env.example, a Key Vault reference in app settings, and IaC that explicitly disables public blob access and pins TLS 1.2. The golden case therefore proves the gate is quiet on a compliant project rather than merely quiet, and every mutation below turns exactly one of those into its forbidden counterpart.",
@@ -361,6 +369,52 @@
       "search": "export const mockClient: ApiClient =",
       "replacement": "export const mockClient =",
       "expectedCode": "missingMockClient"
+    },
+    {
+      "comment": "The three cases below each DELETE the documented `mockClient: ApiClient` annotation and replace it with a different legitimate way of declaring the same seam implementation. Every one of them reported missingMockClient before this change — the old matcher required the binding to be named mock/stub/fake AND carried a `[^\\n]*` that could not cross a newline. They are vacuous fails: the seam is correct and the gate went red anyway. Each case therefore fails on the old matcher and passes on the new one, so it certifies the fix rather than merely re-asserting current behaviour.",
+      "id": "frontend-mock-client-satisfies-below-multiline-literal",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export const previewClient = {\n    listTickets: async () => tickets,\n    getTicket: async () => tickets[0] as Ticket,\n    createTicket: async () => tickets[0] as Ticket,\n} satisfies ApiClient;\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "id": "frontend-mock-client-declared-by-factory-return-type",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export function createPreviewClient(): ApiClient {\n    return mockClient as ApiClient;\n}\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "id": "frontend-mock-client-neutrally-named",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "replace",
+      "search": "export const mockClient: ApiClient = {",
+      "replacement": "export const previewClient: ApiClient = {\n    listTickets: async () => tickets,\n    getTicket: async () => tickets[0] as Ticket,\n    createTicket: async () => tickets[0] as Ticket,\n};\n\nexport const mockClient = {",
+      "expectedCode": "passed"
+    },
+    {
+      "comment": "Seam scope. The existing frontend-api-seam-bypassed case only mutates a page, so the check's scope beyond pages was never certified. Integrate deletes src/mocks/, which breaks a shared module exactly as hard as it breaks a page, so a non-page importer must stay a violation. Run 2026090980336773 failed on src/auth.tsx and 2026090413313337 on src/components/TaskRow.tsx — neither is a page or a hook.",
+      "id": "frontend-api-seam-bypassed-outside-a-page",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "file": "services/web/src/App.tsx",
+      "operation": "replace",
+      "search": "import { TicketsPage } from './pages/TicketsPage';",
+      "replacement": "import { TicketsPage } from './pages/TicketsPage';\nimport { tickets } from './mocks/data';",
+      "expectedCode": "apiSeamBypassed"
     },
     {
       "comment": "Blame mapping, product side. Each of these three outcomes means the generated project is genuinely undebuggable, so each must be charged to the product (exit 1) rather than excused as an instrument fault.",
@@ -1086,6 +1140,16 @@
       "file": "infra/main.bicep",
       "operation": "delete",
       "expectedCode": "noIacFound"
+    },
+    {
+      "comment": "No template, but the deploy phase reports resources it created. That is not the gate having nothing to look at — it is the agent provisioning outside IaC, which blocked-patterns.md forbids. Reported as noIacFound it maps to outOfScope and exits 3, which the harness reads as a request to unwire the gate, so a run that provisioned a whole application by hand scores NOT-APPLICABLE and leaves no trace in any aggregate. Separating those two verdicts is the entire point of the code, so it is certified apart from the empty-workspace case above.",
+      "id": "iac-compiles-imperative-provisioning-is-charged-to-the-agent",
+      "tier": "offline",
+      "fixture": "reference-iac-deployed",
+      "validator": "iac-compiles",
+      "file": "infra/main.bicep",
+      "operation": "delete",
+      "expectedCode": "imperativeProvisioning"
     },
     {
       "comment": "The scaffold phase is contracted to record what it generated. With no manifest there is no self-report to check, which is a different failure from a self-report that turns out to be false.",

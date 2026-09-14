@@ -17,6 +17,7 @@ import { openPlanViewTool } from "./openPlanViewTool";
 import { openRequirementsViewTool } from "./openRequirementsViewTool";
 import { openScaffoldNextStepsViewTool } from "./openScaffoldNextStepsViewTool";
 import { recordDeployPrerequisitesTool } from "./recordDeployPrerequisitesTool";
+import { reportAgentLaunchTool } from "./reportAgentLaunchTool";
 import { startAzureDebugGenerateTool } from "./startAzureDebugGenerateTool";
 import { startDeploymentTool } from "./startDeploymentTool";
 import { startLocalDevelopmentTool } from "./startLocalDevelopmentTool";
@@ -24,6 +25,8 @@ import { startProjectIntegrateTool } from "./startProjectIntegrateTool";
 import { startProjectScaffoldTool } from "./startProjectScaffoldTool";
 
 export function registerCopilotOnRailsTools(mcpServer: McpServer): void {
+    registerMcpToolWithTelemetry(mcpServer, reportAgentLaunchTool);
+
     // Phase 1: Project scaffolding tools
     registerMcpToolWithTelemetry(mcpServer, openRequirementsViewTool);
     registerMcpToolWithTelemetry(mcpServer, openPlanViewTool);
