@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { ext } from "../../../../extensionVariables";
+import { isJsonObject, readStringRecord } from "../../shared/jsonUtils";
 
 /**
  * A running frontend dev server. `url` is the localhost URL the server bound to
@@ -79,7 +80,12 @@ function detectPackageManager(folder: string): 'npm' | 'pnpm' | 'yarn' {
 function detectDevScript(folder: string): string | undefined {
     try {
         const pkgRaw = fs.readFileSync(path.join(folder, 'package.json'), 'utf-8');
-        const scripts = (JSON.parse(pkgRaw) as { scripts?: Record<string, string> }).scripts ?? {};
+        const parsed: unknown = JSON.parse(pkgRaw);
+        if (!isJsonObject(parsed)) {
+            return undefined;
+        }
+
+        const scripts = readStringRecord(parsed.scripts) ?? {};
         if (scripts.dev) {
             return 'dev';
         }
