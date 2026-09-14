@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isJsonObject } from '../../shared/jsonUtils';
+
 export type RequirementsAnswer = string | number | boolean | string[] | null;
 
 export type RequirementsStatus = 'inferred' | 'needs_input' | 'confirmed' | string;
@@ -107,64 +109,82 @@ export function inferInputType(
 }
 
 function parseOption(raw: unknown): RequirementsOption | undefined {
-    if (typeof raw === 'string' && raw.trim().length > 0) {
-        return { label: raw };
+    if (!isJsonObject(raw)) {
+        return undefined;
     }
-    if (raw && typeof raw === 'object') {
-        const obj = raw as Record<string, unknown>;
-        const label = typeof obj.label === 'string' ? obj.label : undefined;
-        if (!label) {
-            return undefined;
-        }
-        const description = typeof obj.description === 'string' ? obj.description : undefined;
-        const exclusive = typeof obj.exclusive === 'boolean' ? obj.exclusive : undefined;
-        return { label, description, exclusive };
+
+    const label = typeof raw.label === 'string' ? raw.label : undefined;
+    if (!label) {
+        return undefined;
     }
-    return undefined;
+
+    const description = typeof raw.description === 'string' ? raw.description : undefined;
+    const exclusive = typeof raw.exclusive === 'boolean' ? raw.exclusive : undefined;
+    return { label, description, exclusive };
+}
+
+function parseWorkspaceSignals(raw: unknown): RequirementsWorkspaceSignals | undefined {
+    if (!isJsonObject(raw)) {
+        return undefined;
+    }
+
+    return {
+        rootPath: typeof raw.rootPath === 'string' ? raw.rootPath : undefined,
+        detectedFiles: Array.isArray(raw.detectedFiles)
+            ? raw.detectedFiles.filter((file): file is string => typeof file === 'string')
+            : undefined,
+        hasSourceCode: typeof raw.hasSourceCode === 'boolean' ? raw.hasSourceCode : undefined,
+        hasPackageJson: typeof raw.hasPackageJson === 'boolean' ? raw.hasPackageJson : undefined,
+        decision: typeof raw.decision === 'string' ? raw.decision : undefined,
+        decisionReason: typeof raw.decisionReason === 'string' ? raw.decisionReason : undefined,
+    };
 }
 
 export function parseRequirementsJson(content: string): RequirementsData {
-    const raw = JSON.parse(content) as Record<string, unknown>;
-    const questionsRaw = Array.isArray(raw.questions) ? raw.questions as unknown[] : [];
+    const parsed: unknown = JSON.parse(content);
+    if (!isJsonObject(parsed)) {
+        throw new TypeError('Requirements JSON must contain an object.');
+    }
+
+    const questionsRaw = Array.isArray(parsed.questions) ? parsed.questions : [];
 
     const questions: RequirementsQuestion[] = questionsRaw
         .map((q, idx): RequirementsQuestion | undefined => {
-            if (!q || typeof q !== 'object') {
+            if (!isJsonObject(q)) {
                 return undefined;
             }
-            const obj = q as Record<string, unknown>;
-            const id = typeof obj.id === 'string' && obj.id.trim() ? obj.id : `question-${idx}`;
-            const category = typeof obj.category === 'string' && obj.category.trim() ? obj.category : 'general';
-            const question = typeof obj.question === 'string' ? obj.question : '';
-            const header = typeof obj.header === 'string' ? obj.header : undefined;
-            const status = typeof obj.status === 'string' ? obj.status : 'needs_input';
-            const rationale = typeof obj.rationale === 'string'
-                ? obj.rationale
-                : (typeof obj.reason === 'string' ? obj.reason : undefined);
-            const multiSelect = typeof obj.multiSelect === 'boolean' ? obj.multiSelect : undefined;
-            const allowFreeformInput = typeof obj.allowFreeformInput === 'boolean' ? obj.allowFreeformInput : undefined;
-            const serviceId = typeof obj.serviceId === 'string' && obj.serviceId.trim() ? obj.serviceId : undefined;
+            const id = typeof q.id === 'string' && q.id.trim() ? q.id : `question-${idx}`;
+            const category = typeof q.category === 'string' && q.category.trim() ? q.category : 'general';
+            const question = typeof q.question === 'string' ? q.question : '';
+            const header = typeof q.header === 'string' ? q.header : undefined;
+            const status = typeof q.status === 'string' ? q.status : 'needs_input';
+            const rationale = typeof q.rationale === 'string'
+                ? q.rationale
+                : (typeof q.reason === 'string' ? q.reason : undefined);
+            const multiSelect = typeof q.multiSelect === 'boolean' ? q.multiSelect : undefined;
+            const allowFreeformInput = typeof q.allowFreeformInput === 'boolean' ? q.allowFreeformInput : undefined;
+            const serviceId = typeof q.serviceId === 'string' && q.serviceId.trim() ? q.serviceId : undefined;
 
             let answer: RequirementsAnswer;
-            if (obj.answer === null || obj.answer === undefined) {
+            if (q.answer === null || q.answer === undefined) {
                 answer = null;
-            } else if (Array.isArray(obj.answer)) {
-                answer = obj.answer.filter((x): x is string => typeof x === 'string');
-            } else if (typeof obj.answer === 'string' || typeof obj.answer === 'number' || typeof obj.answer === 'boolean') {
-                answer = obj.answer;
+            } else if (Array.isArray(q.answer)) {
+                answer = q.answer.filter((x): x is string => typeof x === 'string');
+            } else if (typeof q.answer === 'string' || typeof q.answer === 'number' || typeof q.answer === 'boolean') {
+                answer = q.answer;
             } else {
-                answer = String(obj.answer);
+                answer = null;
             }
 
-            const options = Array.isArray(obj.options)
-                ? obj.options.map(parseOption).filter((o): o is RequirementsOption => o !== undefined)
+            const options = Array.isArray(q.options)
+                ? q.options.map(parseOption).filter((o): o is RequirementsOption => o !== undefined)
                 : undefined;
 
             let recommendedChoice: RequirementsRecommendedChoice | undefined;
-            if (Array.isArray(obj.recommendedChoice)) {
-                recommendedChoice = obj.recommendedChoice.filter((x): x is string => typeof x === 'string');
-            } else if (typeof obj.recommendedChoice === 'string') {
-                recommendedChoice = obj.recommendedChoice;
+            if (Array.isArray(q.recommendedChoice)) {
+                recommendedChoice = q.recommendedChoice.filter((x): x is string => typeof x === 'string');
+            } else if (typeof q.recommendedChoice === 'string') {
+                recommendedChoice = q.recommendedChoice;
             }
 
             return {
@@ -184,34 +204,31 @@ export function parseRequirementsJson(content: string): RequirementsData {
         })
         .filter((q): q is RequirementsQuestion => q !== undefined);
 
-    const workspaceSignals = raw.workspaceSignals && typeof raw.workspaceSignals === 'object'
-        ? raw.workspaceSignals as RequirementsWorkspaceSignals
-        : undefined;
+    const workspaceSignals = parseWorkspaceSignals(parsed.workspaceSignals);
 
-    const servicesRaw = Array.isArray(raw.services) ? raw.services as unknown[] : [];
+    const servicesRaw = Array.isArray(parsed.services) ? parsed.services : [];
     const services: RequirementsService[] = servicesRaw
         .map((s): RequirementsService | undefined => {
-            if (!s || typeof s !== 'object') { return undefined; }
-            const obj = s as Record<string, unknown>;
-            const id = typeof obj.id === 'string' && obj.id.trim() ? obj.id : undefined;
-            const label = typeof obj.label === 'string' && obj.label.trim() ? obj.label : undefined;
-            const role = typeof obj.role === 'string' && ['frontend', 'backend', 'worker'].includes(obj.role) ? obj.role as RequirementsServiceRole : undefined;
+            if (!isJsonObject(s)) { return undefined; }
+            const id = typeof s.id === 'string' && s.id.trim() ? s.id : undefined;
+            const label = typeof s.label === 'string' && s.label.trim() ? s.label : undefined;
+            const role = typeof s.role === 'string' && ['frontend', 'backend', 'worker'].includes(s.role) ? s.role as RequirementsServiceRole : undefined;
             if (!id || !label || !role) { return undefined; }
-            const root = typeof obj.root === 'string' ? obj.root : undefined;
+            const root = typeof s.root === 'string' ? s.root : undefined;
             return { id, label, role, root };
         })
         .filter((s): s is RequirementsService => s !== undefined);
 
     const executionMode: RequirementsExecutionMode | undefined =
-        raw.executionMode === 'auto' || raw.executionMode === 'guided'
-            ? raw.executionMode
+        parsed.executionMode === 'auto' || parsed.executionMode === 'guided'
+            ? parsed.executionMode
             : undefined;
 
     return {
-        schemaVersion: typeof raw.schemaVersion === 'string' ? raw.schemaVersion : undefined,
-        generatedAt: typeof raw.generatedAt === 'string' ? raw.generatedAt : undefined,
-        mode: typeof raw.mode === 'string' ? raw.mode : undefined,
-        summary: typeof raw.summary === 'string' ? raw.summary : undefined,
+        schemaVersion: typeof parsed.schemaVersion === 'string' ? parsed.schemaVersion : undefined,
+        generatedAt: typeof parsed.generatedAt === 'string' ? parsed.generatedAt : undefined,
+        mode: typeof parsed.mode === 'string' ? parsed.mode : undefined,
+        summary: typeof parsed.summary === 'string' ? parsed.summary : undefined,
         executionMode,
         workspaceSignals,
         services: services.length > 0 ? services : undefined,

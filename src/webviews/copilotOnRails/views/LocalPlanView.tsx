@@ -39,6 +39,8 @@ import {
     useState,
     type JSX,
 } from "react";
+import { classifyInstalledForRow, InstalledChip } from "./components/InstalledChip";
+import { InlineMarkdown } from "./components/InlineMarkdown";
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
@@ -58,7 +60,7 @@ import { quoteMermaidLabels } from "./utils/quoteMermaidLabels";
 mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
-    securityLevel: "loose",
+    securityLevel: "strict",
     fontSize: 11,
     flowchart: {
         nodeSpacing: 15,
@@ -655,8 +657,51 @@ const SectionCard = ({
     defaultOpen: boolean;
     onRefreshPrerequisites?: () => void;
     isRefreshing?: boolean;
-}): JSX.Element => {
+}): JSX.Element | null => {
     const [open, setOpen] = useState(defaultOpen);
+    const [failedDiagrams, setFailedDiagrams] = useState<ReadonlySet<number>>(
+        () => new Set(),
+    );
+    const handleDiagramStatus = useCallback(
+        (index: number, failed: boolean) =>
+            setFailedDiagrams((previous) => {
+                if (previous.has(index) === failed) {
+                    return previous;
+                }
+                const next = new Set(previous);
+                if (failed) {
+                    next.add(index);
+                } else {
+                    next.delete(index);
+                }
+                return next;
+            }),
+        [],
+    );
+
+    const diagramCount = useMemo(
+        () => section.content.filter(isMermaidCodeBlock).length,
+        [section.content],
+    );
+
+    const isDiagramOnlySection = useMemo(
+        () =>
+            section.content.every(
+                (item) =>
+                    isMermaidCodeBlock(item) ||
+                    item.type === "paragraph" ||
+                    item.type === "blockquote",
+            ),
+        [section.content],
+    );
+
+    if (
+        diagramCount > 0 &&
+        failedDiagrams.size >= diagramCount &&
+        isDiagramOnlySection
+    ) {
+        return null;
+    }
 
     return (
         <div className="sectionCard">
@@ -691,6 +736,9 @@ const SectionCard = ({
                             key={i}
                             item={item}
                             sectionTitle={section.title}
+                            onDiagramStatus={(failed) =>
+                                handleDiagramStatus(i, failed)
+                            }
                         />
                     ))}
                 </div>
@@ -699,12 +747,20 @@ const SectionCard = ({
     );
 };
 
+function isMermaidCodeBlock(item: LocalPlanContent): boolean {
+    return (
+        item.type === "codeBlock" && item.language?.toLowerCase() === "mermaid"
+    );
+}
+
 const ContentBlock = ({
     item,
     sectionTitle,
+    onDiagramStatus,
 }: {
     item: LocalPlanContent;
     sectionTitle: string;
+    onDiagramStatus?: (failed: boolean) => void;
 }): JSX.Element | null => {
     switch (item.type) {
         case "table":
@@ -724,8 +780,13 @@ const ContentBlock = ({
                 />
             );
         case "codeBlock":
-            if (item.language?.toLowerCase() === "mermaid") {
-                return <MermaidBlock code={item.code} />;
+            if (isMermaidCodeBlock(item)) {
+                return (
+                    <MermaidBlock
+                        code={item.code}
+                        onRenderStatus={onDiagramStatus}
+                    />
+                );
             }
             return <CodeBlock language={item.language} code={item.code} />;
         case "bulletList":
@@ -734,12 +795,9 @@ const ContentBlock = ({
             return <BlockquoteBlock text={item.text} />;
         case "paragraph":
             return (
-                <p
-                    className="paragraph"
-                    dangerouslySetInnerHTML={{
-                        __html: formatInline(item.text),
-                    }}
-                />
+                <p className="paragraph">
+                    <InlineMarkdown text={item.text} />
+                </p>
             );
         case "subsection":
             return (
@@ -786,6 +844,11 @@ const DataTable = ({
     const toolIdx = isPrereq
         ? headers.findIndex((h) => h.toLowerCase().includes("tool"))
         : -1;
+    // Render the detection pass result as the same chip the Project Scaffolding
+    // plan uses instead of echoing the raw ✅/❓ characters from the markdown.
+    const installedIdx = isPrereq
+        ? headers.findIndex((h) => h.toLowerCase().includes("installed"))
+        : -1;
     const columnHidden = (idx: number): boolean => idx === installIdx;
 
     return (
@@ -795,12 +858,9 @@ const DataTable = ({
                     <tr>
                         {headers.map((h, hi) =>
                             columnHidden(hi) ? null : (
-                                <th
-                                    key={hi}
-                                    dangerouslySetInnerHTML={{
-                                        __html: formatInline(h),
-                                    }}
-                                />
+                                <th key={hi}>
+                                    <InlineMarkdown text={h} />
+                                </th>
                             ),
                         )}
                         {isPrereq && <th key="install">Install</th>}
@@ -829,13 +889,9 @@ const DataTable = ({
                                         return (
                                             <td key={ci}>
                                                 <span className="supportWarningCell">
-                                                    <span
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: formatInline(
-                                                                cell,
-                                                            ),
-                                                        }}
-                                                    />
+                                                    <span>
+                                                        <InlineMarkdown text={cell} />
+                                                    </span>
                                                     <Tooltip
                                                         relationship="label"
                                                         content={warningMessage}
@@ -852,13 +908,22 @@ const DataTable = ({
                                             </td>
                                         );
                                     }
+                                    if (ci === installedIdx) {
+                                        return (
+                                            <td key={ci}>
+                                                <InstalledChip
+                                                    status={classifyInstalledForRow(
+                                                        toolName,
+                                                        cell,
+                                                    )}
+                                                />
+                                            </td>
+                                        );
+                                    }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                                 {isPrereq && (
@@ -969,12 +1034,9 @@ const GenerateCheckboxTable = ({
                 <thead>
                     <tr>
                         {table.headers.map((h, hi) => (
-                            <th
-                                key={hi}
-                                dangerouslySetInnerHTML={{
-                                    __html: formatInline(h),
-                                }}
-                            />
+                            <th key={hi}>
+                                <InlineMarkdown text={h} />
+                            </th>
                         ))}
                     </tr>
                 </thead>
@@ -1002,12 +1064,9 @@ const GenerateCheckboxTable = ({
                                         );
                                     }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                             </tr>
@@ -1043,36 +1102,59 @@ const CodeBlock = ({
  * it can rescue a diagram mermaid would have refused, and it can never be the
  * reason a diagram that used to render stops rendering.
  */
-const renderMermaid = async (id: string, code: string): Promise<string> => {
+const renderMermaid = async (
+    id: string,
+    code: string,
+    container: Element,
+): Promise<string> => {
     const quoted = quoteMermaidLabels(code);
     try {
-        return (await mermaid.render(id, quoted)).svg;
+        return (await mermaid.render(id, quoted, container)).svg;
     } catch (err) {
         if (quoted === code) {
             throw err;
         }
         // A fresh id: mermaid leaves the failed attempt's scratch element behind.
-        return (await mermaid.render(`${id}-verbatim`, code)).svg;
+        return (await mermaid.render(`${id}-verbatim`, code, container)).svg;
     }
 };
 
-const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
+const MermaidBlock = ({
+    code,
+    onRenderStatus,
+}: {
+    code: string;
+    onRenderStatus?: (failed: boolean) => void;
+}): JSX.Element | null => {
     const ref = useRef<HTMLDivElement>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [failedCode, setFailedCode] = useState<string | null>(null);
+    const onRenderStatusRef = useRef(onRenderStatus);
 
     useEffect(() => {
+        onRenderStatusRef.current = onRenderStatus;
+    });
+
+    useEffect(() => {
+        const container = ref.current;
+        if (!container) {
+            return;
+        }
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
-        renderMermaid(id, code)
+        renderMermaid(id, code, container)
             .then((svg) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
-                    setError(null);
+                    setFailedCode(null);
+                    onRenderStatusRef.current?.(false);
                 }
             })
-            .catch((err: Error) => {
+            .catch(() => {
+                // A malformed diagram isn't actionable for the user, so drop the
+                // block entirely rather than surfacing a parse error.
                 if (!cancelled) {
-                    setError(err.message);
+                    setFailedCode(code);
+                    onRenderStatusRef.current?.(true);
                 }
             });
         return () => {
@@ -1080,15 +1162,8 @@ const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
         };
     }, [code]);
 
-    if (error) {
-        return (
-            <div className="codeBlock">
-                <span className="codeBlockLang">mermaid (error)</span>
-                <pre>
-                    <code>{code}</code>
-                </pre>
-            </div>
-        );
+    if (failedCode === code) {
+        return null;
     }
 
     return <div className="mermaidDiagram" ref={ref} />;
@@ -1097,19 +1172,17 @@ const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
 const BulletListBlock = ({ items }: { items: string[] }): JSX.Element => (
     <ul className="bulletList">
         {items.map((item, i) => (
-            <li
-                key={i}
-                dangerouslySetInnerHTML={{ __html: formatInline(item) }}
-            />
+            <li key={i}>
+                <InlineMarkdown text={item} />
+            </li>
         ))}
     </ul>
 );
 
 const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
-    <div
-        className="blockquote"
-        dangerouslySetInnerHTML={{ __html: formatInline(text) }}
-    />
+    <div className="blockquote">
+        <InlineMarkdown text={text} />
+    </div>
 );
 
 const SubsectionBlock = ({
@@ -1147,37 +1220,3 @@ const SubsectionBlock = ({
         </div>
     );
 };
-
-function formatInline(text: string): string {
-    return (
-        escapeHtml(text.trim())
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-            .replace(
-                /\[([^\]]+)\]\(([^)]+)\)/g,
-                '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
-            )
-            // Restore a small whitelist of presentational HTML tags that the agent
-            // emits inside table cells (collapsible endpoint lists, line breaks).
-            .replace(
-                /&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi,
-                "<$1$2>",
-            )
-            // Swap the warning emoji for the themed amber warning codicon so it
-            // matches the rest of the UI instead of the OS emoji glyph.
-            .replace(
-                /\u26A0\uFE0F?/g,
-                '<span class="codicon codicon-warning warningIcon" aria-hidden="true"></span>',
-            )
-    );
-}
-
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}

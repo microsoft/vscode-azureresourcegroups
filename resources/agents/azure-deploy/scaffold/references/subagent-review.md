@@ -41,12 +41,12 @@ Read [bicep-patterns-security.md](bicep-patterns-security.md) and [rbac-roles.md
 
 Read [self-review-checklist.md](self-review-checklist.md).
 
-**Do:** First run the **cross-module reference trace** from the checklist's § Cross-Module Reference Validation: parse every `module` call in `main.bicep`, read each target module's `param`/`output` declarations and `secrets[]` entries, then verify every reference resolves (params passed match params declared, outputs referenced exist, every CA `secretRef` has a matching KV secret resource). Then run L2–L4:
+**Do:** First run the **cross-module reference trace** from the checklist's § Cross-Module Reference Validation: parse every `module` call in `main.bicep`, read each target module's `param`/`output` declarations and `secrets[]` entries, then verify every reference resolves (params passed match params declared, outputs referenced exist, every CA `secretRef` has a matching native `secrets[]` entry — ⛔ NO `keyVaultUrl` / Key Vault). Then run L2–L4:
 - **L2 (Pattern Validation):** File structure matches `main.bicep` → `modules/*.bicep`, naming follows plan, Container Apps uses two-phase wiring, every `files[]` entry exists on disk, no `azure.yaml`, cross-module references all resolve
 - **L3 (Hallucination Detection):** Resource names match `naming.resources[]` exactly, API versions are real (verify via `az bicep build`), SKU names match plan, no invented resource types
 - **L4 (WAF Alignment):** Check per-pillar:
   - Reliability: zone redundancy (prod SKUs), health probes, GRS storage, min replicas ≥1
-  - Security: managed identity, KV secrets, HTTPS+TLS 1.2, no public blob, no `administratorLogin`
+  - Security: managed identity, on-compute app-internal secrets (no Key Vault), HTTPS+TLS 1.2, no public blob, no `administratorLogin`
   - Cost: SKU matches budget, scale-to-zero for dev/test CA, free grants applied
   - Ops: App Insights, 5 AppOnboard tags, all values parameterized
   - Performance: autoscale (prod), CDN for SPA, connection pooling, cache tier

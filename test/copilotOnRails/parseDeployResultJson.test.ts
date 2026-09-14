@@ -413,6 +413,40 @@ suite('parseDeployResultJson', () => {
             assert.strictEqual(result.healthStatus, 'unknown');
         });
 
+        test('uses current defaults for valid JSON with a non-object root', () => {
+            for (const content of ['null', '[]', '"result"', '42', 'true']) {
+                const result = parseDeployResultJson(content);
+
+                assert.strictEqual(result.status, 'unknown');
+                assert.strictEqual(result.healthStatus, 'unknown');
+                assert.strictEqual(result.partial, false);
+                assert.deepStrictEqual(result.endpoints, []);
+                assert.deepStrictEqual(result.resources, []);
+            }
+        });
+
+        test('ignores top-level fields of the wrong type', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                status: false,
+                healthStatus: 1,
+                partial: 'false',
+                sessionId: [],
+                subscriptionId: {},
+                resourceGroupName: null,
+                endpoints: 1,
+                resources: [],
+            }));
+
+            assert.strictEqual(result.status, 'unknown');
+            assert.strictEqual(result.healthStatus, 'unknown');
+            assert.strictEqual(result.partial, false);
+            assert.strictEqual(result.sessionId, '');
+            assert.strictEqual(result.subscriptionId, '');
+            assert.strictEqual(result.resourceGroupName, '');
+            assert.deepStrictEqual(result.endpoints, []);
+            assert.deepStrictEqual(result.resources, []);
+        });
+
         test('reports an empty file as an empty render issue', () => {
             assert.strictEqual(getDeployResultRenderIssue('   ', parseDeployResultJson('{}')), 'empty');
         });

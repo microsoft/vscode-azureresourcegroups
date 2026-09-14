@@ -1,0 +1,33 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+// Shared styling for the prerequisites "Installed" cell so the project
+// scaffolding and local development plans render the same icon and label
+// instead of the raw ✅/❓ characters from the plan markdown.
+@mixin installedChip {
+    .installedChip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        font-size: 0.85em;
+
+        .codicon {
+            font-size: 13px;
+        }
+
+        &.installed-installed {
+            color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+        }
+
+        &.installed-missing {
+            color: var(--vscode-testing-iconFailed, var(--vscode-errorForeground));
+        }
+
+        &.installed-unknown {
+            color: var(--vscode-descriptionForeground);
+        }
+    }
+}
