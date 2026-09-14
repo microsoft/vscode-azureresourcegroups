@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { agentLaunchProtocolVersion, recordAgentLaunchAttempt, recordChatOpenCommandOutcome } from '../../utils/copilotOnRails/agentLaunchDiagnostics';
+import { recordAgentLaunchAttempt, recordChatOpenCommandOutcome } from '../../utils/copilotOnRails/agentLaunchDiagnostics';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { ensureLocalHarnessOn, getLocalHarnessSettingDiagnostics } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
@@ -169,7 +169,6 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
         const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
         const harnessSettings = getLocalHarnessSettingDiagnostics();
-        setCorProp(context, 'agentLaunchProtocolVersion', agentLaunchProtocolVersion);
         for (const setting of harnessSettings) {
             const telemetryKey = setting.settingId === 'chat.editor.preferCopilotHarness'
                 ? 'preferCopilotHarness'

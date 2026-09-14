@@ -16,7 +16,6 @@ import {
 const agentLaunchesKey = 'copilotOnRails.agentLaunches';
 let launchUpdateQueue: Promise<void> = Promise.resolve();
 
-export { agentLaunchProtocolVersion } from './agentLaunchRecord';
 export type { AgentLaunchDiagnostic } from './agentLaunchRecord';
 
 export function getAgentLaunchDiagnostics(): AgentLaunchDiagnostic[] {

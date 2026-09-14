@@ -5,20 +5,13 @@
 
 import type { LocalHarnessSettingDiagnostic } from '../../webviews/copilotOnRails/extension/harnessSettings';
 
-export const agentLaunchProtocolVersion = 1;
-
 const maxAgentLaunches = 20;
 
-export type ReportedChatHarness = 'local' | 'copilot' | 'unknown';
-export type StartupToolDiscovery = 'direct' | 'toolSearch' | 'activated' | 'unknown';
 export type ChatOpenCommandOutcome = 'pending' | 'completed' | 'error';
 
 export interface AgentLaunchAcknowledgement {
     agentName: string;
-    protocolVersion: number;
-    reportedHarness: ReportedChatHarness;
-    toolDiscovery: StartupToolDiscovery;
-    reportedModel?: string;
+    harness: string;
 }
 
 export interface AgentLaunchDiagnostic {
@@ -34,10 +27,7 @@ export interface AgentLaunchDiagnostic {
     acknowledgedAt?: string;
     reportedAgent?: string;
     agentMatched?: boolean;
-    protocolVersion?: number;
-    reportedHarness?: ReportedChatHarness;
-    toolDiscovery?: StartupToolDiscovery;
-    reportedModel?: string;
+    reportedHarness?: string;
 }
 
 export type NewAgentLaunchDiagnostic = Omit<AgentLaunchDiagnostic, 'id' | 'attemptedAt' | 'chatOpenCommandOutcome'>;
@@ -79,10 +69,7 @@ export function acknowledgeLatestAgentLaunch(
         acknowledgedAt,
         reportedAgent: acknowledgement.agentName,
         agentMatched: current.expectedAgent === acknowledgement.agentName,
-        protocolVersion: acknowledgement.protocolVersion,
-        reportedHarness: acknowledgement.reportedHarness,
-        toolDiscovery: acknowledgement.toolDiscovery,
-        reportedModel: acknowledgement.reportedModel,
+        reportedHarness: acknowledgement.harness,
     };
     const updated = [...launches];
     updated[index] = acknowledgedLaunch;

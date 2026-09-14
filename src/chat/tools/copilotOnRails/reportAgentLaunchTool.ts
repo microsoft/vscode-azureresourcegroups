@@ -7,32 +7,14 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vs
 import { CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import { UnspecifiedOutputSchema } from '@microsoft/vscode-inproc-mcp/mcp';
 import { z } from 'zod/mini';
-import {
-    azureDebugGenerateAgent,
-    azureDebugPlanAgent,
-    azureDeployAgent,
-    azureProjectIntegrateAgent,
-    azureProjectPlanAgent,
-    azureProjectScaffoldAgent,
-} from '../../../constants';
-import { agentLaunchProtocolVersion, recordAgentLaunchAcknowledgement } from '../../../utils/copilotOnRails/agentLaunchDiagnostics';
+import { recordAgentLaunchAcknowledgement } from '../../../utils/copilotOnRails/agentLaunchDiagnostics';
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from '../../../utils/copilotOnRails/telemetryUtils';
 
 export const reportAgentLaunchToolName = 'report_agent_launch';
 
 const reportAgentLaunchInputSchema = z.object({
-    agentName: z.enum([
-        azureProjectPlanAgent,
-        azureProjectScaffoldAgent,
-        azureProjectIntegrateAgent,
-        azureDebugPlanAgent,
-        azureDebugGenerateAgent,
-        azureDeployAgent,
-    ]),
-    protocolVersion: z.literal(agentLaunchProtocolVersion),
-    reportedHarness: z.enum(['local', 'copilot', 'unknown']),
-    toolDiscovery: z.enum(['direct', 'toolSearch', 'activated', 'unknown']),
-    reportedModel: z.optional(z.string()),
+    agentName: z.string(),
+    harness: z.string(),
 });
 
 export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSchema, typeof UnspecifiedOutputSchema> = {
@@ -47,9 +29,7 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
         return await callWithTelemetryAndErrorHandling(`mcpTool/${reportAgentLaunchToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: reportAgentLaunchToolName, extras }, async (corContext) => {
                 setCorProp(corContext, 'reportedAgentName', input.agentName);
-                setCorProp(corContext, 'reportedAgentLaunchProtocolVersion', input.protocolVersion);
-                setCorProp(corContext, 'reportedHarness', input.reportedHarness);
-                setCorProp(corContext, 'startupToolDiscovery', input.toolDiscovery);
+                setCorProp(corContext, 'reportedHarness', input.harness);
 
                 const launch = await recordAgentLaunchAcknowledgement(input);
                 if (!launch) {
@@ -62,10 +42,15 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
                 setCorProp(corContext, 'agentLaunchAcknowledgementOutcome', 'recorded');
                 setCorProp(corContext, 'expectedAgentName', launch.expectedAgent);
                 setCorProp(corContext, 'agentNameMatched', launch.agentMatched);
+                if (input.harness.trim().toLowerCase() === 'copilot') {
+                    return {
+                        message: 'Recorded startup using the "copilot" harness, but Copilot on Rails requested the local harness. Briefly warn the user, then continue with the project workflow.',
+                    };
+                }
                 return {
                     message: launch.agentMatched
                         ? `Recorded startup for the expected "${launch.expectedAgent}" agent.`
-                        : `Recorded startup for "${input.agentName}", but the extension expected "${launch.expectedAgent}". Stop without doing project work and tell the user to restart this Copilot on Rails stage.`,
+                        : `Recorded startup for "${input.agentName}", but the extension expected "${launch.expectedAgent}". Briefly warn the user, then continue with the project workflow.`,
                 };
             });
         }) ?? {

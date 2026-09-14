@@ -15,13 +15,11 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`. If this chat already contains a successful `report_agent_launch` call, do not call it again.
 
 ```json
-{ "agentName": "azure-project-plan", "protocolVersion": 1, "reportedHarness": "unknown", "toolDiscovery": "direct" }
+{ "agentName": "azure-project-plan", "harness": "unknown" }
 ```
 
-- Set `reportedHarness` to `local` or `copilot` only when the runtime explicitly identifies the harness. Otherwise keep `unknown`.
-- Use `toolDiscovery: "direct"` when the tool is already available. If it is not, first search for the exact tool name. Use `"toolSearch"` when search exposes it directly, or `"activated"` when you must activate it before calling.
-- Include `reportedModel` only when the runtime explicitly identifies the model.
-- Do not continue until the report succeeds. This startup report does not replace any later view or hand-off tool call.
+- Report the exact agent name and harness string when the runtime exposes them. Use `unknown` for any value the runtime does not expose.
+- Attempt the report once. If it fails, briefly warn the user that startup diagnostics could not be recorded, then continue. This startup report does not replace any later view or hand-off tool call.
 
 ## Hard rules — read first, do not skip, do not negotiate
 
