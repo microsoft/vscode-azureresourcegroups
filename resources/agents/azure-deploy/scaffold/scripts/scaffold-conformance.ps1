@@ -1,4 +1,9 @@
 #!/usr/bin/env pwsh
+# ---------------------------------------------------------------------------------------------
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License. See LICENSE.md in the project root for license information.
+# ---------------------------------------------------------------------------------------------
+
 # Scaffold -> Deploy conformance gate.
 # Checks generated IaC against the plan for the semantic defects `az bicep build`
 # cannot catch (valid Bicep, wrong values) — the class that causes deploy healing.
