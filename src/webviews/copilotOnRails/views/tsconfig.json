@@ -12,6 +12,7 @@
         "strict": true,
         "noImplicitReturns": true,
         "allowSyntheticDefaultImports": true,
+        "allowImportingTsExtensions": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "noEmit": true,

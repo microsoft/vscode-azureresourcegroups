@@ -153,6 +153,16 @@ void runGraderAsync('generated infrastructure compiles and the agent reported it
         fail(`this stimulus asked the agent to generate deployment infrastructure and none reached the workspace: ${notApplicable.message}`);
     }
 
+    // `imperativeProvisioning` is a finding about the *absence* of a template, so there
+    // is nothing to hand the compiler. Falling through would invoke `az bicep build` on
+    // an undefined entry point and fail with "bicep exited 2 with no diagnostic this
+    // grader could parse", burying the actual finding — that the agent created real
+    // Azure resources without writing any infrastructure code — under a tooling error.
+    const imperative = offline.issues.find(issue => issue.code === 'imperativeProvisioning');
+    if (imperative) {
+        fail(imperative.message);
+    }
+
     // A stimulus that only asked for a scaffold has no manifest to grade, and failing it for
     // that would grade a contract the agent was never invoked under.
     const suppressionIssues = offline.issues.filter(issue => issue.code === 'suppressedBlockingDiagnostic');
