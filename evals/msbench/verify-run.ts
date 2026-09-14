@@ -290,11 +290,14 @@ interface ModelVerdict {
  * So there is no silent fallback to detect and no machinery worth building
  * for one.
  *
- * Existence is not identity, though. This checks the one line that states which
- * model actually became active, so that a future regression in model selection
- * shows up as a failed run rather than as a quietly mislabelled datapoint —
- * which matters most during model sweeps, where every run is supposed to be a
- * different model.
+ * Existence is not identity, though. This checks the lines that state which model
+ * actually became active, so that a future regression in model selection shows up
+ * as a failed run rather than as a quietly mislabelled datapoint — which matters
+ * most during model sweeps, where every run is supposed to be a different model.
+ *
+ * *Lines*, plural: a run can select more than once. One that starts on the
+ * requested model and switches mid-run is not a datapoint for either model, and
+ * reading only the first selection reports it as verified.
  *
  * `Set active model to: <id>` is emitted into `vsc-output/agent-output.log`
  * (mirrored in `entry.log`); present in all seven stored runs checked.
@@ -324,9 +327,22 @@ function verifyModel(outputDir: string, expectedOverride?: string): ModelVerdict
         join(outputDir, 'vsc-output', 'agent-output.log'),
         join(outputDir, 'entry.log'),
     );
-    const active = logPath
-        ? /Set active model to:\s*(\S+)/.exec(readFileSync(logPath, 'utf8'))?.[1]
-        : undefined;
+    // EVERY selection event, not the first.
+    //
+    // This was a single `.exec()`, which reads only the first match and so reports
+    // "verified" for a run that selected the requested model once and then switched.
+    // That is the exact symptom reported from the field — "it uses the model I picked
+    // once, then goes back to Sonnet" — and the old check could not have caught it:
+    // with one line read, a second, different line is invisible.
+    //
+    // It matters more now that the suite sweeps two models (see models.ts). A sweep
+    // datapoint labelled with a model that only answered the first turn is worse than
+    // no datapoint, because it gets quoted as a per-model result.
+    const selections = logPath
+        ? [...readFileSync(logPath, 'utf8').matchAll(/Set active model to:\s*(\S+)/gu)].map(match => match[1])
+        : [];
+    const active = selections[0];
+    const distinct = [...new Set(selections.map(id => id.trim().toLowerCase()))];
 
     if (!requested) {
         return { requested, active, mismatch: false, unverified: true, note: 'no modelSelector.id to compare against' };
@@ -346,7 +362,30 @@ function verifyModel(outputDir: string, expectedOverride?: string): ModelVerdict
         // pass. `unverified` is not `verified OK`.
         return { requested, active, mismatch: false, unverified: true, note: 'no "Set active model to:" line in agent-output.log or entry.log' };
     }
-    return { requested, active, mismatch: !modelMatches(requested, active) };
+    // More than one distinct model in one run is a mismatch regardless of which was
+    // requested: the run cannot be attributed to a single model, so it is not a usable
+    // datapoint for any of them — including the one that was asked for.
+    if (distinct.length > 1) {
+        return {
+            requested,
+            // Report the whole sequence, not the first selection. A banner reading
+            // "Requested: X / Active: X" above a mismatch verdict looks like a false
+            // alarm, and the reader dismisses the one line that matters.
+            active: selections.join(' -> '),
+            mismatch: true,
+            note: `MODEL DRIFT — ${selections.length} selection event(s) naming ${distinct.length} different models. `
+                + 'This run cannot be attributed to one model, so it is not a usable datapoint for any of them.',
+        };
+    }
+    const mismatch = !modelMatches(requested, active);
+    return {
+        requested,
+        active,
+        mismatch,
+        // Repeated-but-identical selections are normal and must still pass; say so,
+        // otherwise the next reader re-investigates a non-event.
+        note: !mismatch && selections.length > 1 ? `${selections.length} selection events, all ${active}` : undefined,
+    };
 }
 
 function banner(lines: string[]): void {
