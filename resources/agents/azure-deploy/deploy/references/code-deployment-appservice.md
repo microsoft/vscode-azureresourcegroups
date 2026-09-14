@@ -12,7 +12,7 @@ After IaC deployment creates the Azure resources, deploy application code.
 
 > ⛔ **TypeScript projects:** Oryx with `NODE_ENV=production` skips devDependencies. If `typescript`, `@types/*`, or build tools are in `devDependencies`, move them to `dependencies` before zipdeploy. Alternative: set `NPM_CONFIG_PRODUCTION=false` as app setting so Oryx installs devDeps during build.
 
-> ⛔ **Wait for App Service to stabilize** (F1: 30-120s cold start). Poll `az webapp show -g {rg} -n {app} --query state` every 10s, max 2 min. If not `Running`, check logs.
+> ⛔ **Wait for App Service to stabilize** (B1: ~30-90s cold start on a freshly created plan). Poll `az webapp show -g {rg} -n {app} --query state` every 10s, max 2 min. If not `Running`, check logs.
 
 When `deployStrategy.codeDeployPattern == "startup-install"`, surface: "⚠️ First cold start: 2-5 min (native module compilation)."
 

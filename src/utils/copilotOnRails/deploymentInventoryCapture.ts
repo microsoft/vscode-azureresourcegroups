@@ -44,7 +44,10 @@ export interface CollectDeploymentTargetsResult {
 
 /** Resolve an `AzureSubscription` by ID, or `undefined` when it isn't available (e.g. signed out). */
 export async function resolveSubscription(subscriptionId: string): Promise<AzureSubscription | undefined> {
-    const provider = await ext.subscriptionProviderFactory();
+    // Honours the testing override the same way `getAzureResourcesService()` does. Without it this
+    // path always reaches the real provider, so anything built on it — the deployment inventory and
+    // the migration firewall exception both — could only ever be tested up to its first Azure call.
+    const provider = ext.testing.overrideAzureSubscriptionProvider?.() ?? await ext.subscriptionProviderFactory();
     const subscriptions = await provider.getAvailableSubscriptions({ filter: false });
     return subscriptions.find((s) => s.subscriptionId === subscriptionId);
 }

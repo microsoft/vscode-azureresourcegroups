@@ -52,7 +52,7 @@ Read [validation-and-manifest.md](validation-and-manifest.md) and [scaffold-sche
 For each Container App resource in the generated Bicep:
 
 1. **cpu/memory combo** — verify `cpu` (must be type `string`) + `memory` is one of: `0.25/0.5Gi`, `0.5/1Gi`, `0.75/1.5Gi`, `1/2Gi`, `1.25/2.5Gi`, `1.5/3Gi`, `1.75/3.5Gi`, `2/4Gi`. FIXABLE: adjust to nearest valid combo (use smallest valid combo for sidecars/companions).
-2. **secretRef coverage** — every `secretRef` in container env vars must have a matching entry in `configuration.secrets[]`. Every KV secret URL in `secrets[]` must reference a `Microsoft.KeyVault/vaults/secrets` resource that exists in the generated modules. Missing secret resource → FIXABLE: add it to the KV module.
+2. **secretRef coverage** — every `secretRef` in container env vars must have a matching entry in `configuration.secrets[]` (native `name` + `value`). ⛔ **No `keyVaultUrl` / Key Vault** — a `keyVaultUrl` or any `Microsoft.KeyVault/vaults` resource is a BLOCK. Missing native secret entry → FIXABLE: add `{ name, value: <secureParam> }` to the CA's `secrets[]`.
 3. **probe path** — if `prereq-output.json.healthEndpoint` is non-null, verify `probePath` matches it. If null AND any `plainEnvVars` entry is named `BASE` or `PATH_PREFIX`, verify `probePath` starts with that value (not bare `/`). If null AND no BASE var: verify the app has a route handler for the probe path (check source entry point for `app.get('/')` or framework root handler) — bare `/` on a REST API with only sub-path routes (e.g., `/users`, `/messages`) returns 404 and blocks revision activation. FIXABLE: update `probePath` to a known GET endpoint from the app.
 
 FIXABLE errors: fix the Bicep → re-run `az bicep build` → proceed to Step 3c.

@@ -1,0 +1,15 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+// The shared webview theme maps Fluent's disabled button surface back to
+// `--vscode-button-background`, so a disabled (or already-actioned) button keeps
+// the primary/brand fill and still reads as interactive. VS Code's button
+// guidance renders those states on the neutral secondary surface instead, so the
+// control is entirely gray. Overriding the tokens — rather than the generated
+// Fluent rules — leaves every other system-defined button state intact.
+.fui-Button {
+    --colorNeutralBackgroundDisabled: var(--vscode-button-secondaryBackground, #313131) !important;
+    --colorNeutralForegroundDisabled: var(--vscode-disabledForeground, var(--vscode-button-secondaryForeground)) !important;
+}

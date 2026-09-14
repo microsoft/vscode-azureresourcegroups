@@ -6,8 +6,8 @@ Container Apps-specific Bicep patterns. For shared patterns (skeleton, naming, t
 
 Container Apps + ACR requires two-phase deployment (circular dependency: CA needs ACR image, ACR needs CA identity for AcrPull):
 
-1. **Phase 1:** Deploy Container App with placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`). ⛔ **No `registries` block, no KV `secretRef`.** The placeholder image is pulled from MCR (public). Use `registries: []` and `secrets: []`. **RBAC role assignments (AcrPull, KV Secrets User) ARE created in Phase 1** — they don't affect the placeholder deployment and need 1–2 minutes to propagate before Phase 2.
-2. **Phase 2:** Build + push app image to ACR, redeploy with real image + `registries` + KV `secretRef` entries. RBAC is already propagated from Phase 1.
+1. **Phase 1:** Deploy Container App with placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`). ⛔ **No `registries` block.** The placeholder image is pulled from MCR (public). Use `registries: []`. Native `secrets` (literal values) MAY be set in Phase 1 — they have no RBAC dependency. **The AcrPull role assignment IS created in Phase 1** — it doesn't affect the placeholder deployment and needs 1–2 minutes to propagate before Phase 2.
+2. **Phase 2:** Build + push app image to ACR, redeploy with real image + `registries`. AcrPull RBAC is already propagated from Phase 1.
 
 > ⛔ **Placeholder image listens on port 80, not your app's port.** Set `targetPort` conditionally: `var effectivePort = containerImage == 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' ? 80 : appPort`. Mismatched ports cause "Operation expired" (health probe can't reach container).
 
@@ -34,7 +34,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false  // ⛔ MANDATORY
       }
       registries: isPlaceholder ? [] : [{ server: acr.properties.loginServer, identity: 'system' }]
-      secrets: isPlaceholder ? [] : [ /* KV secretRefs here */ ]
+      secrets: [ { name: 'secret-key', value: secretKey } ] // native CA secrets (no RBAC dep) — NOT KV
     }
     template: {
       containers: [{
@@ -107,20 +107,18 @@ properties: {
 
 > ⛔ **ACR module:** `retentionPolicy` is **Premium-only**. For Basic/Standard ACR, omit `retentionPolicy` entirely — ARM rejects it.
 
-## Key Vault Secret References
+## Container Apps Secrets (Native — No Key Vault)
 
-> ⛔ **Container Apps does NOT support `@Microsoft.KeyVault(SecretUri=...)` syntax.** That is App Service-only. Container Apps uses `secretRef` with managed identity.
+> ⛔ **No Key Vault.** Container Apps store app-internal secrets in the app's **native** `secrets` array with a literal `value` supplied by an `@secure()` param at deploy time. NEVER use `keyVaultUrl`, `@Microsoft.KeyVault(...)`, or a KV `secrets` child resource.
 
-**Correct pattern — Container Apps secrets from Key Vault:**
+> ⛔ **Only app-internal secrets use `secretRef`.** Database, cache, and storage access is managed-identity + token — wire their **connection parameters as plain `env` values** (host, db name, MI username, `sslmode=require`), never a `secretRef`. `secretRef` is for things like `SECRET_KEY`/JWT/third-party API keys.
 
-> ❌ **WRONG — `environment().suffixes.keyvaultDns` produces double-dot URL:**
-> `keyVaultUrl: 'https://${kvName}${environment().suffixes.keyvaultDns}/secrets/...'`
-> That function returns `.vault.azure.net` (WITH leading dot) → `kv-name..vault.azure.net` → `ContainerAppSecretKeyVaultUrlInvalid`.
-> ✅ Use `keyVault.name` + `.vault.azure.net` (hardcoded domain) or `keyVaultModule.outputs.vaultUri`.
-
-> ⛔ **Every `secrets[].keyVaultUrl` in a Container App MUST have a matching `Microsoft.KeyVault/vaults/secrets` child resource in the KV module.** If the CA references `sshpass` via secretRef, the KV module must create that secret. Missing secrets → `SecretNotFound` at Phase 2 deploy.
+> Native secrets have no RBAC dependency, so they don't need the `isPlaceholder` gate that KV secretRefs required (two-phase wiring is still needed for ACR registries + real image — see § Two-Phase Wiring).
 
 ```bicep
+@secure()
+param secretKey string   // generated at deploy, passed via CLI --parameters, never committed
+
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   identity: {
     type: 'SystemAssigned'
@@ -128,22 +126,18 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   properties: {
     configuration: {
       secrets: [
-        {
-          name: 'db-connection-string'
-          // ⛔ Do NOT replace vault.azure.net with environment().suffixes.keyvaultDns — it adds a leading dot → double-dot URL
-          #disable-next-line no-hardcoded-env-urls
-          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/db-connection-string'
-          identity: 'system'  // Uses the CA's system-assigned managed identity
-        }
+        { name: 'secret-key', value: secretKey }   // ⛔ native CA secret — NOT keyVaultUrl
       ]
     }
     template: {
       containers: [{
         env: [
-          {
-            name: 'DATABASE_URL'
-            secretRef: 'db-connection-string'  // References the secret defined above
-          }
+          // App-internal secret via secretRef:
+          { name: 'SECRET_KEY', secretRef: 'secret-key' }
+          // Database via managed identity — plain connection params, NO password/secretRef:
+          { name: 'PGHOST', value: '${pgName}.postgres.database.azure.com' }
+          { name: 'PGUSER', value: containerAppName }  // the MI's DB principal name
+          { name: 'PGSSLMODE', value: 'require' }
         ]
       }]
     }
@@ -158,30 +152,21 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
 >   [
 >     { name: 'PORT', value: '8000' }
 >     { name: 'NODE_ENV', value: 'production' }
+>     // DB/cache via managed identity — plain connection params, no secretRef:
+>     { name: 'PGHOST', value: '${pgName}.postgres.database.azure.com' }
+>     { name: 'PGUSER', value: containerAppName }
 >   ],
 >   [
->     { name: 'DATABASE_URL', secretRef: 'db-connection-string' }
->     { name: 'REDIS_URL', secretRef: 'redis-connection-string' }
+>     { name: 'SECRET_KEY', secretRef: 'secret-key' }  // app-internal secret only
 >   ]
 > )
 > ```
 
-> ⛔ **KV Secrets User role scoped to Key Vault resource — NOT `resourceGroup()`.** Scoping to `resourceGroup()` causes 403.
-
-```bicep
-resource kvRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault                    // ⛔ scope to KV resource, not RG
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
-    principalId: containerApp.identity.principalId  // ⛔ object ID, NOT clientId
-    principalType: 'ServicePrincipal'
-  }
-}
-```
+> ⛔ **`principalId: containerApp.identity.principalId`** (object ID, NOT clientId) for the AcrPull role assignment. See [rbac-roles.md](rbac-roles.md) for the AcrPull role GUID.
 
 > ❌ **WRONG:** `principalId: .clientId` (not the object ID) or `identity: containerApp.id` in secrets[] (use `'system'` for system-assigned MI).
 
-> For KV secret seeding and dependency chain, see [env-var-secrets.md](env-var-secrets.md).
+> App-internal secrets are native CA secrets (literal `value` from an `@secure()` param) — there is no Key Vault, no KV role assignment, and no secret seeding into KV.
 
 ## Multi-Container Internal DNS
 

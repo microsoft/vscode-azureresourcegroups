@@ -15,11 +15,12 @@ Per-pillar Well-Architected Framework alignment for AppOnboard-generated infrast
 ## Security
 
 - System-assigned managed identity on all services
-- Key Vault for all secrets (no inline connection strings)
+- App-internal secrets stored on-compute (App Service app settings / CA native secrets) — ⛔ NO Key Vault; no inline/committed values
 - HTTPS-only + TLS 1.2+ on all endpoints
 - No public blob access on storage accounts
 - Private endpoints where budget allows (balanced/performance tiers)
-- No `administratorLogin` for SQL (Entra-only auth)
+- No `administratorLogin`/password or access key on ANY data service (SQL, PostgreSQL, MySQL, Redis, Storage, Cosmos) — Entra / managed-identity-only auth
+- Compute floor B1 / SWA Standard — no F1/D1/Free (managed identity is mandatory)
 
 ## Cost Optimization
 

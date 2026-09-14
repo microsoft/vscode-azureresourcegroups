@@ -15,6 +15,7 @@ import { TreeDataItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 import { ActivityLogTreeDataProvider } from "./tree/activityLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
+import type { MigrationFirewallOperations } from "./utils/copilotOnRails/migrationFirewallAccess";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace extActions {
@@ -93,6 +94,7 @@ export namespace ext {
     export namespace testing {
         export let overrideAzureServiceFactory: AzureResourcesServiceFactory | undefined;
         export let overrideAzureSubscriptionProvider: (() => AzureSubscriptionProvider) | undefined;
+        export let overrideMigrationFirewallOperations: MigrationFirewallOperations | undefined;
     }
 
     export let focusedGroup: GroupingKind | undefined;

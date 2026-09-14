@@ -154,7 +154,7 @@ export interface QuotaValidation {
   method?: "cli" | "what-if" | "unverifiable";
   /** The specific region that passed validation */
   verifiedRegion?: string;
-  /** The specific SKU that was validated (e.g., "B1", "F1") */
+  /** The specific SKU that was validated (e.g., "B1", "S1") */
   verifiedSku?: string;
   /** Regions checked during validation */
   checkedRegions?: string[];

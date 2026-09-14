@@ -91,6 +91,9 @@ function quoteLabelsInLine(line: string): string {
     // an arrowhead, so a rule for it could not be made safe.
     const afterBrackets = mapUnquotedSegments(line, (segment) => {
         let result = segment
+            // Double circle `(((text)))`, cylinder `[(text)]` and circle `((text))` are
+            // matched before the plain `[text]` rule so their delimiters survive, and the
+            // double circle runs first so the circle rule cannot claim its inner parens.
             .replace(/\(\(\(([^()\n]+)\)\)\)/g, (_match, label: string) => `(((${quote(label)})))`)
             // The cylinder body is lazy up to the first `)]` so a label that itself
             // contains parentheses — `[(Postgres (primary))]` — is quoted whole.
@@ -112,8 +115,16 @@ function quoteLabelsInLine(line: string): string {
             result = result.replace(/\{([^{}\n]+)\}/g, (_match, label: string) => `{${quote(label)}}`);
         }
 
-        // Edge labels: `-->|text|`.
-        return result.replace(/\|([^|\n]+)\|/g, (_match, label: string) => `|${quote(label)}|`);
+        // Edge labels: `-->|text|`. The opening `|` has to be anchored to the link that
+        // owns it, because an already-quoted edge label leaves its own pipes outside the
+        // quoted segment: `A -->|"one"| B -->|"two"| C` splits into an unquoted piece of
+        // `| B -->|`, whose two pipes would otherwise be read as a label and quote the
+        // connector itself into `|" B -->"|`. A link always ends in one of `-=.~>xo`, and
+        // a bare node id never does in a position where a label pipe could follow.
+        return result.replace(
+            /([-=.~][-=.~>xo]*)\|([^|\n]+)\|/g,
+            (_match, link: string, label: string) => `${link}|${quote(label)}|`,
+        );
     });
 
     // `click nodeId call handler(a, b)` is the one flowchart statement that puts an

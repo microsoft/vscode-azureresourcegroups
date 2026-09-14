@@ -14,9 +14,12 @@
  *    fine in a browser tab, so the failure is invisible to the agent, but the user can
  *    never click "Approve UI" and the whole flow stalls. That asymmetry is exactly why
  *    it needs a grader.
- * 2. **Seam integrity** — pages and hooks import the `api` object from `src/api/`, never
- *    the mock directly, which is what keeps integration the one-file swap the integrate
- *    agent's instructions assume.
+ * 2. **Seam integrity** — no file outside `src/api/` imports the mock. Pages and hooks are the
+ *    usual offenders, but a shared component or an auth provider that reaches for a fixture
+ *    breaks the swap just as hard: integrate deletes `src/mocks/`, so every importer outside
+ *    the seam needs an edit and the "one file changes" promise is gone. Reference data with no
+ *    plan route is not an exemption — it belongs behind the seam too, as an `ApiClient` method
+ *    the mock backs at scaffold time.
  *
  * Framework-specific checks are applied per detected framework rather than skipped, so
  * a non-Vite project cannot pass the embeddability section by default.
@@ -419,17 +422,28 @@ async function checkApiSeam(
         });
     }
 
-    // The mock is what makes the preview render without a backend; it must be typed as
-    // the seam contract so the live client is a drop-in replacement. Match the binding
-    // itself — `export const api: ApiClient = mockClient` in the entry file is the swap
-    // wiring, not the implementation, and must not stand in for it.
-    const mockBinding = /(?:const|let|var|class)\s+\w*(?:[Mm]ock|[Ss]tub|[Ff]ake)\w*\s*(?::\s*ApiClient\b|[^\n]*\b(?:implements|satisfies)\s+ApiClient\b)/;
-    const providesMockClient = seamSources.some(s => mockBinding.test(s));
+    // The mock is what makes the preview render without a backend; it must be typed as the seam
+    // contract so the live client is a drop-in replacement.
+    //
+    // Match the *implementation*, and neither the name nor the wiring:
+    //  - Naming is not part of the contract. `previewClient` / `sampleClient` satisfy the seam
+    //    exactly as well as `mockClient`, so keying on mock/stub/fake fails correct scaffolds.
+    //  - `export const api: ApiClient = mockClient` in the entry file is the swap wiring, not the
+    //    implementation, so an annotated binding only counts when a literal initialises it.
+    //  - The annotation legitimately appears in three places: on the binding, on a
+    //    `satisfies`/`implements` clause (which lands many lines below the opening brace, so this
+    //    must not be line-anchored), or on a factory's return type.
+    const mockImplementationForms = [
+        /(?:const|let|var)\s+\w+\s*:\s*ApiClient\s*=\s*[[{]/,
+        /\b(?:implements|satisfies)\s+ApiClient\b/,
+        /\)\s*:\s*ApiClient\s*(?:=>|\{)/,
+    ];
+    const providesMockClient = seamSources.some(source => mockImplementationForms.some(form => form.test(source)));
     if (!providesMockClient) {
         issues.push({
             code: 'missingMockClient',
             path: `${relativeFrontend}/src/api/`,
-            message: 'The seam must provide a scaffold-time `ApiClient` implementation backed by mock data.',
+            message: 'The seam must provide a scaffold-time implementation declared as `ApiClient` — `const mockClient: ApiClient = { … }`, a `satisfies ApiClient` object, a class that `implements ApiClient`, or a factory returning `ApiClient`. Deriving the type from the mock instead (`type ApiClient = typeof mockClient`) inverts the seam: integrate deletes the mock, which deletes the interface with it, so the live client has nothing to implement.',
         });
     }
 
@@ -453,7 +467,8 @@ function isTestFile(relative: string): boolean {
         || /(?:^|\/)setupTests\.[cm]?[jt]sx?$/.test(posix);
 }
 
-async function checkSeamNotBypassed(    frontendDirectory: string,
+async function checkSeamNotBypassed(
+    frontendDirectory: string,
     issues: ArtifactValidationIssue[],
 ): Promise<void> {
     const sourceRoot = path.join(frontendDirectory, 'src');
@@ -461,7 +476,12 @@ async function checkSeamNotBypassed(    frontendDirectory: string,
     const mockRoot = path.join(sourceRoot, 'mocks');
 
     for await (const file of walkSourceFiles(sourceRoot)) {
-        if (file.startsWith(seamRoot + path.sep) || file.startsWith(mockRoot + path.sep)) {
+        // The mock layer is allowed to be the mock layer. It is a folder (`src/mocks/data.ts`) in
+        // the documented layout, but agents also ship it as a single `src/mocks.ts` module — the
+        // same code playing the same role. Excluding only the folder makes the file form report
+        // itself as its own bypass, so both shapes are excluded.
+        const isMockModule = file.startsWith(mockRoot + path.sep) || stripSourceExtension(file) === mockRoot;
+        if (file.startsWith(seamRoot + path.sep) || isMockModule) {
             continue;
         }
         // Tests are supposed to reach for fixtures directly, and they are not part of the
@@ -481,10 +501,16 @@ async function checkSeamNotBypassed(    frontendDirectory: string,
             issues.push({
                 code: 'apiSeamBypassed',
                 path: path.relative(frontendDirectory, file).split(path.sep).join('/'),
-                message: `Imports "${bypass[1]}" directly instead of the \`src/api/\` seam, which breaks the one-file swap at integrate time.`,
+                message: `Imports "${bypass[1]}" directly instead of the \`src/api/\` seam, which breaks the one-file swap at integrate time. Reference data with no plan route is not an exemption — give the \`ApiClient\` interface a method for it and back that method with the mock.`,
             });
         }
     }
+}
+
+/** `src/mocks.ts` and `src/mocks/` are the same layer in two layouts; compare without the extension. */
+function stripSourceExtension(file: string): string {
+    const extension = path.extname(file);
+    return SOURCE_EXTENSIONS.has(extension) ? file.slice(0, -extension.length) : file;
 }
 
 async function* walkSourceFiles(directory: string): AsyncGenerator<string> {
