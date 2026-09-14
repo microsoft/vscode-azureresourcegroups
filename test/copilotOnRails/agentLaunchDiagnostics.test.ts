@@ -16,10 +16,6 @@ import {
 function launch(expectedAgent: string, id: string, attemptedAt: string): AgentLaunchDiagnostic {
     return appendAgentLaunch([], {
         expectedAgent,
-        vscodeVersion: '1.105.0',
-        extensionVersion: '0.12.8',
-        copilotChatVersion: '0.32.0',
-        harnessSettings: [],
     }, id, attemptedAt)[0];
 }
 
@@ -40,7 +36,6 @@ suite('agentLaunchDiagnostics', () => {
 
         const result = acknowledgeLatestAgentLaunch(launches, {
             agentName: 'azure-project-scaffold',
-            harness: 'unknown',
         }, '2026-09-12T10:01:01.000Z');
 
         assert.strictEqual(result.launches[0].acknowledgedAt, undefined);
@@ -49,7 +44,6 @@ suite('agentLaunchDiagnostics', () => {
             acknowledgedAt: '2026-09-12T10:01:01.000Z',
             reportedAgent: 'azure-project-scaffold',
             agentMatched: true,
-            reportedHarness: 'unknown',
         });
     });
 
@@ -73,7 +67,7 @@ suite('agentLaunchDiagnostics', () => {
                 const agentName = agentFile.replace('.agent.md', '');
                 const instructions = readFileSync(`${agentsRoot}/${agentFile}`, 'utf8');
                 assert.match(instructions, new RegExp(
-                    `"agentName": "${agentName}", "harness": "unknown"`,
+                    `"agentName": "${agentName}"`,
                 ));
                 assert.match(instructions, /If this chat already contains a successful `report_agent_launch` call, do not call it again\./);
                 assert.match(instructions, /search for the exact `report_agent_launch` tool name, activate it when needed, and retry\./);
@@ -87,11 +81,9 @@ suite('agentLaunchDiagnostics', () => {
 
         const result = acknowledgeLatestAgentLaunch(launches, {
             agentName: 'agent',
-            harness: 'future-harness',
         }, '2026-09-12T10:00:01.000Z');
 
         assert.strictEqual(result.acknowledgedLaunch?.reportedAgent, 'agent');
-        assert.strictEqual(result.acknowledgedLaunch?.reportedHarness, 'future-harness');
         assert.strictEqual(result.acknowledgedLaunch?.agentMatched, false);
     });
 
@@ -99,12 +91,10 @@ suite('agentLaunchDiagnostics', () => {
         const launches = [launch('azure-project-plan', 'launch-1', '2026-09-12T10:00:00.000Z')];
         const first = acknowledgeLatestAgentLaunch(launches, {
             agentName: 'azure-project-plan',
-            harness: 'local',
         }, '2026-09-12T10:00:01.000Z');
 
         const duplicate = acknowledgeLatestAgentLaunch(first.launches, {
             agentName: 'azure-project-plan',
-            harness: 'local',
         }, '2026-09-12T10:00:02.000Z');
 
         assert.strictEqual(duplicate.acknowledgedLaunch, undefined);

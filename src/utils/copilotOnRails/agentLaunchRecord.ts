@@ -3,15 +3,12 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { LocalHarnessSettingDiagnostic } from '../../webviews/copilotOnRails/extension/harnessSettings';
-
 const maxAgentLaunches = 20;
 
 export type ChatOpenCommandOutcome = 'pending' | 'completed' | 'error';
 
 export interface AgentLaunchAcknowledgement {
     agentName: string;
-    harness: string;
 }
 
 export interface AgentLaunchDiagnostic {
@@ -19,15 +16,9 @@ export interface AgentLaunchDiagnostic {
     expectedAgent: string;
     attemptedAt: string;
     chatOpenCommandOutcome: ChatOpenCommandOutcome;
-    expectedModel?: string;
-    vscodeVersion: string;
-    extensionVersion: string;
-    copilotChatVersion: string;
-    harnessSettings: LocalHarnessSettingDiagnostic[];
     acknowledgedAt?: string;
     reportedAgent?: string;
     agentMatched?: boolean;
-    reportedHarness?: string;
 }
 
 export type NewAgentLaunchDiagnostic = Omit<AgentLaunchDiagnostic, 'id' | 'attemptedAt' | 'chatOpenCommandOutcome'>;
@@ -69,7 +60,6 @@ export function acknowledgeLatestAgentLaunch(
         acknowledgedAt,
         reportedAgent: acknowledgement.agentName,
         agentMatched: current.expectedAgent === acknowledgement.agentName,
-        reportedHarness: acknowledgement.harness,
     };
     const updated = [...launches];
     updated[index] = acknowledgedLaunch;

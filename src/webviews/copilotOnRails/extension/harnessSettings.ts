@@ -21,31 +21,6 @@ const HARNESS_SETTINGS = [
 
 export const COPILOT_HARNESS_SETTING_IDS = HARNESS_SETTINGS.map(({ prefix, key }) => `${prefix}.${key}`);
 
-export interface LocalHarnessSettingDiagnostic {
-    settingId: string;
-    effectiveValue: boolean | null;
-    defaultValue: boolean | null;
-    globalValue: boolean | null;
-    workspaceValue: boolean | null;
-    workspaceFolderValue: boolean | null;
-}
-
-export function getLocalHarnessSettingDiagnostics(): LocalHarnessSettingDiagnostic[] {
-    const folder = workspace.workspaceFolders?.[0];
-    return HARNESS_SETTINGS.map(({ prefix, key }) => {
-        const configuration = workspace.getConfiguration(prefix, folder?.uri);
-        const inspected = configuration.inspect<boolean>(key);
-        return {
-            settingId: `${prefix}.${key}`,
-            effectiveValue: configuration.get<boolean>(key) ?? null,
-            defaultValue: inspected?.defaultValue ?? null,
-            globalValue: inspected?.globalValue ?? null,
-            workspaceValue: inspected?.workspaceValue ?? null,
-            workspaceFolderValue: inspected?.workspaceFolderValue ?? null,
-        };
-    });
-}
-
 /**
  * Ensures the local chat harness stays in use for a Copilot on Rails run by turning the two
  * experimental "Copilot Harness" settings off at Workspace scope. Like the raised chat request

@@ -14,7 +14,6 @@ export const reportAgentLaunchToolName = 'report_agent_launch';
 
 const reportAgentLaunchInputSchema = z.object({
     agentName: z.string(),
-    harness: z.string(),
 });
 
 export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSchema, typeof UnspecifiedOutputSchema> = {
@@ -29,7 +28,6 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
         return await callWithTelemetryAndErrorHandling(`mcpTool/${reportAgentLaunchToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: reportAgentLaunchToolName, extras }, async (corContext) => {
                 setCorProp(corContext, 'reportedAgentName', input.agentName);
-                setCorProp(corContext, 'reportedHarness', input.harness);
 
                 const launch = await recordAgentLaunchAcknowledgement(input);
                 if (!launch) {

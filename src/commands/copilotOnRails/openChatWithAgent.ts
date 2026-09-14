@@ -10,7 +10,7 @@ import { projectSubmissionState } from '../../tree/project/projectSubmissionStat
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { recordAgentLaunchAttempt, recordChatOpenCommandOutcome } from '../../utils/copilotOnRails/agentLaunchDiagnostics';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
-import { ensureLocalHarnessOn, getLocalHarnessSettingDiagnostics } from '../../webviews/copilotOnRails/extension/harnessSettings';
+import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
@@ -167,23 +167,9 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
 
-        const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
-        const harnessSettings = getLocalHarnessSettingDiagnostics();
-        for (const setting of harnessSettings) {
-            const telemetryKey = setting.settingId === 'chat.editor.preferCopilotHarness'
-                ? 'preferCopilotHarness'
-                : 'defaultToCopilotHarness';
-            setCorProp(context, telemetryKey, setting.effectiveValue ?? 'unknown');
-        }
-
         try {
             const launch = await recordAgentLaunchAttempt({
                 expectedAgent: agentName,
-                expectedModel: resolvedModel,
-                vscodeVersion: vscode.version,
-                extensionVersion: (ext.context.extension.packageJSON as { version?: string }).version ?? 'unknown',
-                copilotChatVersion: (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'unknown',
-                harnessSettings,
             });
             launchDiagnosticId = launch.id;
             setCorProp(context, 'agentLaunchDiagnosticRecorded', true);
