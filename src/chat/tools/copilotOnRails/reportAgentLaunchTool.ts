@@ -7,7 +7,6 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vs
 import { CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import { UnspecifiedOutputSchema } from '@microsoft/vscode-inproc-mcp/mcp';
 import { z } from 'zod/mini';
-import { recordAgentLaunchAcknowledgement } from '../../../utils/copilotOnRails/agentLaunchDiagnostics';
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from '../../../utils/copilotOnRails/telemetryUtils';
 
 export const reportAgentLaunchToolName = 'report_agent_launch';
@@ -27,23 +26,9 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${reportAgentLaunchToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: reportAgentLaunchToolName, extras }, async (corContext) => {
-                setCorProp(corContext, 'reportedAgentName', input.agentName);
-
-                const launch = await recordAgentLaunchAcknowledgement(input);
-                if (!launch) {
-                    setCorProp(corContext, 'agentLaunchAcknowledgementOutcome', 'noPendingLaunch');
-                    return {
-                        message: 'Recorded the agent startup report, but no pending Copilot on Rails launch was found.',
-                    };
-                }
-
-                setCorProp(corContext, 'agentLaunchAcknowledgementOutcome', 'recorded');
-                setCorProp(corContext, 'expectedAgentName', launch.expectedAgent);
-                setCorProp(corContext, 'agentNameMatched', launch.agentMatched);
+                setCorProp(corContext, 'agentName', input.agentName);
                 return {
-                    message: launch.agentMatched
-                        ? `Recorded startup for the expected "${launch.expectedAgent}" agent.`
-                        : `Recorded startup for "${input.agentName}", but the extension expected "${launch.expectedAgent}". Continue with the project workflow.`,
+                    message: 'Recorded the Copilot on Rails agent startup.',
                 };
             });
         }) ?? {

@@ -418,7 +418,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
-| `report_agent_launch` | Records the agent name exposed by the chat runtime. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. Reporting never blocks project work or warns the user. A successful call also proves that the chat session could reach the CoR MCP server. |
+| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. Reporting never blocks project work or warns the user. A successful call also proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -452,7 +452,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
-`copilotOnRails.createdAt`, `copilotOnRails.agentLaunches`, and `copilotOnRails.diagnosticEvents` (see below).
+`copilotOnRails.createdAt`, and `copilotOnRails.diagnosticEvents` (see below).
 
 `copilotOnRails.firewallLeases` is kept there too. Deploying can involve running outstanding database
 migrations, and if the database can only be reached from your machine, the deploy agent opens a
@@ -512,8 +512,8 @@ The diagnostics object has four fields:
 | --- | --- |
 | `prompt` | The project description the user typed. |
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
-| `agentLaunches` | Up to the **20 most recent** chat launch records. Each records the expected agent, whether the chat-open command completed, and the agent name reported through the CoR MCP server. A missing `acknowledgedAt` means `report_agent_launch` was not called. The reported name may be `unknown` when the runtime does not expose it. |
-| `diagnosticEvents` | Up to the **50 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+| `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
+| `diagnosticEvents` | Up to the **50 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. A successful `report_agent_launch` event records the reported `agentName`; the same property is sent with the tool's telemetry. Error messages are **masked** before being recorded. |
 
 Privacy guarantees, by design:
 
@@ -523,8 +523,6 @@ Privacy guarantees, by design:
   read‑only inspector.
 - Correlating identifiers (project id, Copilot session/request ids) are deliberately **excluded** so the
   draft can't be tied back to a user.
-- The launch record's `id` is generated locally and is not sent to telemetry. It only lets the extension
-  update the matching workspace-cached record after the chat-open command returns.
 
 When triaging, always ask the reporter to confirm they reviewed and redacted the `Diagnostics data` block
 before submitting.
@@ -535,7 +533,7 @@ before submitting.
 | --- | --- | --- |
 | *"Creating a project with Copilot requires an empty folder."* | The open folder isn't empty. | Click **Browse…** and pick an empty folder; VS Code reopens there and resumes. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
-| Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `agentLaunches`. A missing `acknowledgedAt` means the startup report never reached the CoR MCP server. If it arrived, compare `expectedAgent` with `reportedAgent` and inspect `agentMatched`. |
+| Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
 | Plan preview shows *"couldn't render this plan — didn't match the expected layout."* | `.azure/project-plan.md` diverged from the required numbered skeleton. | The plan agent must rewrite the plan to the exact template (numbered `## N.` headings, `**Status**` / `**Created**` / `**Mode**` rows, a `## 6. Design System & UI` section with a `**Component Library**:` row). |
 | The flow doesn't advance after an approval. | An agent didn't successfully call its hand‑off MCP tool. | Check the diagnostics event log for a missing `start_*` event; re‑trigger the stage. Agents must load a tool via `tool_search` → `activate_tools` if it isn't directly listed. |

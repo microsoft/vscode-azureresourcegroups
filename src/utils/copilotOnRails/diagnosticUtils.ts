@@ -5,7 +5,6 @@
 
 import { maskUserInfo, parseError } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
-import { AgentLaunchDiagnostic, getAgentLaunchDiagnostics } from "./agentLaunchDiagnostics";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 
 // #region prompt
@@ -86,7 +85,6 @@ export function getDiagnosticsMetadata(): DiagnosticsMetadata {
         prompt: getPrompt() ?? '',
         createdAt: getCreatedAt() ?? '',
         systemInfo: getRecordedSystemInfo(),
-        agentLaunches: getAgentLaunchDiagnostics(),
         diagnosticEvents: getDiagnosticEvents(),
     };
 }
@@ -177,11 +175,6 @@ export interface DiagnosticsMetadata {
      * The machine/runtime information captured when the project was first created.
      */
     systemInfo: Record<string, string>;
-    /**
-     * Chat launches initiated by the extension. A missing `acknowledgedAt` means the
-     * expected startup-report MCP tool was not called.
-     */
-    agentLaunches: AgentLaunchDiagnostic[];
     /**
      * The events recorded over a CoR workspace project's lifetime.
      */

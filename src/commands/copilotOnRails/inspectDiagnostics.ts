@@ -15,7 +15,7 @@ export async function inspectDiagnostics(context: IActionContext): Promise<void>
     context.telemetry.properties.isCopilotEvent = 'true';
 
     const metadata: DiagnosticsMetadata = getDiagnosticsMetadata();
-    if (!metadata.prompt && !metadata.createdAt && metadata.agentLaunches.length === 0 && metadata.diagnosticEvents.length === 0) {
+    if (!metadata.prompt && !metadata.createdAt && metadata.diagnosticEvents.length === 0) {
         void vscode.window.showInformationMessage(vscode.l10n.t('No Copilot on Rails diagnostics have been recorded for this workspace yet.'));
         return;
     }
