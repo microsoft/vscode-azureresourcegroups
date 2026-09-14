@@ -8,8 +8,9 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { agentLaunchProtocolVersion, recordAgentLaunchAttempt, recordChatOpenCommandOutcome } from '../../utils/copilotOnRails/agentLaunchDiagnostics';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
-import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
+import { ensureLocalHarnessOn, getLocalHarnessSettingDiagnostics } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
@@ -120,6 +121,25 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     return true;
 }
 
+async function tryRecordChatOpenCommandOutcome(
+    context: CopilotOnRailsContext,
+    launchDiagnosticId: string | undefined,
+    outcome: 'completed' | 'error',
+): Promise<void> {
+    if (!launchDiagnosticId) {
+        return;
+    }
+
+    try {
+        await recordChatOpenCommandOutcome(launchDiagnosticId, outcome);
+        setCorProp(context, 'agentLaunchDiagnosticOutcomeRecorded', true);
+    } catch (error) {
+        setCorProp(context, 'agentLaunchDiagnosticOutcomeRecorded', false);
+        setCorErrorProp(context, 'agentLaunchDiagnosticOutcomeError', parseError(error).message);
+        ext.outputChannel.warn(vscode.l10n.t('Could not update the Copilot agent launch diagnostics: {0}', parseError(error).message));
+    }
+}
+
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
     setCorProp(context, 'chatQueryLength', query.length);
 
@@ -133,6 +153,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     }
 
     agentLaunchInProgress = true;
+    let launchDiagnosticId: string | undefined;
     try {
         await ensureLocalHarnessOn();
 
@@ -146,6 +167,32 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
 
+        const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
+        const harnessSettings = getLocalHarnessSettingDiagnostics();
+        setCorProp(context, 'agentLaunchProtocolVersion', agentLaunchProtocolVersion);
+        for (const setting of harnessSettings) {
+            const telemetryKey = setting.settingId === 'chat.editor.preferCopilotHarness'
+                ? 'preferCopilotHarness'
+                : 'defaultToCopilotHarness';
+            setCorProp(context, telemetryKey, setting.effectiveValue ?? 'unknown');
+        }
+
+        try {
+            const launch = await recordAgentLaunchAttempt({
+                expectedAgent: agentName,
+                expectedModel: resolvedModel,
+                vscodeVersion: vscode.version,
+                extensionVersion: (ext.context.extension.packageJSON as { version?: string }).version ?? 'unknown',
+                copilotChatVersion: (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'unknown',
+                harnessSettings,
+            });
+            launchDiagnosticId = launch.id;
+            setCorProp(context, 'agentLaunchDiagnosticRecorded', true);
+        } catch (error) {
+            setCorProp(context, 'agentLaunchDiagnosticRecorded', false);
+            setCorErrorProp(context, 'agentLaunchDiagnosticError', parseError(error).message);
+        }
+
         // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
         // command is the supported way to launch one. If the mode hasn't been discovered yet this
         // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
@@ -155,7 +202,9 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
             query,
             ...(selector ? { modelSelector: selector } : {}),
         });
+        await tryRecordChatOpenCommandOutcome(context, launchDiagnosticId, 'completed');
     } catch (err) {
+        await tryRecordChatOpenCommandOutcome(context, launchDiagnosticId, 'error');
         const message = err instanceof Error ? err.message : String(err);
         setCorProp(context, chatLaunchOutcomeKey, 'error');
         setCorErrorProp(context, 'chatLaunchError', message);

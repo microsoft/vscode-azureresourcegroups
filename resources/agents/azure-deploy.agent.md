@@ -10,6 +10,19 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 
 # Azure Deployment Agent
 
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`. If this chat already contains a successful `report_agent_launch` call, do not call it again.
+
+```json
+{ "agentName": "azure-deploy", "protocolVersion": 1, "reportedHarness": "unknown", "toolDiscovery": "direct" }
+```
+
+- Set `reportedHarness` to `local` or `copilot` only when the runtime explicitly identifies the harness. Otherwise keep `unknown`.
+- Use `toolDiscovery: "direct"` when the tool is already available. If it is not, first search for the exact tool name. Use `"toolSearch"` when search exposes it directly, or `"activated"` when you must activate it before calling.
+- Include `reportedModel` only when the runtime explicitly identifies the model.
+- Do not continue until the report succeeds. This startup report does not replace any later view or hand-off tool call.
+
 ## Azure Resources MCP Tools
 
 Every `copilot-azure-resources-extension-tools/*` tool this agent uses is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
@@ -32,7 +45,7 @@ The project may already have an approved `.azure/project-plan.md`, a completed `
 
 ## Mandatory workflow
 
-Your first action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
+After the startup report, your first workflow action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
 
 📖 **[`.github/agents/azure-deploy/instructions.md`](.github/agents/azure-deploy/instructions.md)**
 

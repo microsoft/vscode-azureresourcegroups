@@ -10,6 +10,19 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 
 # Azure Project Plan Agent
 
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`. If this chat already contains a successful `report_agent_launch` call, do not call it again.
+
+```json
+{ "agentName": "azure-project-plan", "protocolVersion": 1, "reportedHarness": "unknown", "toolDiscovery": "direct" }
+```
+
+- Set `reportedHarness` to `local` or `copilot` only when the runtime explicitly identifies the harness. Otherwise keep `unknown`.
+- Use `toolDiscovery: "direct"` when the tool is already available. If it is not, first search for the exact tool name. Use `"toolSearch"` when search exposes it directly, or `"activated"` when you must activate it before calling.
+- Include `reportedModel` only when the runtime explicitly identifies the model.
+- Do not continue until the report succeeds. This startup report does not replace any later view or hand-off tool call.
+
 ## Hard rules — read first, do not skip, do not negotiate
 
 **These rules override any other skill, training, or assumption.** Violating any one of them breaks the user-facing flow.
