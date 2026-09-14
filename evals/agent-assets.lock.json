@@ -1,7 +1,7 @@
 {
-    "agentAssetsHash": "4ee3e2581dc5961353f50b52b1527846568f954dfbfaccd315373fb86c5e296d",
+    "agentAssetsHash": "dcfcf27ffe59c7f581306b80f96c42c37a210b8d29584588847e88f54e59c015",
     "scope": "azure-debug-generate.agent.md, azure-debug-generate/**, azure-debug-plan.agent.md, azure-debug-plan/**, azure-deploy.agent.md, azure-deploy/**, azure-project-integrate.agent.md, azure-project-integrate/**, azure-project-plan.agent.md, azure-project-plan/**, azure-project-scaffold.agent.md, azure-project-scaffold/**, shared-references/**",
-    "updatedAt": "2026-09-14T18:19:33.749Z",
+    "updatedAt": "2026-09-14T18:29:22.765Z",
     "files": {
         "azure-debug-generate.agent.md": "3fdfda50d9833fea3f5e11d02bd9691b6bff83fc0c73d6df3f5e5ef6fbaad07a",
         "azure-debug-generate/.metadata.json": "c0ccce18678415f23db0073d48cc646f2de446e7821c99c3130553548d958e0c",
@@ -35,7 +35,7 @@
         "azure-debug-plan/references/plan-template.md": "e3a1d72d910409ebb7d2ae0a034c7fb69485b033c3b322d3b8431a272649b05d",
         "azure-debug-plan/references/project-types.md": "bfa27fbbe95be139f6390f2c8fa4719d36c1a577c512885e2eb2c8cf89b8cc58",
         "azure-debug-plan/references/runtimes.md": "f84769fe13f8464524f8ddeab6e325ea37b91ff2d7ec033d74748fe8a9924904",
-        "azure-deploy.agent.md": "eaf0226363a762fda081e02d40a21d72f0f1a9e114fd1e15ee45c04feef28d75",
+        "azure-deploy.agent.md": "561186eb34ffa1dbdbef35ceedb904ea2221528f743ecf89ca72f8e20b118bb9",
         "azure-deploy/.metadata.json": "be0709e660b5da6f558d73e464bed2cd39a3382619bc9076796078843d43cb56",
         "azure-deploy/cor-references/migration-access.md": "2dce754d450740ade47ab1079e1d3046850c54da7d5acc19209825af8f9fdfb0",
         "azure-deploy/deploy/instructions.md": "054c0a8c8fe9db5f1afbddf3efd8d3a4aeb7f19994fe3f96939c53ef57b44706",
