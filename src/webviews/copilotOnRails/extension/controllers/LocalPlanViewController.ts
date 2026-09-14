@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { buildChatOpenOptions, launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
@@ -81,13 +81,10 @@ export class LocalPlanViewController extends CopilotOnRailsWebviewController<Rec
         const approvalOutcomeKey = 'approvalOutcome';
         await ensureAgentInstructions(context, azureDebugPlanAgent);
 
-        // Fresh chat session for the approval hand-off so the next phase starts with a
-        // clean context window.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
-            mode: azureDebugPlanAgent,
-            query: 'I approve the debug setup plan.',
-        }));
+        if (!(await launchAgentChat(context, azureDebugPlanAgent, 'I approve the debug setup plan.'))) {
+            setCorProp(context, approvalOutcomeKey, 'launchFailed');
+            return false;
+        }
 
         setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
