@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 // Mock State Switcher - forces data/loading/empty/error states for preview verification
 
 export type PreviewDataState = 'data' | 'loading' | 'empty' | 'error';

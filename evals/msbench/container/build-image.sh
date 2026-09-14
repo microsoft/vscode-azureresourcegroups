@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ---------------------------------------------------------------------------------------------
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License. See LICENSE.md in the project root for license information.
+# ---------------------------------------------------------------------------------------------
+
 # Build and push the Copilot-on-Rails benchmark image to our own ACR.
 #
 # ── Why this script exists ────────────────────────────────────────────────────
