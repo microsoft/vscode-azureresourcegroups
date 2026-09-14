@@ -28,8 +28,36 @@
 # and the model half of that key is read from here: `--model .` makes the vscode
 # plugin resolve the model from this block rather than from the CLI flag. Changing
 # `id` therefore moves our runs into a different queue — see README.md, "Run queueing".
+#
+# MSBench sweeps TWO models, one per family: `gpt-5.6-sol` and `claude-sonnet-4.6`.
+# The set lives in `models.ts` — do not restate it here, and do not widen it by
+# editing this id. `build-config.ts` refuses to build a config for anything outside
+# the set, whether it arrived from here or from `--model`. To run the other one:
+#
+#     ./run.sh --model claude-sonnet-4.6 --stimulus photo-app-requirements
+#
+# Why two rather than all five families the product supports: one run per stimulus is
+# forced (see the note above on `promptSteps`), and README-redteam.md asks for the
+# red-team corpus on every model swept, so cost is per-model across the whole suite.
+# One GPT and one Claude catches the divergences that matter — #1807 is a live case
+# where two models disagreed on a security prompt.
+#
+# This pinned `claude-sonnet-4.5` for 66 of the corpus's 93 runs: a version that never
+# existed. That exact pin is now refused — the sweep set is exact ids, so anything
+# outside it fails before submission. What is NOT caught here is a dead version put
+# into `models.ts` itself: the product matches models by FAMILY
+# (`supportedModelNames` in src/utils/copilotOnRails/modelSelection.ts) and no longer
+# pins versions, so `claude-sonnet-4.5` passes the family check — it is a real
+# `Sonnet`. That case is caught at launch, where an unknown id hard-fails with
+# `X_MODEL_NOT_FOUND_ERROR` before any agent turn, and afterwards by `verify-run.ts`
+# comparing the model that answered against the one requested.
+#
+# `gpt-5.6-sol` is the default because it is the one of the two MEASURED to dispatch.
+# `claude-sonnet-4.6` failed outright with
+# `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
+# (run 2026090974671590, 2026-09-09), so re-test it before quoting a Claude datapoint.
 modelSelector:
-  id: claude-sonnet-4.5
+  id: gpt-5.6-sol
   vendor: copilot
 
 # Set explicitly because the defaults (6300 / 2700 / 300) are sized for a

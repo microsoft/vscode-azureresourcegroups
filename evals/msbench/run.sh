@@ -22,13 +22,15 @@
 #                            # run a stack instead: the prompt and the gate
 #                            # wiring are derived from config/stacks/<id>.yaml
 #                            # rather than hand-written. See config/gates.yaml.
-#   ./run.sh --model claude-opus-4.7
+#   ./run.sh --model claude-sonnet-4.6
 #                            # retarget the run without editing config/base.yaml.
-#                            # The suite requires every supported model, and this
-#                            # is the only way to sweep one without mutating the
-#                            # shared default. NOTE: the model is half the CES
-#                            # queueing key, so overridden runs queue separately
-#                            # from default-model ones.
+#                            # MSBench sweeps two models — gpt-5.6-sol (the
+#                            # default) and claude-sonnet-4.6 — and this is the
+#                            # only way to reach the other without mutating the
+#                            # shared default. Anything outside that set is
+#                            # refused; see models.ts. NOTE: the model is half
+#                            # the CES queueing key, so overridden runs queue
+#                            # separately from default-model ones.
 #   BENCHMARK=corbench.cor_functions_host \
 #     ./run.sh --dataset evals/msbench/container/dataset.jsonl
 #                            # run inside our own container image, which carries
