@@ -18,7 +18,7 @@ const reportAgentLaunchInputSchema = z.object({
 
 export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSchema, typeof UnspecifiedOutputSchema> = {
     name: reportAgentLaunchToolName,
-    description: 'Record which Copilot on Rails custom agent and chat environment received the current launch request. CoR agents must call this before doing any project work.',
+    description: 'Record which Copilot on Rails custom agent received the current launch request.',
     inputSchema: reportAgentLaunchInputSchema,
     annotations: {
         openWorldHint: false,
