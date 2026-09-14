@@ -1,5 +1,11 @@
 # Deploy — IaC Execution & Health Verification
 
+> ⛔ **Read [`references/blocked-patterns.md`](references/blocked-patterns.md) before your first resource-creating command.**
+>
+> The trigger is **any** command that can create Azure resources — `az … create`, `az … up`, `azd up`, `azd provision`, `terraform apply` — not only `az deployment sub create`. Keying it to the declarative command alone made the rule unreachable on the path that most needs it: an agent that decided to provision imperatively never ran `az deployment sub create`, so it never reached the file explaining that imperative provisioning is forbidden.
+>
+> **This phase deploys a template. It does not create resources by hand.** If `infra/` holds no template, you are not ready to deploy — return to scaffold and generate one. Reaching for `az containerapp up` because the template is failing is the one fallback that is never available.
+
 ## Quick Reference
 
 | Property | Value |
