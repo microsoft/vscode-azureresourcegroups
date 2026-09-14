@@ -124,6 +124,14 @@
       ]
     },
     {
+      "id": "reference-frontend-integrated",
+      "path": "evals/grader-certification/reference-frontend-integrated",
+      "description": "The frontend after azure-project-integrate has swapped the ApiClient seam: src/api/index.ts binds `api` to a live client that calls the API over fetch, and the mock layer is deleted. Its sibling is stage-local-dev, which is the same shape before the swap, so between them they pin both ends of the one change that agent exists to make. Hand-written rather than harvested because no run has ever exercised the seam swap — that gap is what frontend-seam-live was written to close.",
+      "offlineValidators": [
+        "frontend-seam-live"
+      ]
+    },
+    {
       "id": "safety-boundaries-empty",
       "path": "evals/grader-certification/safety-boundaries-empty",
       "description": "A workspace the agent produced nothing in — the refusal outcome, and the shape of a run that was throttled or pointed at the wrong directory. Every check in this suite is negative, so an empty tree scores a clean sweep of the whole security suite unless the liveness precondition stops it. It shipped broken once (#1767), because the file count was satisfied by the 152 instruction files the phase preamble stages. Its golden expectation is therefore preconditionUnmet, not a pass: if someone later makes an empty workspace fall through to green, certification goes red instead of the security suite going quietly green.",
@@ -1453,6 +1461,65 @@
       "file": "services/web/package.json",
       "operation": "delete",
       "expectedCode": "frontendNotFound"
+    },
+    {
+      "comment": "The headline failure this gate was written for: the integrate agent produced its artifact and its tool calls, and never touched the one line that wires the app. Every existing assertion in integrate-seam.yaml still passes on this tree.",
+      "id": "seam-reverted-to-mock",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "file": "services/web/src/api/index.ts",
+      "operation": "replace",
+      "search": "import { liveClient } from './client';\n\nexport const api: ApiClient = liveClient;",
+      "replacement": "import { mockClient } from './mockClient';\n\nexport const api: ApiClient = mockClient;",
+      "expectedCode": "seamStillMocked"
+    },
+    {
+      "comment": "The case that stops this gate being a spell-check on an identifier. The seam points at something called liveClient, the mock layer is gone, nothing imports mocks/ - and the client returns a canned value without ever calling the API. Every other rule in the contract passes here.",
+      "id": "live-client-is-a-renamed-mock",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "file": "services/web/src/api/client.ts",
+      "operation": "replace",
+      "search": "  const res = await fetch(`${BASE}${path}`, {\n    headers: { 'content-type': 'application/json' },\n    ...init,\n  });\n  if (!res.ok) {\n    throw new Error(`${init?.method ?? 'GET'} ${path} failed with ${res.status}`);\n  }\n  return (await res.json()) as T;",
+      "replacement": "  void init;\n  return ([] as unknown) as T;",
+      "expectedCode": "liveClientIssuesNoRequests"
+    },
+    {
+      "comment": "wire-live-data.md leans on the annotation for its correctness argument - 'Because liveClient is typed : ApiClient, the compiler guarantees it covers every method the pages already call.' Without it a half-implemented client compiles and fails on the first missing method at runtime.",
+      "id": "live-client-loses-its-interface-annotation",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "file": "services/web/src/api/client.ts",
+      "operation": "replace",
+      "search": "export const liveClient: ApiClient = {",
+      "replacement": "export const liveClient = {",
+      "expectedCode": "liveClientUntyped"
+    },
+    {
+      "comment": "'Remove the mock layer. Delete src/api/mockClient.ts and src/mocks/*.' A surviving copy is what lets a page drift back onto it later, which is the failure the scaffold-side apiSeamBypassed check exists for at the other end of the chain.",
+      "id": "mock-client-left-behind",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "file": "services/web/src/api/mockClient.ts",
+      "operation": "create",
+      "replacement": "import type { ApiClient } from './types';\n\nexport const mockClient: ApiClient = {} as ApiClient;\n",
+      "expectedCode": "mockClientRetained"
+    },
+    {
+      "comment": "The worse half of the mock-layer rule: deleted from the seam, still imported by a page. The contract states it as a search - 'a search of the frontend src/ for mock / mockData / previewState must find nothing that is still imported'.",
+      "id": "page-reaches-past-the-seam-to-mocks",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "file": "services/web/src/pages/TasksPage.tsx",
+      "operation": "replace",
+      "search": "import { api } from '../api';",
+      "replacement": "import { api } from '../api';\nimport { seedTasks } from '../mocks/data';",
+      "expectedCode": "mockStillImported"
     }
   ]
 }
