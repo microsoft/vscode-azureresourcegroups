@@ -32,6 +32,37 @@ suite('quoteMermaidLabels', () => {
             );
         });
 
+        test('quotes a double circle without collapsing it into a circle', () => {
+            // The circle rule's body accepts `(`, so without a double-circle rule ahead of
+            // it `A(((Core)))` came out as `A(("(Core")))` — a diagram that rendered before
+            // normalization stopped rendering after it.
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A(((Core))) --> B'),
+                'graph LR\n    A((("Core"))) --> B',
+            );
+        });
+
+        test('quotes each edge label on a line that chains several edges', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A -->|one| B -->|two| C'),
+                'graph LR\n    A -->|"one"| B -->|"two"| C',
+            );
+        });
+
+        test('quotes the remaining edge label when one is already quoted', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A -->|"one"| B -->|two| C'),
+                'graph LR\n    A -->|"one"| B -->|"two"| C',
+            );
+        });
+
+        test('quotes edge labels on the dotted, thick and circle-end link forms', () => {
+            assert.strictEqual(
+                quoteMermaidLabels('graph LR\n    A -.->|dotted| B ==>|thick| C --o|circle| D --x|cross| E'),
+                'graph LR\n    A -.->|"dotted"| B ==>|"thick"| C --o|"circle"| D --x|"cross"| E',
+            );
+        });
+
         test('quotes stadium, subroutine and hexagon labels without losing the shape', () => {
             assert.strictEqual(
                 quoteMermaidLabels('graph LR\n    A([Stadium]) --> B[[Subroutine]] --> C{{Hexagon}}'),
@@ -74,6 +105,24 @@ suite('quoteMermaidLabels', () => {
         test('is idempotent', () => {
             const once = quoteMermaidLabels('graph LR\n    A[API] -->|calls| B[(DB)]');
             assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('is idempotent on a line that chains several edge labels', () => {
+            // A single-edge line cannot catch this: the corruption needed two quoted edge
+            // labels with a bare node between them, so that the unquoted piece of the split
+            // line was `| B -->|` and the connector itself looked like a label.
+            const once = quoteMermaidLabels('graph LR\n    A -->|one| B -->|two| C');
+            assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('is idempotent on a double circle', () => {
+            const once = quoteMermaidLabels('graph LR\n    A(((Core))) --> B');
+            assert.strictEqual(quoteMermaidLabels(once), once);
+        });
+
+        test('leaves an already-quoted chain of edge labels alone', () => {
+            const code = 'graph LR\n    A -->|"one"| B -->|"two"| C';
+            assert.strictEqual(quoteMermaidLabels(code), code);
         });
 
         test('does not touch brackets, braces or pipes inside an already-quoted label', () => {

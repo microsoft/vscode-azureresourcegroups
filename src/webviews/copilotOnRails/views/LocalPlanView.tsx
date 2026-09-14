@@ -1034,6 +1034,28 @@ const CodeBlock = ({
     </div>
 );
 
+/**
+ * Renders `code` with labels quoted, falling back to the diagram exactly as the
+ * author wrote it if that rewrite is what mermaid rejects.
+ *
+ * `quoteMermaidLabels` is a regex pass over a real grammar, so it can always
+ * meet a shape it reads wrong. The fallback keeps it strictly an improvement:
+ * it can rescue a diagram mermaid would have refused, and it can never be the
+ * reason a diagram that used to render stops rendering.
+ */
+const renderMermaid = async (id: string, code: string): Promise<string> => {
+    const quoted = quoteMermaidLabels(code);
+    try {
+        return (await mermaid.render(id, quoted)).svg;
+    } catch (err) {
+        if (quoted === code) {
+            throw err;
+        }
+        // A fresh id: mermaid leaves the failed attempt's scratch element behind.
+        return (await mermaid.render(`${id}-verbatim`, code)).svg;
+    }
+};
+
 const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
     const ref = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
@@ -1041,9 +1063,8 @@ const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
     useEffect(() => {
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
-        mermaid
-            .render(id, quoteMermaidLabels(code))
-            .then(({ svg }) => {
+        renderMermaid(id, code)
+            .then((svg) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
                     setError(null);
