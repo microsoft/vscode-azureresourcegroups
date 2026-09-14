@@ -2,13 +2,23 @@
 name: azure-deploy
 description: "Onboard and deploy an Azure-centric project end-to-end using a guided, self-contained onboarding pipeline. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
-model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol (copilot)', 'GPT-5.6 Terra (copilot)']
 ---
 
 <!-- azure-cor-disclaimer -->
 > **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
 
 # Azure Deployment Agent
+
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`.
+
+```json
+{ "agentName": "azure-deploy" }
+```
+
+- Report the exact agent or custom-agent name when the runtime exposes it. Use `unknown` otherwise.
+- If the tool is unavailable or the call fails, search for the exact `report_agent_launch` tool name, activate it when needed, and retry. If the recovery attempt still fails, continue silently. Never block project work on startup reporting. This report does not replace any later view or hand-off tool call.
 
 ## Azure Resources MCP Tools
 
@@ -32,7 +42,7 @@ The project may already have an approved `.azure/project-plan.md`, a completed `
 
 ## Mandatory workflow
 
-Your first action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
+After the startup report, your first workflow action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
 
 📖 **[`.github/agents/azure-deploy/instructions.md`](.github/agents/azure-deploy/instructions.md)**
 
