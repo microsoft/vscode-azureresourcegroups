@@ -70,36 +70,36 @@ your explicit action.
 
 ```mermaid
 flowchart TD
-    Start([Create New Project With Copilot]) --> Prompt[Describe your project]
+    Start(["Create New Project With Copilot"]) --> Prompt["Describe your project"]
     Prompt --> Plan
-    StartupReport{{report_agent_launch<br/>first action in every agent}}
+    StartupReport{{"report_agent_launch<br/>once per chat session and agent"}}
 
-    subgraph Plan[1 · azure-project-plan]
-        Req[Requirements view] --> PlanDoc[.azure/project-plan.md] --> PlanView[Plan preview + approve]
+    subgraph Plan["1 · azure-project-plan"]
+        Req["Requirements view"] --> PlanDoc[".azure/project-plan.md"] --> PlanView["Plan preview + approve"]
     end
 
-    Plan -->|start_project_scaffold| Scaffold
+    Plan -->|"start_project_scaffold"| Scaffold
 
-    subgraph Scaffold[2 · azure-project-scaffold]
-        Gen[Generate frontend/backend/db] --> Preview[Frontend preview + Approve UI]
+    subgraph Scaffold["2 · azure-project-scaffold"]
+        Gen["Generate frontend/backend/db"] --> Preview["Frontend preview + Approve UI"]
     end
 
-    Scaffold -->|start_project_integrate| Integrate
+    Scaffold -->|"start_project_integrate"| Integrate
 
-    subgraph Integrate[3 · azure-project-integrate]
-        Wire[Wire to live data + migrations] --> Smoke[Smoke-test end-to-end] --> Next1[Next Steps view]
+    subgraph Integrate["3 · azure-project-integrate"]
+        Wire["Wire to live data + migrations"] --> Smoke["Smoke-test end-to-end"] --> Next1["Next Steps view"]
     end
 
-    Next1 -->|start_local_development| Debug
+    Next1 -->|"start_local_development"| Debug
 
-    subgraph Debug[4-5 · azure-debug-plan / azure-debug-generate]
-        DbgPlan[.azure/vscode-debug-plan.md] --> DbgGen[Emulators + launch/tasks] --> Next2[Debug Next Steps view]
+    subgraph Debug["4-5 · azure-debug-plan / azure-debug-generate"]
+        DbgPlan[".azure/vscode-debug-plan.md"] --> DbgGen["Emulators + launch/tasks"] --> Next2["Debug Next Steps view"]
     end
 
-    Next2 -->|start_deployment| Deploy
+    Next2 -->|"start_deployment"| Deploy
 
-    subgraph Deploy[6 · azure-deploy]
-        DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
+    subgraph Deploy["6 · azure-deploy"]
+        DepPlan["prepare-plan.json"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
     end
 
     StartupReport -.-> Plan
@@ -107,7 +107,7 @@ flowchart TD
     StartupReport -.-> Integrate
     StartupReport -.-> Debug
     StartupReport -.-> Deploy
-    Deploy --> Done([azd up])
+    Deploy --> Done(["azd up"])
 ```
 
 Each box is a **chat agent** (a `*.agent.md` under `resources/agents/`). Agents hand off to each other by
@@ -395,7 +395,8 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 
 Six agents form the pipeline. Each is a `*.agent.md` under [`resources/agents/`](../resources/agents/); their
 step‑by‑step instructions live in the sibling folders and are copied into your workspace at
-`.github/agents/` before they run.
+`.github/agents/` before they run. Each agent reports its launch once per chat session. Repeated startup
+calls from later turns in the same chat are ignored.
 
 | # | Agent | Reads | Writes | Hands off with |
 | --- | --- | --- | --- | --- |
@@ -422,7 +423,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
-| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
+| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -591,6 +592,8 @@ The diagnostics object has four fields:
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
 | `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
 | `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+
+`report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 
 Privacy guarantees, by design:
 
