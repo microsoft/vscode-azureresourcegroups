@@ -30,6 +30,7 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
+        "onCommand:copilotOnRails.createProjectWithCopilot",
         "workspaceContains:**/.azure/.pending-create",
         "workspaceContains:**/.azure/project-plan.md",
         "workspaceContains:**/.azure/requirements.json",
