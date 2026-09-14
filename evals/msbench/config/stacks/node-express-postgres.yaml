@@ -75,4 +75,20 @@ knownGaps:
       variant that persists in memory — the latter is one data file, which is
       the point of the schema.
 
+      OVERTAKEN, on both halves. The premise was that a datastore implies Docker;
+      it does not. The custom image installs PostgreSQL at build time and
+      config/phases/local.yaml starts it in the preamble, neither of which needs a
+      container — measured end to end by container/verify-emulators.sh and by run
+      2026083068733550, where runtime-crud completed a real POST-then-GET
+      round-trip through `pg`. The gate also no longer stands down on the package
+      name: `datastoreServerReachable` probes the port, so it only reports this
+      reason when nothing is listening.
+
+      This entry is therefore unobservable rather than merely stale — `phases: [plan]`
+      below means runtime-crud never runs for this stack at all, which is why
+      `npm run gate-health` lists it under DECLARED BUT NEVER OBSERVED. It is kept
+      because it stays true on the stock image, where no PostgreSQL is installed.
+      The way to retire it is to give this stack the local phase and measure what
+      runtime-crud actually reports, not to delete the line.
+
 phases: [plan]

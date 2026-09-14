@@ -78,6 +78,31 @@ promptSteps:
       - comment: Agent should have opened the scaffold next steps view
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_scaffold_next_steps_view%'
 
+      # The swap itself — the one change this agent exists to make, and until now the
+      # one thing nothing here observed. Every other assertion in this stimulus passes
+      # on an agent that writes a flawless integration-plan.md, opens the right view,
+      # and never touches `src/api/index.ts`; the app it "integrated" still renders
+      # `src/mocks/data.ts`.
+      #
+      # `gate-health` found the same hole from the other end. `runtime-frontend-api` —
+      # "the two halves of the app talk to each other" — is the suite's only never-passed
+      # gate, 0 passes in 17 runs, because it is wired to `phases: [local]` and the local
+      # phase runs the debug agents rather than integrate. It asks whether the halves are
+      # connected at the one point in the chain where the scaffold's contract says they
+      # are deliberately not.
+      #
+      # Certified offline against `reference-frontend-integrated`, whose mutations cover
+      # the seam reverted to the mock, a "live" client that issues no HTTP request at all,
+      # and a surviving mock layer — so a green here cannot be a rename.
+      - comment: the frontend API seam points at a live client
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-frontend-seam-live.ts
+
+      # Recorded, not asserted. On a red seam assertion the first question is which
+      # client the seam actually names, and that is one file.
+      - comment: Triage; the state of the frontend API seam after integration
+        exec: 'cat /workspace/services/web/src/api/index.ts 2>&1; ls -la /workspace/services/web/src/api /workspace/services/web/src/mocks 2>&1 || true'
+        assertZeroExitCode: false
+
       # vally: tool-calls forbidden [workflow-tools-start_local_development]
       # First half of the pair. Nothing in this turn approves moving on, so a hand-off
       # here is the agent skipping the gate — and it would take the work into a chat

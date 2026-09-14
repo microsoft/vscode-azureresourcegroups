@@ -14,6 +14,7 @@ import { validateDebugArtifacts } from './artifacts/debugArtifacts.ts';
 import { validateDebugBreakpointVerdict } from './artifacts/debugBreakpointVerdict.ts';
 import { validateDatastoreFidelity } from './artifacts/datastoreFidelity.ts';
 import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
+import { validateFrontendSeamLive } from './artifacts/frontendSeamLive.ts';
 import { selfTestIacCompiles, validateScaffoldedIac } from './artifacts/iacCompiles.ts';
 import { selfTestSafetyBoundaries } from './artifacts/safetyBoundaries.ts';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
@@ -66,7 +67,7 @@ interface CertificationMutation {
     fixture: string;
     validator: string;
     file?: string;
-    operation: 'replace' | 'append' | 'delete' | 'relocate' | 'scenario-status';
+    operation: 'replace' | 'append' | 'create' | 'delete' | 'relocate' | 'scenario-status';
     search?: string;
     replacement?: string;
     expectedCode: string;
@@ -268,6 +269,13 @@ const OFFLINE_VALIDATORS: Record<
     },
     preview: async workspace => validatePreviewArtifacts(path.join(workspace, '.azure', '.preview-temp')),
     'frontend-scaffold': async workspace => validateFrontendScaffold(workspace),
+
+    // The post-integrate counterpart of `frontend-scaffold`. That gate asserts the seam
+    // exists and is not bypassed; this one asserts integrate actually moved it. Certified
+    // against `reference-frontend-integrated`, whose mutations are the negative half — a
+    // seam reverted to the mock, a "live" client that issues no request, and a surviving
+    // mock layer all have to be caught, or the gate is a spell-check on an identifier.
+    'frontend-seam-live': async workspace => validateFrontendSeamLive(workspace),
     'service-fidelity': async workspace =>
         validateServiceFidelity(workspace, await readArtifact(workspace, '.azure/project-plan.md')),
     'datastore-fidelity': async workspace =>
@@ -433,6 +441,17 @@ async function withMutatedFixture<T>(
                 const destination = path.join(workspace, mutation.replacement);
                 await fs.mkdir(path.dirname(destination), { recursive: true });
                 await fs.rename(filePath, destination);
+            } else if (mutation.operation === 'create') {
+                // Writes a file the fixture deliberately does NOT contain, which is the only
+                // way to express "the agent left behind something it was contracted to
+                // delete". `append` cannot: it reads first, so it fails on a missing path.
+                //
+                // Deliberately a separate operation rather than letting `append` create.
+                // Append-creates would turn a typo'd path in any existing mutation from a
+                // loud failure into a silently-created file, and a mutation that quietly
+                // tests nothing is the exact failure certification exists to prevent.
+                await fs.mkdir(path.dirname(filePath), { recursive: true });
+                await fs.writeFile(filePath, mutation.replacement ?? '');
             } else {
                 const content = await fs.readFile(filePath, 'utf8');
                 if (mutation.operation === 'replace') {

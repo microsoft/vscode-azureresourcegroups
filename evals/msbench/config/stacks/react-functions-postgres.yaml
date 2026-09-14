@@ -81,6 +81,14 @@ knownGaps:
       default-image run red for an undeclared reason. Revisit if the custom image
       becomes the default, not before.
 
+      `npm run gate-health` reports this entry under DECLARED BUT NEVER OBSERVED,
+      and that report is right about the facts and wrong about the remedy here:
+      the reason genuinely has not been observed since the custom image shipped,
+      because every recent run used that image. Deleting the declaration on that
+      evidence would break the default-image runs the paragraph above describes.
+      The finding is a symptom of the schema having no way to say "on this image",
+      not of a stale claim. Do not clear it without measuring a stock-image run.
+
 # ## Why this stack drives the local phase
 #
 # Because the `approved-fullstack` seed *is* this stack. That seed's plan document
