@@ -1524,27 +1524,33 @@ these two values:**
 | Key | Value | Where it comes from |
 | --- | --- | --- |
 | endpoint tag | `copilot-on-rails` | `--tag endpoint=copilot-on-rails` (set by `run.sh`) |
-| model | `claude-opus-4.7` | derived from `modelSelector` in [`config/base.yaml`](config/base.yaml) |
+| model | `gpt-5.6-sol` | derived from `modelSelector` in [`config/base.yaml`](config/base.yaml) |
 
 CES serialises runs that share the same **(model, endpoint tag)** pair: the second one
 waits in a queue rather than racing the first for the same model capacity. Unqueued runs
 race — ours against each other, and against any other team on the same model.
 
-> **The model must be one the agents declare.** `resources/agents/*.agent.md` list
-> `Claude Opus 4.7` and `Claude Sonnet 4.6`; anything else measures a configuration the
-> product does not ship. `base.yaml` pinned `claude-sonnet-4.5` for 66 of the corpus's
-> 93 runs before this was noticed, so results cached before 2026-09-09 are evidence
-> about the harness rather than about the shipped agent. `check-agent-drift.ts` now
-> validates this value, and the older `claude-sonnet-4.5` figures quoted further down
-> are left as the historical record of what those runs actually used.
+> **MSBench sweeps two models, and only two.** `resources/agents/*.agent.md` declare
+> four — `Claude Opus 4.7`, `Claude Sonnet 4.6`, `GPT-5.6 Sol`, `GPT-5.6 Terra` — but
+> this suite covers one per family: **`gpt-5.6-sol`** (the `base.yaml` default) and
+> **`claude-sonnet-4.6`** (`./run.sh --model claude-sonnet-4.6`). Every extra model
+> multiplies a corpus that `README-redteam.md` already wants run per model, and two
+> families catch more than two revisions of one would — [#1807](https://github.com/microsoft/vscode-azureresourcegroups/issues/1807)
+> is a live case where two models disagreed on a security prompt.
 >
-> **Of the two declared models, only `claude-opus-4.7` currently runs.**
-> `claude-sonnet-4.6` fails immediately with
-> `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
-> (measured, run `2026090974671590`), so it is not a usable default even though it is
-> declared and cheaper. Re-test it before switching; a model that passes the drift check
-> can still be undispatchable, because that check reads the agent front-matter and knows
-> nothing about backend availability.
+> The set lives in [`models.ts`](models.ts) and is proved a subset of the agent
+> frontmatter on every use, so it can be narrowed but not invented. `base.yaml` pinned
+> `claude-sonnet-4.5` — declared by no agent — for 66 of the corpus's 93 runs before
+> this was noticed, so results cached before 2026-09-09 are evidence about the harness
+> rather than about the shipped agent; the older `claude-sonnet-4.5` figures quoted
+> further down are left as the historical record of what those runs actually used.
+>
+> **`claude-sonnet-4.6` was last measured as undispatchable.** It failed immediately
+> with `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
+> (run `2026090974671590`, 2026-09-09), which is why `gpt-5.6-sol` is the default.
+> Re-test before quoting a Claude datapoint: a model that passes every check here can
+> still be unserveable, because those checks read front-matter and know nothing about
+> backend availability.
 
 The catch is that **there is no validation of these strings**. A run tagged
 `copilot_on_rails`, `CopilotOnRails`, or `copilot-on-rails ` is accepted, submitted, and

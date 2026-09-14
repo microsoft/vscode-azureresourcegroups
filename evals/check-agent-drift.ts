@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { listEvalAssetFiles, readSupportedModels, SHARED_FOLDER } from "./src/agent-definition.ts";
+import { resolveSweepModels } from "./msbench/models.ts";
 
 const scriptDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptDir, "..");
@@ -347,6 +348,11 @@ const currentFiles = agentAssetFiles();
  *
  * A guard that tests a file nobody runs is the vacuous pass this suite exists to
  * prevent, so `base.yaml` is checked first and by the same rule.
+ *
+ * `base.yaml` is held to the stricter of two sets. Every pin must name a model the
+ * agents declare; the MSBench pin must additionally be one of the two the suite is
+ * budgeted to sweep (see `msbench/models.ts`). Both are derived — a third list of
+ * model ids maintained by hand is the original defect, not a fix for it.
  */
 interface ModelPin {
     /** Path relative to `evals/`, for the failure message. */
@@ -354,6 +360,13 @@ interface ModelPin {
     readonly file: string;
     /** Pulls the pinned model id out of that file's own syntax. */
     readonly read: (text: string) => string | undefined;
+    /**
+     * Whether the pin must also sit inside the MSBench sweep set, which is narrower
+     * than the declared models. Only MSBench is budgeted per model; the Vally spec
+     * drives no paid sweep, so holding it to the sweep set would be an unrelated
+     * restriction dressed up as a contract.
+     */
+    readonly mustBeSwept: boolean;
 }
 
 const MODEL_PINS: readonly ModelPin[] = [
@@ -364,6 +377,7 @@ const MODEL_PINS: readonly ModelPin[] = [
         label: "msbench/config/base.yaml",
         file: path.join(scriptDir, "msbench", "config", "base.yaml"),
         read: text => /^modelSelector:\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+id:\s*(\S+)\s*$/m.exec(text)?.[1],
+        mustBeSwept: true,
     },
     {
         // The legacy Vally spec. Kept under the same rule so it cannot rot back, but it
@@ -374,25 +388,42 @@ const MODEL_PINS: readonly ModelPin[] = [
             const defaults = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(text)?.[1] ?? "";
             return /^\s+model:\s*(\S+)\s*$/m.exec(defaults)?.[1];
         },
+        mustBeSwept: false,
     },
 ];
 
 try {
     const supported = readSupportedModels(repoRoot, PLAN);
+    // Throws if the sweep set names anything the agents do not declare, so the
+    // narrowing cannot become an invention. Caught below as `eval-model-resolution`.
+    const sweep = resolveSweepModels(repoRoot);
+    checked.push(`msbench-sweep-declared (${sweep.join(", ")})`);
+
     for (const pin of MODEL_PINS) {
+        const allowed = pin.mustBeSwept ? sweep : supported;
         const pinned = pin.read(fs.readFileSync(pin.file, "utf8"));
         if (!pinned) {
             failures.push(
                 `eval-model-unpinned: evals/${pin.label} declares no model.\n`
                 + "    Without a pin the model falls back to a host default, which differs\n"
                 + "    between a developer machine and CI, so the graders disagree.\n"
-                + `    Supported: ${supported.join(", ")}`,
+                + `    Allowed: ${allowed.join(", ")}`,
             );
-        } else if (!supported.includes(pinned)) {
+        } else if (pin.mustBeSwept && !allowed.includes(pinned)) {
+            failures.push(
+                `eval-model-unswept: evals/${pin.label} pins '${pinned}', which is not in the\n`
+                + "    MSBench sweep set.\n"
+                + `    Sweep set: ${allowed.join(", ")}\n`
+                + `    Declared by ${PLAN}.agent.md: ${supported.join(", ")}\n`
+                + "    The sweep set is deliberately narrower than what the product declares,\n"
+                + "    because every model added multiplies a suite measured in paid capacity.\n"
+                + "    Widen it in evals/msbench/models.ts, not by editing this pin.",
+            );
+        } else if (!allowed.includes(pinned)) {
             failures.push(
                 `eval-model-unsupported: evals/${pin.label} pins '${pinned}', which `
                 + `${PLAN}.agent.md does not list.\n`
-                + `    Supported: ${supported.join(", ")}\n`
+                + `    Supported: ${allowed.join(", ")}\n`
                 + "    A run on an undeclared model measures a configuration the product does\n"
                 + "    not ship, and its result is not evidence about the shipped agent.",
             );
