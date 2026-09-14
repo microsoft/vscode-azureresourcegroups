@@ -145,7 +145,8 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 ## Launching the flow
 
 Open the **Azure Project** view (Explorer sidebar → *Azure Project*, or an empty window's welcome view) and
-click **Create New Project With Copilot**. This runs the `copilotOnRails.createProjectWithCopilot` command.
+click **Create New Project With Copilot**. This activates the Azure Resources extension when needed, then
+runs the `copilotOnRails.createProjectWithCopilot` command.
 
 <p align="center">
   <img src="images/copilot-create-project/01-launch-azure-project-view.png" alt="Azure Project view with the Create New Project With Copilot button" />
