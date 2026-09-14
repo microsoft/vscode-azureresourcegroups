@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-frontend-integrated",
+    "prompt": "Build a task tracker with a React frontend and an Azure Functions API, then wire the frontend to the live API.",
+    "baselinePrompt": "Create a task tracker with a React frontend and an Azure Functions HTTP API. Scaffold it behind an ApiClient seam, then integrate the two halves so the frontend reads and writes real data.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "node",
+        "database": "none",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "No datastore required"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": false,
+        "test": false,
+        "lint": "skip",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

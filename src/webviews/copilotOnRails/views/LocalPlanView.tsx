@@ -55,6 +55,7 @@ import {
     type LocalPlanSection,
 } from "./utils/parseLocalDebugPlanMarkdown";
 import { getPrerequisiteInstallLink } from "./utils/prerequisiteInstallLinks";
+import { quoteMermaidLabels } from "./utils/quoteMermaidLabels";
 
 mermaid.initialize({
     startOnLoad: false,
@@ -1092,6 +1093,32 @@ const CodeBlock = ({
     </div>
 );
 
+/**
+ * Renders `code` with labels quoted, falling back to the diagram exactly as the
+ * author wrote it if that rewrite is what mermaid rejects.
+ *
+ * `quoteMermaidLabels` is a regex pass over a real grammar, so it can always
+ * meet a shape it reads wrong. The fallback keeps it strictly an improvement:
+ * it can rescue a diagram mermaid would have refused, and it can never be the
+ * reason a diagram that used to render stops rendering.
+ */
+const renderMermaid = async (
+    id: string,
+    code: string,
+    container: Element,
+): Promise<string> => {
+    const quoted = quoteMermaidLabels(code);
+    try {
+        return (await mermaid.render(id, quoted, container)).svg;
+    } catch (err) {
+        if (quoted === code) {
+            throw err;
+        }
+        // A fresh id: mermaid leaves the failed attempt's scratch element behind.
+        return (await mermaid.render(`${id}-verbatim`, code, container)).svg;
+    }
+};
+
 const MermaidBlock = ({
     code,
     onRenderStatus,
@@ -1114,9 +1141,8 @@ const MermaidBlock = ({
         }
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
-        mermaid
-            .render(id, code, container)
-            .then(({ svg }) => {
+        renderMermaid(id, code, container)
+            .then((svg) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
                     setFailedCode(null);

@@ -66,6 +66,7 @@ const ENTRYPOINTS = [
     'evals/graders/validate-webview-parseable.ts',
     'evals/graders/validate-integration-plan.ts',
     'evals/graders/validate-frontend-scaffold.ts',
+    'evals/graders/validate-frontend-seam-live.ts',
     'evals/graders/validate-no-scaffold.ts',
     'evals/graders/validate-project-builds.ts',
     'evals/graders/validate-service-fidelity.ts',
