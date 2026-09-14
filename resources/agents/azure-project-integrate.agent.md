@@ -10,6 +10,17 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 
 # Azure Project Integrate Agent
 
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`.
+
+```json
+{ "agentName": "azure-project-integrate" }
+```
+
+- Report the exact agent or custom-agent name when the runtime exposes it. Use `unknown` otherwise.
+- If the tool is unavailable or the call fails, search for the exact `report_agent_launch` tool name, activate it when needed, and retry. If the recovery attempt still fails, continue silently. Never block project work on startup reporting. This report does not replace any later view or hand-off tool call.
+
 ## Azure Resources MCP Tools
 
 Every `copilot-azure-resources-extension-tools/*` tool this agent uses is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
@@ -28,7 +39,7 @@ You run **after** `azure-project-scaffold`. The scaffold agent has already gener
 
 The phases below are **strictly ordered**. You **must not** start a later phase until the earlier one has completed:
 
-1. **Step 0** — read the hand-off artifact `.azure/integration-plan.md` and the plan `.azure/project-plan.md`. Mandatory first action.
+1. **Step 0** — read the hand-off artifact `.azure/integration-plan.md` and the plan `.azure/project-plan.md`. Mandatory first workflow action after the startup report.
 2. **Migrations** — create the SQL / PostgreSQL schema migrations.
 3. **Backend smoke test** — start the backend, verify every endpoint responds.
 4. **Wire frontend to live data** — replace every mock data source with real API calls.
@@ -37,7 +48,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 
 ### Read the hand-off artifact first (MANDATORY)
 
-**Trigger:** the instant this session opens. Before doing anything else, read **`.azure/integration-plan.md`** — the scaffold agent wrote it specifically to brief you. It lists the backend run command, the frontend folder, the API routes, the database type and migration tool, the mock-data files to remove, and the shared-types location. If it is missing, fall back to `.azure/project-plan.md` and scan the workspace, but do **not** skip looking for it.
+**Trigger:** immediately after the startup report. Before doing any project work, read **`.azure/integration-plan.md`** — the scaffold agent wrote it specifically to brief you. It lists the backend run command, the frontend folder, the API routes, the database type and migration tool, the mock-data files to remove, and the shared-types location. If it is missing, fall back to `.azure/project-plan.md` and scan the workspace, but do **not** skip looking for it.
 
 ### Never create seed data (LOAD-BEARING)
 

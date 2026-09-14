@@ -74,7 +74,7 @@ fi
 
 # service-name -> resource-type map (longest keys first so 'container apps environment' wins)
 declare -a MAP_KEYS=( "container apps environment" "container app" "container registry" "mysql" "postgres" \
-  "key vault" "log analytics" "application insights" "static web app" "app service" "functions" \
+  "log analytics" "application insights" "static web app" "app service" "functions" \
   "sql" "cosmos" "redis" "storage" "service bus" "event hub" )
 map_type() {
   case "$1" in
@@ -83,7 +83,6 @@ map_type() {
     *"container registry"*)         echo 'Microsoft\.ContainerRegistry/registries';;
     *mysql*)                        echo 'Microsoft\.DBforMySQL/flexibleServers';;
     *postgres*)                     echo 'Microsoft\.DBforPostgreSQL/flexibleServers';;
-    *"key vault"*)                  echo 'Microsoft\.KeyVault/vaults';;
     *"log analytics"*)              echo 'Microsoft\.OperationalInsights/workspaces';;
     *"application insights"*)       echo 'Microsoft\.Insights/components';;
     *"static web app"*)             echo 'Microsoft\.Web/staticSites';;
@@ -154,25 +153,60 @@ if [ "$has_mysql" = 1 ] || [ "$has_pg" = 1 ]; then
   if [ "$has_mysql" = 1 ] && iac_has 'delegatedSubnetResourceId|privateDnsZoneResourceId'; then
     add_fail "MYSQL-NO-NETWORK-BLOCK" "MySQL module includes a network block (delegatedSubnetResourceId) — omit it for public access; an empty value is rejected by ARM" "infra/modules"
   fi
-  # 11. DB-LOGIN-NOT-RESERVED (pure-text) — administratorLogin must not be an Azure-reserved name.
-  if iac_has "administratorLogin:[[:space:]]*'(root|admin|administrator|guest|public|sa|azure_superuser|azure_pg_admin)'"; then
-    resv="$(printf '%s' "$iac" | grep -oE "administratorLogin:[[:space:]]*'[^']+'" | grep -oiE "(root|admin|administrator|guest|public|sa|azure_superuser|azure_pg_admin)" | head -n1)"
-    add_fail "DB-LOGIN-NOT-RESERVED" "administratorLogin uses a reserved name ('${resv}') — derive a safe login (e.g. '{project}admin'), never a compose-sourced reserved name" "infra/modules"
+  # 11. DB-NO-LOCAL-AUTH (pure-text) — databases MUST be Entra / managed-identity only.
+  if iac_has "administratorLogin[[:space:]]*:"; then
+    add_fail "DB-NO-LOCAL-AUTH" "administratorLogin/administratorLoginPassword present — databases must be Entra-only (authConfig passwordAuth Disabled + Entra admin). Remove ALL admin login/password params." "infra/modules"
+  fi
+  if iac_has "passwordAuth[[:space:]]*:[[:space:]]*'Enabled'"; then
+    add_fail "DB-NO-LOCAL-AUTH" "PostgreSQL authConfig sets passwordAuth: 'Enabled' — must be 'Disabled' (Entra-only)" "infra/modules"
+  fi
+  # 11b. DB-ENTRA-ADMIN — PG/MySQL must set an Entra administrator for token-based migrations.
+  if ! iac_has 'flexibleServers/administrators'; then
+    add_fail "DB-ENTRA-ADMIN" "PostgreSQL/MySQL module missing an administrators (Entra admin) child resource — required for Entra-only auth + token-based migrations" "infra/modules"
+  fi
+  # 11c. PG-ENTRA-ONLY — PostgreSQL must explicitly disable password auth.
+  if [ "$has_pg" = 1 ] && ! iac_has "passwordAuth[[:space:]]*:[[:space:]]*'Disabled'"; then
+    add_fail "PG-ENTRA-ONLY" "PostgreSQL module missing authConfig { passwordAuth: 'Disabled', activeDirectoryAuth: 'Enabled' }" "infra/modules"
+  fi
+  # 11c2. MYSQL-ENTRA-UAMI — MySQL AAD admin requires a user-assigned MI; identityResourceId: null fails to deploy.
+  if [ "$has_mysql" = 1 ]; then
+    if iac_has "identityResourceId[[:space:]]*:[[:space:]]*null"; then
+      add_fail "MYSQL-ENTRA-UAMI" "MySQL administrators sets identityResourceId: null — will not deploy. Set it to a user-assigned managed identity resourceId and add that UAMI to the server's identity block." "infra/modules"
+    elif ! iac_has 'identityResourceId'; then
+      add_fail "MYSQL-ENTRA-UAMI" "MySQL administrators missing identityResourceId — MySQL Entra admin REQUIRES a user-assigned managed identity (unlike PostgreSQL)." "infra/modules"
+    fi
   fi
 fi
 
-# --- Key Vault checks (pure-text) ---
-if iac_has 'Microsoft\.KeyVault/vaults'; then
-  # 7. KV-NO-PURGE
-  if iac_has 'enablePurgeProtection'; then
-    add_fail "KV-NO-PURGE" "enablePurgeProtection present — omit it (policy may reject false)" "infra/modules"
-  fi
-  # 8. KV-DEPLOYER-ROLE
-  has_officer=0; iac_has 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7' && has_officer=1
-  has_param=0; { iac_has 'deployerObjectId' || printf '%s' "$params_raw" | grep -q 'deployerObjectId'; } && has_param=1
-  if [ "$has_officer" != 1 ] || [ "$has_param" != 1 ]; then
-    add_fail "KV-DEPLOYER-ROLE" "missing deployer Key Vault Secrets Officer role and/or deployerObjectId param" "infra/modules/role-assignments.bicep"
-  fi
+# --- No shared-key / access-key / local-auth on any data service (managed-identity only) ---
+# 11d. STORAGE-NO-SHARED-KEY
+if iac_has 'Microsoft\.Storage/storageAccounts' && ! iac_has "allowSharedKeyAccess[[:space:]]*:[[:space:]]*false"; then
+  add_fail "STORAGE-NO-SHARED-KEY" "Storage account must set allowSharedKeyAccess: false (managed-identity only)" "infra/modules"
+fi
+# 11e. REDIS-NO-KEYS
+if iac_has 'Microsoft\.Cache/redis' && ! iac_has "disableAccessKeyAuthentication[[:space:]]*:[[:space:]]*true"; then
+  add_fail "REDIS-NO-KEYS" "Redis must set disableAccessKeyAuthentication: true + accessPolicyAssignments (Entra only)" "infra/modules"
+fi
+# 11f. COSMOS-NO-LOCAL-AUTH
+if iac_has 'Microsoft\.DocumentDB/databaseAccounts' && ! iac_has "disableLocalAuth[[:space:]]*:[[:space:]]*true"; then
+  add_fail "COSMOS-NO-LOCAL-AUTH" "Cosmos DB must set disableLocalAuth: true (data-plane RBAC only)" "infra/modules"
+fi
+# 11g. MSG-NO-LOCAL-AUTH
+if iac_has 'Microsoft\.ServiceBus/namespaces|Microsoft\.EventHub/namespaces' && ! iac_has "disableLocalAuth[[:space:]]*:[[:space:]]*true"; then
+  add_fail "MSG-NO-LOCAL-AUTH" "Service Bus / Event Hubs namespace must set disableLocalAuth: true (managed-identity only)" "infra/modules"
+fi
+# 11h. NO-FREE-SKU — free/shared compute tiers are not allowed (managed identity is mandatory).
+if iac_has "name[[:space:]]*:[[:space:]]*'(F1|D1)'"; then
+  sku="$(printf '%s' "$iac" | grep -oE "name[[:space:]]*:[[:space:]]*'(F1|D1)'" | grep -oE '(F1|D1)' | head -n1)"
+  add_fail "NO-FREE-SKU" "App Service plan uses a free/shared SKU ('${sku}') — floor is B1 (managed identity is mandatory; the free-tier MI sidecar OOMs)" "infra/modules"
+fi
+if iac_has 'Microsoft\.Web/staticSites' && iac_has "tier[[:space:]]*:[[:space:]]*'Free'"; then
+  add_fail "NO-FREE-SKU" "Static Web App uses the Free tier — floor is Standard" "infra/modules"
+fi
+
+# --- No Key Vault (app-internal secrets live on the compute resource) ---
+if iac_has 'Microsoft\.KeyVault/vaults' || iac_has '@Microsoft\.KeyVault' || iac_has 'keyVaultUrl'; then
+  add_fail "NO-KEYVAULT" "Key Vault detected (Microsoft.KeyVault/vaults, @Microsoft.KeyVault(...), or keyVaultUrl) — no Key Vault is allowed. Store app-internal secrets on the compute resource: @secure() param -> App Service appSettings / Container Apps native secrets[]." "infra/"
 fi
 
 # --- Container Apps / ACR checks (deterministic ARM-failure invariants) ---

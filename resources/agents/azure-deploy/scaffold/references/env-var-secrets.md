@@ -9,38 +9,28 @@ Applies to ALL compute targets (App Service, Container Apps, Functions). For Con
 > 2. **Defaults:** Use app defaults unless overriding with deployed URL
 > 3. **Required:** Fields without defaults must be provided
 >
-> **Pitfalls:** `CORS_ORIGINS=["*"]` → invalid for strict validators (use actual URLs). `DATABASE_URL=changethis` → use KV ref. JSON array env vars need Bicep variable escaping:
+> **Pitfalls:** `CORS_ORIGINS=["*"]` → invalid for strict validators (use actual URLs). `DATABASE_URL=changethis` → use a managed-identity connection (no password; wire plain connection params, driver fetches a token). JSON array env vars need Bicep variable escaping:
 > ```bicep
 > var corsOrigins = '["https://${containerApp.properties.configuration.ingress.fqdn}"]'
 > { name: 'CORS_ORIGINS', value: corsOrigins }
 > ```
 
-## Key Vault Secret Dependency Chain
+## App-Internal Secret Storage (No Key Vault)
 
-> ⛔ **Chicken-and-egg:** CA references KV secrets that don't exist yet at deploy time. KV secret values (DB connection strings, passwords) are only known AFTER IaC creates the database.
+> ⛔ **No Key Vault is created.** Database/cache/storage access is managed-identity + token — there is NO connection-string password or access key to store. App-internal secrets that are NOT an Azure resource credential (e.g. `SECRET_KEY`, JWT signing key, third-party API keys) are stored **directly on the compute resource** from an `@secure()` param generated at deploy time.
 
-**Correct ordering:**
-1. **IaC Phase 1:** Key Vault → RBAC → Database → Container App with `secrets: []` (placeholder image, no KV refs yet)
-2. **Deploy phase seeds KV:** `az keyvault secret set --vault-name {kv} --name db-connection-string --value {value}`
-3. **IaC Phase 2:** Redeploy Bicep with `isPlaceholder=false` → activates KV `secretRef` entries + real image + ACR registries
-
-**IaC pattern — reference secrets by name, gated by `isPlaceholder`:**
-
-> ⛔ **Container Apps:** KV `secretRef` entries MUST be gated behind `isPlaceholder` (see [bicep-container-apps.md](bicep-container-apps.md) § Two-Phase Wiring). Phase 1 deploys with `secrets: []` because the CA's managed identity has no RBAC yet. Phase 2 activates KV refs after RBAC propagates.
+**Where app-internal secrets go:**
+- **App Service / Functions:** `@secure()` param → `siteConfig.appSettings` (platform-encrypted at rest), or set at deploy via `az webapp config appsettings set`.
+- **Container Apps:** `@secure()` param → the CA's **native** `secrets: [{ name, value }]` → `secretRef`. No `keyVaultUrl`. Native secrets have no RBAC dependency, so they need no `isPlaceholder` gating (two-phase wiring is still needed for ACR registries + real image only).
 
 ```bicep
-// Phase 1: secrets: [] (isPlaceholder == true)
-// Phase 2: KV secretRef entries activated after RBAC propagates
-secrets: isPlaceholder ? [] : [
-  {
-    name: 'db-connection-string'
-    keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/db-connection-string'
-    identity: 'system'
-  }
+// Container Apps — native secret (NOT keyVaultUrl)
+secrets: [
+  { name: 'secret-key', value: secretKey }  // value from an @secure() param
 ]
 ```
 
-> ⛔ **Do NOT hardcode secrets in committed files** — not in `main.parameters.json`, `terraform.tfvars`, env vars, or any generated file. (`@secure()` Bicep params ARE the correct way to pass a secret at deploy time — the ban is on committing the value, not on the parameter.) The deploy phase seeds secrets into Key Vault via `az keyvault secret set` after database provisioning — see [code-deployment-appservice.md](../../deploy/references/code-deployment-appservice.md) or [code-deployment-container-apps.md](../../deploy/references/code-deployment-container-apps.md) § Database Post-Deploy.
+> ⛔ **Do NOT hardcode secrets in committed files** — not in `main.parameters.json`, `terraform.tfvars`, env vars, or any generated file. (`@secure()` Bicep params ARE the correct way to pass an **app-internal** secret at deploy time — the ban is on committing the value, not on the parameter. Databases/caches/storage have NO secret param — they use managed identity.) The deploy phase generates each app-internal secret ONCE and passes it as an `@secure()` param — see [code-deployment-appservice.md](../../deploy/references/code-deployment-appservice.md) or [code-deployment-container-apps.md](../../deploy/references/code-deployment-container-apps.md).
 
 ## Azure Managed Service SSL/TLS Requirements
 
@@ -51,10 +41,10 @@ Check `prereq-output.json.warnings[]` for warnings with `fixPhase: "scaffold"`. 
 > ⛔ **Prefer env var override over code change.** Only modify source if no env override path exists AND user approves.
 > ⛔ **Self-review:** If any `fixPhase: "scaffold"` warning exists and IaC lacks the fix → flag as FLAGGED.
 
-## Key Vault Secret Naming
+## App-Internal Secret Naming
 
-> ⛔ **KV secret names allow only alphanumeric characters and hyphens.** Map env var names: `SECRET_KEY` → `secret-key`, `DATABASE_URL` → `database-url`. Do NOT use underscores — Azure rejects them with `SecretNameInvalid`.
+> ⛔ **Container Apps native secret names allow only lowercase alphanumeric characters and hyphens.** Map env var names: `SECRET_KEY` → `secret-key`, `JWT_SECRET` → `jwt-secret`. Do NOT use underscores or uppercase. (App Service app settings keep the original env var name, e.g. `SECRET_KEY`.)
 
-## Compose → Azure PaaS Credential Mapping
+## Compose → Azure PaaS Credential Mapping (Entra-only)
 
-> ⛔ **Azure managed databases only create the `administratorLogin` user.** Docker-compose `POSTGRES_USER` / `MYSQL_USER` auto-creates a database user — Azure PostgreSQL/MySQL Flexible Server does NOT. Map compose user env vars to the `administratorLogin` value from your Bicep, not the compose username.
+> ⛔ **Azure managed databases are provisioned Entra-only — there is no username/password to map.** Docker-compose `POSTGRES_USER`/`POSTGRES_PASSWORD` / `MYSQL_USER`/`MYSQL_PASSWORD` are DROPPED, not translated. The app connects with its **managed identity**: the DB username is the app MI's principal name and the "password" is an Entra token fetched at runtime. Map the compose DB **name** (`POSTGRES_DB`/`MYSQL_DATABASE`) to the app DB; do NOT emit any password env var. See [database-post-deploy.md](../../deploy/references/database-post-deploy.md) for granting the MI a DB role.

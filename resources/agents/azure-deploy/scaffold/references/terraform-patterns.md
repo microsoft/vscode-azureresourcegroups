@@ -20,7 +20,6 @@ infra/
     │   └── outputs.tf
     ├── container-app/
     ├── sql-database/
-    ├── key-vault/
     ├── log-analytics/
     └── ...
 ```
@@ -90,7 +89,6 @@ resource "random_string" "suffix" {
 locals {
   # Pattern: {type}-{appname}-{env}-{suffix}
   app_name    = "app-${var.environment_name}-${random_string.suffix.result}"
-  kv_name     = "kv-${var.environment_name}-${random_string.suffix.result}"
   sql_name    = "sql-${var.environment_name}-${random_string.suffix.result}"
   # Storage/ACR: alphanumeric only, no hyphens
   storage_name = "st${replace(var.environment_name, "-", "")}${random_string.suffix.result}"
@@ -118,27 +116,33 @@ locals {
 
 > ⚠️ `timestamp()` changes on every plan. Add `lifecycle { ignore_changes = [tags["created-at"]] }` on every resource.
 
-## Secrets — random_password, Not random_string
+## Secrets — App-Internal Only, Stored On-Compute (No Key Vault)
+
+Use `random_password` ONLY for app-internal secrets that are NOT an Azure resource credential (e.g. a Django `SECRET_KEY`, JWT signing key), and store the value **directly on the compute resource** as an app setting / container secret. ⛔ **No Key Vault.** Azure resource auth (database, cache, storage, Cosmos) is **managed-identity + token — never a generated password**.
 
 ```hcl
-resource "random_password" "db_password" {
-  length  = 32
+resource "random_password" "app_secret_key" {
+  length  = 50
   special = true
   lifecycle { ignore_changes = [result] }
 }
 
-resource "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"
-  value        = random_password.db_password.result
-  key_vault_id = azurerm_key_vault.kv.id
+# App Service — store directly as an app setting (no Key Vault):
+resource "azurerm_linux_web_app" "app" {
+  # ...
+  app_settings = {
+    SECRET_KEY = random_password.app_secret_key.result
+  }
 }
+# Container Apps — use a native `secret { name, value }` block + `env { secret_name = ... }`.
 ```
 
 > ⛔ NEVER use `random_string` for secrets — it is not marked `sensitive` in state. Always use `random_password`.
+> ⛔ **NEVER generate a database/cache/storage password or access key** (no `administrator_login_password`, no `random_password` for a DB). Those services use `azuread_authentication_only`/`password_auth_enabled = false`/`shared_access_key_enabled = false` + managed identity. See [bicep-patterns-security.md](bicep-patterns-security.md) § Data Services.
 
 ## Container Apps — Two-Phase Wiring
 
-Same circular dependency as Bicep — see [bicep-container-apps.md](bicep-container-apps.md). Phase 1: placeholder image, no ACR/KV refs. Phase 2: build + push, assign AcrPull, update via `az containerapp update --image` outside Terraform.
+Same circular dependency as Bicep — see [bicep-container-apps.md](bicep-container-apps.md). Phase 1: placeholder image, no ACR refs. Phase 2: build + push, assign AcrPull, update via `az containerapp update --image` outside Terraform.
 
 ```hcl
 # Phase 1: Placeholder image
@@ -167,12 +171,13 @@ Apply same security rules as Bicep — see [bicep-patterns-security.md](bicep-pa
 
 | Rule | Terraform HCL |
 |------|---------------|
-| Managed identity | `identity { type = "SystemAssigned" }` |
-| ⛔ No SQL admin password | `azuread_authentication_only = true`. Never generate `administrator_login_password` |
-| Key Vault RBAC | `enable_rbac_authorization = true` on `azurerm_key_vault` |
-| KV secret reference | `app_settings = { KEY = "@Microsoft.KeyVault(VaultName=..;SecretName=..)" }` |
+| Managed identity (MANDATORY — all compute) | `identity { type = "SystemAssigned" }` |
+| ⛔ No DB admin password (SQL/PG/MySQL) | SQL: `azuread_authentication_only = true`; PostgreSQL: `authentication { password_auth_enabled = false, active_directory_auth_enabled = true, tenant_id = ... }` + `azurerm_postgresql_flexible_server_active_directory_administrator`; MySQL: `azurerm_mysql_flexible_server_active_directory_administrator` + `aad_auth_only`. NEVER `administrator_login_password`. |
+| ⛔ No storage/cache keys | Storage: `shared_access_key_enabled = false`; Redis: `azurerm_redis_cache` with `access_keys_authentication_enabled = false` + `azurerm_redis_cache_access_policy_assignment` for the app MI |
+| ⛔ No Key Vault | Do NOT create `azurerm_key_vault` / `azurerm_key_vault_secret`. App-internal secrets go directly into `app_settings` (App Service) or a native container `secret` block |
+| App-internal secret (on-compute) | `app_settings = { SECRET_KEY = random_password.app_secret_key.result }` — no `@Microsoft.KeyVault(...)` |
 | HTTPS only | `https_only = true`, `minimum_tls_version = "1.2"` |
 | Storage | `https_traffic_only_enabled = true`, `allow_nested_items_to_be_public = false`, `min_tls_version = "TLS1_2"` |
-| ⛔ Cosmos DB RBAC | `azurerm_cosmosdb_sql_role_assignment`, NOT `azurerm_role_assignment` — see [rbac-roles.md](rbac-roles.md) |
+| ⛔ Cosmos DB RBAC | `azurerm_cosmosdb_sql_role_assignment`, NOT `azurerm_role_assignment` + `local_authentication_disabled = true` — see [rbac-roles.md](rbac-roles.md) |
 | RBAC assignments | `principal_type = "ServicePrincipal"` REQUIRED — see [rbac-roles.md](rbac-roles.md) |
 | SCM/FTP auth | `scm.allow: true` (scaffold), `ftp.allow: false` (always) — use `azapi_resource` |

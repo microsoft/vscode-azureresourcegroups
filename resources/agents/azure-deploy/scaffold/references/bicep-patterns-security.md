@@ -4,34 +4,34 @@ Mandatory security configuration for all AppOnboard-generated Bicep. Read during
 
 For core patterns (file structure, skeleton, naming, tagging), see [bicep-patterns.md](bicep-patterns.md). For data module templates (PostgreSQL, Redis), see [subagent-iac-gen.md](subagent-iac-gen.md) Step 6.
 
-## Key Vault Deployer RBAC
+## No Key Vault — App-Internal Secret Storage
 
-The deploying user/principal needs RBAC to write secrets (scaffold seeds initial values) and read them (verify wiring):
+> ⛔ **Do NOT create a Key Vault.** AppOnboard-generated IaC MUST NOT emit `Microsoft.KeyVault/vaults` (or any KV secret / KV RBAC resource). Azure resource auth (database, cache, storage, Cosmos, queues) is managed-identity + token — there is nothing to store. App-internal secrets that are NOT an Azure resource credential (e.g. `SECRET_KEY`, JWT signing key, third-party API keys) are stored **directly on the compute resource**, never in Key Vault:
 
-- **Key Vault Secrets Officer** (`b86a8fe4-44ce-4948-aee5-eccb2c155cd7`) — write secrets
-- **Key Vault Secrets User** (`4633458b-17de-408a-b874-0445c86b69e6`) — read secrets (also needed by app MI)
+- **App Service / Functions:** pass each secret as an `@secure()` Bicep param → `siteConfig.appSettings`. The platform encrypts app settings at rest. The value is generated at deploy time and passed via CLI (never committed); it does not appear in ARM deployment history because it's `@secure()`.
+- **Container Apps:** pass each secret as an `@secure()` param → the Container App's **native** `secrets: [{ name, value }]` array → referenced by `secretRef`. This is the Container Apps secret store, NOT Key Vault (`keyVaultUrl` is never used).
 
-If the app seeds data using a generated secret (admin password, API key), either display it to the user at deploy time OR ensure the deployer has read RBAC on the Key Vault.
-
-> ⛔ **Include a role assignment for the deploying user** (`context.json.azure.userObjectId`) with Key Vault Secrets Officer scoped to the Key Vault resource. Without this, `az keyvault secret set` fails with 403 during deploy secret seeding.
+> ⛔ **No `@Microsoft.KeyVault(...)` references, no `keyVaultUrl` secretRefs, no KV role assignments** (`Key Vault Secrets Officer`/`Secrets User`), no `deployerObjectId` KV param.
 
 ## Security Defaults
 
 > **Source:** Adapted from Azure security best practices. See [Azure security baseline](https://learn.microsoft.com/en-us/security/benchmark/azure/overview) for updates.
 
-### Identity — Managed Identity Everywhere
+### Identity — Managed Identity Everywhere (MANDATORY, NO EXCEPTIONS)
 
-> ⛔ **Managed identity decision — evaluate top to bottom, first match wins.**
+> ⛔ **Every compute resource MUST have a managed identity. There is NO SKU, tier, or service combination that is exempt.** Managed identity is the ONLY sanctioned way for app code to authenticate to any Azure resource. Shared keys, admin logins, and connection-string passwords are BLOCKED (see [`bicep-patterns-data.md`](bicep-patterns-data.md) and the conformance gate).
 >
 > | Condition | Include MI? |
 > |-----------|-------------|
-> | F1 or D1 SKU on Linux | **NO** (MI sidecar causes OOM — use `@secure()` param + KV deployer RBAC instead) |
-> | Any Key Vault, database, storage, queue, or ACR access | **YES** |
+> | Any compute (App Service, Container Apps, Functions) | **YES — always** |
+> | Any database, storage, queue, cache, Cosmos, or ACR access | **YES — always** |
 > | None of the above | **YES** (default secure) |
 
 - **System-assigned managed identity** for all services (default). User-assigned only when shared identity is explicitly needed.
-- ⛔ **Never generate `administratorLogin` or `administratorLoginPassword`** for SQL — including inside conditional branches. Use Entra-only auth (see SQL Server pattern below).
-- App-to-service auth: managed identity + RBAC role assignments. Zero secrets in code or config.
+- ⛔ **Compute floor is B1 (App Service) / Standard (Static Web Apps).** F1/D1/Free tiers are NOT offered — the free-tier MI sidecar OOMs and cannot host managed identity, and free SWA lacks the config (CORS, custom auth) these apps need. SKU selection MUST NOT emit F1, D1, or Free. See [sku-matrix.md](../../prepare/references/sku-matrix.md).
+- ⛔ **Never generate `administratorLogin`, `administratorLoginPassword`, access keys, or connection-string passwords** for ANY data service (SQL, PostgreSQL, MySQL, Redis, Storage, Cosmos DB, Service Bus, Event Hubs) — including inside conditional branches. Use Entra/MI-only auth (see the data-service patterns below and in [`bicep-patterns-data.md`](bicep-patterns-data.md)).
+- App-to-service auth: managed identity + RBAC role assignments (or data-plane role assignments for Cosmos/Redis). Zero shared-key or password auth to any Azure resource.
+- **App-internal secrets** that are NOT an Azure resource credential (e.g. Django `SECRET_KEY`, JWT signing key, third-party API keys) are stored **directly on the compute resource** — App Service app settings or Container Apps native secrets, from an `@secure()` param generated at deploy. ⛔ **No Key Vault** (see § No Key Vault — App-Internal Secret Storage).
 
 ```bicep
 identity: {
@@ -39,9 +39,21 @@ identity: {
 }
 ```
 
-### SQL Server — Entra-Only Authentication
+### Data Services — Entra / Managed-Identity-Only Authentication
 
-> For full SQL auth reference (connection strings, managed identity SQL grants, CI/CD principal types), see `azure-prepare/references/services/sql-database/auth.md`.
+> ⛔ **Local/shared-key/password authentication MUST be disabled on every data service.** The app authenticates with its managed identity; the deploying principal is granted an Entra admin/data role so migrations and seeding can run token-based. Full module templates (auth config, Entra admin child resources, MI data-plane roles) live in [`bicep-patterns-data.md`](bicep-patterns-data.md).
+
+| Service | How local auth is disabled | App/MI access |
+|---------|----------------------------|---------------|
+| Azure SQL | `azureADOnlyAuthentication: true` (pattern below) | Entra admin + `CREATE USER [<mi>] FROM EXTERNAL PROVIDER` |
+| PostgreSQL Flexible | `authConfig: { passwordAuth: 'Disabled', activeDirectoryAuth: 'Enabled' }` | Entra admin child resource + MI role via `pgaadauth_create_principal` |
+| MySQL Flexible | Entra admin child resource, `aad_auth_only` config | MI mapped as an AAD login |
+| Redis | `disableAccessKeyAuthentication: true` + `accessPolicyAssignments` | Data Owner/Contributor access policy to the MI |
+| Storage | `allowSharedKeyAccess: false` | Storage Blob/Queue Data role to the MI |
+| Cosmos DB | `disableLocalAuth: true` | `sqlRoleAssignments` (data plane) — see [rbac-roles.md](rbac-roles.md) |
+| Service Bus / Event Hubs | `disableLocalAuth: true` | Data Sender/Receiver role to the MI |
+
+### SQL Server — Entra-Only Authentication
 
 ```bicep
 param principalId string
@@ -70,50 +82,42 @@ resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
 
 > ⚠️ If deploying from CI/CD with a service principal, set `principalType` to `'Application'`. The default `'User'` only works for interactive deployments.
 
-### Secrets — Key Vault References
+### Secrets — App-Internal, Stored On-Compute (No Key Vault)
 
-Store secrets in Key Vault. Reference via app settings — never inline.
+App-internal secrets (e.g. `SECRET_KEY`, `JWT_SECRET`, `API_KEY`, session secrets) are stored directly on the compute resource. ⛔ **No Key Vault**, no `@Microsoft.KeyVault(...)`, no `keyVaultUrl`.
 
-> ⛔ **No plaintext secrets in Bicep `appSettings`.** Values like `SECRET_KEY`, `JWT_SECRET`, `API_KEY`, session secrets, and database passwords MUST NOT be hardcoded — not even as placeholders. Never use `uniqueString()` for secrets (deterministic/predictable). These appear in ARM deployment history and persist in source control.
+> ⛔ **No plaintext/committed secrets.** Values MUST NOT be hardcoded in Bicep or committed to `main.parameters.json` — pass them as `@secure()` params generated at deploy time. Never use `uniqueString()` for secrets (deterministic/predictable). `@secure()` params do NOT appear in ARM deployment history.
 >
-> **Container Apps exception:** Phase 1 of two-phase deployment uses `secrets: []` — NO secrets at all (not plaintext, not KV). KV `secretRef` entries are activated in Phase 2 after RBAC propagates. See [bicep-container-apps.md](../../scaffold/references/bicep-container-apps.md) § Two-Phase Wiring.
->
-> ⛔ **Container Apps KV URL — do NOT use `environment().suffixes.keyvaultDns`.** That function returns `.vault.azure.net` (WITH leading dot) → double-dot URL → `ContainerAppSecretKeyVaultUrlInvalid`. Use `'https://${kvName}.vault.azure.net/secrets/...'` with `#disable-next-line no-hardcoded-env-urls` to suppress the linter.
->
-> **Correct patterns:**
-> 1. **Key Vault reference (preferred):** `'@Microsoft.KeyVault(VaultName=${kvName};SecretName=secret-key)'`
-> 2. **Deploy-time seeding (free-tier):** Omit from Bicep; run `az webapp config appsettings set --settings SECRET_KEY=$(openssl rand -base64 32)` post-deploy
-> 3. **Bicep `@secure()` parameter:** Pass via CLI `--parameters secretKey=$(openssl rand -base64 32)` — never committed to parameters.json
->
-> ❌ **NEVER:** `{ name: 'SECRET_KEY', value: 'hard-to-guess-string' }` or `value: 'change-me'` in Bicep
+> ❌ **NEVER:** `{ name: 'SECRET_KEY', value: 'hard-to-guess-string' }` or `value: 'change-me'`; any `@secure()` password param for a database/cache/storage account (those use managed identity — see § Data Services).
 
 ```bicep
-// App Service / Functions — Key Vault reference pattern
+// App Service / Functions
+@secure()
+param secretKey string   // generated at deploy time, passed via CLI --parameters, never committed
+
 appSettings: [
-  {
-    name: 'DB_CONNECTION_STRING'
-    value: '@Microsoft.KeyVault(VaultName=${kvName};SecretName=db-connection-string)'
-  }
+  // Database via managed identity — plain connection params, NO password:
+  { name: 'PGHOST', value: '${pgName}.postgres.database.azure.com' }
+  { name: 'PGDATABASE', value: appDbName }
+  { name: 'PGUSER', value: appServiceName }   // the MI's DB principal name
+  { name: 'PGSSLMODE', value: 'require' }
+  // App-internal secret stored directly as an app setting (platform-encrypted at rest):
+  { name: 'SECRET_KEY', value: secretKey }
 ]
 ```
 
-Key Vault module — emit this resource EXACTLY; add no other properties. `enablePurgeProtection` is deliberately absent (ARM rejects `false`; `true` blocks cleanup).
+For Container Apps, put the secret in the Container App's **native** `secrets: [{ name, value: secretKey }]` array (value from an `@secure()` param) and reference it via `secretRef` — see [bicep-container-apps.md](bicep-container-apps.md). ⛔ **Never** emit a `Microsoft.KeyVault/vaults` resource.
 
-```bicep
-resource kv 'Microsoft.KeyVault/vaults@{apiVersion}' = {
-  name: kvName
-  location: location
-  tags: tags
-  properties: {
-    sku: { family: 'A', name: 'standard' }
-    tenantId: subscription().tenantId
-    enableRbacAuthorization: true          // RBAC, not access policies
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-    networkAcls: { defaultAction: 'Allow', bypass: 'AzureServices' }
-  }
-}
-```
+### App Settings Are Non-Secret Endpoint Configuration Only
+
+> ⛔ **App settings / container `env` MUST NOT contain any secret or connection string.** With managed identity the app authenticates by token — there is nothing secret to configure. App settings carry ONLY **non-secret endpoint configuration** that tells the app *where* and *as which identity* to connect:
+> - **Endpoint / host** — e.g. `PGHOST=myserver.postgres.database.azure.com`, `AZURE_STORAGE_BLOB_ENDPOINT=https://myacct.blob.core.windows.net`
+> - **Resource name** — e.g. database name, container/queue name
+> - **Identity principal** — the MI's DB principal name as the connection `user` (Postgres/MySQL AAD auth)
+> - **`AZURE_CLIENT_ID`** — ONLY for a user-assigned MI, so `DefaultAzureCredential` selects the right identity (omit for system-assigned)
+> - **Non-secret app flags** — e.g. `NODE_ENV`, `PGSSLMODE=require`, CORS origins
+>
+> ❌ **NEVER put in app settings / `env`:** a full **connection string** (`DATABASE_URL=postgres://user:pass@host/db`, `AccountKey=...`, `SharedAccessKey=...`), a **password**, an **access key**, a **SAS token**, or any other credential. If a value would authenticate you, it does not belong here — use managed identity instead. The ONLY secret-like value permitted anywhere is a genuinely app-internal secret (e.g. `SECRET_KEY`) that is NOT an Azure resource credential, and even that is passed as an `@secure()` param, never as a plain app-setting literal.
 
 ### Transport — HTTPS Only
 

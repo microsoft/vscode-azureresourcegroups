@@ -1,0 +1,113 @@
+{
+  "sessionId": "00000000-0000-4000-8000-000000000001",
+  "subscriptionId": "00000000-0000-4000-8000-000000000002",
+  "deploymentNames": [
+    "attendance-deployment-1",
+    "attendance-deployment-2",
+    "attendance-deployment-3",
+    "attendance-deployment-4",
+    "attendance-deployment-5"
+  ],
+  "resourceGroupName": "rg-attendance-dev-cec6",
+  "status": "succeeded",
+  "resourceIds": [
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.OperationalInsights/workspaces/log-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Insights/components/appi-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-func-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Storage/storageAccounts/stattendancedevcec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/serverFarms/plan-func-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/sites/func-attendance-dev-cec6",
+    "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/staticSites/swa-attendance-dev-cec6"
+  ],
+  "endpoints": [
+    {
+      "name": "attendance-api",
+      "url": "https://api.attendance.example.com/health",
+      "healthStatus": "healthy"
+    },
+    {
+      "name": "attendance-web",
+      "url": "https://attendance.example.com/",
+      "healthStatus": "healthy"
+    }
+  ],
+  "healthStatus": "healthy",
+  "duration": {
+    "startedUtc": "2026-09-11T21:33:33Z",
+    "completedUtc": "2026-09-11T22:23:14Z"
+  },
+  "warnings": [
+    "Function App CORS was widened at deploy time to include the example frontend hostname.",
+    "PostgreSQL Flexible Server has public network access enabled with an AllowAllAzureServicesAndResourcesWithinAzureIps rule (0.0.0.0). Post-deploy recommendation: switch to Private Access + VNet integration for production.",
+    "Function App code was modified during deploy to add DefaultAzureCredential-based PostgreSQL token auth (services/attendance-api/src/services/postgres/PgDatabase.ts). Committed but not pushed."
+  ],
+  "partial": false,
+  "resourceResults": [
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6", "type": "Microsoft.Resources/resourceGroups", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.OperationalInsights/workspaces/log-attendance-dev-cec6", "type": "Microsoft.OperationalInsights/workspaces", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Insights/components/appi-attendance-dev-cec6", "type": "Microsoft.Insights/components", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-func-attendance-dev-cec6", "type": "Microsoft.ManagedIdentity/userAssignedIdentities", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Storage/storageAccounts/stattendancedevcec6", "type": "Microsoft.Storage/storageAccounts", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-attendance-dev-cec6", "type": "Microsoft.DBforPostgreSQL/flexibleServers", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/serverFarms/plan-func-attendance-dev-cec6", "type": "Microsoft.Web/serverFarms", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/sites/func-attendance-dev-cec6", "type": "Microsoft.Web/sites", "status": "succeeded"},
+    {"resourceId": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/staticSites/swa-attendance-dev-cec6", "type": "Microsoft.Web/staticSites", "status": "succeeded"}
+  ],
+  "createdResources": [
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/staticSites/swa-attendance-dev-cec6", "name": "swa-attendance-dev-cec6", "type": "Microsoft.Web/staticSites", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Storage/storageAccounts/stattendancedevcec6", "name": "stattendancedevcec6", "type": "Microsoft.Storage/storageAccounts", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.OperationalInsights/workspaces/log-attendance-dev-cec6", "name": "log-attendance-dev-cec6", "type": "Microsoft.OperationalInsights/workspaces", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-func-attendance-dev-cec6", "name": "id-func-attendance-dev-cec6", "type": "Microsoft.ManagedIdentity/userAssignedIdentities", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-attendance-dev-cec6", "name": "psql-attendance-dev-cec6", "type": "Microsoft.DBforPostgreSQL/flexibleServers", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Insights/components/appi-attendance-dev-cec6", "name": "appi-attendance-dev-cec6", "type": "Microsoft.Insights/components", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/serverFarms/plan-func-attendance-dev-cec6", "name": "plan-func-attendance-dev-cec6", "type": "Microsoft.Web/serverFarms", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/Microsoft.Web/sites/func-attendance-dev-cec6", "name": "func-attendance-dev-cec6", "type": "Microsoft.Web/sites", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"},
+    {"id": "/subscriptions/00000000-0000-4000-8000-000000000002/resourceGroups/rg-attendance-dev-cec6/providers/microsoft.alertsmanagement/smartDetectorAlertRules/Failure Anomalies - appi-attendance-dev-cec6", "name": "Failure Anomalies - appi-attendance-dev-cec6", "type": "microsoft.alertsmanagement/smartDetectorAlertRules", "resourceGroup": "rg-attendance-dev-cec6", "classification": "orphaned"}
+  ],
+  "orphanedResourceGroups": [],
+  "inventoryUnverified": false,
+  "healingAttempts": [
+    {
+      "attempt": 1,
+      "phase": "deployment",
+      "errors": [
+        {"source": "Microsoft.Web/sites (functionApp module)", "detail": "The following app setting (Site.SiteConfig.AppSettings.FUNCTIONS_WORKER_RUNTIME) for Flex Consumption sites is invalid.", "classification": "IAC_ERROR"}
+      ],
+      "action": "retried",
+      "result": "fixed",
+      "resourceGroupName": "rg-attendance-dev-cec6"
+    },
+    {
+      "attempt": 2,
+      "phase": "deployment",
+      "errors": [
+        {"source": "Microsoft.DBforPostgreSQL/flexibleServers/administrators", "detail": "AadAuthOperationCannotBePerformedWhenServerIsNotAccessible - transient race between PostgreSQL server ready-state and admin PUT.", "classification": "INFRA_TRANSIENT"}
+      ],
+      "action": "retried",
+      "result": "fixed",
+      "resourceGroupName": "rg-attendance-dev-cec6"
+    },
+    {
+      "attempt": 3,
+      "phase": "deployment",
+      "errors": [
+        {"source": "Function App runtime", "detail": "pg client received empty password: the DefaultAzureCredential token function was overwritten by pg's connection-string parsing when both `connectionString` and `password` were set on Pool config. Fixed by parsing the URL and passing individual fields (services/attendance-api/src/services/postgres/PgDatabase.ts).", "classification": "IAC_ERROR"}
+      ],
+      "action": "retried",
+      "result": "fixed",
+      "resourceGroupName": "rg-attendance-dev-cec6"
+    },
+    {
+      "attempt": 4,
+      "phase": "deployment",
+      "errors": [
+        {"source": "Microsoft.DBforPostgreSQL/flexibleServers/administrators", "detail": "Second attempt of the Postgres admin race during CORS-update redeploy.", "classification": "INFRA_TRANSIENT"}
+      ],
+      "action": "retried",
+      "result": "fixed",
+      "resourceGroupName": "rg-attendance-dev-cec6"
+    }
+  ]
+}

@@ -336,6 +336,7 @@ const currentHash = hashAgentAssets();
 const currentFiles = agentAssetFiles();
 
 /**
+
  * The eval spec must run the agent on a model the product actually ships it on.
  * Catching a bad pin here costs a second; catching it at trial time costs a run.
  *

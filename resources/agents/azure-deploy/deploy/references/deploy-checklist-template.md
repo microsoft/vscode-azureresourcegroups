@@ -14,8 +14,9 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 # RG: {rgName} | Sub: {subscriptionId} | Session: {sessionId}
 
 ## ⛔ Secret generation (BEFORE first az deployment)
-- Auto-generate ALL `@secure()` params before first `az deployment sub create` — NEVER `ask_user`
-- ⛔ On ANY retry OR redeploy (incl. after a conversation compaction): read the SAME `@secure()` value back from Key Vault (source of truth) or `deploy-audit.log` — NEVER regenerate. A secret that's both applied to a resource AND stored in KV desyncs if regenerated: e.g. a DB module re-applying `administratorLoginPassword` re-sets the server admin but not the KV secret the app reads → auth 500s while provisioning still reports success.
+- ⛔ **No database/cache/storage passwords or access keys exist** — those services are Entra/managed-identity only (no `@secure()` DB password params, no `administratorLoginPassword`). See [database-post-deploy.md](database-post-deploy.md).
+- Auto-generate ONLY app-internal `@secure()` params (e.g. `SECRET_KEY`, JWT key) before first `az deployment sub create` — NEVER `ask_user`
+- ⛔ On ANY retry OR redeploy (incl. after a conversation compaction): read the SAME `@secure()` value back from `deploy-secrets.env` (or `deploy-audit.log`) — NEVER regenerate. Pass it to EVERY deployment. An app-internal secret that's regenerated overwrites the live on-compute value → auth 500s while provisioning still reports success.
 
 ## ⛔ Read deploy/instructions.md
 - You MUST `view` deploy/instructions.md BEFORE running any `az deployment` command
@@ -52,7 +53,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Wait ~60s for RBAC propagation (AcrPull role) before code deploy
 - BuildKit Dockerfiles: create Dockerfile.azure without --mount syntax
 - Pass real image on EVERY Bicep redeploy: --parameters containerImage='{acr}/{app}:latest'
-- KV secrets: `revision restart` does NOT refresh — must create new revision
+- Native CA secrets: `revision restart` does NOT refresh — must create new revision
 - ACR build failures count toward healing counter
 - Windows: append `--no-logs` to `az acr build` to avoid UnicodeEncodeError
 - ⛔ After the revision is ready, run an explicit live HTTP probe against the ingress FQDN (`curl -sSfL`/`iwr` on `*.azurecontainerapps.io`) — this call IS the health check; capture the result into `deploy-result.json.endpoints[].healthStatus`.
@@ -66,7 +67,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Store token in $env:SWA_CLI_DEPLOYMENT_TOKEN — never as CLI arg
 
 ## During healing / retries
-- ⛔ REGION LOCK: Deploy region MUST match plan region ({region}). Any region change → RE-PRESENT deploy approval gate with old and new region. Do NOT silently switch. After approval: update `prepare-plan.json.services[].region`, `deploymentVariables.location`, AND append attempt number to `naming.suffix` (e.g., `edd6` → `edd602`). Recompute ALL resource names from the new suffix before redeploying — globally unique names (App Service, Key Vault) from the old region may be soft-deleted and unavailable.
+- ⛔ REGION LOCK: Deploy region MUST match plan region ({region}). Any region change → RE-PRESENT deploy approval gate with old and new region. Do NOT silently switch. After approval: update `prepare-plan.json.services[].region`, `deploymentVariables.location`, AND append attempt number to `naming.suffix` (e.g., `edd6` → `edd602`). Recompute ALL resource names from the new suffix before redeploying — globally unique names (App Service, Storage, ACR) from the old region may be soft-deleted and unavailable.
 - ⛔ IaC-only: NEVER use `az containerapp update --image`, `az webapp update`, `az appservice plan delete`, or `az group create` — fix the Bicep and redeploy via `az deployment sub create`
 - ⛔ IaC-only for app-managed roles: NEVER `az role assignment create` for AcrPull or KV Secrets User — Bicep-managed (deterministic GUID), so an imperative grant collides on redeploy (`RoleAssignmentExists`). Missing app role = fix the Bicep module and redeploy. (Deployer/subscription-scope 403s are the ONLY exception — see [`error-classification.md`](error-classification.md).)
 - ⛔ **On error: read [`error-classification.md`](error-classification.md)** to classify the failure and follow the prescribed remediation. Do NOT ad-hoc heal without reading the classification.

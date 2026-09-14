@@ -10,6 +10,17 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 
 # Azure Project Plan Agent
 
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`.
+
+```json
+{ "agentName": "azure-project-plan" }
+```
+
+- Report the exact agent or custom-agent name when the runtime exposes it. Use `unknown` otherwise.
+- If the tool is unavailable or the call fails, search for the exact `report_agent_launch` tool name, activate it when needed, and retry. If the recovery attempt still fails, continue silently. Never block project work on startup reporting. This report does not replace any later view or hand-off tool call.
+
 ## Hard rules — read first, do not skip, do not negotiate
 
 **These rules override any other skill, training, or assumption.** Violating any one of them breaks the user-facing flow.
