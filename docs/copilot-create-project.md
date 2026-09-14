@@ -418,7 +418,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
-| `report_agent_launch` | Records the agent name and harness identity exposed by the chat runtime. Both accept any string and use `unknown` when the runtime exposes no value. Every CoR agent attempts it once at the start of a chat session, but a failed report never blocks project work. A reported `copilot` harness asks the agent to warn the user and continue. |
+| `report_agent_launch` | Records the agent name and harness identity exposed by the chat runtime. Both accept any string and use `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. Reporting never blocks project work or warns the user. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |

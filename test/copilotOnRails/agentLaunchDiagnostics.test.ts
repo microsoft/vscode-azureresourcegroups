@@ -76,6 +76,8 @@ suite('agentLaunchDiagnostics', () => {
                     `"agentName": "${agentName}", "harness": "unknown"`,
                 ));
                 assert.match(instructions, /If this chat already contains a successful `report_agent_launch` call, do not call it again\./);
+                assert.match(instructions, /search for the exact `report_agent_launch` tool name, activate it when needed, and retry\./);
+                assert.match(instructions, /continue silently\. Never block project work on startup reporting\./);
             }
         });
     });

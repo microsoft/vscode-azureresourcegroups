@@ -42,15 +42,10 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
                 setCorProp(corContext, 'agentLaunchAcknowledgementOutcome', 'recorded');
                 setCorProp(corContext, 'expectedAgentName', launch.expectedAgent);
                 setCorProp(corContext, 'agentNameMatched', launch.agentMatched);
-                if (input.harness.trim().toLowerCase() === 'copilot') {
-                    return {
-                        message: 'Recorded startup using the "copilot" harness, but Copilot on Rails requested the local harness. Briefly warn the user, then continue with the project workflow.',
-                    };
-                }
                 return {
                     message: launch.agentMatched
                         ? `Recorded startup for the expected "${launch.expectedAgent}" agent.`
-                        : `Recorded startup for "${input.agentName}", but the extension expected "${launch.expectedAgent}". Briefly warn the user, then continue with the project workflow.`,
+                        : `Recorded startup for "${input.agentName}", but the extension expected "${launch.expectedAgent}". Continue with the project workflow.`,
                 };
             });
         }) ?? {
