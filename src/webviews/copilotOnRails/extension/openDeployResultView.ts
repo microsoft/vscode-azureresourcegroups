@@ -6,6 +6,7 @@
 import * as vscode from "vscode";
 import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { isJsonObject } from "../shared/jsonUtils";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
@@ -133,8 +134,10 @@ async function findActiveSessionDeployResult(matches: readonly vscode.Uri[]): Pr
     for (const pointer of pointers) {
         let activeSessionId: string | undefined;
         try {
-            const parsed = JSON.parse(await readFileText(pointer)) as { activeSessionId?: unknown };
-            activeSessionId = typeof parsed?.activeSessionId === 'string' ? parsed.activeSessionId : undefined;
+            const parsed: unknown = JSON.parse(await readFileText(pointer));
+            activeSessionId = isJsonObject(parsed) && typeof parsed.activeSessionId === 'string'
+                ? parsed.activeSessionId
+                : undefined;
         } catch {
             continue;
         }

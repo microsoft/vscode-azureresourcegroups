@@ -87,7 +87,7 @@ suite('deployResultTelemetryUtils', () => {
     });
 
     test('reports invalid JSON without exposing parser errors', () => {
-        for (const content of ['{"private@example.com":', 'null', '[]']) {
+        for (const content of ['{"private@example.com":', 'null', '[]', '"result"', '42', 'true']) {
             assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', content), { parsedOk: false });
         }
     });

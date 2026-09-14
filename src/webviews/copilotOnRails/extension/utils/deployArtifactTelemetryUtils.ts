@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { CopilotOnRailsContext } from '../../../../utils/copilotOnRails/CopilotOnRailsContext';
 import { setCorProp } from '../../../../utils/copilotOnRails/telemetryUtils';
+import { isJsonObject } from '../../shared/jsonUtils';
 import { parseDeployResultJson } from '../../views/utils/parseDeployResultJson';
 
 type ArtifactFile = 'prereq-output.json' | 'prepare-plan.json' | 'scaffold-manifest.json' | 'deploy-result.json';
@@ -118,15 +119,16 @@ export async function recordDeployArtifactsTelemetry(context: CopilotOnRailsCont
 
 /** Select fields explicitly; never include artifact text or JSON parser errors in either sink. */
 export function getDeployArtifactTelemetry(file: ArtifactFile, content: string): DeployArtifactTelemetry {
-    let data: JsonObject | undefined;
+    let parsed: unknown;
     try {
-        data = object(JSON.parse(content));
+        parsed = JSON.parse(content);
     } catch {
         return { parsedOk: false };
     }
-    if (!data) {
+    if (!isJsonObject(parsed)) {
         return { parsedOk: false };
     }
+    const data = parsed;
 
     let metrics: Omit<DeployArtifactTelemetry, 'parsedOk'>;
     switch (file) {
@@ -209,7 +211,7 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
 }
 
 function object(value: unknown): JsonObject | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : undefined;
+    return isJsonObject(value) ? value : undefined;
 }
 
 function records(value: unknown): JsonObject[] | undefined {
