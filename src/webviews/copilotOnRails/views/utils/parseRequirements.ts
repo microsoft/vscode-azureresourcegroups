@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isJsonObject } from '../../shared/jsonUtils';
+import { isJsonObject } from '../../shared/jsonUtils.ts';
 
 export type RequirementsAnswer = string | number | boolean | string[] | null;
 
