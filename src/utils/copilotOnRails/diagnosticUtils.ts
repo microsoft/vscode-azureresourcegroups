@@ -53,7 +53,7 @@ export function getRecordedSystemInfo(): Record<string, string> {
 // #endregion
 
 // #region diagnosticEvents
-const maxCachedEvents: number = 50;
+const maxCachedEvents: number = 75;
 const eventsKey: string = 'copilotOnRails.diagnosticEvents';
 
 /**
