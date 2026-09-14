@@ -98,18 +98,20 @@ Static lockfile analysis only.
 
 > ⛔ **Lockfile grep is the ONLY valid evidence.** Do NOT set `hasNativeModules` from package name alone. `prebuild-install` without `node-gyp` = prebuilt → `hasNativeModules: false`. Key: `bcrypt` ✅ native, `bcryptjs` ❌ JS. `psycopg2` ✅, `psycopg2-binary` ❌. `sharp` v0.33+ ❌ prebuilt. `canvas` ✅ always. No lockfile → `"unknown"`, ⚠️ WARN.
 
-When `hasNativeModules: true`: `f1Viable: false`, `f1BlockReason: "native modules ({signal})"`.
+When `hasNativeModules: true`: `f1Viable: false`, `f1BlockReason: "native modules ({signal})"`. (F1/D1/Free are never offered regardless — see below.)
 
-## F1 Viability — Beyond Native Modules
+## SKU Sizing Signals — Beyond Native Modules
 
-| Condition | f1BlockReason |
+> ⛔ **F1/D1/Free are never selected** (managed identity is mandatory and the free-tier MI sidecar OOMs). The floor is always **B1**. `f1Viable` is retained for back-compat but is effectively always `false`; treat these signals as "size **up** from B1" (B2/S1), never as "drop to free".
+
+| Condition | f1BlockReason / sizing note |
 |-----------|---------------|
-| Large dep tree (Python >10, Node lockfile >500KB, .NET >20 NuGet) | `"large dependency tree"` |
+| Large dep tree (Python >10, Node lockfile >500KB, .NET >20 NuGet) | `"large dependency tree"` — consider B2 |
 | Build-time compilation (`tsconfig.json` + `"build"` script) | `"build-time compilation"` |
 | WSGI/ASGI server (`gunicorn`/`uvicorn`/`daphne`) | `"WSGI/ASGI server"` |
 | 🔶 Major Migration (>5 files) | `"major migration"` |
 
-When `f1Viable: false`: prepare selects B1 (~$13/mo) minimum.
+Prepare always selects **B1 (~$13/mo) minimum**; the signals above only push sizing higher.
 
 ## First-Run Initialization
 

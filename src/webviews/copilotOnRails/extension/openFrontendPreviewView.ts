@@ -8,6 +8,7 @@ import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
 import { INTEGRATION_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { isJsonObject, readStringRecord } from "../shared/jsonUtils";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -135,12 +136,16 @@ function isFrontendProject(dir: vscode.Uri): boolean {
         return true;
     }
     try {
-        const pkg = JSON.parse(fs.readFileSync(vscode.Uri.joinPath(dir, 'package.json').fsPath, 'utf-8')) as {
-            dependencies?: Record<string, string>;
-            devDependencies?: Record<string, string>;
-        };
-        const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-        return FRONTEND_FRAMEWORKS.some((framework) => framework in deps);
+        const parsed: unknown = JSON.parse(fs.readFileSync(vscode.Uri.joinPath(dir, 'package.json').fsPath, 'utf-8'));
+        if (!isJsonObject(parsed)) {
+            return false;
+        }
+
+        const dependencies = readStringRecord(parsed.dependencies) ?? {};
+        const devDependencies = readStringRecord(parsed.devDependencies) ?? {};
+        return FRONTEND_FRAMEWORKS.some((framework) =>
+            Object.hasOwn(dependencies, framework) || Object.hasOwn(devDependencies, framework)
+        );
     } catch {
         return false;
     }

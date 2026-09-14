@@ -10,7 +10,7 @@ For each service in `services[]`:
 
 > **PostgreSQL wiring:** Include firewall rule + extension allow-list (see [subagent-iac-gen.md](subagent-iac-gen.md) Step 6 if PostgreSQL in plan). ⛔ **PostgreSQL config resources** (e.g., `require_secure_transport`) must use `source: 'user-override'` — `'system-default'` is read-only and ARM rejects it. ⛔ **Do NOT create `databases/postgres` child resource** — it exists by default and ARM rejects duplicate creation. **BuildKit Dockerfiles:** Generate `Dockerfile.azure` for ACR compatibility — see [code-deployment-container-apps.md § BuildKit](../../deploy/references/code-deployment-container-apps.md).
 
-> **Env var completeness:** Read `.env.example` (or `.env.sample`, `config.example`) + config/settings files (Pydantic `Settings`, `@t3-oss/env-nextjs`, Django `settings.py`) for each component to enumerate required env vars before generating IaC. Every env var with a placeholder value (not `localhost`) should map to either: (1) a Bicep parameter, (2) a KV secret reference, or (3) a hardcoded value derived from other resources (e.g., database connection string from the DB module output). ⛔ **Container Apps:** KV `secretRef` entries must be gated behind `isPlaceholder` — Phase 1 = `secrets: []`, Phase 2 activates KV refs. See [bicep-container-apps.md](bicep-container-apps.md). Flag unmapped vars in selfReview as ⚠️ WARN. Missing vars cause container crash loops at deploy time.
+> **Env var completeness:** Read `.env.example` (or `.env.sample`, `config.example`) + config/settings files (Pydantic `Settings`, `@t3-oss/env-nextjs`, Django `settings.py`) for each component to enumerate required env vars before generating IaC. Every env var with a placeholder value (not `localhost`) should map to either: (1) a Bicep parameter, (2) a **managed-identity KV reference** for an app-internal secret (NOT an Azure resource credential), or (3) a value derived from other resources. ⛔ **Database/cache/storage access is managed-identity + token — wire connection *parameters* (host, db name, MI username, `sslmode=require`) as plain app settings, never a connection-string password or access key.** ⛔ **Container Apps:** KV `secretRef` entries must be gated behind `isPlaceholder` — Phase 1 = `secrets: []`, Phase 2 activates KV refs. See [bicep-container-apps.md](bicep-container-apps.md). Flag unmapped vars in selfReview as ⚠️ WARN. Missing vars cause container crash loops at deploy time.
 
 > ⛔ **Set `targetScope = 'subscription'` in `main.bicep`.** Subscription-scope Bicep creates the resource group in IaC with all 5 AppOnboard tags (including `created-at`). Do NOT use default resource-group scope — it requires imperative `az group create` which consistently misses tags. If the user lacks subscription-level permissions, the deploy phase handles fallback to RG-scope automatically.
 
@@ -36,7 +36,7 @@ If extending existing IaC, MERGE with existing tags using `union()` / `merge()`.
 
 ⛔ **API version verification:** Use versions from `apiVersions` input map. If a type is missing from the map, use the latest GA version from reference file examples — no `-preview` suffix. `az bicep build` catches invalid versions at compile time.
 
-⛔ **Resource property verification:** Training data references deprecated properties. Known traps: `Microsoft.CognitiveServices/accounts/deployments` uses `sku` (name + capacity), NOT `scaleSettings` (deprecated) — omit `raiPolicyName`; Key Vault `enablePurgeProtection` — omit entirely (`false` rejected by ARM, `true` blocks cleanup). Fallback: `az bicep build` + `what-if`.
+⛔ **Resource property verification:** Training data references deprecated properties. Known traps: `Microsoft.CognitiveServices/accounts/deployments` uses `sku` (name + capacity), NOT `scaleSettings` (deprecated) — omit `raiPolicyName`. ⛔ **Do NOT emit a `Microsoft.KeyVault/vaults` resource at all** (no Key Vault). Fallback: `az bicep build` + `what-if`.
 
 ### Output
 
@@ -50,7 +50,7 @@ If extending existing IaC, MERGE with existing tags using `union()` / `merge()`.
 
 ### Security Patterns — Apply During Generation
 
-⛔ Apply ALL patterns from [`bicep-patterns-security.md`](bicep-patterns-security.md) during generation — managed identity, SCM/FTP auth policies, KV secrets, least-privilege RBAC.
+⛔ Apply ALL patterns from [`bicep-patterns-security.md`](bicep-patterns-security.md) during generation — managed identity, SCM/FTP auth policies, on-compute app-internal secrets (NO Key Vault), least-privilege RBAC.
 
 ## Step 6b — Dockerfile Generation (conditional)
 

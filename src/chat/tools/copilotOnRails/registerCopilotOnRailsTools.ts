@@ -6,8 +6,10 @@
 import { registerMcpToolWithTelemetry } from "@microsoft/vscode-inproc-mcp/vscode";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { captureDeploymentInventoryTool } from "./captureDeploymentInventoryTool";
+import { closeDatabaseMigrationAccessTool } from "./closeDatabaseMigrationAccessTool";
 import { openDeployPlanViewTool } from "./openDeployPlanViewTool";
 import { openDeployResultViewTool } from "./openDeployResultViewTool";
+import { openDatabaseMigrationAccessTool } from "./openDatabaseMigrationAccessTool";
 import { openFrontendPreviewViewTool } from "./openFrontendPreviewViewTool";
 import { openLocalNextStepsViewTool } from "./openLocalNextStepsViewTool";
 import { openLocalPlanViewTool } from "./openLocalPlanViewTool";
@@ -41,5 +43,7 @@ export function registerCopilotOnRailsTools(mcpServer: McpServer): void {
     registerMcpToolWithTelemetry(mcpServer, recordDeployPrerequisitesTool);
     registerMcpToolWithTelemetry(mcpServer, openDeployPlanViewTool);
     registerMcpToolWithTelemetry(mcpServer, captureDeploymentInventoryTool);
+    registerMcpToolWithTelemetry(mcpServer, openDatabaseMigrationAccessTool);
+    registerMcpToolWithTelemetry(mcpServer, closeDatabaseMigrationAccessTool);
     registerMcpToolWithTelemetry(mcpServer, openDeployResultViewTool);
 }
