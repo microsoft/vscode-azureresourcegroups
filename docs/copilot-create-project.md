@@ -513,7 +513,7 @@ The diagnostics object has four fields:
 | `prompt` | The project description the user typed. |
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
 | `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
-| `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. A successful `report_agent_launch` event records the reported `agentName`; the same property is sent with the tool's telemetry. Error messages are **masked** before being recorded. |
+| `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
 
 Privacy guarantees, by design:
 

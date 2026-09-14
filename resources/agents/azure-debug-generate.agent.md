@@ -13,7 +13,7 @@ target: vscode
 
 ## Startup report - mandatory first action
 
-At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`. If this chat already contains a successful `report_agent_launch` call, do not call it again.
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`.
 
 ```json
 { "agentName": "azure-debug-generate" }
