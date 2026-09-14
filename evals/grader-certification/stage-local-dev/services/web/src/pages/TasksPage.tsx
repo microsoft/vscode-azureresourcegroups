@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 // Tasks list page - main task list with header + action bar
 
 import { useEffect, useState } from 'react';

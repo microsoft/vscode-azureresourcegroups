@@ -34,6 +34,7 @@ the work as it happens.
   - [The agents](#the-agents)
   - [The MCP tools](#the-mcp-tools)
   - [Files & state](#files--state)
+  - [Safe parsing and rendering](#safe-parsing-and-rendering)
 - [Part 5 — Support & triage runbook](#part-5--support--triage-runbook)
   - [Report an issue](#report-an-issue)
   - [Inspect diagnostics](#inspect-diagnostics)
@@ -69,38 +70,44 @@ your explicit action.
 
 ```mermaid
 flowchart TD
-    Start([Create New Project With Copilot]) --> Prompt[Describe your project]
+    Start(["Create New Project With Copilot"]) --> Prompt["Describe your project"]
     Prompt --> Plan
+    StartupReport{{"report_agent_launch<br/>once per chat session and agent"}}
 
-    subgraph Plan[1 · azure-project-plan]
-        Req[Requirements view] --> PlanDoc[.azure/project-plan.md] --> PlanView[Plan preview + approve]
+    subgraph Plan["1 · azure-project-plan"]
+        Req["Requirements view"] --> PlanDoc[".azure/project-plan.md"] --> PlanView["Plan preview + approve"]
     end
 
-    Plan -->|start_project_scaffold| Scaffold
+    Plan -->|"start_project_scaffold"| Scaffold
 
-    subgraph Scaffold[2 · azure-project-scaffold]
-        Gen[Generate frontend/backend/db] --> Preview[Frontend preview + Approve UI]
+    subgraph Scaffold["2 · azure-project-scaffold"]
+        Gen["Generate frontend/backend/db"] --> Preview["Frontend preview + Approve UI"]
     end
 
-    Scaffold -->|start_project_integrate| Integrate
+    Scaffold -->|"start_project_integrate"| Integrate
 
-    subgraph Integrate[3 · azure-project-integrate]
-        Wire[Wire to live data + migrations] --> Smoke[Smoke-test end-to-end] --> Next1[Next Steps view]
+    subgraph Integrate["3 · azure-project-integrate"]
+        Wire["Wire to live data + migrations"] --> Smoke["Smoke-test end-to-end"] --> Next1["Next Steps view"]
     end
 
-    Next1 -->|start_local_development| Debug
+    Next1 -->|"start_local_development"| Debug
 
-    subgraph Debug[4-5 · azure-debug-plan / azure-debug-generate]
-        DbgPlan[.azure/vscode-debug-plan.md] --> DbgGen[Emulators + launch/tasks] --> Next2[Debug Next Steps view]
+    subgraph Debug["4-5 · azure-debug-plan / azure-debug-generate"]
+        DbgPlan[".azure/vscode-debug-plan.md"] --> DbgGen["Emulators + launch/tasks"] --> Next2["Debug Next Steps view"]
     end
 
-    Next2 -->|start_deployment| Deploy
+    Next2 -->|"start_deployment"| Deploy
 
-    subgraph Deploy[6 · azure-deploy]
-        DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
+    subgraph Deploy["6 · azure-deploy"]
+        DepPlan["prepare-plan.json"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
     end
 
-    Deploy --> Done([azd up])
+    StartupReport -.-> Plan
+    StartupReport -.-> Scaffold
+    StartupReport -.-> Integrate
+    StartupReport -.-> Debug
+    StartupReport -.-> Deploy
+    Deploy --> Done(["azd up"])
 ```
 
 Each box is a **chat agent** (a `*.agent.md` under `resources/agents/`). Agents hand off to each other by
@@ -127,8 +134,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 ## Prerequisites
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
-- A Copilot plan with access to the supported models (the flow defaults to
-  `Claude Opus 4.7 (copilot)`, `Claude Sonnet 4.6 (copilot)`, `GPT-5.6 Sol (copilot)`, or `GPT-5.6 Terra (copilot)`).
+- A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
+  GPT Sol, GPT Astra, and GPT Terra models currently available through GitHub Copilot, so newly available
+  versions appear without an extension update. The lowest-version available Opus model is selected by default.
 - **An empty folder.** The flow needs a clean workspace to build in. If the open folder already contains
   files, you'll be asked to **Browse…** to an empty folder; VS Code reopens there and resumes automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
@@ -247,7 +255,9 @@ and dependencies, and writes `.azure/vscode-debug-plan.md`. After you approve, *
 produces the debugging artifacts — `docker-compose` for emulators, VS Code `launch.json` / `tasks.json`, and
 API tests — then opens the **Debug Next Steps** view. Like the plan preview, the debug plan's **Prerequisites**
 section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
-plan markdown.
+plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
+attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
+`https`, or `mailto` URLs. Mermaid diagrams use strict security mode.
 
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
@@ -385,7 +395,8 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 
 Six agents form the pipeline. Each is a `*.agent.md` under [`resources/agents/`](../resources/agents/); their
 step‑by‑step instructions live in the sibling folders and are copied into your workspace at
-`.github/agents/` before they run.
+`.github/agents/` before they run. Each agent reports its launch once per chat session. Repeated startup
+calls from later turns in the same chat are ignored.
 
 | # | Agent | Reads | Writes | Hands off with |
 | --- | --- | --- | --- | --- |
@@ -412,6 +423,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
+| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -459,6 +471,79 @@ app (`az containerapp exec`, `az webapp ssh`), then a one‑shot job in the same
 firewall rule is a last resort, and it is never widened beyond a single address — see
 [`cor-references/migration-access.md`](../resources/agents/azure-deploy/cor-references/migration-access.md).
 
+## Safe parsing and rendering
+
+This section is the security contract for code that reads or renders the artifacts above.
+
+### Trust boundary
+
+**SDL requirement.** Treat `.azure/*`, `.azure/.preview-temp/*`,
+`.copilot-azure/sessions/*`, and workspace `package.json` files as untrusted input. Agents may write these
+files, and users and other workspace tools can edit them. A reader can also observe a partial write. Validate
+data before it influences a path, URL, command, process, file operation, HTML node, or SVG node.
+
+**Design assumptions.** Artifacts belong to the current workspace and may be incomplete while an agent is
+working. Readers may preserve fields that are already valid, but they must not infer that the rest of the
+document is trustworthy.
+
+**Residual risk.** Runtime shape checks do not make a string safe for every later use. Validate again for the
+specific sink. A future deserializer, renderer, or URL handler can introduce a new execution path even when
+the current JSON parsing step is data-only.
+
+### JSON parsing and partial artifacts
+
+Safe deserialization and safe downstream use are separate checks.
+
+Use plain, one-argument `JSON.parse(text)`. This operation is data-only. JSON content cannot supply or invoke
+a reviver; application code would have to pass the optional second argument. Do not add a reviver without a
+separate security review.
+
+Assign the parse result to `unknown`. Narrow the root and every consumed field with runtime checks before use.
+A TypeScript cast only changes the compiler's view and does not validate runtime data.
+
+Malformed JSON follows the caller's existing error or retry path. For valid JSON with an incomplete object,
+preserve valid fields and ignore or default invalid fields according to the artifact contract. Filtering an
+invalid array entry must not discard its valid siblings. Never silently coerce an object to a string, which
+can turn unsupported input into text such as `[object Object]`.
+
+### Paths and package metadata
+
+Validate every artifact-supplied path part before passing it to `Uri.joinPath`, `path.join`, or another file
+API. Preview page slugs use kebab case and must match `[a-z0-9]+(?:-[a-z0-9]+)*`. A value such as
+`../outside` must fail validation before the code constructs `<slug>.html`; joining first would let the
+artifact escape the preview directory.
+
+When reading a workspace `package.json`, require an object root. Require `dependencies`, `devDependencies`,
+and `scripts` to be object records when present. Preserve entries whose values are strings and drop entries
+with other value types. When key presence changes behavior, use an own-property check such as
+`Object.hasOwn(record, key)` rather than reading through the prototype chain.
+
+### Markdown, HTML, and SVG
+
+Prefer a small parsed node model and React nodes for agent-written Markdown. Do not use
+`dangerouslySetInnerHTML` for plan text. Allowlist link protocols before creating anchors. The local debug
+plan currently allows `http`, `https`, and `mailto`. Restore only the tags required by the plan contract,
+currently attribute-free `<details>`, `<summary>`, and `<br>` tags. Leave unknown or attribute-bearing HTML
+as text.
+
+Mermaid output is still generated SVG inserted into the document. Initialize Mermaid with
+`securityLevel: "strict"` before rendering and keep that setting in place before inserting its SVG.
+
+### Audit Checklist
+
+1. Find every JSON parse, file read, and deserializer used by the changed flow.
+2. Confirm each `JSON.parse` call has one argument and no reviver. Review deserializer dependencies for code
+   execution or unsafe object construction.
+3. Parse into `unknown`, validate the root, and narrow every consumed field at runtime.
+4. Check malformed JSON follows the existing error or retry path. Check incomplete objects preserve valid
+   fields without coercing invalid values.
+5. Trace artifact values into path construction, shell or process calls, file operations, and URLs. Apply
+   sink-specific validation and confinement.
+6. Trace artifact text into HTML and SVG sinks. Prefer React nodes, allowlist protocols and tags, and keep
+   Mermaid in strict security mode.
+7. Add targeted tests for malformed roots, wrong field types, partial objects, traversal strings, unsafe
+   links or tags, and other inputs that reach the changed sink.
+
 ---
 
 # Part 5 — Support & triage runbook
@@ -499,13 +584,16 @@ issue.
 
 ## What the diagnostics contain (privacy)
 
-The diagnostics object has exactly three fields:
+The diagnostics object has four fields:
 
 | Field | Value |
 | --- | --- |
 | `prompt` | The project description the user typed. |
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
-| `diagnosticEvents` | Up to the **50 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionCommand` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+| `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
+| `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+
+`report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 
 Privacy guarantees, by design:
 
@@ -525,6 +613,7 @@ before submitting.
 | --- | --- | --- |
 | *"Creating a project with Copilot requires an empty folder."* | The open folder isn't empty. | Click **Browse…** and pick an empty folder; VS Code reopens there and resumes. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
+| Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
 | Plan preview shows *"couldn't render this plan — didn't match the expected layout."* | `.azure/project-plan.md` diverged from the required numbered skeleton. | The plan agent must rewrite the plan to the exact template (numbered `## N.` headings, `**Status**` / `**Created**` / `**Mode**` rows, a `## 6. Design System & UI` section with a `**Component Library**:` row). |
 | The flow doesn't advance after an approval. | An agent didn't successfully call its hand‑off MCP tool. | Check the diagnostics event log for a missing `start_*` event; re‑trigger the stage. Agents must load a tool via `tool_search` → `activate_tools` if it isn't directly listed. |

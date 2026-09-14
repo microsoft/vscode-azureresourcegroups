@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 'use strict';
 
 // The Azurite half of the emulator proof, and the reason it is a separate fixture from

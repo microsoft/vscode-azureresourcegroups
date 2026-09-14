@@ -40,6 +40,7 @@ import {
     type JSX,
 } from "react";
 import { classifyInstalledForRow, InstalledChip } from "./components/InstalledChip";
+import { InlineMarkdown } from "./components/InlineMarkdown";
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
@@ -54,11 +55,12 @@ import {
     type LocalPlanSection,
 } from "./utils/parseLocalDebugPlanMarkdown";
 import { getPrerequisiteInstallLink } from "./utils/prerequisiteInstallLinks";
+import { quoteMermaidLabels } from "./utils/quoteMermaidLabels";
 
 mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
-    securityLevel: "loose",
+    securityLevel: "strict",
     fontSize: 11,
     flowchart: {
         nodeSpacing: 15,
@@ -793,12 +795,9 @@ const ContentBlock = ({
             return <BlockquoteBlock text={item.text} />;
         case "paragraph":
             return (
-                <p
-                    className="paragraph"
-                    dangerouslySetInnerHTML={{
-                        __html: formatInline(item.text),
-                    }}
-                />
+                <p className="paragraph">
+                    <InlineMarkdown text={item.text} />
+                </p>
             );
         case "subsection":
             return (
@@ -859,12 +858,9 @@ const DataTable = ({
                     <tr>
                         {headers.map((h, hi) =>
                             columnHidden(hi) ? null : (
-                                <th
-                                    key={hi}
-                                    dangerouslySetInnerHTML={{
-                                        __html: formatInline(h),
-                                    }}
-                                />
+                                <th key={hi}>
+                                    <InlineMarkdown text={h} />
+                                </th>
                             ),
                         )}
                         {isPrereq && <th key="install">Install</th>}
@@ -893,13 +889,9 @@ const DataTable = ({
                                         return (
                                             <td key={ci}>
                                                 <span className="supportWarningCell">
-                                                    <span
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: formatInline(
-                                                                cell,
-                                                            ),
-                                                        }}
-                                                    />
+                                                    <span>
+                                                        <InlineMarkdown text={cell} />
+                                                    </span>
                                                     <Tooltip
                                                         relationship="label"
                                                         content={warningMessage}
@@ -929,12 +921,9 @@ const DataTable = ({
                                         );
                                     }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                                 {isPrereq && (
@@ -1045,12 +1034,9 @@ const GenerateCheckboxTable = ({
                 <thead>
                     <tr>
                         {table.headers.map((h, hi) => (
-                            <th
-                                key={hi}
-                                dangerouslySetInnerHTML={{
-                                    __html: formatInline(h),
-                                }}
-                            />
+                            <th key={hi}>
+                                <InlineMarkdown text={h} />
+                            </th>
                         ))}
                     </tr>
                 </thead>
@@ -1078,12 +1064,9 @@ const GenerateCheckboxTable = ({
                                         );
                                     }
                                     return (
-                                        <td
-                                            key={ci}
-                                            dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
-                                            }}
-                                        />
+                                        <td key={ci}>
+                                            <InlineMarkdown text={cell} />
+                                        </td>
                                     );
                                 })}
                             </tr>
@@ -1110,6 +1093,32 @@ const CodeBlock = ({
     </div>
 );
 
+/**
+ * Renders `code` with labels quoted, falling back to the diagram exactly as the
+ * author wrote it if that rewrite is what mermaid rejects.
+ *
+ * `quoteMermaidLabels` is a regex pass over a real grammar, so it can always
+ * meet a shape it reads wrong. The fallback keeps it strictly an improvement:
+ * it can rescue a diagram mermaid would have refused, and it can never be the
+ * reason a diagram that used to render stops rendering.
+ */
+const renderMermaid = async (
+    id: string,
+    code: string,
+    container: Element,
+): Promise<string> => {
+    const quoted = quoteMermaidLabels(code);
+    try {
+        return (await mermaid.render(id, quoted, container)).svg;
+    } catch (err) {
+        if (quoted === code) {
+            throw err;
+        }
+        // A fresh id: mermaid leaves the failed attempt's scratch element behind.
+        return (await mermaid.render(`${id}-verbatim`, code, container)).svg;
+    }
+};
+
 const MermaidBlock = ({
     code,
     onRenderStatus,
@@ -1132,9 +1141,8 @@ const MermaidBlock = ({
         }
         let cancelled = false;
         const id = `mermaid-diagram-${++mermaidIdCounter}`;
-        mermaid
-            .render(id, code, container)
-            .then(({ svg }) => {
+        renderMermaid(id, code, container)
+            .then((svg) => {
                 if (!cancelled && ref.current) {
                     ref.current.innerHTML = svg;
                     setFailedCode(null);
@@ -1164,19 +1172,17 @@ const MermaidBlock = ({
 const BulletListBlock = ({ items }: { items: string[] }): JSX.Element => (
     <ul className="bulletList">
         {items.map((item, i) => (
-            <li
-                key={i}
-                dangerouslySetInnerHTML={{ __html: formatInline(item) }}
-            />
+            <li key={i}>
+                <InlineMarkdown text={item} />
+            </li>
         ))}
     </ul>
 );
 
 const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
-    <div
-        className="blockquote"
-        dangerouslySetInnerHTML={{ __html: formatInline(text) }}
-    />
+    <div className="blockquote">
+        <InlineMarkdown text={text} />
+    </div>
 );
 
 const SubsectionBlock = ({
@@ -1214,37 +1220,3 @@ const SubsectionBlock = ({
         </div>
     );
 };
-
-function formatInline(text: string): string {
-    return (
-        escapeHtml(text.trim())
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-            .replace(
-                /\[([^\]]+)\]\(([^)]+)\)/g,
-                '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
-            )
-            // Restore a small whitelist of presentational HTML tags that the agent
-            // emits inside table cells (collapsible endpoint lists, line breaks).
-            .replace(
-                /&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi,
-                "<$1$2>",
-            )
-            // Swap the warning emoji for the themed amber warning codicon so it
-            // matches the rest of the UI instead of the OS emoji glyph.
-            .replace(
-                /\u26A0\uFE0F?/g,
-                '<span class="codicon codicon-warning warningIcon" aria-hidden="true"></span>',
-            )
-    );
-}
-
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}

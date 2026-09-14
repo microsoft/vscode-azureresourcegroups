@@ -12,6 +12,7 @@ import {
     type DeploymentPlanService,
     type DeploymentPlanTable,
 } from './deploymentPlanTypes';
+import { isJsonObject } from '../../shared/jsonUtils';
 
 /**
  * Friendly labels for the `services[].name` tokens emitted by the prepare phase.
@@ -139,7 +140,7 @@ export function isPreparePlanJson(content: string): boolean {
     }
     try {
         const parsed: unknown = JSON.parse(trimmed);
-        if (!isRecord(parsed)) {
+        if (!isJsonObject(parsed)) {
             return false;
         }
         return 'services' in parsed || 'costEstimate' in parsed || 'naming' in parsed;
@@ -157,7 +158,7 @@ export function isPreparePlanJson(content: string): boolean {
  */
 export function parsePreparePlanJson(content: string): DeploymentPlanData {
     const raw: unknown = JSON.parse(content);
-    const plan = isRecord(raw) ? raw : {};
+    const plan = isJsonObject(raw) ? raw : {};
 
     const planRegion = readString(plan.region) ?? readString(plan.location);
     const resourceNamesByService = readNamingResources(plan.naming);
@@ -180,7 +181,7 @@ export function parsePreparePlanJson(content: string): DeploymentPlanData {
         services,
         costEstimate: readCostEstimate(plan.costEstimate, servicesByPlanId, inlineCosts),
         postDeployRecommendations: readRecommendations(plan.postDeployRecommendations)
-            ?? readRecommendations(isRecord(plan.costEstimate) ? plan.costEstimate.postDeployRecommendations : undefined),
+            ?? readRecommendations(isJsonObject(plan.costEstimate) ? plan.costEstimate.postDeployRecommendations : undefined),
         deploymentVariables,
     };
 }
@@ -354,7 +355,7 @@ function readServiceSku(entry: Record<string, unknown>): string {
     if (direct) {
         return direct;
     }
-    if (!isRecord(entry.sku)) {
+    if (!isJsonObject(entry.sku)) {
         return '';
     }
     const sku = entry.sku;
@@ -387,7 +388,7 @@ function readComponentMapping(value: unknown): Map<string, string> {
  */
 function readNamingResources(value: unknown): Map<string, string> {
     const byService = new Map<string, string>();
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return byService;
     }
 
@@ -401,7 +402,7 @@ function readNamingResources(value: unknown): Map<string, string> {
     for (const entry of readArray(value.resources)) {
         add(readString(entry.type) ?? readString(entry.kind), readString(entry.name));
     }
-    if (isRecord(value.resources)) {
+    if (isJsonObject(value.resources)) {
         for (const [token, resourceName] of Object.entries(value.resources)) {
             add(token, readString(resourceName));
         }
@@ -414,7 +415,7 @@ function readCostEstimate(
     servicesByPlanId: Map<string, DeploymentPlanService>,
     inlineCosts: DeploymentPlanCostBreakdownItem[],
 ): DeploymentPlanCostEstimate | undefined {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         return undefined;
     }
     const items = firstArray(value.breakdown, value.items, value.byService);
@@ -458,7 +459,7 @@ function readRecommendations(value: unknown): DeploymentPlanRecommendation[] | u
             const { title, reason } = splitRecommendationText(entry);
             return { title, reason };
         }
-        if (!isRecord(entry)) {
+        if (!isJsonObject(entry)) {
             return { title: '', reason: '' };
         }
         const id = readString(entry.id);
@@ -484,8 +485,8 @@ function splitRecommendationText(text: string): { title: string; reason: string 
  * and the plan-level region. `azd`-style `AZURE_ENV_NAME` / `AZURE_LOCATION` keys are read too.
  */
 function readDeploymentVariables(plan: Record<string, unknown>, planRegion: string | undefined): DeploymentPlanDeploymentVariables | undefined {
-    const variables = isRecord(plan.deploymentVariables) ? plan.deploymentVariables : {};
-    const naming = isRecord(plan.naming) ? plan.naming : {};
+    const variables = isJsonObject(plan.deploymentVariables) ? plan.deploymentVariables : {};
+    const naming = isJsonObject(plan.naming) ? plan.naming : {};
 
     const environmentName = readString(variables.environmentName)
         ?? readString(variables.AZURE_ENV_NAME)
@@ -504,12 +505,8 @@ function readDeploymentVariables(plan: Record<string, unknown>, planRegion: stri
 
 //#region Primitive readers
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readArray(value: unknown): Record<string, unknown>[] {
-    return Array.isArray(value) ? value.filter(isRecord) : [];
+    return Array.isArray(value) ? value.filter(isJsonObject) : [];
 }
 
 function readString(value: unknown): string | undefined {

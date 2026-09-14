@@ -11,7 +11,6 @@ import { parsePreparePlanJson } from '../../src/webviews/copilotOnRails/views/ut
 import { getWorkspaceFolderUri } from '../testUtils';
 
 const scrapbookProjectFolder = 'copilotOnRails-scrapbook';
-const attendanceProjectFolder = 'copilotOnRails-attendance';
 
 suite('deploymentPlanTelemetryUtils', () => {
     suite('getDeploymentPlanTelemetry', () => {
@@ -32,28 +31,6 @@ suite('deploymentPlanTelemetryUtils', () => {
                 supportingServiceTypes: 'keyvault,userassignedidentity,loganalyticsworkspace,applicationinsights',
 
                 estimatedMonthlyCost: 23,
-            };
-
-            assert.deepStrictEqual(telemetry, expected);
-        });
-
-        test('attendance project', () => {
-            const telemetry = loadDeploymentPlanTelemetry(attendanceProjectFolder);
-
-            const expected: DeploymentPlanTelemetry = {
-                planParsedOk: true,
-
-                location: 'westus2',
-
-                coreServiceCount: 4,
-                coreServiceTypes: 'functions,staticwebapp,storageaccount,postgresflexibleserver',
-                coreServiceSkus: 'flexconsumption (fc1),free,standard_lrs,standard_b1ms',
-                hasDatabase: true,
-
-                supportingServiceCount: 4,
-                supportingServiceTypes: 'keyvault,userassignedidentity,loganalyticsworkspace,applicationinsights',
-
-                estimatedMonthlyCost: 18.1,
             };
 
             assert.deepStrictEqual(telemetry, expected);

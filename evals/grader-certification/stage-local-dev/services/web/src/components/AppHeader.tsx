@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 // App header with navigation
 
 import { Toolbar, ToolbarButton, Title3, Avatar } from '@fluentui/react-components';

@@ -94,7 +94,10 @@ import { type ArtifactValidationIssue, type ArtifactValidationResult, createVali
 
 /** Codes whose verdict is "we could not look", not "the agent did badly". */
 export const IAC_NOT_APPLICABLE_CODES: Record<string, 'outOfScope' | 'coverageGap'> = {
-    // A project with no IaC at all is not a project this gate has a question about.
+    // A project with no IaC at all is not a project this gate has a question about —
+    // *provided nothing was provisioned*. Once the run reports created resources, the
+    // absence of IaC stops being out of scope and becomes `imperativeProvisioning`,
+    // which is deliberately absent from this table so it is charged to the agent.
     noIacFound: 'outOfScope',
     // Terraform is a real deploy story we have simply not written a validator for. Reporting
     // it as a pass would make this gate silently approve every Terraform project.
@@ -508,6 +511,7 @@ export function discoverIac(workspace: string): DiscoveredIac {
  */
 const SESSIONS_ROOT = '.copilot-azure/sessions';
 const MANIFEST_FILENAME = 'scaffold-manifest.json';
+const DEPLOY_RESULT_FILENAME = 'deploy-result.json';
 const ACTIVE_SESSION_FILENAME = 'active-session.json';
 /** For messages, when there is no concrete file to point at. */
 const SCAFFOLD_MANIFEST = `${SESSIONS_ROOT}/*/${MANIFEST_FILENAME}`;
@@ -526,14 +530,23 @@ function readActiveSessionId(sessionsRoot: string): string | undefined {
     }
 }
 
-function manifestIn(sessionsRoot: string, session: string): { absolute: string; relative: string } | undefined {
-    const absolute = path.join(sessionsRoot, session, MANIFEST_FILENAME);
+function sessionArtifactIn(sessionsRoot: string, session: string, filename: string): { absolute: string; relative: string } | undefined {
+    const absolute = path.join(sessionsRoot, session, filename);
     return existsSync(absolute)
-        ? { absolute, relative: `${SESSIONS_ROOT}/${session}/${MANIFEST_FILENAME}` }
+        ? { absolute, relative: `${SESSIONS_ROOT}/${session}/${filename}` }
         : undefined;
 }
 
-export function discoverScaffoldManifest(workspace: string): { absolute: string; relative: string } | undefined {
+/**
+ * Locate one artifact inside the session folder the run is actually using.
+ *
+ * Generalised from the scaffold-manifest lookup so the deploy record can be found
+ * by the same rules. Which session is live is a property of the run, not of the
+ * file being read, so both artifacts must agree on it; resolving them differently
+ * would let a gate grade the manifest from one session against the deployment of
+ * another.
+ */
+function discoverSessionArtifact(workspace: string, filename: string): { absolute: string; relative: string } | undefined {
     const sessionsRoot = path.join(workspace, ...SESSIONS_ROOT.split('/'));
     if (!existsSync(sessionsRoot)) {
         return undefined;
@@ -547,7 +560,7 @@ export function discoverScaffoldManifest(workspace: string): { absolute: string;
 
     const activeId = readActiveSessionId(sessionsRoot);
     if (activeId !== undefined) {
-        const active = manifestIn(sessionsRoot, activeId);
+        const active = sessionArtifactIn(sessionsRoot, activeId, filename);
         if (active) {
             return active;
         }
@@ -558,7 +571,7 @@ export function discoverScaffoldManifest(workspace: string): { absolute: string;
 
     let newest: { found: { absolute: string; relative: string }; mtimeMs: number } | undefined;
     for (const session of sessions) {
-        const found = manifestIn(sessionsRoot, session);
+        const found = sessionArtifactIn(sessionsRoot, session, filename);
         if (!found) {
             continue;
         }
@@ -576,6 +589,75 @@ export function discoverScaffoldManifest(workspace: string): { absolute: string;
     return newest?.found;
 }
 
+export function discoverScaffoldManifest(workspace: string): { absolute: string; relative: string } | undefined {
+    return discoverSessionArtifact(workspace, MANIFEST_FILENAME);
+}
+
+/**
+ * How many resources the deploy phase reports having created, across every shape
+ * the field has actually been observed in.
+ *
+ * The contract says `createdResources` is an array. Measured runs did not honour
+ * that: one wrote the raw `az resource list` envelope `{"value":[…]}`, another
+ * omitted the field entirely and recorded `resourceIds` instead. A reader that
+ * accepted only the contracted shape would score both as "created nothing" — and
+ * since that is precisely the question separating a legitimate no-IaC scenario
+ * from an agent that provisioned imperatively, strictness here would hand an
+ * exemption to the runs this gate exists to catch. Schema drift must not become
+ * a licence; it is reported by `missingScaffoldManifest`-style codes elsewhere.
+ */
+export function countProvisionedResources(report: unknown): number {
+    const r = report as {
+        createdResources?: unknown;
+        resourceIds?: unknown;
+        resourceResults?: unknown;
+    } | null;
+    if (!r || typeof r !== 'object') {
+        return 0;
+    }
+    const created = r.createdResources;
+    if (Array.isArray(created)) {
+        return created.length;
+    }
+    if (created && typeof created === 'object' && Array.isArray((created as { value?: unknown }).value)) {
+        return ((created as { value: unknown[] }).value).length;
+    }
+    if (Array.isArray(r.resourceIds)) {
+        return r.resourceIds.length;
+    }
+    if (Array.isArray(r.resourceResults)) {
+        return r.resourceResults.length;
+    }
+    return 0;
+}
+
+/** The deploy phase's own record of what it did, if it wrote one readably. */
+export function readDeployReport(workspace: string): { relative: string; succeeded: boolean; resources: number; deploymentNames: string[] } | undefined {
+    const found = discoverSessionArtifact(workspace, DEPLOY_RESULT_FILENAME);
+    if (!found) {
+        return undefined;
+    }
+    let parsed: unknown;
+    try {
+        // A BOM is stripped because these artifacts are routinely written by shells
+        // that emit one, and a parse failure here would silently read as "nothing
+        // was deployed" — the same false exemption the counting rules above avoid.
+        parsed = JSON.parse(readFileSync(found.absolute, 'utf8').replace(/^\uFEFF/, ''));
+    } catch {
+        return undefined;
+    }
+    const report = parsed as { status?: unknown; deploymentNames?: unknown } | null;
+    const names = Array.isArray(report?.deploymentNames)
+        ? report!.deploymentNames.filter((n): n is string => typeof n === 'string')
+        : [];
+    return {
+        relative: found.relative,
+        succeeded: String(report?.status ?? '').toLowerCase() === 'succeeded',
+        resources: countProvisionedResources(parsed),
+        deploymentNames: names,
+    };
+}
+
 /**
  * Grades the artifacts the scaffold phase is contracted to leave behind, and the internal
  * consistency of its own validation report. Deliberately does not compile anything, so it
@@ -586,6 +668,37 @@ export async function validateScaffoldedIac(workspace: string, options: Blocking
     const iac = discoverIac(workspace);
 
     if (iac.flavour === 'none') {
+        // "No IaC" is two different verdicts wearing one code.
+        //
+        // A workspace that never deployed has nothing for this gate to compile, and
+        // saying so is correct. A workspace that created real Azure resources and
+        // still has no template did not fall outside the gate's scope — it violated
+        // the contract the deploy phase is built on, and
+        // `deploy/references/blocked-patterns.md` forbids the imperative commands
+        // that produce exactly this state.
+        //
+        // Both were previously reported as `noIacFound`, which maps to `outOfScope`
+        // and exits 3. Under the harness's own semantics that reads as "unwire this
+        // gate", so a run that provisioned an entire application imperatively scored
+        // NOT-APPLICABLE and disappeared from every aggregate. Measured on a real
+        // run: seven resources created under the deployment name
+        // `manual-azure-cli-provision`, zero templates on disk, gate green-adjacent.
+        //
+        // The deploy report is the agent's own record, so this distinction costs one
+        // file read and no compiler.
+        const deployed = readDeployReport(workspace);
+        if (deployed && deployed.succeeded && deployed.resources > 0) {
+            const names = deployed.deploymentNames.join(', ');
+            return createValidationResult([{
+                code: 'imperativeProvisioning',
+                path: deployed.relative,
+                message: `the deploy phase reports ${deployed.resources} created resource(s)`
+                    + `${names ? ` under deployment name(s) ${names}` : ''}`
+                    + ', but the workspace contains no infrastructure template'
+                    + ` (looked for ${[...BICEP_ENTRY_POINTS, ...TERRAFORM_ENTRY_POINTS].join(', ')});`
+                    + ' the resources are unreproducible and unversioned',
+            }]);
+        }
         return createValidationResult([{
             code: 'noIacFound',
             path: 'infra/main.bicep',
