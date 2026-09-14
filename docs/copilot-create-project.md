@@ -72,6 +72,7 @@ your explicit action.
 flowchart TD
     Start([Create New Project With Copilot]) --> Prompt[Describe your project]
     Prompt --> Plan
+    StartupReport{{report_agent_launch<br/>first action in every agent}}
 
     subgraph Plan[1 · azure-project-plan]
         Req[Requirements view] --> PlanDoc[.azure/project-plan.md] --> PlanView[Plan preview + approve]
@@ -101,6 +102,11 @@ flowchart TD
         DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
     end
 
+    StartupReport -.-> Plan
+    StartupReport -.-> Scaffold
+    StartupReport -.-> Integrate
+    StartupReport -.-> Debug
+    StartupReport -.-> Deploy
     Deploy --> Done([azd up])
 ```
 
@@ -128,8 +134,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 ## Prerequisites
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
-- A Copilot plan with access to the supported models (the flow defaults to
-  `Claude Opus 4.7 (copilot)`, `Claude Sonnet 4.6 (copilot)`, `GPT-5.6 Sol (copilot)`, or `GPT-5.6 Terra (copilot)`).
+- A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
+  GPT Sol, GPT Astra, and GPT Terra models currently available through GitHub Copilot, so newly available
+  versions appear without an extension update. The lowest-version available Opus model is selected by default.
 - **An empty folder.** The flow needs a clean workspace to build in. If the open folder already contains
   files, you'll be asked to **Browse…** to an empty folder; VS Code reopens there and resumes automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
@@ -415,6 +422,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
+| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -575,13 +583,14 @@ issue.
 
 ## What the diagnostics contain (privacy)
 
-The diagnostics object has exactly three fields:
+The diagnostics object has four fields:
 
 | Field | Value |
 | --- | --- |
 | `prompt` | The project description the user typed. |
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
-| `diagnosticEvents` | Up to the **50 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionCommand` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+| `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
+| `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
 
 Privacy guarantees, by design:
 
@@ -601,6 +610,7 @@ before submitting.
 | --- | --- | --- |
 | *"Creating a project with Copilot requires an empty folder."* | The open folder isn't empty. | Click **Browse…** and pick an empty folder; VS Code reopens there and resumes. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
+| Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
 | Plan preview shows *"couldn't render this plan — didn't match the expected layout."* | `.azure/project-plan.md` diverged from the required numbered skeleton. | The plan agent must rewrite the plan to the exact template (numbered `## N.` headings, `**Status**` / `**Created**` / `**Mode**` rows, a `## 6. Design System & UI` section with a `**Component Library**:` row). |
 | The flow doesn't advance after an approval. | An agent didn't successfully call its hand‑off MCP tool. | Check the diagnostics event log for a missing `start_*` event; re‑trigger the stage. Agents must load a tool via `tool_search` → `activate_tools` if it isn't directly listed. |

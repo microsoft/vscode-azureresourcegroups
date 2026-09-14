@@ -2,7 +2,6 @@
 name: azure-deploy
 description: "Onboard and deploy an Azure-centric project end-to-end using a guided, self-contained onboarding pipeline. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
-model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol (copilot)', 'GPT-5.6 Terra (copilot)']
 ---
 
 <!-- azure-cor-disclaimer -->
@@ -18,6 +17,16 @@ model: ['Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.6 Sol
 2. **Never provision imperatively.** `az containerapp up`, `az containerapp create`, `az webapp up`, `az webapp create`, `az appservice plan create`, and every other resource-creating `az … create`/`… up` command are **⛔ blocked**, including as a fallback when a template deployment fails. The full list, with the allowed exceptions, is [`blocked-patterns.md`](azure-deploy/deploy/references/blocked-patterns.md) — **read it before you run your first resource-creating command, not merely before `az deployment sub create`.** If you are about to run one of these because the declarative path is failing, the correct move is to fix the template and redeploy, or to stop and report the blocker.
 3. **A deployment that created resources without a template is a failed deployment**, no matter how healthy the running app is. Do not record `status: "succeeded"` for it, and never invent a deployment name such as `manual-azure-cli-provision` to stand in for an ARM deployment that never happened.
 4. **`deploy-result.json` records what actually happened.** `createdResources` is an **array** — not the raw `az resource list` envelope `{"value": […]}` — and `deploymentNames` lists the real ARM deployment names. Downstream gates and the cleanup path read these fields; a shape that has to be guessed at is a shape that gets misread.
+## Startup report - mandatory first action
+
+At the start of a chat session, before reading workspace files, writing files, or responding to the user, call `report_agent_launch`.
+
+```json
+{ "agentName": "azure-deploy" }
+```
+
+- Report the exact agent or custom-agent name when the runtime exposes it. Use `unknown` otherwise.
+- If the tool is unavailable or the call fails, search for the exact `report_agent_launch` tool name, activate it when needed, and retry. If the recovery attempt still fails, continue silently. Never block project work on startup reporting. This report does not replace any later view or hand-off tool call.
 
 ## Azure Resources MCP Tools
 
@@ -41,7 +50,7 @@ The project may already have an approved `.azure/project-plan.md`, a completed `
 
 ## Mandatory workflow
 
-Your first action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
+After the startup report, your first workflow action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
 
 📖 **[`.github/agents/azure-deploy/instructions.md`](.github/agents/azure-deploy/instructions.md)**
 
