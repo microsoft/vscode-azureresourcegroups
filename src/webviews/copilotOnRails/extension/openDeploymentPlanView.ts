@@ -75,7 +75,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
             ? vscode.l10n.t('The deployment plan file is empty. Copilot may still be generating it. This view will reload automatically when the file changes.')
             : renderIssue === 'invalidJson'
                 ? vscode.l10n.t('The deployment plan file isn\u2019t valid JSON yet. Copilot may still be writing it. This view will reload automatically when the file changes.')
-                : vscode.l10n.t('The deployment plan doesn\u2019t list any Azure services yet. This view will reload automatically when the file changes.');
+                : vscode.l10n.t('The deployment plan doesn\u2019t contain any details to show yet. This view will reload automatically when the file changes.');
         return {
             ...(parsed ?? emptyPlanData()),
             parseError: buildParseError(errorMessage ?? renderIssueMessage, sourceFileUri),

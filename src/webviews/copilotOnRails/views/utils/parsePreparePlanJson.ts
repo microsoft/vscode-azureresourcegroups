@@ -162,7 +162,7 @@ export function parsePreparePlanJson(content: string): DeploymentPlanData {
     const planRegion = readString(plan.region) ?? readString(plan.location);
     const resourceNamesByService = readNamingResources(plan.naming);
     const componentsByService = readComponentMapping(plan.componentMapping);
-    const { services, servicesByPlanId } = readServices(plan.services, planRegion, resourceNamesByService, componentsByService);
+    const { services, servicesByPlanId, inlineCosts } = readServices(plan.services, planRegion, resourceNamesByService, componentsByService);
     const deploymentVariables = readDeploymentVariables(plan, planRegion);
 
     const regionCode = firstNonEmpty(
@@ -178,12 +178,17 @@ export function parsePreparePlanJson(content: string): DeploymentPlanData {
         locationCode: regionCode,
         resources: buildServicesTable(services),
         services,
-        costEstimate: readCostEstimate(plan.costEstimate, servicesByPlanId),
-        postDeployRecommendations: readRecommendations(plan.postDeployRecommendations),
+        costEstimate: readCostEstimate(plan.costEstimate, servicesByPlanId, inlineCosts),
+        postDeployRecommendations: readRecommendations(plan.postDeployRecommendations)
+            ?? readRecommendations(isRecord(plan.costEstimate) ? plan.costEstimate.postDeployRecommendations : undefined),
         deploymentVariables,
     };
 }
 
+/**
+ * Reports why a plan can't be rendered. A plan is only rejected when it carries nothing
+ * displayable at all — a plan missing some sections still renders the sections it has.
+ */
 export function getPreparePlanRenderIssue(content: string, plan: DeploymentPlanData | undefined): PreparePlanRenderIssue | undefined {
     if (content.trim().length === 0) {
         return 'empty';
@@ -191,10 +196,12 @@ export function getPreparePlanRenderIssue(content: string, plan: DeploymentPlanD
     if (!plan) {
         return 'invalidJson';
     }
-    if ((plan.services?.length ?? 0) === 0) {
-        return 'missingServices';
-    }
-    return undefined;
+    const hasContent = (plan.services?.length ?? 0) > 0
+        || plan.costEstimate !== undefined
+        || (plan.postDeployRecommendations?.length ?? 0) > 0
+        || plan.deploymentVariables !== undefined
+        || plan.locationCode.length > 0;
+    return hasContent ? undefined : 'missingServices';
 }
 
 /** Human-readable label for a `services[].name` (or `services[].kind`) token. */
@@ -236,16 +243,18 @@ function buildServicesTable(services: DeploymentPlanService[]): DeploymentPlanTa
 /**
  * Reads `services[]` in any dialect the prepare agent emits, filling gaps from
  * `naming.resources` and `componentMapping[]`. Also indexes services by their plan-level
- * `id`, which `costEstimate.byService[]` references instead of repeating the label.
+ * `id`, which `costEstimate.byService[]` references instead of repeating the label, and
+ * collects per-service costs for plans that omit a `costEstimate` breakdown array.
  */
 function readServices(
     value: unknown,
     planRegion: string | undefined,
     resourceNamesByService: Map<string, string>,
     componentsByService: Map<string, string>,
-): { services: DeploymentPlanService[]; servicesByPlanId: Map<string, DeploymentPlanService> } {
+): { services: DeploymentPlanService[]; servicesByPlanId: Map<string, DeploymentPlanService>; inlineCosts: DeploymentPlanCostBreakdownItem[] } {
     const servicesByPlanId = new Map<string, DeploymentPlanService>();
     const services: DeploymentPlanService[] = [];
+    const inlineCosts: DeploymentPlanCostBreakdownItem[] = [];
 
     for (const entry of readArray(value)) {
         const planId = readString(entry.id);
@@ -253,13 +262,10 @@ function readServices(
         const canonicalKey = name ? resolveServiceKey(name) : undefined;
         const service: DeploymentPlanService = {
             name,
-            sku: readString(entry.sku)
-                ?? readString(entry.skuName)
-                ?? readString(entry.planSku)
-                ?? readString(entry.tier)
-                ?? '',
+            sku: readServiceSku(entry),
             component: readString(entry.component)
                 ?? readString(entry.componentId)
+                ?? readString(entry.componentPath)
                 ?? (planId ? componentsByService.get(normalizeServiceToken(planId)) : undefined)
                 ?? planId
                 ?? '',
@@ -271,34 +277,92 @@ function readServices(
                 ?? '',
             version: readString(entry.version) ?? readString(entry.engineVersion),
         };
-        if (service.name.length === 0 && service.resourceName.length === 0) {
+        if (service.name.length === 0 && service.resourceName.length === 0 && service.purpose.length === 0 && service.component.length === 0) {
             continue;
         }
         services.push(service);
         if (planId) {
             servicesByPlanId.set(normalizeServiceToken(planId), service);
         }
+
+        const monthlyUsd = readNumber(entry.estimatedMonthlyCostUsd) ?? readNumber(entry.monthlyCostUsd) ?? readNumber(entry.monthlyUsd);
+        if (monthlyUsd !== undefined) {
+            inlineCosts.push({
+                service: getServiceDisplayName(service.name),
+                sku: service.sku,
+                monthlyUsd,
+                note: readString(entry.costAssumptions) ?? readString(entry.costAssumption) ?? service.purpose,
+            });
+        }
     }
 
-    return { services, servicesByPlanId };
+    return { services, servicesByPlanId, inlineCosts };
 }
 
 /**
  * Picks the token identifying a service entry: the first candidate resolving to a known
  * service wins, so an ARM type beats a literal Azure `kind` like `"StorageV2"`.
- * Unrecognized entries keep their most descriptive raw token.
+ * Unrecognized entries keep their most descriptive raw token rather than being dropped.
  */
 function readServiceNameToken(entry: Record<string, unknown>): string {
     const armType = readString(entry.azureService) ?? readString(entry.resourceType) ?? readString(entry.armType);
     const kind = readString(entry.kind);
 
-    if (armType && normalizeServiceToken(armType) === normalizeServiceToken(WEB_SITES_ARM_TYPE)) {
-        return kind?.toLowerCase().includes('functionapp') ? 'functionApp' : 'appService';
+    const explicitName = readString(entry.name);
+    if (explicitName && resolveServiceKey(explicitName)) {
+        return explicitName;
     }
 
-    const candidates = [readString(entry.name), armType, kind, readString(entry.type), readString(entry.service), readString(entry.id)];
+    // A compound `resourceType` bundles the supporting resources of one service, e.g.
+    // `"Microsoft.Web/sites (functionapp,linux) + Microsoft.Web/serverfarms"`. The leading
+    // recognizable segment names the service; its parenthetical carries the ARM `kind`.
+    for (const segment of splitArmTypes(armType)) {
+        if (normalizeServiceToken(segment.type) === normalizeServiceToken(WEB_SITES_ARM_TYPE)) {
+            return (segment.kind ?? kind)?.toLowerCase().includes('functionapp') ? 'functionApp' : 'appService';
+        }
+        if (resolveServiceKey(segment.type)) {
+            return segment.type;
+        }
+    }
+
+    const candidates = [kind, readString(entry.type), readString(entry.service), readString(entry.id)];
     const recognized = candidates.find(candidate => candidate !== undefined && resolveServiceKey(candidate) !== undefined);
-    return recognized ?? firstNonEmpty(readString(entry.name), kind, readString(entry.type), readString(entry.service)) ?? '';
+    return recognized ?? firstNonEmpty(
+        explicitName,
+        splitArmTypes(armType)[0]?.type,
+        kind,
+        readString(entry.type),
+        readString(entry.service),
+        readString(entry.id),
+    ) ?? '';
+}
+
+/** Splits a possibly compound ARM type into its segments, lifting each `(kind)` parenthetical. */
+function splitArmTypes(value: string | undefined): { type: string; kind: string | undefined }[] {
+    if (!value) {
+        return [];
+    }
+    return value.split('+').map(segment => ({
+        type: segment.replace(/\([^)]*\)/g, ' ').trim(),
+        kind: /\(([^)]*)\)/.exec(segment)?.[1].trim(),
+    })).filter(segment => segment.type.length > 0);
+}
+
+/** Reads the SKU, which some plans write as an object of SKU facets rather than a string. */
+function readServiceSku(entry: Record<string, unknown>): string {
+    const direct = readString(entry.sku) ?? readString(entry.skuName) ?? readString(entry.planSku) ?? readString(entry.tier);
+    if (direct) {
+        return direct;
+    }
+    if (!isRecord(entry.sku)) {
+        return '';
+    }
+    const sku = entry.sku;
+    return readString(sku.name)
+        ?? readString(sku.plan)
+        ?? readString(sku.tier)
+        ?? readString(sku.capacity)
+        ?? Object.values(sku).map(readString).filter(value => value !== undefined).join(', ');
 }
 
 /** Indexes `componentMapping[]` by the service id it targets, for the table's Component column. */
@@ -345,7 +409,11 @@ function readNamingResources(value: unknown): Map<string, string> {
     return byService;
 }
 
-function readCostEstimate(value: unknown, servicesByPlanId: Map<string, DeploymentPlanService>): DeploymentPlanCostEstimate | undefined {
+function readCostEstimate(
+    value: unknown,
+    servicesByPlanId: Map<string, DeploymentPlanService>,
+    inlineCosts: DeploymentPlanCostBreakdownItem[],
+): DeploymentPlanCostEstimate | undefined {
     if (!isRecord(value)) {
         return undefined;
     }
@@ -364,16 +432,18 @@ function readCostEstimate(value: unknown, servicesByPlanId: Map<string, Deployme
             note: readString(entry.note) ?? readString(entry.assumption) ?? linkedService?.purpose,
         };
     });
+    // Some plans price each service inline and give only a range here, with no breakdown array.
+    const effectiveBreakdown = breakdown.length > 0 ? breakdown : inlineCosts;
     const monthlyUsd = readNumber(value.monthlyUsd)
         ?? readNumber(value.monthlyTotalUsd)
         ?? readNumber(value.totalMonthlyUsd)
         ?? readNumber(value.totalUsd)
-        ?? breakdown.reduce((total, item) => total + item.monthlyUsd, 0);
+        ?? effectiveBreakdown.reduce((total, item) => total + item.monthlyUsd, 0);
 
     return {
         monthlyUsd,
         currency: readString(value.currency) ?? 'USD',
-        breakdown,
+        breakdown: effectiveBreakdown,
         disclaimer: readString(value.disclaimer) ?? readStringArray(value.assumptions)?.join(' '),
     };
 }
@@ -419,6 +489,7 @@ function readDeploymentVariables(plan: Record<string, unknown>, planRegion: stri
 
     const environmentName = readString(variables.environmentName)
         ?? readString(variables.AZURE_ENV_NAME)
+        ?? readString(plan.environmentName)
         ?? readString(naming.resourcePrefix);
     const location = readString(variables.location)
         ?? readString(variables.AZURE_LOCATION)

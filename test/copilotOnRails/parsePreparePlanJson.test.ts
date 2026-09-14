@@ -290,6 +290,92 @@ suite('parsePreparePlanJson', () => {
         });
     });
 
+    suite('compound-resourceType prepare-plan dialect', () => {
+        // Some plans name a service by a compound ARM type, write the SKU as an object of
+        // facets, price each service inline, and nest recommendations under costEstimate.
+        const compoundPlan = JSON.stringify({
+            environmentName: 'attendance',
+            region: 'eastus2',
+            naming: { resourceToken: 'computed at deploy-time via uniqueString(...)' },
+            services: [
+                {
+                    id: 'monitoring',
+                    resourceType: 'Microsoft.Insights/components + Microsoft.OperationalInsights/workspaces',
+                    purpose: 'App Insights + Log Analytics workspace.',
+                    sku: { logAnalytics: 'PerGB2018', appInsights: 'web' },
+                    estimatedMonthlyCostUsd: 3,
+                    costAssumptions: 'Dev workload: ~1 GB/mo ingestion.',
+                },
+                {
+                    id: 'storage',
+                    resourceType: 'Microsoft.Storage/storageAccounts',
+                    purpose: 'AzureWebJobsStorage.',
+                    sku: { name: 'Standard_LRS', kind: 'StorageV2' },
+                    estimatedMonthlyCostUsd: 0.5,
+                },
+                {
+                    id: 'compliance-api',
+                    resourceType: 'Microsoft.Web/sites (functionapp,linux) + Microsoft.Web/serverfarms',
+                    purpose: 'TypeScript Azure Functions v4 HTTP API.',
+                    sku: { plan: 'FC1', tier: 'FlexConsumption', instanceMemoryMB: 2048 },
+                    componentPath: 'services/compliance-api',
+                    estimatedMonthlyCostUsd: 3,
+                },
+            ],
+            costEstimate: {
+                currency: 'USD',
+                monthlyTotalLow: 8,
+                monthlyTotalHigh: 20,
+                postDeployRecommendations: ['Set a subscription-level budget alert at $25/mo.'],
+            },
+        });
+
+        test('resolves a service from a compound resourceType', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.resources.rows.length, 3);
+            assert.strictEqual(plan.resources.rows[0][0], 'Application Insights');
+            assert.strictEqual(plan.resources.rows[1][0], 'Storage Account');
+        });
+
+        test('reads the ARM kind from the resourceType parenthetical', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.resources.rows[2][0], 'Functions App');
+            assert.strictEqual(plan.resources.rows[2][2], 'services/compliance-api');
+        });
+
+        test('flattens a SKU written as an object of facets', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.resources.rows[0][4], 'PerGB2018, web');
+            assert.strictEqual(plan.resources.rows[1][4], 'Standard_LRS');
+            assert.strictEqual(plan.resources.rows[2][4], 'FC1');
+        });
+
+        test('builds the cost breakdown from per-service estimates', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.costEstimate?.breakdown.length, 3);
+            assert.strictEqual(plan.costEstimate?.monthlyUsd, 6.5);
+            assert.strictEqual(plan.costEstimate?.breakdown[0].service, 'Application Insights');
+            assert.strictEqual(plan.costEstimate?.breakdown[0].note, 'Dev workload: ~1 GB/mo ingestion.');
+        });
+
+        test('reads recommendations nested under costEstimate', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.postDeployRecommendations?.length, 1);
+            assert.strictEqual(plan.postDeployRecommendations?.[0].title, 'Set a subscription-level budget alert at $25/mo.');
+        });
+
+        test('reads a top-level environmentName', () => {
+            const plan = parsePreparePlanJson(compoundPlan);
+
+            assert.strictEqual(plan.deploymentVariables?.environmentName, 'attendance');
+        });
+    });
+
     suite('tolerance', () => {
         test('renders a partially written plan', () => {
             const plan = parsePreparePlanJson('{ "services": [{ "name": "appService", "sku": "B1" }] }');
@@ -308,10 +394,31 @@ suite('parsePreparePlanJson', () => {
             assert.strictEqual(plan.deploymentVariables, undefined);
         });
 
-        test('reports render issues for empty and service-less plans', () => {
+        test('reports render issues for empty and contentless plans', () => {
             assert.strictEqual(getPreparePlanRenderIssue('  ', undefined), 'empty');
             assert.strictEqual(getPreparePlanRenderIssue('{ bad', undefined), 'invalidJson');
             assert.strictEqual(getPreparePlanRenderIssue('{}', parsePreparePlanJson('{}')), 'missingServices');
+        });
+
+        test('renders a plan whose only content is not services', () => {
+            for (const content of ['{ "region": "westus" }', '{ "costEstimate": { "monthlyTotalUsd": 5 } }', '{ "postDeployRecommendations": ["Do a thing."] }']) {
+                assert.strictEqual(getPreparePlanRenderIssue(content, parsePreparePlanJson(content)), undefined, content);
+            }
+        });
+
+        test('keeps a service entry that matches no known Azure service', () => {
+            const plan = parsePreparePlanJson('{ "services": [{ "id": "my-thing", "purpose": "does stuff" }, { "resourceType": "Microsoft.Future/widgets" }] }');
+
+            assert.strictEqual(plan.resources.rows.length, 2);
+            assert.strictEqual(plan.resources.rows[0][0], 'My Thing');
+            assert.strictEqual(plan.resources.rows[1][0], 'Microsoft.Future/widgets');
+        });
+
+        test('drops only service entries with nothing to show', () => {
+            const plan = parsePreparePlanJson('{ "services": [{}, null, 5, "x", { "purpose": "keep me" }] }');
+
+            assert.strictEqual(plan.services?.length, 1);
+            assert.strictEqual(plan.resources.rows[0][3], 'keep me');
         });
 
         test('sums the cost breakdown when the total is missing', () => {
