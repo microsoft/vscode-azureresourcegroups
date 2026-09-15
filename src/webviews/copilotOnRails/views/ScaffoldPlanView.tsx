@@ -1215,7 +1215,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                             // supported set is picked (e.g. Bun runtime, yarn,
                                             // Next.js). Informational only — doesn't block.
                                             const supportedSet = ci > 0 && componentName ? fullySupportedOptions[componentName] : undefined;
-                                            const showSupportWarning = !!cell && (
+                                            const showSupportWarning = ci > 0 && !!cell && (
                                                 serviceKind === 'backend' && (componentName === 'Framework' || componentName === 'Backend')
                                                     ? !isAzureFunctionsFramework(cell)
                                                     : supportedSet !== undefined && !supportedSet.has(cell.trim())
