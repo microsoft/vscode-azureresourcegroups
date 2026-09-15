@@ -11,6 +11,9 @@ import {
     findKeyValue,
     findSection,
     findTable,
+    getServiceStackKind,
+    isAzureFunctionsFramework,
+    normalizeScaffoldPlanComponent,
     parseScaffoldPlanMarkdown,
     type ScaffoldPlanData,
     type ScaffoldPlanSection,
@@ -60,6 +63,11 @@ suite('parseScaffoldPlanMarkdown', () => {
             assert.strictEqual(table.rows.find((r) => r[0] === 'Orchestration')?.[1], 'docker-compose');
         });
 
+        test('classifies service stacks from their section headers', () => {
+            assert.strictEqual(getServiceStackKind(getSection(parsedPlan, 'Attendance Compliance API')), 'backend');
+            assert.strictEqual(getServiceStackKind(getSection(parsedPlan, 'Attendance Compliance Web App')), 'frontend');
+        });
+
         test('finds a keyValue from the overview section', () => {
             const section = getSection(parsedPlan, 'Project Overview');
             assert.strictEqual(findKeyValue(section, 'App Type'), 'SPA + API');
@@ -99,6 +107,28 @@ suite('parseScaffoldPlanMarkdown', () => {
     test('findColumnIndex matches a case-insensitive substring by default', () => {
         assert.strictEqual(findColumnIndex(['Tool', 'Installed', 'Version'], 'install'), 1);
         assert.strictEqual(findColumnIndex(['Tool', 'Installed'], 'runtime'), -1);
+    });
+
+    test('normalizes model variations in component labels', () => {
+        assert.strictEqual(normalizeScaffoldPlanComponent('Backend'), 'Backend');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Frontend'), 'Frontend');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Programming Language'), 'Language');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Execution Runtime'), 'Runtime');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Backend Framework'), 'Framework');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Package Management'), 'Package Manager');
+        assert.strictEqual(normalizeScaffoldPlanComponent('Testing Framework'), 'Test Runner');
+    });
+
+    test('recognizes flexible web app section headers', () => {
+        for (const title of ['Web App', 'web-app', 'WEB_APP', 'WebApp', 'web application', 'Website', 'Front-End']) {
+            assert.strictEqual(getServiceStackKind({ number: 2, title, content: [] }), 'frontend');
+        }
+    });
+
+    test('recognizes Azure Functions framework labels', () => {
+        assert.strictEqual(isAzureFunctionsFramework('Azure Functions'), true);
+        assert.strictEqual(isAzureFunctionsFramework('Azure Functions v4 (Node.js v4 model)'), true);
+        assert.strictEqual(isAzureFunctionsFramework('Express'), false);
     });
 });
 

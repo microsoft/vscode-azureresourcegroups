@@ -32,6 +32,7 @@ export const INTEGRATION_PLAN_FILE_GLOB = '.azure/integration-plan.md';
 export const DEBUG_PLAN_FILE_GLOB = '.azure/vscode-debug-plan.md';
 export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
 export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
+export const APP_ONBOARD_CONTEXT_FILE_GLOB = '.copilot-azure/sessions/*/context.json';
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,

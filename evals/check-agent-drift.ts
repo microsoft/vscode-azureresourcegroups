@@ -25,6 +25,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
 import { listEvalAssetFiles, SHARED_FOLDER } from "./src/agent-definition.ts";
+import { resolveSweepModels } from "./msbench/models.ts";
 
 const scriptDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptDir, "..");
@@ -338,6 +339,18 @@ const currentFiles = agentAssetFiles();
 /**
  * The eval spec needs an explicit model for reproducibility even though the product
  * discovers available versions of its supported models dynamically.
+ *
+ * Two files are checked, and the second is the one that drives paid runs. This rule
+ * was written against the legacy Vally spec, which pins a supported model and so kept
+ * reporting green — while every MSBench run took its model from
+ * `msbench/config/base.yaml`, which nothing validated. That file pinned
+ * `claude-sonnet-4.5` for 66 of the 93 runs in the local corpus. A guard that tests a
+ * file nobody runs is the vacuous pass this suite exists to prevent.
+ *
+ * They are held to different standards on purpose. The Vally spec only has to name a
+ * family the product supports. `base.yaml` additionally has to be one of the two
+ * models MSBench is budgeted to sweep, because that file is half the CES queueing key
+ * and every run resolves from it.
  */
 const evalSpecPath = path.join(scriptDir, "project-plan", "eval.yaml");
 try {
@@ -360,6 +373,39 @@ try {
     }
 } catch (err) {
     failures.push(`eval-model-resolution: ${err instanceof Error ? err.message : String(err)}`);
+}
+
+/**
+ * What every MSBench run actually resolves its model from: `--model .` makes the
+ * vscode plugin read this block rather than the CLI flag.
+ */
+const msbenchBasePath = path.join(scriptDir, "msbench", "config", "base.yaml");
+try {
+    // Throws if the sweep set names a family the product does not ship, or covers one
+    // family twice. Reported below as `msbench-model-resolution`.
+    const sweep = resolveSweepModels();
+    const base = fs.readFileSync(msbenchBasePath, "utf8");
+    const pinned = /^modelSelector:\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+id:\s*(\S+)\s*$/m.exec(base)?.[1];
+    if (!pinned) {
+        failures.push(
+            "msbench-model-unpinned: evals/msbench/config/base.yaml has no `modelSelector.id`.\n"
+            + "    Every run resolves its model from that block, and it is half the CES queueing\n"
+            + `    key, so it cannot be left to a default.\n    Sweep set: ${sweep.join(", ")}`,
+        );
+    } else if (!sweep.includes(pinned)) {
+        failures.push(
+            `msbench-model-unswept: evals/msbench/config/base.yaml pins '${pinned}', which is not\n`
+            + "    one of the models MSBench sweeps.\n"
+            + `    Sweep set: ${sweep.join(", ")}\n`
+            + "    The set is deliberately narrower than the families the product supports,\n"
+            + "    because one run per stimulus is forced and the red-team corpus is run per\n"
+            + "    model. Widen it in evals/msbench/models.ts, not by editing this pin.",
+        );
+    } else {
+        checked.push(`msbench-model-pinned (${pinned})`);
+    }
+} catch (err) {
+    failures.push(`msbench-model-resolution: ${err instanceof Error ? err.message : String(err)}`);
 }
 const previous: AssetBaseline | null = fs.existsSync(lockPath)
     ? JSON.parse(fs.readFileSync(lockPath, "utf8")) as AssetBaseline

@@ -70,36 +70,36 @@ your explicit action.
 
 ```mermaid
 flowchart TD
-    Start([Create New Project With Copilot]) --> Prompt[Describe your project]
+    Start(["Create New Project With Copilot"]) --> Prompt["Describe your project"]
     Prompt --> Plan
-    StartupReport{{report_agent_launch<br/>first action in every agent}}
+    StartupReport{{"report_agent_launch<br/>once per chat session and agent"}}
 
-    subgraph Plan[1 · azure-project-plan]
-        Req[Requirements view] --> PlanDoc[.azure/project-plan.md] --> PlanView[Plan preview + approve]
+    subgraph Plan["1 · azure-project-plan"]
+        Req["Requirements view"] --> PlanDoc[".azure/project-plan.md"] --> PlanView["Plan preview + approve"]
     end
 
-    Plan -->|start_project_scaffold| Scaffold
+    Plan -->|"start_project_scaffold"| Scaffold
 
-    subgraph Scaffold[2 · azure-project-scaffold]
-        Gen[Generate frontend/backend/db] --> Preview[Frontend preview + Approve UI]
+    subgraph Scaffold["2 · azure-project-scaffold"]
+        Gen["Generate frontend/backend/db"] --> Preview["Frontend preview + Approve UI"]
     end
 
-    Scaffold -->|start_project_integrate| Integrate
+    Scaffold -->|"start_project_integrate"| Integrate
 
-    subgraph Integrate[3 · azure-project-integrate]
-        Wire[Wire to live data + migrations] --> Smoke[Smoke-test end-to-end] --> Next1[Next Steps view]
+    subgraph Integrate["3 · azure-project-integrate"]
+        Wire["Wire to live data + migrations"] --> Smoke["Smoke-test end-to-end"] --> Next1["Next Steps view"]
     end
 
-    Next1 -->|start_local_development| Debug
+    Next1 -->|"start_local_development"| Debug
 
-    subgraph Debug[4-5 · azure-debug-plan / azure-debug-generate]
-        DbgPlan[.azure/vscode-debug-plan.md] --> DbgGen[Emulators + launch/tasks] --> Next2[Debug Next Steps view]
+    subgraph Debug["4-5 · azure-debug-plan / azure-debug-generate"]
+        DbgPlan[".azure/vscode-debug-plan.md"] --> DbgGen["Emulators + launch/tasks"] --> Next2["Debug Next Steps view"]
     end
 
-    Next2 -->|start_deployment| Deploy
+    Next2 -->|"start_deployment"| Deploy
 
-    subgraph Deploy[6 · azure-deploy]
-        DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
+    subgraph Deploy["6 · azure-deploy"]
+        DepPlan["prepare-plan.json"] --> Progress["Deployment progress view"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
     end
 
     StartupReport -.-> Plan
@@ -107,7 +107,7 @@ flowchart TD
     StartupReport -.-> Integrate
     StartupReport -.-> Debug
     StartupReport -.-> Deploy
-    Deploy --> Done([azd up])
+    Deploy --> Done(["azd up"])
 ```
 
 Each box is a **chat agent** (a `*.agent.md` under `resources/agents/`). Agents hand off to each other by
@@ -191,6 +191,10 @@ The plan agent writes `.azure/project-plan.md` (with `**Status**: Planning`) and
 For apps with a UI, the preview also renders one **UI Preview** card per screen (each a sandboxed HTML
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
+
+Editable service-stack choices follow the service role and language. API, backend, and worker sections offer
+backend frameworks, while web app and frontend sections offer frontend frameworks. The view also recognizes
+minor component-label variations such as `Framework` and `Backend Framework`.
 
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link
@@ -290,6 +294,17 @@ Once you approve a plan, **reopening it keeps the Approve Plan button disabled**
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
 </p>
 
+After approval, the plan closes and the **Deployment progress** view opens. It shows the deployment
+phases and, while Azure is provisioning, the individual resource types and names reported by ARM.
+The view also shows when the deploy is waiting for the separate confirmation in chat. When the
+deployment finishes, it closes automatically as the Deployment results view opens.
+
+> 📷 *Screenshot needed: the Deployment progress view while Azure resources are being provisioned.*
+
+<p align="center">
+  <img src="images/copilot-create-project/16-deployment-progress-view.png" alt="Deployment progress view" />
+</p>
+
 ### Knowing what was created (and cleaning up after a failure)
 
 Deploying real Azure resources means a failed or partially-completed deployment can leave resources behind. To
@@ -381,6 +396,7 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 | **Debug plan** view | `copilotOnRails.openDebugPlanView` | `open_local_plan_view` | Review the local debug configuration; approve. |
 | **Debug Next Steps** view | `copilotOnRails.openDebugNextStepsView` | `open_local_next_steps_view` | Post‑debug "What's next?" (deploy / run tests). |
 | **Deployment plan** view | `copilotOnRails.openDeploymentPlanView` | `open_deploy_plan_view` | Review the deployment plan; approve. |
+| **Deployment progress** view | `copilotOnRails.showProgressView` | — (opened after plan approval) | Follow deployment phases and Azure resource provisioning. Closes when results open. |
 | **Deployment results** view | `copilotOnRails.openDeployResultView` | `open_deploy_result_view` | Read-only report of a finished deploy: status, endpoints, resources, cleanup. |
 | **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline. |
 
@@ -396,7 +412,8 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 
 Six agents form the pipeline. Each is a `*.agent.md` under [`resources/agents/`](../resources/agents/); their
 step‑by‑step instructions live in the sibling folders and are copied into your workspace at
-`.github/agents/` before they run.
+`.github/agents/` before they run. Each agent reports its launch once per chat session. Repeated startup
+calls from later turns in the same chat are ignored.
 
 | # | Agent | Reads | Writes | Hands off with |
 | --- | --- | --- | --- | --- |
@@ -423,7 +440,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
-| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it at the start of a chat session. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
+| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -452,8 +469,9 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
-| `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. |
-| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view. A workspace can hold several — the session named by `.copilot-azure/sessions/active-session.json` wins, falling back to the newest file. |
+| `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
+| `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
+| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
@@ -592,6 +610,8 @@ The diagnostics object has four fields:
 | `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
 | `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
 | `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
+
+`report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 
 Privacy guarantees, by design:
 

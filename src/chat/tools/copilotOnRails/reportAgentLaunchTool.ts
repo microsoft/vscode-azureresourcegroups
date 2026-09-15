@@ -8,8 +8,10 @@ import { CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import { UnspecifiedOutputSchema } from '@microsoft/vscode-inproc-mcp/mcp';
 import { z } from 'zod/mini';
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from '../../../utils/copilotOnRails/telemetryUtils';
+import { AgentLaunchReportTracker } from './agentLaunchReportTracker';
 
 export const reportAgentLaunchToolName = 'report_agent_launch';
+const agentLaunchReports = new AgentLaunchReportTracker();
 
 const reportAgentLaunchInputSchema = z.object({
     agentName: z.string(),
@@ -24,14 +26,37 @@ export const reportAgentLaunchTool: CopilotTool<typeof reportAgentLaunchInputSch
         destructiveHint: false,
     },
     execute: async (input, extras) => {
-        return await callWithTelemetryAndErrorHandling(`mcpTool/${reportAgentLaunchToolName}/execute`, async (context: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: reportAgentLaunchToolName, extras }, async (corContext) => {
-                setCorProp(corContext, 'agentName', input.agentName);
-                return {
-                    message: 'Recorded the Copilot on Rails agent startup.',
-                };
+        const sessionId = extras?.sessionId;
+        if (sessionId && !agentLaunchReports.tryStart(sessionId, input.agentName)) {
+            return {
+                message: 'The Copilot on Rails agent startup was already recorded for this chat session.',
+            };
+        }
+
+        try {
+            const result = await callWithTelemetryAndErrorHandling(`mcpTool/${reportAgentLaunchToolName}/execute`, async (context: IActionContext) => {
+                return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: reportAgentLaunchToolName, extras }, async (corContext) => {
+                    setCorProp(corContext, 'agentName', input.agentName);
+                    return {
+                        message: 'Recorded the Copilot on Rails agent startup.',
+                    };
+                });
             });
-        }) ?? {
+
+            if (result) {
+                return result;
+            }
+        } catch (error) {
+            if (sessionId) {
+                agentLaunchReports.markFailed(sessionId, input.agentName);
+            }
+            throw error;
+        }
+
+        if (sessionId) {
+            agentLaunchReports.markFailed(sessionId, input.agentName);
+        }
+        return {
             message: 'Failed to record the Copilot on Rails agent startup report.',
         };
     },
