@@ -147,7 +147,17 @@ export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext, autopilot: boolean): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        setCorProp(context, 'autopilot', autopilot);
+        let confirmedAutopilot = false;
+        if (autopilot) {
+            confirmedAutopilot = await this.confirmAutopilot();
+            if (!confirmedAutopilot) {
+                // Autopilot was requested but the confirmation dialog was declined.
+                setCorProp(context, 'autopilot', false);
+                setCorProp(context, approvalOutcomeKey, 'confirmationDeclined');
+                return false;
+            }
+        }
+        setCorProp(context, 'autopilot', confirmedAutopilot);
 
         await ensureAgentInstructions(context, 'azure-project-scaffold');
 
@@ -162,16 +172,18 @@ export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<
             }
         }
 
-        if (autopilot) {
+        if (confirmedAutopilot) {
             await this.recordAutopilotMode();
+        }
+        if (confirmedAutopilot) {
             await enableAutopilot(ext.context);
         } else {
             await this.ensureRequestBudget();
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
-        if (!(await launchAgentChat(context, azureProjectScaffoldAgent, autopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
-            if (autopilot) {
+        if (!(await launchAgentChat(context, azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
+            if (confirmedAutopilot) {
                 await disableAutopilot();
             }
             // Undo the approval because scaffolding did not start, leaving the plan ready to retry.
@@ -184,6 +196,19 @@ export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<
         }
         setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
+    }
+
+    private async confirmAutopilot(): Promise<boolean> {
+        const enableAutopilotTitle = vscode.l10n.t('Enable Autopilot');
+        const result = await vscode.window.showWarningMessage(
+            vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
+            {
+                modal: true,
+                detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
+            },
+            enableAutopilotTitle,
+        );
+        return result === enableAutopilotTitle;
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
