@@ -28,6 +28,7 @@ import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
+import { registerDebugSessionWatcher } from './commands/copilotOnRails/registerDebugSessionWatcher';
 import { createResourceGroup } from './commands/createResourceGroup';
 import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
@@ -60,7 +61,9 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
+import { clearLeasesForTesting, closeMigrationAccess, openMigrationAccess, readLeases, reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeployProgressWatcher } from './webviews/copilotOnRails/extension/deployProgressWatcher';
@@ -88,7 +91,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const corPlanFilesWatcher = new ProjectPlanFilesWatcher();
     context.subscriptions.push(corPlanFilesWatcher);
     registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
+    registerDebugSessionWatcher(context, corPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
+    registerDeploymentPlanAutoOpen(context);
     registerAutopilot(context);
     registerDebugPlanImplementedWatcher(context);
     registerDeployInventoryWatcher(context);
@@ -142,6 +147,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         registerCommands();
         void resumePendingCreateWithCopilot();
+        void resumeCreateProjectViewAfterReload();
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
@@ -151,6 +157,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             serverVersion: ext.version,
             registerTools: (server) => registerMcpTools(server),
         });
+
+        // Reap any temporary database firewall rule an interrupted migration left behind. This is
+        // the guarantee the deploy agent's instructions cannot make: it runs regardless of how the
+        // previous session ended. Fire-and-forget so a signed-out or slow Azure call never delays
+        // activation.
+        void reconcileMigrationFirewallLeases(activateContext);
     });
 
     const extensionManager = new ResourceGroupsExtensionManager();
@@ -338,7 +350,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         } catch {
                             return false;
                         }
-                    }
+                    },
+                    migrationFirewall: {
+                        setOverrideOperations: (operations) => {
+                            ext.testing.overrideMigrationFirewallOperations = operations;
+                        },
+                        readLeases: () => readLeases(),
+                        clearLeases: () => clearLeasesForTesting(),
+                        open: (context, input) => openMigrationAccess(context, input),
+                        close: (context, input) => closeMigrationAccess(context, input),
+                        reconcile: (context) => reconcileMigrationFirewallLeases(context),
+                    },
                 },
             }),
         };
