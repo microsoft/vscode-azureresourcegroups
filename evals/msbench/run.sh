@@ -22,13 +22,15 @@
 #                            # run a stack instead: the prompt and the gate
 #                            # wiring are derived from config/stacks/<id>.yaml
 #                            # rather than hand-written. See config/gates.yaml.
-#   ./run.sh --model claude-opus-4.7
+#   ./run.sh --model claude-sonnet-5
 #                            # retarget the run without editing config/base.yaml.
-#                            # The suite requires every supported model, and this
-#                            # is the only way to sweep one without mutating the
-#                            # shared default. NOTE: the model is half the CES
-#                            # queueing key, so overridden runs queue separately
-#                            # from default-model ones.
+#                            # MSBench sweeps two models — gpt-5.6-sol (the
+#                            # default) and claude-sonnet-5 — and this is the
+#                            # only way to reach the other without mutating the
+#                            # shared default. Anything outside that set is
+#                            # refused; see models.ts. NOTE: the model is half
+#                            # the CES queueing key, so overridden runs queue
+#                            # separately from default-model ones.
 #   BENCHMARK=corbench.cor_functions_host \
 #     ./run.sh --dataset evals/msbench/container/dataset.jsonl
 #                            # run inside our own container image, which carries
@@ -507,8 +509,9 @@ set -e
 # is visible in the table itself: the agent was throttled mid-run (so it
 # produced nothing, and every assertion resolves trivially), or the model that
 # answered was not the model requested. verify-run.ts checks both and owns the
-# verdict; exit 75 means "not a result, retry later" and 65 means "measured the
-# wrong thing", both distinct from the 1 that means a genuine red run.
+# verdict; exit 75 means "throttled, retry later", 69 means "void for a reason
+# that spent no budget", and 65 means "measured the wrong thing", all distinct
+# from the 1 that means a genuine red run.
 RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
 if [ -z "$RUN_ID" ] && [ "$CLI_STATUS" -eq 0 ]; then
     # The CLI reported success without printing a run id, so there is nothing to
@@ -571,9 +574,20 @@ if [ -n "$RUN_ID" ]; then
         # ~250k tokens discovering the same thing. Recorded here rather than inside
         # verify-run.ts because verify-run is also the offline --self-test entry
         # point and a self-test must not write budget state.
+        #
+        # ONLY 75 writes the marker, and ONLY 0 clears it. 75 is the rate limit,
+        # which is the single fault that actually spends the budget the cooldown
+        # protects. The other void types exit 69: they cost ~0 tokens (an unknown
+        # model dies at launch, before any agent turn), so a cooldown for them
+        # blocks work to let a budget recover that was never touched — and tells
+        # the reader "voided by RATE_LIMIT" about a run that was not.
+        #
+        # Clearing only on success is what the paragraph above already claimed;
+        # the previous `else` cleared on 65 and 69 too, which silently discarded a
+        # live cooldown whenever a mismatched or void run followed a throttled one.
         if [ "$VERIFY_STATUS" -eq 75 ]; then
             date +%s > "${THROTTLE_MARKER}"
-        else
+        elif [ "$VERIFY_STATUS" -eq 0 ]; then
             rm -f "${THROTTLE_MARKER}"
         fi
 

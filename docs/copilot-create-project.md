@@ -192,6 +192,10 @@ For apps with a UI, the preview also renders one **UI Preview** card per screen 
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
 
+Editable service-stack choices follow the service role and language. API, backend, and worker sections offer
+backend frameworks, while web app and frontend sections offer frontend frameworks. The view also recognizes
+minor component-label variations such as `Framework` and `Backend Framework`.
+
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link
 deterministically from a built‑in catalog by matching the tool name, so the plan markdown can never inject an

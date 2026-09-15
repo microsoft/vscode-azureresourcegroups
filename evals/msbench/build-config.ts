@@ -48,6 +48,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DISK_TRIAGE_COMMENT, FINGERPRINT_COMMENT, SENTINEL_COMMENT } from './assertionIdentity.ts';
+import { resolveSweepModels } from './models.ts';
 import type { PhaseWiring } from '../src/gateWiring.ts';
 import type { Stack } from '../src/stack.ts';
 import { seedFor, seedPaths } from './stage-workspace.ts';
@@ -160,17 +161,28 @@ function flagValue(name: string): string | undefined {
 const MODEL_SELECTOR_ID = /^(modelSelector:[\s\S]*?\n\s+id:[^\S\n]*)([^\s#]+)/m;
 
 /**
- * Apply `--model <id>`, which retargets the run without touching `base.yaml`.
+ * Resolve the model the run will use, and prove it is one MSBench sweeps.
  *
- * ## Why this exists
+ * Two jobs, because they are one decision: `--model <id>` retargets the run without
+ * touching `base.yaml`, and whichever value wins — flag or default — is the one that
+ * has to be validated.
+ *
+ * ## Why the override exists
  *
  * The suite this harness runs is explicit that "a Pass on one model is not a
  * Pass for the feature", and `config/stimuli/README-redteam.md` says to run the
- * red-team stimuli on every supported model. Until now there was no way to do
+ * red-team stimuli on every swept model. Until now there was no way to do
  * that: the model lives in `base.yaml`, which is shared by every stimulus and is
  * also the CES queueing key, so a sweep meant editing a checked-in file, running,
  * and remembering to put it back. All 38 runs in the local cache are
  * `claude-sonnet-4.5`, which is what that costs in practice.
+ *
+ * ## Why the default is validated too, not just the override
+ *
+ * Validating only an explicit `--model` guards the value someone typed and leaves
+ * unguarded the value nobody looks at. `claude-sonnet-4.5` reached 66 of the
+ * corpus's 93 runs precisely because it arrived from the default, so the default is
+ * the case that most needs checking.
  *
  * ## Why it fails loudly rather than falling back
  *
@@ -178,7 +190,8 @@ const MODEL_SELECTOR_ID = /^(modelSelector:[\s\S]*?\n\s+id:[^\S\n]*)([^\s#]+)/m;
  * default. A `--model` that silently did nothing would produce a run labelled as
  * a sweep datapoint for a model that never answered — the precise mislabelling
  * `verify-run.ts` exits 65 to prevent, except arrived at before the run rather
- * than after, and therefore for free.
+ * than after, and therefore for free. An out-of-set model is refused on the same
+ * reasoning: cheaper to stop now than to pay for a run with no column to go in.
  *
  * The override is recorded as a trailing comment so the generated file explains
  * itself. `verify-run.ts` reads `[^"'\s#]+`, so the comment cannot be mistaken
@@ -186,15 +199,18 @@ const MODEL_SELECTOR_ID = /^(modelSelector:[\s\S]*?\n\s+id:[^\S\n]*)([^\s#]+)/m;
  */
 function applyModelOverride(merged: string): string {
     const model = flagValue('--model');
-    if (model === undefined) {
-        return merged;
-    }
-    if (!model || model.startsWith('--')) {
-        console.error('--model needs a model id, e.g. --model claude-opus-4.7');
+    if (model !== undefined && (!model || model.startsWith('--'))) {
+        console.error('--model needs a model id, e.g. --model claude-sonnet-4.6');
         process.exit(1);
     }
     const match = MODEL_SELECTOR_ID.exec(merged);
     if (!match) {
+        // Nothing to override and no override asked for: leave the config alone.
+        // `base.yaml` always carries the block, and `check-agent-drift.ts` fails if it
+        // stops doing so, which is the cheaper place to catch that.
+        if (model === undefined) {
+            return merged;
+        }
         console.error(
             'Could not find a modelSelector.id to override in the generated config.\n'
             + '  --model must not silently do nothing: the run would be recorded as a\n'
@@ -203,10 +219,26 @@ function applyModelOverride(merged: string): string {
         process.exit(1);
     }
     const previous = match[2];
-    if (previous === model) {
+    const resolved = model ?? previous;
+
+    const sweep = resolveSweepModels();
+    if (!sweep.includes(resolved)) {
+        const via = model === undefined ? "base.yaml's modelSelector.id" : '--model';
+        console.error(
+            `Model '${resolved}' (from ${via}) is not one MSBench sweeps.\n`
+            + `  Sweep set: ${sweep.join(', ')}\n`
+            + '  This suite covers one model per family rather than everything the product\n'
+            + '  supports, because one run per stimulus is forced and the red-team corpus is\n'
+            + '  run per model. See evals/msbench/models.ts.\n'
+            + '  Grading outside the set produces a datapoint no published result has a column for.',
+        );
+        process.exit(1);
+    }
+
+    if (resolved === previous) {
         return merged;
     }
-    return merged.replace(MODEL_SELECTOR_ID, `$1${model} # --model override (base.yaml default: ${previous})`);
+    return merged.replace(MODEL_SELECTOR_ID, `$1${resolved} # --model override (base.yaml default: ${previous})`);
 }
 
 /**

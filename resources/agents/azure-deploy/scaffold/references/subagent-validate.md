@@ -61,9 +61,9 @@ FIXABLE errors: fix the Bicep → re-run `az bicep build` → proceed to Step 3c
 
 > Skip if no App Service or Functions in the plan.
 
-For each App Service / Functions resource in the generated Bicep:
+For each App Service resource, and each **Premium (EP1)** Functions resource, in the generated Bicep:
 
-1. **basicPublishingCredentialsPolicies** — verify both child resources exist: `basicPublishingCredentialsPolicies/scm` (with `allow: true`) and `basicPublishingCredentialsPolicies/ftp` (with `allow: false`). Missing → FIXABLE: add the child resources per [bicep-patterns-security.md](bicep-patterns-security.md) § Publishing Credential Lockdown.
+1. **basicPublishingCredentialsPolicies** — verify both child resources exist: `basicPublishingCredentialsPolicies/scm` (with `allow: true`) and `basicPublishingCredentialsPolicies/ftp` (with `allow: false`). Missing → FIXABLE: add the child resources per [bicep-patterns-security.md](bicep-patterns-security.md) § Publishing Credential Lockdown. ⛔ **Skip Flex Consumption function apps** (`kind: 'functionapp,linux'` with `functionAppConfig`) — they must NOT have these policies; if present, FIXABLE: remove them (see [bicep-functions-flex.md](bicep-functions-flex.md)).
 2. **uniqueString in naming** — verify the App Service name uses `uniqueString()` or a unique suffix (not a hardcoded literal). Hardcoded names cause global collisions. Missing → FIXABLE: wrap name with `uniqueString(resourceGroup().id)`.
 
 FIXABLE errors: fix the Bicep → re-run `az bicep build` → proceed to Step 3c.

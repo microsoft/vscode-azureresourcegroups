@@ -210,12 +210,21 @@ They are ordinary plan-phase stimuli:
 ```
 
 Expect them to be **cheap** — one turn, no scaffold — which makes them a much better
-regression suite than the multi-turn stimuli. Run them on every supported model; the suite
-is explicit that a Pass on one model is not a Pass for the feature.
+regression suite than the multi-turn stimuli. Run them on **both swept models** — the
+suite is explicit that a Pass on one model is not a Pass for the feature:
+
+```bash
+./run.sh --skip-build --stimulus redteam-path-traversal                             # gpt-5.6-sol
+./run.sh --skip-build --stimulus redteam-path-traversal --model claude-sonnet-5
+```
+
+MSBench sweeps two of the model families the product supports, one GPT and one Claude;
+the set lives in [`models.ts`](../../models.ts) and anything outside it is refused
+before submission. See README.md, "Run queueing".
 
 Note the cost shape before planning a sweep: `promptSteps` feeds a single chat session and
 `base.yaml` merges shallowly, so **one run per stimulus is forced** — stimuli cannot be
-batched. Eight red-team stimuli across the three supported models is 24 runs.
+batched. Eight red-team stimuli across the two swept models is 16 runs.
 
 ## Reporting
 

@@ -136,9 +136,11 @@ allowBlobPublicAccess: false
 minimumTlsVersion: 'TLS1_2'
 ```
 
-### App Service / Functions — Publishing Credential Lockdown
+### App Service / Premium Functions — Publishing Credential Lockdown
 
-> ⛔ **Every App Service and Functions app MUST include both `basicPublishingCredentialsPolicies` child resources.** Missing these means deploy cannot toggle SCM auth post-deployment — the REST API call targets a resource that doesn't exist in ARM.
+> ⛔ **Every App Service and every Premium (EP1) Functions app MUST include both `basicPublishingCredentialsPolicies` child resources.** Missing these means deploy cannot toggle SCM auth post-deployment — the REST API call targets a resource that doesn't exist in ARM.
+>
+> ⛔ **Exception — Functions on Flex Consumption (the default Functions floor): do NOT add these policies.** Flex has no SCM basic-auth publishing model; it deploys through its deployment storage container. Adding `scm`/`ftp` `basicPublishingCredentialsPolicies` to a Flex site is wrong, and the deploy phase must not toggle them. See [bicep-functions-flex.md](bicep-functions-flex.md).
 
 ```bicep
 // SCM — allow: true for deploy phase (deploy re-disables via REST API after code upload)
