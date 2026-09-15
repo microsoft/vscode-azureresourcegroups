@@ -73,23 +73,6 @@ export function parseDeployResultStatus(content: string): DeployResultStatus | u
     return status === 'in-progress' || status === 'succeeded' || status === 'failed' ? status : undefined;
 }
 
-/**
- * Whether the pipeline is parked at its deploy approval gate, waiting on the user.
- *
- * The pipeline has two mandatory gates: approving the plan authorises *scaffolding* only, and a
- * second "🚀 Ready to deploy?" prompt in Chat authorises spending money on resources. `context.json`
- * flips to `currentPhase: "deploy"` at the post-scaffold checkpoint — which happens *before* that
- * second gate is presented — so the phase alone must never be read as "deploying".
- *
- * The reliable discriminator is `deploy-result.json`: the agent opens that record before its very
- * first `az` command, so scaffolding being finished with no record yet means nothing is running
- * and the gate is waiting for an answer.
- */
-export function isAwaitingDeployApproval(signals: DeployProgressSignals): boolean {
-    const completed = new Set(signals.completedPhases ?? []);
-    return isScaffoldDone(signals) && signals.deployStatus === undefined && !completed.has('deploy');
-}
-
 function isScaffoldDone(signals: DeployProgressSignals): boolean {
     const completed = new Set(signals.completedPhases ?? []);
     // A deploy-result record can only exist once scaffolding produced something to deploy, so
@@ -110,7 +93,6 @@ export function buildDeployProgressSteps(signals: DeployProgressSignals): Loadin
     const completed = new Set(signals.completedPhases ?? []);
     const deployStatus = signals.deployStatus;
     const scaffoldDone = isScaffoldDone(signals);
-    const awaitingApproval = isAwaitingDeployApproval(signals);
 
     // A terminal failure always wins: the agent can mark the deploy phase complete in
     // `completedPhases` even when the deployment itself did not succeed.
@@ -128,9 +110,7 @@ export function buildDeployProgressSteps(signals: DeployProgressSignals): Loadin
         {
             id: deployProgressStepIds.provision,
             label: vscode.l10n.t('Provisioning Azure resources'),
-            // Stays `pending` while the deploy gate is unanswered: nothing is being provisioned
-            // yet, and a spinner here would imply work is underway when the agent is waiting.
-            status: !scaffoldDone || awaitingApproval
+            status: !scaffoldDone
                 ? 'pending'
                 : deployFailed ? 'failed' : deployFinished ? 'done' : 'active',
         },
@@ -146,21 +126,13 @@ export function buildDeployProgressSteps(signals: DeployProgressSignals): Loadin
     return steps;
 }
 
-/** Spinner heading, which must not promise deployment while the deploy gate is still unanswered. */
-export function buildDeployProgressTitle(signals: DeployProgressSignals): string {
-    return isAwaitingDeployApproval(signals)
-        ? vscode.l10n.t('Ready to deploy to Azure')
-        : vscode.l10n.t('Deploying your project to Azure…');
+/** Spinner heading for the deployment phase. */
+export function buildDeployProgressTitle(_signals: DeployProgressSignals): string {
+    return vscode.l10n.t('Deploying your project to Azure…');
 }
 
 /** Supporting copy shown under the spinner, matched to the step that is currently running. */
-export function buildDeployProgressMessage(steps: readonly LoadingStep[], signals?: DeployProgressSignals): string {
-    if (signals && isAwaitingDeployApproval(signals)) {
-        // Spell out that this is a second, separate confirmation. Users who approved the plan
-        // reasonably read the follow-up prompt as the same question being asked twice.
-        return vscode.l10n.t('Your infrastructure code is ready. Approving the plan authorized this code — creating the Azure resources needs one more confirmation. Answer "🚀 Ready to deploy?" in the Chat view to continue.');
-    }
-
+export function buildDeployProgressMessage(steps: readonly LoadingStep[]): string {
     const activeId = steps.find((step) => step.status === 'active')?.id;
     switch (activeId) {
         case deployProgressStepIds.provision:

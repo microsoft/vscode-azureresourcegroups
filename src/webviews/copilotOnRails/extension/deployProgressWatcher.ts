@@ -22,7 +22,6 @@ import {
     buildDeployProgressSteps,
     buildDeployProgressTitle,
     deployProgressStepIds,
-    isAwaitingDeployApproval,
     parseDeployProgressContext,
     parseDeployResultStatus,
     type DeployProgressSignals,
@@ -213,9 +212,8 @@ function buildConfig(signals: DeployProgressSignals): LoadingViewConfiguration {
     return {
         stage: 2,
         title: buildDeployProgressTitle(signals),
-        message: buildDeployProgressMessage(steps, signals),
+        message: buildDeployProgressMessage(steps),
         showNeedHelp: true,
-        awaitingInput: isAwaitingDeployApproval(signals),
         steps,
     };
 }

@@ -292,8 +292,8 @@ Once you approve a plan, **reopening it keeps the Approve Plan button disabled**
 
 After approval, the plan closes and the **Deployment progress** view opens. It shows the deployment
 phases and, while Azure is provisioning, the individual resource types and names reported by ARM.
-The view also shows when the deploy is waiting for the separate confirmation in chat. When the
-deployment finishes, it closes automatically as the Deployment results view opens.
+The view notes that chat may still ask you to confirm the deployment. When the deployment finishes,
+it closes automatically as the Deployment results view opens.
 
 > 📷 *Screenshot needed: the Deployment progress view while Azure resources are being provisioned.*
 
