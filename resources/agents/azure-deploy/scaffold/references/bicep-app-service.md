@@ -2,6 +2,8 @@
 
 App Service-specific Bicep patterns. For shared patterns (skeleton, naming, tags, security defaults, data modules), see [bicep-patterns.md](bicep-patterns.md).
 
+> ⛔ **Azure Functions on Flex Consumption (the default Functions floor) is NOT an App Service — do NOT use this module for it.** Flex uses a different resource shape (`functionAppConfig`) and a different deploy channel; see [bicep-functions-flex.md](bicep-functions-flex.md). This module applies to App Service web apps and to Functions only on **Premium (EP1)**.
+
 ## Module Template
 
 Standard App Service module with managed identity and SCM/FTP auth disabled. Use this as the base for ALL App Service resources.

@@ -27,7 +27,7 @@ Extract every security claim from the generated IaC and check for internal contr
 | `principalType` missing on role assignments | Causes intermittent 30s+ delays |
 | ⛔ Identity block missing on compute resource | ⛔ **MANDATORY FAIL** — ALL compute MUST have `identity: { type: 'SystemAssigned' }`. There is NO exception: managed identity is required on every SKU (the compute floor is B1, which supports MI; F1/D1/Free are never generated). Missing identity → `FLAGGED`. |
 | SQL firewall `0.0.0.0/0` without private endpoint | Prefer MI + private endpoint. AllowAzureServices genuinely needed → `PLAUSIBLE`. |
-| ⛔ SCM/FTP auth policy missing on App Service | ALL App Service MUST have `basicPublishingCredentialsPolicies`: `scm.allow: true`, `ftp.allow: false`. Missing → `FLAGGED`. |
+| ⛔ SCM/FTP auth policy missing on App Service | ALL App Service (and Premium/EP1 Functions) MUST have `basicPublishingCredentialsPolicies`: `scm.allow: true`, `ftp.allow: false`. Missing → `FLAGGED`. ⛔ **Functions on Flex Consumption must NOT have these policies** — flag their presence instead. |
 | ⛔ Any `Microsoft.KeyVault/vaults`, `@Microsoft.KeyVault(...)`, or `keyVaultUrl` present | ⛔ **MANDATORY FAIL** — no Key Vault is created; app-internal secrets live on the compute resource. → ⛔ **FLAGGED** |
 
 **Rating:** Claims that contradict each other → `FLAGGED`. Consistent claims → `VERIFIED`.

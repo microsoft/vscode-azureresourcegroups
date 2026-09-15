@@ -1,6 +1,8 @@
-# Code Deployment — App Service & Functions
+# Code Deployment — App Service (and Premium/EP1 Functions)
 
 After IaC deployment creates the Azure resources, deploy application code.
+
+> ⛔ **Functions on Flex Consumption (the default Functions floor) do NOT deploy through this SCM/Kudu path.** They use a blob-container package channel with no `basicPublishingCredentialsPolicies` toggle. Use [code-deployment-functions-flex.md](code-deployment-functions-flex.md) instead. This file applies to App Service web apps and to Functions only on **Premium (EP1)**.
 
 > ⛔ **`--subscription {subscriptionId}` on EVERY `az` command.**
 

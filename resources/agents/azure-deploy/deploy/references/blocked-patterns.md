@@ -15,7 +15,7 @@ Commands the agent must NEVER execute. Block decisions are non-negotiable — us
 | `az appservice plan update` | ⛔ Block | Imperative SKU change — edit Bicep + redeploy |
 | `az webapp update` | ⛔ Block | Imperative resource modification — all changes via IaC |
 | `az functionapp update` | ⛔ Block | Imperative resource modification — all changes via IaC |
-| `az webapp deployment source config-zip` | ⛔ Block | Requires SCM basic auth — use `az webapp deploy` (Entra auth) |
+| `az webapp deployment source config-zip` | ⛔ Block | Requires SCM basic auth — use `az webapp deploy` (Entra auth). ⛔ **This block is the `webapp` command only.** `az functionapp deployment source config-zip` is the **ALLOWED** deploy channel for Flex Consumption function apps (blob-container package, not SCM basic auth) — see [`code-deployment-functions-flex.md`](code-deployment-functions-flex.md). |
 | `az webapp deploy --track-status` | ⛔ Block | `--track-status` flag does not exist. Remove it. |
 | `az webapp up` / `az webapp create` / `az appservice plan create` | ⛔ Block | Creates App Service Plan + App imperatively — bypasses IaC entirely |
 | `az containerapp update` (config changes) | ⛔ Block | Imperative resource modification — all changes via IaC |

@@ -34,6 +34,13 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
   Required: app-onboard-skill, app-onboard-session-id, created-at, environment, deployed-by
 - Verify portal link is still correct if healing changed the deployment name
 
+## Code deploy — Functions (Flex Consumption) (delete if not using Flex Functions)
+- ⛔ **Read [`code-deployment-functions-flex.md`](code-deployment-functions-flex.md).** Flex is NOT App Service: no SCM/Kudu, no `basicPublishingCredentialsPolicies`, no `SCM_DO_BUILD_DURING_DEPLOYMENT`/`ENABLE_ORYX_BUILD`.
+- Deploy the package: `az functionapp deployment source config-zip --subscription {sub} -g {rgName} -n {appName} --src {zip} [--build-remote true]` (remote build for Python/Node) — or `func azure functionapp publish {appName}`.
+- ⛔ **Local (non-CI) deploy warning — say it to the user:** hardening network access can block publishing from your machine. Deploy with access OPEN, verify health, THEN harden. An ipify-derived `/32` SCM allow rule will NOT match Flex egress (platform gateway pool) — do not try it.
+- ⛔ A trailing `Deny all` rule (priority `2147483647`) in `ipSecurityRestrictions`/`scmIpSecurityRestrictions` is the expected platform sentinel — NOT an error.
+- The app identity needs a Storage Blob Data role on the deployment storage (shared-key is disabled).
+
 ## Code deploy — App Service (delete if not using App Service)
 - ⛔ **Deploy command: `az webapp deploy --type zip`** (Entra-capable, supports `--async`). NEVER `az webapp deployment source config-zip` — it needs SCM basic auth and is disallowed.
 - Wait for stabilization: `az webapp show -g {rgName} -n {appName} --query state` → "Running"

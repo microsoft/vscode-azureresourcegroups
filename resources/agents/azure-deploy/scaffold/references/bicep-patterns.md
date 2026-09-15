@@ -114,7 +114,8 @@ If `prepare-plan.json.naming.resources[]` provides pre-computed names with suffi
 ## Compute-Target Patterns
 
 Read the file(s) matching the service mapping — load only what's needed:
-- **App Service / Functions:** [bicep-app-service.md](bicep-app-service.md) — module template, SCM/FTP auth, native module deploy strategy
+- **Functions on Flex Consumption** (the default Functions floor): [bicep-functions-flex.md](bicep-functions-flex.md) — `functionAppConfig`, MI-based deployment storage, forbidden App Service settings. ⛔ Do NOT use the App Service module for a Flex function app.
+- **App Service (and Functions on Premium/EP1):** [bicep-app-service.md](bicep-app-service.md) — module template, SCM/FTP auth, native module deploy strategy
 - **Container Apps:** [bicep-container-apps.md](bicep-container-apps.md) — two-phase ACR wiring, ingress, secretRef, image parameter, multi-container DNS
 - **Static Web Apps:** [bicep-swa.md](bicep-swa.md) — module template, detached deploy rule
 
