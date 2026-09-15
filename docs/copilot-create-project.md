@@ -99,7 +99,7 @@ flowchart TD
     Next2 -->|"start_deployment"| Deploy
 
     subgraph Deploy["6 · azure-deploy"]
-        DepPlan["prepare-plan.json"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
+        DepPlan["prepare-plan.json"] --> Progress["Deployment progress view"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
     end
 
     StartupReport -.-> Plan
@@ -290,6 +290,17 @@ Once you approve a plan, **reopening it keeps the Approve Plan button disabled**
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
 </p>
 
+After approval, the plan closes and the **Deployment progress** view opens. It shows the deployment
+phases and, while Azure is provisioning, the individual resource types and names reported by ARM.
+The view also shows when the deploy is waiting for the separate confirmation in chat. When the
+deployment finishes, it closes automatically as the Deployment results view opens.
+
+> 📷 *Screenshot needed: the Deployment progress view while Azure resources are being provisioned.*
+
+<p align="center">
+  <img src="images/copilot-create-project/16-deployment-progress-view.png" alt="Deployment progress view" />
+</p>
+
 ### Knowing what was created (and cleaning up after a failure)
 
 Deploying real Azure resources means a failed or partially-completed deployment can leave resources behind. To
@@ -381,6 +392,7 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 | **Debug plan** view | `copilotOnRails.openDebugPlanView` | `open_local_plan_view` | Review the local debug configuration; approve. |
 | **Debug Next Steps** view | `copilotOnRails.openDebugNextStepsView` | `open_local_next_steps_view` | Post‑debug "What's next?" (deploy / run tests). |
 | **Deployment plan** view | `copilotOnRails.openDeploymentPlanView` | `open_deploy_plan_view` | Review the deployment plan; approve. |
+| **Deployment progress** view | `copilotOnRails.showProgressView` | — (opened after plan approval) | Follow deployment phases and Azure resource provisioning. Closes when results open. |
 | **Deployment results** view | `copilotOnRails.openDeployResultView` | `open_deploy_result_view` | Read-only report of a finished deploy: status, endpoints, resources, cleanup. |
 | **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline. |
 
@@ -454,7 +466,8 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
-| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view. A workspace can hold several — the session named by `.copilot-azure/sessions/active-session.json` wins, falling back to the newest file. |
+| `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
+| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,

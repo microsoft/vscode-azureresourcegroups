@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentOperation, GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { DeploymentExtended, DeploymentOperation, GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { createCredential, createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
@@ -35,9 +35,27 @@ export interface DeploymentOperationsResult {
     unavailable?: DeploymentOperationsUnavailableReason;
 }
 
+export interface DeploymentsResult {
+    deployments: ScopedDeployment[];
+    /** Set when the deployment list could not be read at all. See {@link DeploymentOperationsResult.unavailable}. */
+    unavailable?: DeploymentOperationsUnavailableReason;
+}
+
+/** An ARM deployment and the scope needed to read its operations. */
+export interface ScopedDeployment {
+    deployment: DeploymentExtended;
+    /** The deployment's resource group, or `undefined` for a subscription-scoped deployment. */
+    resourceGroupName?: string;
+}
+
 export interface AzureResourcesService {
     listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]>;
     listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]>;
+    /**
+     * Lists subscription- and resource-group-scoped deployments for the progress view.
+     * Each result includes the scope needed to read its operations.
+     */
+    listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult>;
     /**
      * Lists the ARM deployment operations for a single deployment. Used by the
      * deployment inventory capture to determine, deterministically, which resource
@@ -73,8 +91,8 @@ function getStatusCode(error: unknown): number | undefined {
 function classifyDeploymentOperationsError(error: unknown): DeploymentOperationsUnavailableReason | undefined {
     switch (getStatusCode(error)) {
         case 404:
-            // The deployment was never created or has already been removed. Genuinely no
-            // operations — the only case that is safe to report as an empty result.
+            // The deployment (or resource group) was never created or has already been removed.
+            // Genuinely nothing to report — the only case that is safe to treat as an empty result.
             return undefined;
         case 401:
         case 403:
@@ -114,6 +132,39 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
         async listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]> {
             const client = await createClient(context, subscription);
             return uiUtils.listAllIterator(client.resourceGroups.list());
+        },
+        async listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult> {
+            const client = await createClient(context, subscription);
+
+            async function read(scope: 'subscription' | 'resourceGroup'): Promise<DeploymentsResult> {
+                try {
+                    const iterator = scope === 'resourceGroup'
+                        ? client.deployments.listByResourceGroup(resourceGroupName)
+                        : client.deployments.listAtSubscriptionScope();
+                    const deployments = await uiUtils.listAllIterator(iterator);
+                    return {
+                        deployments: deployments.map((deployment) => ({
+                            deployment,
+                            resourceGroupName: scope === 'resourceGroup' ? resourceGroupName : undefined,
+                        })),
+                    };
+                } catch (error) {
+                    const unavailable = classifyDeploymentOperationsError(error);
+                    return unavailable ? { deployments: [], unavailable } : { deployments: [] };
+                }
+            }
+
+            const [subscriptionScope, resourceGroupScope] = await Promise.all([read('subscription'), read('resourceGroup')]);
+            const deployments = [...subscriptionScope.deployments, ...resourceGroupScope.deployments];
+
+            // One successful scope is enough to return a usable result.
+            if (deployments.length === 0) {
+                const unavailable = subscriptionScope.unavailable ?? resourceGroupScope.unavailable;
+                if (unavailable) {
+                    return { deployments: [], unavailable };
+                }
+            }
+            return { deployments };
         },
         async listDeploymentOperations(context: IActionContext, subscription: AzureSubscription, deploymentName: string, resourceGroupName?: string): Promise<DeploymentOperationsResult> {
             const client = await createClient(context, subscription);
