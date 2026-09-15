@@ -9,7 +9,6 @@ import {
     buildDeployProgressSteps,
     buildDeployProgressTitle,
     deployProgressStepIds,
-    isAwaitingDeployApproval,
     parseDeployProgressContext,
     parseDeployResultStatus,
     type DeployProgressSignals,
@@ -44,23 +43,21 @@ suite('deployProgressSteps', () => {
             );
         });
 
-        test('holds provisioning at pending while the deploy approval gate is unanswered', () => {
-            // `currentPhase` flips to "deploy" at the post-scaffold checkpoint, before the gate is
-            // presented — so this state means "waiting on the user", not "provisioning".
+        test('starts provisioning progress when the scaffold advances to the deploy phase', () => {
             assert.deepStrictEqual(
                 statuses(stepsFor({ currentPhase: 'deploy', completedPhases: ['prereq', 'prepare', 'scaffold'] })),
-                ['done', 'pending', 'pending'],
+                ['done', 'active', 'pending'],
             );
         });
 
         test('treats currentPhase deploy as scaffold evidence even if completedPhases lags', () => {
             assert.deepStrictEqual(
                 statuses(stepsFor({ currentPhase: 'deploy', completedPhases: [] })),
-                ['done', 'pending', 'pending'],
+                ['done', 'active', 'pending'],
             );
         });
 
-        test('starts provisioning only once the deploy result record appears', () => {
+        test('keeps provisioning active when the deploy result record appears', () => {
             assert.deepStrictEqual(
                 statuses(stepsFor({ currentPhase: 'deploy', completedPhases: ['scaffold'], deployStatus: 'in-progress' })),
                 ['done', 'active', 'pending'],
@@ -105,38 +102,9 @@ suite('deployProgressSteps', () => {
         });
     });
 
-    suite('isAwaitingDeployApproval', () => {
-        test('is false before scaffolding finishes — the gate has not been reached', () => {
-            assert.strictEqual(isAwaitingDeployApproval({}), false);
-            assert.strictEqual(isAwaitingDeployApproval({ currentPhase: 'scaffold', completedPhases: ['prepare'] }), false);
-        });
-
-        test('is true once scaffolding finishes and no deploy record exists yet', () => {
-            assert.strictEqual(isAwaitingDeployApproval({ currentPhase: 'deploy', completedPhases: ['scaffold'] }), true);
-        });
-
-        test('is false as soon as the deploy record is opened, which happens before the first az command', () => {
-            assert.strictEqual(
-                isAwaitingDeployApproval({ currentPhase: 'deploy', completedPhases: ['scaffold'], deployStatus: 'in-progress' }),
-                false,
-            );
-        });
-
-        test('is false for a finished deployment, including a failed one', () => {
-            assert.strictEqual(isAwaitingDeployApproval({ completedPhases: ['scaffold', 'deploy'] }), false);
-            assert.strictEqual(isAwaitingDeployApproval({ completedPhases: ['scaffold'], deployStatus: 'failed' }), false);
-            assert.strictEqual(isAwaitingDeployApproval({ completedPhases: ['scaffold'], deployStatus: 'succeeded' }), false);
-        });
-    });
-
     suite('buildDeployProgressTitle', () => {
-        test('does not claim a deployment is underway while the gate is unanswered', () => {
+        test('shows the deployment title as soon as the deploy phase begins', () => {
             const title = buildDeployProgressTitle({ currentPhase: 'deploy', completedPhases: ['scaffold'] });
-            assert.ok(!title.includes('Deploying'), `expected the waiting title not to say "Deploying", got: ${title}`);
-        });
-
-        test('switches to the deploying title once the deploy record exists', () => {
-            const title = buildDeployProgressTitle({ currentPhase: 'deploy', completedPhases: ['scaffold'], deployStatus: 'in-progress' });
             assert.ok(title.includes('Deploying'), `expected the active title to say "Deploying", got: ${title}`);
         });
     });
@@ -147,27 +115,22 @@ suite('deployProgressSteps', () => {
             assert.ok(message.includes('Chat'), `expected the scaffold message to point at Chat, got: ${message}`);
         });
 
-        test('explains that the deploy gate is a second, separate confirmation', () => {
+        test('warns that chat may still ask for deployment confirmation', () => {
             const signals: DeployProgressSignals = { currentPhase: 'deploy', completedPhases: ['scaffold'] };
-            const message = buildDeployProgressMessage(stepsFor(signals), signals);
+            const message = buildDeployProgressMessage(stepsFor(signals));
 
             assert.ok(message.includes('Chat'), `expected the gate message to point at Chat, got: ${message}`);
-            assert.ok(
-                /one more|separate|another/i.test(message),
-                `expected the gate message to explain this is an additional confirmation, got: ${message}`,
-            );
+            assert.ok(/confirm/i.test(message), `expected the message to mention confirmation, got: ${message}`);
         });
 
-        test('changes as the pipeline moves from waiting through provisioning to verifying', () => {
-            const awaiting: DeployProgressSignals = { currentPhase: 'deploy', completedPhases: ['scaffold'] };
+        test('changes as the pipeline moves from scaffolding through provisioning to verifying', () => {
             const provisioningSignals: DeployProgressSignals = { currentPhase: 'deploy', completedPhases: ['scaffold'], deployStatus: 'in-progress' };
 
             const scaffolding = buildDeployProgressMessage(stepsFor({}));
-            const waiting = buildDeployProgressMessage(stepsFor(awaiting), awaiting);
-            const provisioning = buildDeployProgressMessage(stepsFor(provisioningSignals), provisioningSignals);
+            const provisioning = buildDeployProgressMessage(stepsFor(provisioningSignals));
             const verifying = buildDeployProgressMessage(stepsFor({ deployStatus: 'succeeded' }));
 
-            assert.strictEqual(new Set([scaffolding, waiting, provisioning, verifying]).size, 4);
+            assert.strictEqual(new Set([scaffolding, provisioning, verifying]).size, 3);
         });
 
         test('falls back to the scaffolding copy when no step is active', () => {

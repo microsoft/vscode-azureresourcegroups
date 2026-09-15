@@ -14,6 +14,7 @@ export interface ProjectPlanFiles {
     hasLocalDevelopmentPlan: boolean;
     hasDeploymentPlan: boolean;
     hasAppOnboardSession: boolean;
+    hasDeployResult: boolean;
     /** True when any project artifact exists (requirements, a plan file, or an App Onboard session). */
     hasAny: boolean;
     /** The furthest stage reached. */
@@ -33,6 +34,12 @@ export const DEBUG_PLAN_FILE_GLOB = '.azure/vscode-debug-plan.md';
 export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
 export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
 export const APP_ONBOARD_CONTEXT_FILE_GLOB = '.copilot-azure/sessions/*/context.json';
+export const PREPARE_PLAN_FILE_GLOB = '.azure/prepare-plan.json';
+export const APP_ONBOARD_PREPARE_PLAN_FILE_GLOB = '.copilot-azure/sessions/*/prepare-plan.json';
+export const PREPARE_PLAN_FILE_GLOBS = [PREPARE_PLAN_FILE_GLOB, APP_ONBOARD_PREPARE_PLAN_FILE_GLOB] as const;
+export const DEPLOY_RESULT_FILE_GLOB = '.azure/deploy-result.json';
+export const APP_ONBOARD_DEPLOY_RESULT_FILE_GLOB = '.copilot-azure/sessions/*/deploy-result.json';
+export const DEPLOY_RESULT_FILE_GLOBS = [DEPLOY_RESULT_FILE_GLOB, APP_ONBOARD_DEPLOY_RESULT_FILE_GLOB] as const;
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,
@@ -42,7 +49,12 @@ const PLAN_FILE_GLOBS = [
 ] as const;
 
 /** All artifacts that indicate an in-progress project, for watching. */
-const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS, APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB] as const;
+const ALL_PROJECT_FILE_GLOBS = [
+    REQUIREMENTS_FILE_GLOB,
+    ...PLAN_FILE_GLOBS,
+    APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB,
+    ...DEPLOY_RESULT_FILE_GLOBS,
+] as const;
 
 export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWatcher {
     const folder = vscode.workspace.workspaceFolders?.[0];
@@ -50,9 +62,14 @@ export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWat
     return vscode.workspace.createFileSystemWatcher(pattern);
 }
 
+/** Finds project artifacts, including git-ignored App Onboard session files. */
+export async function findProjectFiles(glob: string): Promise<vscode.Uri[]> {
+    return vscode.workspace.findFiles(glob, null);
+}
+
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
-    const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles, appOnboardSessionFiles] = await Promise.all(
-        ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
+    const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles, appOnboardSessionFiles, deployResultFiles] = await Promise.all(
+        ALL_PROJECT_FILE_GLOBS.map((glob) => findProjectFiles(glob)),
     );
 
     const hasRequirements = requirementsFiles.length > 0;
@@ -60,9 +77,10 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
     const hasDeploymentPlan = deploymentPlanFiles.length > 0;
     const hasAppOnboardSession = appOnboardSessionFiles.length > 0;
+    const hasDeployResult = deployResultFiles.length > 0;
 
     let currentStage: ProjectStage = 0;
-    if (hasDeploymentPlan || hasAppOnboardSession) {
+    if (hasDeploymentPlan || hasAppOnboardSession || hasDeployResult) {
         currentStage = 2;
     } else if (hasLocalDevelopmentPlan) {
         currentStage = 1;
@@ -74,7 +92,8 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
         hasLocalDevelopmentPlan,
         hasDeploymentPlan,
         hasAppOnboardSession,
-        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan || hasAppOnboardSession,
+        hasDeployResult,
+        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan || hasAppOnboardSession || hasDeployResult,
         currentStage,
     };
 }

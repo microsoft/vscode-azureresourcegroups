@@ -70,6 +70,7 @@ import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extensio
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
+import { clearLeasesForTesting, closeMigrationAccess, openMigrationAccess, readLeases, reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -93,6 +94,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerDebugPlanImplementedWatcher(context);
     registerDeployInventoryWatcher(context);
     registerDeployProgressWatcher(context);
+    registerDeploymentPlanAutoOpen(context);
     registerDeployResultAutoOpen(context);
     registerViewHostDisposal(context);
 
@@ -338,7 +340,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         } catch {
                             return false;
                         }
-                    }
+                    },
+                    migrationFirewall: {
+                        setOverrideOperations: (operations) => {
+                            ext.testing.overrideMigrationFirewallOperations = operations;
+                        },
+                        readLeases,
+                        clearLeases: clearLeasesForTesting,
+                        open: openMigrationAccess,
+                        close: closeMigrationAccess,
+                        reconcile: reconcileMigrationFirewallLeases,
+                    },
                 },
             }),
         };
