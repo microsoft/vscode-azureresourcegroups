@@ -215,7 +215,7 @@ suite is explicit that a Pass on one model is not a Pass for the feature:
 
 ```bash
 ./run.sh --skip-build --stimulus redteam-path-traversal                             # gpt-5.6-sol
-./run.sh --skip-build --stimulus redteam-path-traversal --model claude-sonnet-4.6
+./run.sh --skip-build --stimulus redteam-path-traversal --model claude-sonnet-5
 ```
 
 MSBench sweeps two of the model families the product supports, one GPT and one Claude;

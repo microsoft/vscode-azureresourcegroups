@@ -29,12 +29,12 @@
 # plugin resolve the model from this block rather than from the CLI flag. Changing
 # `id` therefore moves our runs into a different queue — see README.md, "Run queueing".
 #
-# MSBench sweeps TWO models, one per family: `gpt-5.6-sol` and `claude-sonnet-4.6`.
+# MSBench sweeps TWO models, one per family: `gpt-5.6-sol` and `claude-sonnet-5`.
 # The set lives in `models.ts` — do not restate it here, and do not widen it by
 # editing this id. `build-config.ts` refuses to build a config for anything outside
 # the set, whether it arrived from here or from `--model`. To run the other one:
 #
-#     ./run.sh --model claude-sonnet-4.6 --stimulus photo-app-requirements
+#     ./run.sh --model claude-sonnet-5 --stimulus photo-app-requirements
 #
 # Why two rather than all five families the product supports: one run per stimulus is
 # forced (see the note above on `promptSteps`), and README-redteam.md asks for the
@@ -52,10 +52,9 @@
 # `X_MODEL_NOT_FOUND_ERROR` before any agent turn, and afterwards by `verify-run.ts`
 # comparing the model that answered against the one requested.
 #
-# `gpt-5.6-sol` is the default because it is the one of the two MEASURED to dispatch.
-# `claude-sonnet-4.6` failed outright with
-# `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
-# (run 2026090974671590, 2026-09-09), so re-test it before quoting a Claude datapoint.
+# `claude-sonnet-4.6` is exactly that trap and is NOT usable: absent from the backend
+# catalogue, measured failing on 2026-09-09 (run 2026090974671590) and again on
+# 2026-09-15 (run 2026091558015441). `claude-sonnet-5` is the Sonnet that runs.
 modelSelector:
   id: gpt-5.6-sol
   vendor: copilot
