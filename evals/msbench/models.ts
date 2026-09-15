@@ -52,18 +52,20 @@ import { getSupportedModelName, supportedModelNames } from '../../src/utils/copi
 /**
  * The sweep set. Exact ids, because this is what `modelSelector.id` is set to.
  *
- * `gpt-5.6-sol` is first because it is the `base.yaml` default, and it is the default
- * because it is the one of the two measured to dispatch: it is absent from the
- * shipped `COPILOT_VENDOR_MODELS` catalogue yet resolves and runs (see README.md,
- * "Model verification"), whereas `claude-sonnet-4.6` failed outright with
- * `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
- * on run `2026090974671590` (2026-09-09).
+ * `gpt-5.6-sol` is first because it is the `base.yaml` default. Both entries are
+ * MEASURED to dispatch and pass, on 2026-09-15 against the current `feat/CoR` build:
  *
- * `claude-sonnet-4.6` stays in the set regardless. The set answers "what should be
- * swept", not "what is serving today", and a backend outage is not a reason to stop
- * covering a model family. Re-test before quoting a Claude datapoint.
+ *   gpt-5.6-sol      run 2026091484150789   8/8 assertions, identity verified
+ *   claude-sonnet-5  run 2026091559194892   8/8 assertions, identity verified
+ *
+ * `claude-sonnet-4.6` was the Claude entry until that day and is NOT usable: it is
+ * absent from the backend's catalogue and fails at launch with
+ * `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
+ * (runs 2026090974671590 and 2026091558015441, measured nine days apart). Do not put
+ * it back without re-measuring — nothing in this file can detect it, because it is a
+ * real `Sonnet` and passes the family check below.
  */
-const SWEEP_MODELS: readonly string[] = ['gpt-5.6-sol', 'claude-sonnet-4.6'];
+const SWEEP_MODELS: readonly string[] = ['gpt-5.6-sol', 'claude-sonnet-5'];
 
 /**
  * The sweep set, having proved each entry belongs to a family the product supports

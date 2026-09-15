@@ -1533,11 +1533,15 @@ race — ours against each other, and against any other team on the same model.
 > **MSBench sweeps two models, and only two.** The product supports five model
 > *families* (`supportedModelNames` in `src/utils/copilotOnRails/modelSelection.ts`);
 > this suite covers one GPT and one Claude: **`gpt-5.6-sol`** (the `base.yaml` default)
-> and **`claude-sonnet-4.6`** (`./run.sh --model claude-sonnet-4.6`). One run per
+> and **`claude-sonnet-5`** (`./run.sh --model claude-sonnet-5`). One run per
 > stimulus is forced and `README-redteam.md` wants the red-team corpus run per model,
 > so cost is per-model across the whole suite; and the divergences worth catching are
 > between families rather than between revisions of one — [#1807](https://github.com/microsoft/vscode-azureresourcegroups/issues/1807)
 > is a live case where two models disagreed on a security prompt.
+>
+> Both are **measured** green against the current `feat/CoR` build (2026-09-15):
+> `gpt-5.6-sol` run `2026091484150789` and `claude-sonnet-5` run `2026091559194892`,
+> 8/8 assertions with model identity verified on each.
 >
 > The set lives in [`models.ts`](models.ts). `build-config.ts` refuses to build a
 > config for anything outside it — default or `--model` — and `check-agent-drift.ts`
@@ -1558,10 +1562,12 @@ race — ours against each other, and against any other team on the same model.
 > `claude-sonnet-4.5` figures quoted further down are left as the record of what those
 > runs used.
 >
-> **`claude-sonnet-4.6` was last measured as undispatchable**, failing with
-> `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models: claude-sonnet-4.6`
-> (run `2026090974671590`, 2026-09-09). That is why `gpt-5.6-sol` is the default.
-> Re-test before quoting a Claude datapoint.
+> **`claude-sonnet-4.6` is not on this backend and must not be pinned.** It fails at
+> launch with `X_MODEL_NOT_FOUND_ERROR - Model not found in cached models:
+> claude-sonnet-4.6`, measured on 2026-09-09 (run `2026090974671590`) and again on
+> 2026-09-15 (run `2026091558015441`). `claude-sonnet-5` is the Sonnet that runs.
+> Note what this costs to discover: an unknown id dies before any agent turn, so the
+> probe took 221 seconds and ~0 tokens.
 
 The catch is that **there is no validation of these strings**. A run tagged
 `copilot_on_rails`, `CopilotOnRails`, or `copilot-on-rails ` is accepted, submitted, and

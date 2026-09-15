@@ -39,6 +39,21 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** `<sysexits.h>`: a transient condition, retry later. Not a failed assertion. */
 const EX_TEMPFAIL = 75;
+/**
+ * A void run that consumed no token budget: the model was absent, the stream
+ * died, the transcript would not parse.
+ *
+ * Distinct from EX_TEMPFAIL because `run.sh` writes its throttle marker on 75 and
+ * imposes a 45-minute cooldown, which exists to stop a rate-limited budget being
+ * spent again before it recovers. These faults spend nothing — an unknown model
+ * fails at launch before any agent turn — so serving them the same cooldown
+ * blocks work for a budget that was never touched, and reports "voided by
+ * RATE_LIMIT" about a run that was not.
+ *
+ * Measured: run 2026091558015441 (X_MODEL_NOT_FOUND_ERROR) cost ~0 tokens and
+ * still locked out the next submission for 45 minutes under the shared code.
+ */
+const EX_UNAVAILABLE = 69;
 /** `<sysexits.h>`: the run's own data is wrong, so its numbers mean nothing. */
 const EX_DATAERR = 65;
 
@@ -510,7 +525,9 @@ function main(): void {
             '',
             `Run id: ${runId}`,
         ]);
-        process.exit(EX_TEMPFAIL);
+        // EX_UNAVAILABLE, not EX_TEMPFAIL: these spend no token budget, so they must
+        // not trigger the rate-limit cooldown in run.sh.
+        process.exit(EX_UNAVAILABLE);
     }
 
     if (rateLimited) {
