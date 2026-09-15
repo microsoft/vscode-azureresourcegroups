@@ -550,6 +550,39 @@ export function findKeyValue(section: ScaffoldPlanSection, key: string): string 
     return undefined;
 }
 
+export type ScaffoldPlanComponent = 'Language' | 'Runtime' | 'Backend' | 'Frontend' | 'Framework' | 'Package Manager' | 'Test Runner';
+export type ServiceStackKind = 'backend' | 'frontend' | 'unknown';
+
+export function normalizeScaffoldPlanComponent(value: string): ScaffoldPlanComponent | undefined {
+    if (/\b(?:test|testing)\s+(?:runner|framework)\b/i.test(value)) {
+        return 'Test Runner';
+    }
+    if (/\bpackage\s+manag(?:er|ement)\b/i.test(value)) {
+        return 'Package Manager';
+    }
+    for (const component of ['Language', 'Runtime', 'Framework', 'Backend', 'Frontend'] as const) {
+        if (new RegExp(`\\b${component}\\b`, 'i').test(value)) {
+            return component;
+        }
+    }
+    return undefined;
+}
+
+export function getServiceStackKind(section: ScaffoldPlanSection): ServiceStackKind {
+    if (/\b(api|back[\s_-]?end|worker|functions?)\b/i.test(section.title)) {
+        return 'backend';
+    }
+    if (/\b(front[\s_-]?end|web(?:[\s_-]*(?:app(?:lication)?|site))?|spa|client)\b/i.test(section.title)) {
+        return 'frontend';
+    }
+    const hasRuntime = section.content.some(content =>
+        content.type === 'table' && content.rows.some(row => normalizeScaffoldPlanComponent(row[0] ?? '') === 'Runtime'),
+    );
+    return hasRuntime ? 'backend' : 'unknown';
+}
+
+export function isAzureFunctionsFramework(value: string): boolean {
+    return /^azure functions?(?:\b.*)?$/i.test(value.trim());
+}
+
 //#endregion
-
-
