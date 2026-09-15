@@ -6,7 +6,6 @@
 
 ### Added
 * **Create New Project with Copilot.** Turn a one-sentence idea into a running, Azure-ready application. The extension drives GitHub Copilot through a fixed pipeline of specialized agents — plan → scaffold → integrate → debug → deploy — and surfaces each step in a native VS Code webview so you review and approve the work as it happens. See [Create New Project with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/docs/copilot-create-project.md) for the full guide.
-* Requirements, plan, frontend preview, local development and deployment webviews, each gated on your explicit approval before the next agent starts
 * An **Azure Project** view that tracks how far the project has progressed and links to the artifacts each stage produced
 * Local development setup with generated `launch.json` and `tasks.json`, plus PostgreSQL and Azurite emulators, so the generated project is debuggable with F5
 * Steer `azure-deploy` to run outstanding database migrations after a successful deploy instead of leaving them as a TODO, using a tiered access ladder that prefers running the migration inside the deployed app (no network change) over modifying the database firewall
