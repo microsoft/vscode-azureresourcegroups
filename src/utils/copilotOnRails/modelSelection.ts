@@ -11,7 +11,7 @@ export interface AvailableChatModel {
     readonly name: string;
 }
 
-export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Astra', 'GPT Terra'] as const;
+export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as const;
 
 export function getSupportedModelName(...identifiers: string[]): typeof supportedModelNames[number] | undefined {
     const modelIdentifiers = identifiers.join(' ');
