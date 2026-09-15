@@ -135,7 +135,7 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
 - A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
-  GPT Sol, GPT Astra, and GPT Terra models currently available through GitHub Copilot, so newly available
+  GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
 - **An empty folder.** The flow needs a clean workspace to build in. If the open folder already contains
   files, you'll be asked to **Browse…** to an empty folder; VS Code reopens there and resumes automatically.
