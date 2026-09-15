@@ -50,7 +50,7 @@ Display template for the deploy approval gate. Present after preflight validatio
 ## Rules
 
 - ⛔ Gate is the LAST content in the response — no continued execution until user replies
-- ⛔ SKU column must show exact Azure SKU code + tier name (e.g., "F1 (Free)", "B1 Linux (Basic)") — not generic labels like "Free tier"
-- Always show cost even if $0 (free tier) — user needs confirmation
+- ⛔ SKU column must show exact Azure SKU code + tier name (e.g., "B1 Linux (Basic)", "P1v3 (Premium)") — not generic labels like "cheapest tier". F1/D1/Free are never selected.
+- Always show the monthly cost estimate — there is no $0 tier (B1 floor ~$13/mo)
 - Surface ALL `FLAGGED` self-review findings — user must see risks before approving
 - If validation failed, show failures and block Yes option until resolved

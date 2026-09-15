@@ -8,6 +8,16 @@ Display the architecture plan for user approval BEFORE generating any files:
 
 > ⛔ **Open the plan view FIRST.** Call `open_deploy_plan_view` before displaying the gate text — it renders the `prepare-plan.json` you just wrote (services, SKUs, region, cost) in a side-by-side view. Call it once per gate; it is a display action only and never replaces the chat approval prompt below.
 
+> ⛔ **Record the CLI prerequisites through the MCP tool — not in chat.** The plan view has a prerequisites section for the two CLIs this stage depends on, and it is populated **only** by `record_deploy_prerequisites`. Before (or right alongside) `open_deploy_plan_view`:
+>
+> 1. Probe each CLI with its version command in the user's own default shell — **azd** → `azd version`, **az** → `az version`.
+> 2. Call `record_deploy_prerequisites` with one entry per tool: `installed: true` when the command returned a version, otherwise `installed: false`. Include the detected `version` when you have it.
+> 3. Do **not** pass install links or display names — the view resolves those from its own catalog.
+>
+> Example: `record_deploy_prerequisites({ tools: [{ id: "azd", installed: true, version: "1.9.2" }, { id: "az", installed: false }] })`
+>
+> Checking the CLIs by hand and describing the result in chat does **not** satisfy this — the user's plan view stays empty. Never write these into `prepare-plan.json`; that is the vendored pipeline's artifact. If the tool is not directly listed, load it first per "Azure Resources MCP Tools" in [`azure-deploy.agent.md`](../../azure-deploy.agent.md) — do **not** conclude it is unavailable.
+
 > ⛔ **Resource group edit is MANDATORY in the gate display.** Show this exact block:
 > ```
 > 🏢 **Subscription:** {subscriptionName} (`{subscriptionId}`)
@@ -18,9 +28,9 @@ Display the architecture plan for user approval BEFORE generating any files:
 
 Also display: services + SKUs + region + resource names + monthly cost estimate + files to generate. **Check `context.json.overrides[]` for `iacFormat`** — if Terraform, display "Terraform templates (`infra/*.tf`)"; if Bicep (default), display "Bicep templates (`infra/main.bicep`)". Show resource names so the user sees what will be created.
 
-> ⛔ **Surface plan assumptions.** If `prepare-plan.json.assumptions[]` is present (e.g., free-tier degradation to a paid SKU), display each note prefixed with ⚠️ ABOVE the approval prompt — the user MUST see WHY the cost or SKU differs from the fast-track default. Do not bury or omit them.
+> ⛔ **Surface plan assumptions.** If `prepare-plan.json.assumptions[]` is present (e.g., the B1-floor SKU was unavailable and a higher tier was selected), display each note prefixed with ⚠️ ABOVE the approval prompt — the user MUST see WHY the cost or SKU differs from the default. Do not bury or omit them.
 
-Verify file list against target SKU — F1/D1: no Dockerfile (built-in runtime). ⛔ **Exclude `azure.yaml` from file list** (see pipeline-rules.md).
+Verify file list against target SKU. ⛔ **Exclude `azure.yaml` from file list** (see pipeline-rules.md).
 
 > ⛔ **Container Apps code deploy preview (when plan includes Container Apps).** After the service table, preview the deploy path: build via ACR, replace placeholder images, redeploy. If `buildRequirements.hasBuildKitSyntax == true`, note ACR-compatible versions will be created.
 

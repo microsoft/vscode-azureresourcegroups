@@ -36,22 +36,24 @@ export interface DeploymentOperationsResult {
 }
 
 export interface DeploymentsResult {
-    deployments: DeploymentExtended[];
+    deployments: ScopedDeployment[];
     /** Set when the deployment list could not be read at all. See {@link DeploymentOperationsResult.unavailable}. */
     unavailable?: DeploymentOperationsUnavailableReason;
+}
+
+/** An ARM deployment and the scope needed to read its operations. */
+export interface ScopedDeployment {
+    deployment: DeploymentExtended;
+    /** The deployment's resource group, or `undefined` for a subscription-scoped deployment. */
+    resourceGroupName?: string;
 }
 
 export interface AzureResourcesService {
     listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]>;
     listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]>;
     /**
-     * Lists the ARM deployments in a resource group, newest first is *not* guaranteed — callers
-     * that care about recency must sort on `properties.timestamp` themselves.
-     *
-     * Used by the deployment progress view to discover the in-flight deployment(s) while `azd` is
-     * running, because `deploy-result.json.deploymentNames` is only populated after the deploy
-     * finishes. A resource group that does not exist yet (404) resolves to an empty list, since
-     * that is the normal state for the first seconds of a deployment.
+     * Lists subscription- and resource-group-scoped deployments for the progress view.
+     * Each result includes the scope needed to read its operations.
      */
     listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult>;
     /**
@@ -102,16 +104,25 @@ function classifyDeploymentOperationsError(error: unknown): DeploymentOperations
     }
 }
 
+/**
+ * Builds a `ResourceManagementClient` for a subscription, resolving the correct session when the
+ * account contains duplicate subscriptions. Shared so every ARM caller in the extension gets the
+ * same credential handling.
+ */
+export async function createResourceClientForSubscription(context: IActionContext, subscription: AzureSubscription): Promise<ResourceManagementClient> {
+    // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
+    const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
+    const subContext = createSubscriptionContext(subscription);
+    if (duplicateSubsMode) {
+        const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
+        subContext.credentials = createCredential(() => session);
+    }
+    return await createResourceClient([context, subContext]);
+}
+
 export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => {
     async function createClient(context: IActionContext, subscription: AzureSubscription): Promise<ResourceManagementClient> {
-        // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
-        const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
-        const subContext = createSubscriptionContext(subscription);
-        if (duplicateSubsMode) {
-            const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
-            subContext.credentials = createCredential(() => session);
-        }
-        return await createResourceClient([context, subContext]);
+        return await createResourceClientForSubscription(context, subscription);
     }
     return {
         async listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]> {
@@ -124,12 +135,36 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
         },
         async listDeployments(context: IActionContext, subscription: AzureSubscription, resourceGroupName: string): Promise<DeploymentsResult> {
             const client = await createClient(context, subscription);
-            try {
-                return { deployments: await uiUtils.listAllIterator(client.deployments.listByResourceGroup(resourceGroupName)) };
-            } catch (error) {
-                const unavailable = classifyDeploymentOperationsError(error);
-                return unavailable ? { deployments: [], unavailable } : { deployments: [] };
+
+            async function read(scope: 'subscription' | 'resourceGroup'): Promise<DeploymentsResult> {
+                try {
+                    const iterator = scope === 'resourceGroup'
+                        ? client.deployments.listByResourceGroup(resourceGroupName)
+                        : client.deployments.listAtSubscriptionScope();
+                    const deployments = await uiUtils.listAllIterator(iterator);
+                    return {
+                        deployments: deployments.map((deployment) => ({
+                            deployment,
+                            resourceGroupName: scope === 'resourceGroup' ? resourceGroupName : undefined,
+                        })),
+                    };
+                } catch (error) {
+                    const unavailable = classifyDeploymentOperationsError(error);
+                    return unavailable ? { deployments: [], unavailable } : { deployments: [] };
+                }
             }
+
+            const [subscriptionScope, resourceGroupScope] = await Promise.all([read('subscription'), read('resourceGroup')]);
+            const deployments = [...subscriptionScope.deployments, ...resourceGroupScope.deployments];
+
+            // One successful scope is enough to return a usable result.
+            if (deployments.length === 0) {
+                const unavailable = subscriptionScope.unavailable ?? resourceGroupScope.unavailable;
+                if (unavailable) {
+                    return { deployments: [], unavailable };
+                }
+            }
+            return { deployments };
         },
         async listDeploymentOperations(context: IActionContext, subscription: AzureSubscription, deploymentName: string, resourceGroupName?: string): Promise<DeploymentOperationsResult> {
             const client = await createClient(context, subscription);

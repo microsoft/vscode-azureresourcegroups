@@ -6,11 +6,12 @@
 import * as vscode from "vscode";
 import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, createProjectPlanFileWatcher, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { isJsonObject } from "../shared/jsonUtils";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
 import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
-import { disarmDeployProgressWatcher } from "./deployProgressWatcher";
+import { disarmDeployProgressWatcher, isTrackedDeployResult } from "./deployProgressWatcher";
 import { closeLoadingView } from "./openLoadingView";
 import { parseDeployResultStatus } from "./utils/deployProgressSteps";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
@@ -134,8 +135,10 @@ async function findActiveSessionDeployResult(matches: readonly vscode.Uri[]): Pr
     for (const pointer of pointers) {
         let activeSessionId: string | undefined;
         try {
-            const parsed = JSON.parse(await readFileText(pointer)) as { activeSessionId?: unknown };
-            activeSessionId = typeof parsed?.activeSessionId === 'string' ? parsed.activeSessionId : undefined;
+            const parsed: unknown = JSON.parse(await readFileText(pointer));
+            activeSessionId = isJsonObject(parsed) && typeof parsed.activeSessionId === 'string'
+                ? parsed.activeSessionId
+                : undefined;
         } catch {
             continue;
         }
@@ -156,7 +159,7 @@ async function findActiveSessionDeployResult(matches: readonly vscode.Uri[]): Pr
 }
 
 /** Command/tool entry point: find the newest deploy result and show it. */
-export async function openDeployResultViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
+export async function openDeployResultViewFromWorkspace(_context: CopilotOnRailsContext): Promise<vscode.Uri | undefined> {
     const selected = await findLatestDeployResult();
     if (!selected) {
         void vscode.window.showInformationMessage(
@@ -165,18 +168,17 @@ export async function openDeployResultViewFromWorkspace(_context: CopilotOnRails
         return;
     }
     await openDeployResultViewAsync(selected);
+    return selected;
 }
 
 async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
-    // Render immediately with whatever the artifact currently holds, then compute the deterministic
-    // inventory in the background. When it writes createdResources[] back, the single-file watcher
-    // reloads the view — so the safety net's (possibly multi-second) Azure call never blocks the
-    // first paint, even if the agent never called capture_deployment_inventory.
+    // Render first, then wait for inventory so handoff telemetry reads the completed artifact.
+    // The file watcher updates the visible view when capture finishes.
     openDeployResultViewWithContent(await readFileText(uri), uri);
     surfacedDeployResults.add(uri.toString());
 
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
-    void ensureDeployInventoryCaptured(uri);
+    await ensureDeployInventoryCaptured(uri);
 }
 
 async function reloadDeployResult(uri: vscode.Uri): Promise<void> {
@@ -221,13 +223,17 @@ export function registerDeployResultAutoOpen(context: vscode.ExtensionContext): 
         if (surfacedDeployResults.has(uri.toString())) {
             return;
         }
-        let status: string | undefined;
+        let content: string;
         try {
-            status = parseDeployResultStatus(await readFileText(uri));
+            content = await readFileText(uri);
         } catch {
             // Momentary partial write; a later change event re-triggers this check.
             return;
         }
+        if (!isTrackedDeployResult(content)) {
+            return;
+        }
+        const status = parseDeployResultStatus(content);
         if (status !== 'succeeded' && status !== 'failed') {
             return;
         }

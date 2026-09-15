@@ -9,23 +9,40 @@ import { WebviewContext, useConfiguration } from '@microsoft/vscode-azext-webvie
 import { useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/loadingView.scss';
-import { type LoadingStep, type LoadingViewConfiguration } from './utils/viewConfigTypes';
+import { type LoadingStep, type LoadingStepStatusLabels, type LoadingViewConfiguration } from './utils/viewConfigTypes';
 
 /** Delay before showing the "Need help?" */
 const NEED_HELP_DELAY_MS = 30_000;
 
-const StepMarker = ({ status }: { status: LoadingStep['status'] }): JSX.Element => {
+/**
+ * Screen-reader text for each step state.
+ */
+const DEFAULT_STEP_STATUS_LABELS: LoadingStepStatusLabels = {
+    done: 'Completed',
+    failed: 'Failed',
+    active: 'In progress',
+    pending: 'Not started',
+};
+
+const StepStatusIcon = ({ status }: { status: LoadingStep['status'] }): JSX.Element => {
     switch (status) {
         case 'done':
-            return <CheckmarkCircleFilled className='stepMarkerIcon done' />;
+            return <CheckmarkCircleFilled className='stepMarkerIcon done' aria-hidden='true' />;
         case 'failed':
-            return <ErrorCircleFilled className='stepMarkerIcon failed' />;
+            return <ErrorCircleFilled className='stepMarkerIcon failed' aria-hidden='true' />;
         case 'active':
-            return <Spinner size='extra-tiny' />;
+            return <Spinner size='extra-tiny' aria-hidden='true' />;
         default:
             return <span className='stepMarkerDot' aria-hidden='true' />;
     }
 };
+
+const StepMarker = ({ status, labels }: { status: LoadingStep['status']; labels: LoadingStepStatusLabels }): JSX.Element => (
+    <>
+        <StepStatusIcon status={status} />
+        <span className='visuallyHidden'>{labels[status]}</span>
+    </>
+);
 
 export const LoadingView = (): JSX.Element => {
     const initialConfig = useConfiguration<LoadingViewConfiguration>();
@@ -62,6 +79,7 @@ export const LoadingView = (): JSX.Element => {
     };
 
     const steps = config.steps ?? [];
+    const stepStatusLabels = config.stepStatusLabels ?? DEFAULT_STEP_STATUS_LABELS;
 
     return (
         <div className='loadingView' role='status' aria-live='polite' aria-busy={config.awaitingInput ? undefined : true}>
@@ -83,7 +101,7 @@ export const LoadingView = (): JSX.Element => {
                         {steps.map((step) => (
                             <li key={step.id} className={`loadingStep ${step.status}`} aria-current={step.status === 'active' ? 'step' : undefined}>
                                 <span className='stepMarker'>
-                                    <StepMarker status={step.status} />
+                                    <StepMarker status={step.status} labels={stepStatusLabels} />
                                 </span>
                                 <span className='stepText'>
                                     <span className='stepLabel'>
@@ -95,7 +113,7 @@ export const LoadingView = (): JSX.Element => {
                                             {step.children.map((child) => (
                                                 <li key={child.id} className={`loadingSubStep ${child.status}`}>
                                                     <span className='stepMarker'>
-                                                        <StepMarker status={child.status} />
+                                                        <StepMarker status={child.status} labels={stepStatusLabels} />
                                                     </span>
                                                     <span className='stepLabel'>{child.label}</span>
                                                     {child.note && <span className='stepNote' title={child.note}>{child.note}</span>}

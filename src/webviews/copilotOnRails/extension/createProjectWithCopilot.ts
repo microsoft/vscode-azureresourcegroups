@@ -7,6 +7,7 @@ import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -52,18 +53,23 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
     }
 
     // Nothing detected => start from scratch.
-    openCreateProjectView();
+    await openCreateProjectView();
 }
 
 /** Re-opens the create view pre-filled after a reload-to-discover-agents; no-ops when nothing was stashed. */
 export async function resumeCreateProjectViewAfterReload(): Promise<void> {
     const resume = await consumeReloadResumePrompt();
     if (resume) {
-        openCreateProjectView(resume.prompt, resume.model);
+        await openCreateProjectView(resume.prompt, resume.model);
     }
 }
 
-function openCreateProjectView(initialPrompt?: string, initialModel?: string): void {
+async function openCreateProjectView(initialPrompt?: string, initialModel?: string): Promise<void> {
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+    const modelOptions = getSupportedModelOptions(availableModels);
+    const selectedModel = initialModel && modelOptions.includes(initialModel)
+        ? initialModel
+        : getDefaultOpusModelOption(availableModels);
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
@@ -72,13 +78,10 @@ function openCreateProjectView(initialPrompt?: string, initialModel?: string): v
         hint: vscode.l10n.t('Ctrl+Enter to plan'),
         planButtonLabel: vscode.l10n.t('Plan'),
         modelLabel: vscode.l10n.t('Model'),
-        modelOptions: [
-            'Claude Opus 4.7 (copilot)',
-            'Claude Sonnet 4.6 (copilot)',
-        ],
+        modelOptions,
         recentPrompts: getRecentPrompts(),
         initialPrompt,
-        initialModel,
+        initialModel: selectedModel,
     });
     controller.revealToForeground();
 }
@@ -160,10 +163,43 @@ function folderName(uri: vscode.Uri): string {
 /** Entries that don't count as real project content when checking for a blank slate. */
 const IGNORED_ENTRIES = new Set(['.git', '.DS_Store']);
 
+/**
+ * Content the extension writes into the workspace itself — agent instructions land in
+ * `.github/agents` and the harness overrides in `.vscode/settings.json`. A folder that holds
+ * nothing but what we put there is still a blank slate from the user's point of view, so
+ * these folders are only disqualifying when they contain something we didn't write.
+ */
+const EXTENSION_OWNED_ENTRIES: Record<string, ReadonlySet<string>> = {
+    '.github': new Set(['agents']),
+    '.vscode': new Set(['settings.json']),
+};
+
 async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
     try {
         const entries = await vscode.workspace.fs.readDirectory(folder);
-        return entries.every(([name]) => IGNORED_ENTRIES.has(name));
+        for (const [name] of entries) {
+            if (IGNORED_ENTRIES.has(name)) {
+                continue;
+            }
+
+            const owned = EXTENSION_OWNED_ENTRIES[name];
+            if (owned && (await containsOnly(vscode.Uri.joinPath(folder, name), owned))) {
+                continue;
+            }
+
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** True when every entry in `folder` is either allowed or otherwise ignorable. */
+async function containsOnly(folder: vscode.Uri, allowed: ReadonlySet<string>): Promise<boolean> {
+    try {
+        const entries = await vscode.workspace.fs.readDirectory(folder);
+        return entries.every(([name]) => allowed.has(name) || IGNORED_ENTRIES.has(name));
     } catch {
         return false;
     }

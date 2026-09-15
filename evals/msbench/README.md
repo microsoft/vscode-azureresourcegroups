@@ -2650,6 +2650,32 @@ with a clear message:
   two live CLI processes are *not* evidence of parallel execution — the CLI stays
   resident whether or not CES has started its run — so this says the lock is
   worktree-scoped, and says nothing either way about whether CES serialised them.
+- **A mandated CI gate rewrites `user-overrides.yaml`, so "don't run `build-config.ts`
+  during a sweep" is not enforceable by reading the command you typed.**
+  `npm run clean-machine:check` — one of the pre-PR gates, and the one whose whole point
+  is that a rule in prose is weaker than a mechanism — executes
+  `build-config.ts photo-app-requirements` as one of its four clean-machine entrypoints
+  ([`check-clean-machine.ts`](check-clean-machine.ts), the `runEntrypoints` table). That
+  invocation rewrites `assets/user-overrides.yaml` like any other, and `build-config.ts`
+  takes **no lock** — `assets/.run.lock` is `run.sh`'s alone. So a gate that never
+  mentions `build-config.ts` silently mutates the file a sweep is depending on.
+
+  Two independent observations on 2026-09-09, from different sessions that had each been
+  told the script was unsafe to run: the gate rewrote a *staged* overrides file mid-sweep,
+  which is why run `2026090978012026` genuinely ran `gpt-5.6-sol` and was reported as
+  `requested claude-opus-4.7`; and it rewrote the file again in a second worktree during
+  unrelated grader work. Neither session ran `build-config.ts` knowingly.
+
+  [#1810](https://github.com/microsoft/vscode-azureresourcegroups/pull/1810) removed the
+  damage: `verify-run.ts` now reads `requested` from the run's own config inside the
+  extract rather than from the mutable live file, so a concurrent rebuild can no longer
+  fabricate a MODEL MISMATCH. **The rewrite itself still happens** — #1810 fixed what the
+  mutation could corrupt downstream, not the mutation.
+
+  Blast radius is worktree-scoped, same as the lock: gates run in one worktree cannot
+  disturb a sweep in another. The collision is a sweep and the gate suite in the **same**
+  worktree. Practical rule: while a sweep is in flight, run the gates from a different
+  worktree, or accept that `assets/` will be rebuilt under it.
 - **`output.zip` sits at an unpredictable index inside `results.zip`.** Across 24 local
   archives it has appeared at indices 1, 2, 3, 4, 5, 6 and 10; `2026082620153444` has it
   last. Any consumer that assumes a fixed member position will eventually read the wrong
@@ -2657,6 +2683,28 @@ with a clear message:
   because it explained anything: the artifact scare that prompted the enumeration turned
   out to be a read that predated the run's completion by about five minutes, and member
   order was not the cause. Noted here so nobody re-derives it as one.
+- **`msbench-cli extract` reports refusal on stderr and still exits 0.** Pointed at a
+  destination that already exists and is nonempty it prints
+  `ERROR <dir> exists and is nonempty. Quitting to avoid overwriting.`, writes nothing,
+  and **exits 0** — the same status as a successful extraction. Measured on the same run
+  id, same CLI, only the destination differing:
+
+  | destination | exit code | instance output written |
+  | --- | --- | --- |
+  | fresh directory | 0 | yes |
+  | existing nonempty directory | 0 | **no** |
+
+  So `result.status !== 0` cannot tell the two apart, and any consumer relying on it
+  returns a stale cache as though it were a fresh download. This is not hypothetical: it
+  made `gate-health` report a permanent `READER FAULT` on run `2026090413313337` after a
+  single audit taken while that run was still in flight cached a partial extraction, and
+  it made `regrade`'s `--refresh` a silent no-op. `--refresh` could not clear either,
+  because it re-extracts into the same nonempty directory and hits the identical refusal.
+  Both now clear their own cache before extracting and verify that something was actually
+  written; a caller-supplied `--extract-dir` is reported rather than deleted.
+
+  The general rule this is an instance of: **an exit code is a claim, not a
+  verification.** Where a tool's output is the thing you need, check for the output.
 - **Name the field that answers your question before you read one.** Every status
   surface here has a neighbouring field that looks like the answer and isn't, and
   reading the neighbour has now cost four separate investigations in two days:

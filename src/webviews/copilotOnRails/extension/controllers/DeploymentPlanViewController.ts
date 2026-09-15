@@ -140,8 +140,8 @@ export class DeploymentPlanViewController extends CopilotOnRailsWebviewControlle
                 this.recordPlanTelemetry(context);
                 this.panel.dispose();
 
+                await startDeployProgressView(this.sourceFileUri);
                 resetSurfacedDeployResults();
-                startDeployProgressView();
             });
         });
     }

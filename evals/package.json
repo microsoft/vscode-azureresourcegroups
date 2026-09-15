@@ -23,6 +23,7 @@
         "analyze-run": "node --disable-warning=ExperimentalWarning msbench/analyze-run.ts",
         "seed:harvest": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts",
         "seed:check": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --check",
+    "seed:contract": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/check-seed-contract.ts",
         "seed:self-test": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --self-test",
         "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
         "ci:local": "node ci-local.ts",

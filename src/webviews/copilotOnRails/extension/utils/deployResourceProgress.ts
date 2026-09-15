@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { getAzExtResourceType } from "../../../../../api/src/index";
+import { getName } from "../../../../utils/azExtResourceTypeDisplayName";
 import { type LoadingStep, type LoadingStepStatus } from "../../views/utils/viewConfigTypes";
 
 /**
@@ -56,68 +58,51 @@ export type ArmDeploymentLike = {
 const NESTED_DEPLOYMENT_TYPE = 'microsoft.resources/deployments';
 
 /**
- * Friendly names for the ARM types this pipeline actually provisions.
- *
- * ARM resource *names* are frequently useless on their own — role assignments are named with a
- * GUID, and child resources arrive as `parent/child` — so the type is what tells the user what is
- * being created. Anything not listed here falls back to {@link humanizeResourceType}.
+ * Labels for child and control-plane resources missing from the shared map.
+ * `normalized` must be lower-case.
  */
-const RESOURCE_TYPE_LABELS: Readonly<Record<string, string>> = {
-    'microsoft.app/containerapps': 'Container app',
-    'microsoft.app/managedenvironments': 'Container Apps environment',
-    'microsoft.apimanagement/service': 'API Management service',
-    'microsoft.authorization/roleassignments': 'Role assignment',
-    'microsoft.cache/redis': 'Azure Cache for Redis',
-    'microsoft.cdn/profiles': 'CDN profile',
-    'microsoft.cognitiveservices/accounts': 'Azure AI service',
-    'microsoft.containerregistry/registries': 'Container registry',
-    'microsoft.dbformysql/flexibleservers': 'MySQL server',
-    'microsoft.dbformysql/flexibleservers/databases': 'MySQL database',
-    'microsoft.dbforpostgresql/flexibleservers': 'PostgreSQL server',
-    'microsoft.dbforpostgresql/flexibleservers/configurations': 'PostgreSQL configuration',
-    'microsoft.dbforpostgresql/flexibleservers/databases': 'PostgreSQL database',
-    'microsoft.dbforpostgresql/flexibleservers/firewallrules': 'PostgreSQL firewall rule',
-    'microsoft.documentdb/databaseaccounts': 'Cosmos DB account',
-    'microsoft.eventhub/namespaces': 'Event Hubs namespace',
-    'microsoft.insights/components': 'Application Insights',
-    'microsoft.keyvault/vaults': 'Key vault',
-    'microsoft.keyvault/vaults/secrets': 'Key vault secret',
-    'microsoft.managedidentity/userassignedidentities': 'Managed identity',
-    'microsoft.network/privatednszones': 'Private DNS zone',
-    'microsoft.network/privateendpoints': 'Private endpoint',
-    'microsoft.network/virtualnetworks': 'Virtual network',
-    'microsoft.operationalinsights/workspaces': 'Log Analytics workspace',
-    'microsoft.search/searchservices': 'AI Search service',
-    'microsoft.servicebus/namespaces': 'Service Bus namespace',
-    'microsoft.signalrservice/signalr': 'SignalR service',
-    'microsoft.sql/servers': 'SQL server',
-    'microsoft.sql/servers/databases': 'SQL database',
-    'microsoft.sql/servers/firewallrules': 'SQL firewall rule',
-    'microsoft.storage/storageaccounts': 'Storage account',
-    'microsoft.web/certificates': 'App Service certificate',
-    'microsoft.web/connections': 'API connection',
-    'microsoft.web/serverfarms': 'App Service plan',
-    'microsoft.web/sites': 'App Service',
-    'microsoft.web/sites/basicpublishingcredentialspolicies': 'Publishing credentials policy',
-    'microsoft.web/sites/config': 'App Service configuration',
-    'microsoft.web/sites/slots': 'Deployment slot',
-    'microsoft.web/staticsites': 'Static Web App',
-};
+function childResourceTypeLabel(normalized: string): string | undefined {
+    switch (normalized) {
+        case 'microsoft.authorization/roleassignments': return vscode.l10n.t('Role assignment');
+        case 'microsoft.dbformysql/flexibleservers/databases': return vscode.l10n.t('MySQL database');
+        case 'microsoft.dbforpostgresql/flexibleservers/configurations': return vscode.l10n.t('PostgreSQL configuration');
+        case 'microsoft.dbforpostgresql/flexibleservers/databases': return vscode.l10n.t('PostgreSQL database');
+        case 'microsoft.dbforpostgresql/flexibleservers/firewallrules': return vscode.l10n.t('PostgreSQL firewall rule');
+        case 'microsoft.keyvault/vaults/secrets': return vscode.l10n.t('Key vault secret');
+        case 'microsoft.resources/resourcegroups': return vscode.l10n.t('Resource group');
+        case 'microsoft.sql/servers/databases': return vscode.l10n.t('SQL database');
+        case 'microsoft.sql/servers/firewallrules': return vscode.l10n.t('SQL firewall rule');
+        case 'microsoft.web/sites/basicpublishingcredentialspolicies': return vscode.l10n.t('Publishing credentials policy');
+        case 'microsoft.web/sites/config': return vscode.l10n.t('App Service configuration');
+        case 'microsoft.web/sites/slots': return vscode.l10n.t('Deployment slot');
+        default: return undefined;
+    }
+}
 
-/**
- * Turns an ARM resource type into a readable label, e.g.
- * `Microsoft.Web/sites/basicPublishingCredentialsPolicies` → "Basic publishing credentials policy".
- *
- * Used for types absent from {@link RESOURCE_TYPE_LABELS} so a resource Azure adds tomorrow still
- * reads as something rather than falling back to a bare GUID.
- */
-export function humanizeResourceType(resourceType: string | undefined): string | undefined {
-    const leaf = resourceType?.split('/').pop()?.trim();
-    if (!leaf) {
-        return undefined;
+/** Display names that must not be singularized. */
+const INVARIANT_DISPLAY_NAMES: ReadonlySet<string> = new Set(['Application Insights']);
+
+/** Converts a tree group label into a single-resource label. */
+function singularize(displayName: string): string {
+    if (INVARIANT_DISPLAY_NAMES.has(displayName)) {
+        return displayName;
     }
 
-    const words = leaf
+    const [, head, suffix = ''] = /^(.*?)(\s*\(.*\))?$/.exec(displayName) ?? [];
+    if (head === undefined) {
+        return displayName;
+    }
+
+    return head
+        .replace(/ies$/, 'y')
+        .replace(/sses$/, 'ss')
+        .replace(/([^s])s$/, '$1')
+        + suffix;
+}
+
+/** Converts a camel/Pascal-case identifier into readable words. */
+function humanizeIdentifier(identifier: string): string | undefined {
+    const words = identifier
         // `basicPublishingCredentialsPolicies` → `basic Publishing Credentials Policies`
         .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
         .toLowerCase()
@@ -126,21 +111,38 @@ export function humanizeResourceType(resourceType: string | undefined): string |
         return undefined;
     }
 
-    const singular = words
-        .replace(/ies$/, 'y')
-        .replace(/sses$/, 'ss')
-        .replace(/([^s])s$/, '$1');
-
+    const singular = singularize(words);
     return singular.charAt(0).toUpperCase() + singular.slice(1);
 }
 
-/** The display label for an ARM resource type, or undefined when the type is unknown. */
+/**
+ * Turns an ARM resource type into a readable label, e.g.
+ * `Microsoft.Web/sites/basicPublishingCredentialsPolicies` → "Basic publishing credentials policy".
+ *
+ * Used when the shared resource maps do not recognize the type.
+ */
+export function humanizeResourceType(resourceType: string | undefined): string | undefined {
+    const leaf = resourceType?.split('/').pop()?.trim();
+    return leaf ? humanizeIdentifier(leaf) : undefined;
+}
+
+/** Returns the shared localized resource label, with fallbacks for unsupported types. */
 export function resourceTypeLabel(resourceType: string | undefined): string | undefined {
     const normalized = resourceType?.trim().toLowerCase();
     if (!normalized) {
         return undefined;
     }
-    return RESOURCE_TYPE_LABELS[normalized] ?? humanizeResourceType(resourceType);
+
+    const azExtResourceType = getAzExtResourceType({ type: normalized });
+    const sharedLabel = getName(azExtResourceType);
+    if (sharedLabel) {
+        return singularize(sharedLabel);
+    }
+
+    return childResourceTypeLabel(normalized)
+        // Some classified types have no shared display name.
+        ?? (azExtResourceType ? humanizeIdentifier(azExtResourceType) : undefined)
+        ?? humanizeResourceType(resourceType);
 }
 
 /**
@@ -262,20 +264,33 @@ function resourceTypeFromId(id: string): string | undefined {
     return [namespace, ...typeSegments].join('/');
 }
 
+/** The deployment shape needed for scoped polling. */
+export type ScopedDeploymentLike = {
+    deployment: ArmDeploymentLike;
+    /** The deployment's resource group, or `undefined` for a subscription-scoped deployment. */
+    resourceGroupName?: string;
+};
+
+/** A deployment selected for polling. */
+export type TrackedDeployment = {
+    name: string;
+    /** Passed straight through to `listDeploymentOperations`; `undefined` means subscription scope. */
+    resourceGroupName?: string;
+};
+
 /**
  * Picks the ARM deployments whose operations are worth reading.
  *
- * A resource group accumulates deployment history, so reading every one would both cost an ARM
- * request each and surface resources from previous runs. Only deployments that are still running,
- * or that started after tracking began, belong to the deploy the user is watching.
+ * Deployment history accumulates at both scopes, so only named, active, or recent deployments are
+ * selected.
  */
 export function selectTrackedDeployments(
-    deployments: readonly ArmDeploymentLike[],
+    deployments: readonly ScopedDeploymentLike[],
     options: { knownNames: readonly string[]; since: number; limit: number },
-): string[] {
+): TrackedDeployment[] {
     const known = new Set(options.knownNames);
 
-    const candidates = deployments.filter((deployment) => {
+    const candidates = deployments.filter(({ deployment }) => {
         if (!deployment.name) {
             return false;
         }
@@ -289,10 +304,20 @@ export function selectTrackedDeployments(
         return timestamp !== undefined && timestamp >= options.since;
     });
 
+    const seen = new Set<string>();
     return candidates
-        .sort((a, b) => (b.properties?.timestamp?.getTime() ?? 0) - (a.properties?.timestamp?.getTime() ?? 0))
+        .sort((a, b) => (b.deployment.properties?.timestamp?.getTime() ?? 0) - (a.deployment.properties?.timestamp?.getTime() ?? 0))
+        .filter((candidate) => {
+            // Deduplicate repeated entries within the same scope.
+            const key = `${candidate.resourceGroupName ?? ''}/${candidate.deployment.name ?? ''}`;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        })
         .slice(0, options.limit)
-        .map((deployment) => deployment.name as string);
+        .map(({ deployment, resourceGroupName }) => ({ name: deployment.name as string, resourceGroupName }));
 }
 
 /** Sub-label for the provisioning step, e.g. "4 of 7 resources ready". */

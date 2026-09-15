@@ -6,7 +6,7 @@
 import * as vscode from "vscode";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../extensionVariables";
-import { type LoadingViewConfiguration } from "../views/utils/viewConfigTypes";
+import { type LoadingStepStatusLabels, type LoadingViewConfiguration } from "../views/utils/viewConfigTypes";
 import { LoadingViewController } from "./controllers/LoadingViewController";
 
 let controller: LoadingViewController | undefined;
@@ -42,10 +42,21 @@ export type OpenLoadingViewOptions = {
     onUserClose?: () => void;
 };
 
+function addLocalizedStatusLabels(config: LoadingViewConfiguration): LoadingViewConfiguration {
+    const stepStatusLabels: LoadingStepStatusLabels = {
+        done: vscode.l10n.t('Completed'),
+        failed: vscode.l10n.t('Failed'),
+        active: vscode.l10n.t('In progress'),
+        pending: vscode.l10n.t('Not started'),
+    };
+    return { ...config, stepStatusLabels };
+}
+
 /**
  * Show or update the transient loading view used to bridge workflow steps
  */
 export function openLoadingView(config: LoadingViewConfiguration, options?: OpenLoadingViewOptions): void {
+    config = addLocalizedStatusLabels(config);
     lastConfig = config;
     userCloseHandler = options?.onUserClose;
     hideReopenAffordance();
@@ -112,6 +123,7 @@ export function updateLoadingView(config: LoadingViewConfiguration): boolean {
         // No progress session in flight (or it already handed off) — nothing to refresh.
         return false;
     }
+    config = addLocalizedStatusLabels(config);
     lastConfig = config;
     controller?.updateConfig(config);
     return true;

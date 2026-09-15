@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../commands/copilotOnRails/registerCopilotOnRailsCommands';
+import { OpenDeployResultNode } from './OpenDeployResultNode';
 import { OpenPlanNode } from './OpenPlanNode';
 import { ProgressNode } from './ProgressNode';
 import { StageNode } from './StageNode';
@@ -17,13 +18,28 @@ export class DeploymentStageItem extends StageNode {
     protected readonly stepIndex = 2;
     protected readonly iconName = 'rocket';
 
-    constructor(currentStage: number, hasPlanFile: boolean, private readonly hasAppOnboardSession: boolean) {
+    constructor(
+        currentStage: number,
+        hasPlanFile: boolean,
+        private readonly hasAppOnboardSession: boolean,
+        private readonly hasDeployResult: boolean,
+    ) {
         super(currentStage, hasPlanFile);
     }
 
     getChildren(): ProgressNode[] {
+        const nodes: ProgressNode[] = [];
+
         if (this.hasPlanFile) {
-            return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDeploymentPlanView)];
+            nodes.push(new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDeploymentPlanView));
+        }
+
+        if (this.hasDeployResult) {
+            nodes.push(new OpenDeployResultNode(this.stageId, copilotOnRailsCommandIds.openDeployResultView));
+        }
+
+        if (nodes.length > 0) {
+            return nodes;
         }
 
         return [new StateStageNode(

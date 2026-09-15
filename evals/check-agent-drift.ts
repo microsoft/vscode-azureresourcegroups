@@ -23,7 +23,8 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { listEvalAssetFiles, readSupportedModels, SHARED_FOLDER } from "./src/agent-definition.ts";
+import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
+import { listEvalAssetFiles, SHARED_FOLDER } from "./src/agent-definition.ts";
 
 const scriptDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptDir, "..");
@@ -149,6 +150,19 @@ const contracts: Contract[] = [
         name: "health-route",
         pattern: /`?\/api\/health`?/,
         grader: "plan-structure-valid (Route Definitions)",
+    },
+    {
+        // The sequenced compound task is reachable both directly and as a compound's
+        // `preLaunchTask`, so it is the task likeliest to be invoked twice — and it was
+        // the one task whose literal template omitted `runOptions`. A real run copied the
+        // template faithfully and produced 6 conforming tasks out of 7, failing
+        // `debug-config` with `invalidTaskRunOptions` on exactly the task the template
+        // shipped without it. Pinning the template, not the prose, because the template is
+        // what the agent copied.
+        file: "azure-debug-generate/references/multi-service.md",
+        name: "compound-task-run-options",
+        pattern: /"dependsOrder":\s*"sequence",\s*\n\s*"runOptions":\s*\{\s*"instanceLimit":\s*1,\s*"instancePolicy":\s*"silent"\s*\}/,
+        grader: "debug-config-structurally-sound (invalidTaskRunOptions)",
     },
 ];
 
@@ -322,12 +336,11 @@ const currentHash = hashAgentAssets();
 const currentFiles = agentAssetFiles();
 
 /**
- * The eval spec must run the agent on a model the product actually ships it on.
- * Catching a bad pin here costs a second; catching it at trial time costs a run.
+ * The eval spec needs an explicit model for reproducibility even though the product
+ * discovers available versions of its supported models dynamically.
  */
 const evalSpecPath = path.join(scriptDir, "project-plan", "eval.yaml");
 try {
-    const supported = readSupportedModels(repoRoot, PLAN);
     const spec = fs.readFileSync(evalSpecPath, "utf8");
     const defaultsBlock = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(spec)?.[1] ?? "";
     const pinned = /^\s+model:\s*(\S+)\s*$/m.exec(defaultsBlock)?.[1];
@@ -335,14 +348,12 @@ try {
         failures.push(
             "eval-model-unpinned: evals/project-plan/eval.yaml has no `defaults.model`.\n"
             + "    Without a pin the SDK falls back to the host CLI's default, which differs\n"
-            + "    between a developer machine and CI, so the graders disagree.\n"
-            + `    Supported: ${supported.join(", ")}`,
+            + "    between a developer machine and CI, so the graders disagree.",
         );
-    } else if (!supported.includes(pinned)) {
+    } else if (!getSupportedModelName(pinned)) {
         failures.push(
             `eval-model-unsupported: evals/project-plan/eval.yaml pins '${pinned}', which `
-            + `${PLAN}.agent.md does not list.\n`
-            + `    Supported: ${supported.join(", ")}`,
+            + `does not match a supported model name (${supportedModelNames.join(", ")}).`,
         );
     } else {
         checked.push(`eval-model-pinned (${pinned})`);

@@ -6,8 +6,10 @@
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import {
+    APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB,
     APP_ONBOARD_CONTEXT_FILE_GLOB,
     createProjectPlanFileWatcher,
+    DEPLOY_RESULT_FILE_GLOB,
     DEPLOY_RESULT_FILE_GLOBS,
     findProjectFiles,
 } from "../../../tree/project/projectPlanFiles";
@@ -79,14 +81,37 @@ let trackingStartedAtMs = 0;
 let resourcePollTimer: NodeJS.Timeout | undefined;
 /** Latest per-resource checklist from ARM, rendered under the provisioning step. */
 let resourceSteps: LoadingStep[] = [];
+let resourcePollInFlight = false;
+let resourcePollSequence = 0;
+let pollTarget: DeployTarget | undefined;
+let trackingActive = false;
+let activeSessionId: string | undefined;
+
+export function isTrackedDeployResult(content: string): boolean {
+    if (!trackingActive) {
+        return true;
+    }
+    return activeSessionId !== undefined && deployResultSessionId(content) === activeSessionId;
+}
+
+function deployResultSessionId(content: string): string | undefined {
+    try {
+        const parsed = JSON.parse(content) as { sessionId?: unknown };
+        return typeof parsed?.sessionId === 'string' ? parsed.sessionId : undefined;
+    } catch {
+        return undefined;
+    }
+}
 
 /**
  * Opens the deployment progress view and starts tracking the App Onboard artifacts.
  * Called once the user approves the deployment plan.
  */
-export function startDeployProgressView(): void {
+export async function startDeployProgressView(sourceFileUri?: vscode.Uri): Promise<void> {
     disarmDeployProgressWatcher();
     trackingStartedAtMs = Date.now();
+    trackingActive = true;
+    activeSessionId = sessionIdFromUri(sourceFileUri) ?? await readActiveSessionId();
 
     // Closing the tab is the user's way out of a deployment that was cancelled at the Chat gate:
     // end the whole tracking session rather than leaving a "Show Copilot progress" spinner behind
@@ -126,6 +151,8 @@ export function disarmDeployProgressWatcher(): void {
     }
     stopResourcePolling();
     resourceSteps = [];
+    trackingActive = false;
+    activeSessionId = undefined;
     for (const watcher of watchers) {
         watcher.dispose();
     }
@@ -196,18 +223,27 @@ function buildConfig(signals: DeployProgressSignals): LoadingViewConfiguration {
 //#region Live ARM resource polling
 
 function startResourcePolling(target: DeployTarget): void {
+    // Restart when a retry changes the deployment target.
     if (resourcePollTimer) {
-        return;
+        if (pollTarget?.subscriptionId === target.subscriptionId && pollTarget.resourceGroupName === target.resourceGroupName) {
+            return;
+        }
+        stopResourcePolling();
+        resourceSteps = [];
     }
+    pollTarget = target;
     resourcePollTimer = setInterval(() => void pollDeployedResources(target), RESOURCE_POLL_INTERVAL_MS);
     void pollDeployedResources(target);
 }
 
 function stopResourcePolling(): void {
+    resourcePollSequence++;
     if (resourcePollTimer) {
         clearInterval(resourcePollTimer);
         resourcePollTimer = undefined;
     }
+    pollTarget = undefined;
+    resourcePollInFlight = false;
 }
 
 /**
@@ -218,67 +254,135 @@ function stopResourcePolling(): void {
  * steps still work, so a missing resource list degrades the view rather than breaking it.
  */
 async function pollDeployedResources(target: DeployTarget): Promise<void> {
+    if (resourcePollInFlight) {
+        return;
+    }
+    resourcePollInFlight = true;
+    const pollSequence = ++resourcePollSequence;
     const armedGeneration = generation;
 
-    await callWithTelemetryAndErrorHandling('copilotOnRails.deployProgressResources', async (context: IActionContext) => {
-        // A background poller must never raise error toasts for transient Azure failures.
-        context.errorHandling.suppressDisplay = true;
-        context.telemetry.suppressIfSuccessful = true;
+    try {
+        await callWithTelemetryAndErrorHandling('copilotOnRails.deployProgressResources', async (context: IActionContext) => {
+            // A background poller must never raise error toasts for transient Azure failures.
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
-        const subscription = await resolveSubscription(target.subscriptionId);
-        if (!subscription || armedGeneration !== generation) {
-            return;
-        }
+            const subscription = await resolveSubscription(target.subscriptionId);
+            if (!subscription || armedGeneration !== generation || pollSequence !== resourcePollSequence) {
+                return;
+            }
 
-        const service = getAzureResourcesService();
-        const { deployments, unavailable } = await service.listDeployments(context, subscription, target.resourceGroupName);
-        if (unavailable || armedGeneration !== generation) {
-            return;
-        }
+            const service = getAzureResourcesService();
+            const { deployments, unavailable } = await service.listDeployments(context, subscription, target.resourceGroupName);
+            if (unavailable || armedGeneration !== generation || pollSequence !== resourcePollSequence) {
+                return;
+            }
 
-        const trackedNames = selectTrackedDeployments(deployments, {
-            knownNames: target.deploymentNames,
-            since: trackingStartedAtMs,
-            limit: MAX_TRACKED_DEPLOYMENTS,
+            const tracked = selectTrackedDeployments(deployments, {
+                knownNames: target.deploymentNames,
+                since: trackingStartedAtMs,
+                limit: MAX_TRACKED_DEPLOYMENTS,
+            });
+            if (tracked.length === 0) {
+                return;
+            }
+
+            // Query operations at each deployment's scope.
+            const results = await Promise.all(tracked.map(({ name, resourceGroupName }) =>
+                service.listDeploymentOperations(context, subscription, name, resourceGroupName),
+            ));
+            if (armedGeneration !== generation || pollSequence !== resourcePollSequence) {
+                return;
+            }
+
+            const operations = results.flatMap((result) => result.operations as ArmDeploymentOperationLike[]);
+            const nextSteps = buildResourceSteps(operations);
+            if (nextSteps.length === 0) {
+                return;
+            }
+
+            resourceSteps = nextSteps;
+            scheduleRefresh();
         });
-        if (trackedNames.length === 0) {
-            return;
+    } finally {
+        if (pollSequence === resourcePollSequence) {
+            resourcePollInFlight = false;
         }
-
-        const results = await Promise.all(trackedNames.map((name) =>
-            service.listDeploymentOperations(context, subscription, name, target.resourceGroupName),
-        ));
-        if (armedGeneration !== generation) {
-            return;
-        }
-
-        const operations = results.flatMap((result) => result.operations as ArmDeploymentOperationLike[]);
-        const nextSteps = buildResourceSteps(operations);
-        if (nextSteps.length === 0) {
-            return;
-        }
-
-        resourceSteps = nextSteps;
-        scheduleRefresh();
-    });
+    }
 }
 
 //#endregion
 
-/** Reads the newest App Onboard artifacts, tolerating missing or half-written files. */
 async function readDeployProgressState(): Promise<{ signals: DeployProgressSignals; target: DeployTarget | undefined }> {
-    const [contextContent, deployResultContent] = await Promise.all([
-        readNewestMatch([APP_ONBOARD_CONTEXT_FILE_GLOB]),
-        readNewestMatch(DEPLOY_RESULT_FILE_GLOBS),
-    ]);
+    const activeContext = await readActiveContext();
+    const deployResultContent = await readSessionDeployResult(activeContext?.uri);
 
     return {
         signals: {
-            ...(contextContent ? parseDeployProgressContext(contextContent) : {}),
+            ...(activeContext ? parseDeployProgressContext(activeContext.content) : {}),
             deployStatus: deployResultContent ? parseDeployResultStatus(deployResultContent) : undefined,
         },
         target: deployResultContent ? parseDeployTarget(deployResultContent) : undefined,
     };
+}
+
+function sessionIdFromUri(uri: vscode.Uri | undefined): string | undefined {
+    const segments = uri?.path.split('/').filter(Boolean) ?? [];
+    const sessionsIndex = segments.lastIndexOf('sessions');
+    return sessionsIndex >= 0 && sessionsIndex + 1 < segments.length ? segments[sessionsIndex + 1] : undefined;
+}
+
+async function readActiveSessionId(): Promise<string | undefined> {
+    const pointers = await findProjectFiles(APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB);
+    for (const pointer of pointers) {
+        try {
+            const parsed = JSON.parse(await readFileText(pointer)) as { activeSessionId?: unknown };
+            if (typeof parsed.activeSessionId === 'string') {
+                return parsed.activeSessionId;
+            }
+        } catch {
+            // Try another pointer or fall back to the newest context.
+        }
+    }
+    const context = await readNewestMatch([APP_ONBOARD_CONTEXT_FILE_GLOB]);
+    return context ? sessionIdFromUri(context.uri) : undefined;
+}
+
+async function readActiveContext(): Promise<{ uri: vscode.Uri; content: string } | undefined> {
+    if (!activeSessionId) {
+        return readNewestMatch([APP_ONBOARD_CONTEXT_FILE_GLOB]);
+    }
+
+    const matches = await findProjectFiles(APP_ONBOARD_CONTEXT_FILE_GLOB);
+    const match = matches.find((uri) => sessionIdFromUri(uri) === activeSessionId);
+    if (!match) {
+        return undefined;
+    }
+    try {
+        return { uri: match, content: await readFileText(match) };
+    } catch {
+        return undefined;
+    }
+}
+
+/** Reads the active session result, then its matching root fallback. */
+async function readSessionDeployResult(contextUri: vscode.Uri | undefined): Promise<string | undefined> {
+    if (contextUri) {
+        const sessionResult = vscode.Uri.joinPath(contextUri, '..', 'deploy-result.json');
+        try {
+            const content = await readFileText(sessionResult);
+            if (!activeSessionId || deployResultSessionId(content) === activeSessionId) {
+                return content;
+            }
+        } catch {
+            // The active session has not written a deploy result yet.
+        }
+    }
+    const rootResult = (await readNewestMatch([DEPLOY_RESULT_FILE_GLOB]))?.content;
+    if (!rootResult || (activeSessionId && deployResultSessionId(rootResult) !== activeSessionId)) {
+        return undefined;
+    }
+    return rootResult;
 }
 
 /**
@@ -287,7 +391,7 @@ async function readDeployProgressState(): Promise<{ signals: DeployProgressSigna
  * Resolved against the file system rather than the search index: the deploy agent git-ignores
  * `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
  */
-async function readNewestMatch(globs: readonly string[]): Promise<string | undefined> {
+async function readNewestMatch(globs: readonly string[]): Promise<{ uri: vscode.Uri; content: string } | undefined> {
     const matches = (await Promise.all(globs.map((glob) => findProjectFiles(glob)))).flat();
 
     let newest: { uri: vscode.Uri; mtime: number } | undefined;
@@ -306,7 +410,7 @@ async function readNewestMatch(globs: readonly string[]): Promise<string | undef
         return undefined;
     }
     try {
-        return await readFileText(newest.uri);
+        return { uri: newest.uri, content: await readFileText(newest.uri) };
     } catch {
         return undefined;
     }

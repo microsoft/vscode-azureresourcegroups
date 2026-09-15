@@ -100,6 +100,35 @@ promptSteps:
       - comment: Agent should not have provisioned any Azure resources (turn 0)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%deployment%create%' OR tool LIKE '%azd_up%'
 
+      # vally: tool-calls required [workflow-tools-open_deploy_plan_view]
+      # The gate's own UI surface, graded. `azure-deploy.agent.md` is explicit that
+      # at the scaffold approval gate, "as soon as `prepare-plan.json` is written",
+      # the agent **MUST** call `open_deploy_plan_view` — that view is how the user
+      # sees services, SKUs, region and cost before consenting.
+      #
+      # Turn 0 is precisely that gate, so this grades the contract the agent was
+      # actually given rather than a later stage this stimulus never reaches.
+      - comment: Agent should have opened the deploy plan view at the scaffold approval gate
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_deploy_plan_view%'
+
+      # vally: tool-calls required [workflow-tools-record_deploy_prerequisites]
+      # Same gate. The Deployment plan view renders the two CLIs this stage depends
+      # on, and the agent is instructed to record their status "through **our** MCP
+      # tool" rather than by narrating it in chat. A run that checks `az`/`azd` by
+      # hand and describes the result satisfies every artifact assertion here while
+      # leaving the view empty, which is exactly the substitution this catches.
+      - comment: Agent should have recorded deploy prerequisites through the MCP tool
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%record_deploy_prerequisites%'
+
+      # vally: tool-calls forbidden [workflow-tools-capture_deployment_inventory]
+      # `capture_deployment_inventory` is contracted to fire with `phase: "baseline"`
+      # immediately before the first deployment command. The prompt forbids
+      # provisioning, so its presence means a deployment was about to happen —
+      # a tool-level companion to the `%deployment%create%` check above, and one
+      # that fires earlier because the baseline call precedes the deploy itself.
+      - comment: Agent should not have taken a deployment inventory baseline (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%capture_deployment_inventory%'
+
   # ─── Turn 1: approve, and grade what the scaffold sub-phase produced ──────
   #
   # "Yes" is the literal first option the agent offers at the gate. Everything
@@ -149,6 +178,24 @@ promptSteps:
       # created.
       - comment: Agent should not have run what-if or terraform plan
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%what_if%' OR tool LIKE '%terraform_plan%'
+
+      # vally: tool-calls forbidden [workflow-tools-capture_deployment_inventory] — turn 1 copy.
+      # Turn 1 is where the agent actually generates infrastructure, so it is the
+      # turn most likely to slide into deploying it. The baseline inventory call is
+      # contracted to come immediately before the first deployment command, which
+      # makes its absence a positive statement that no deployment was attempted.
+      - comment: Agent should not have taken a deployment inventory baseline (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%capture_deployment_inventory%'
+
+      # vally: tool-calls forbidden [workflow-tools-open_deploy_result_view]
+      # `open_deploy_result_view` is contracted to fire exactly once, after
+      # `deploy-result.json` reaches a terminal status — success or failure alike.
+      # This stimulus stops at IaC, so a Deployment Results view means the agent
+      # believed it had finished a deployment. Distinct from the provisioning checks
+      # above: those catch the act, this catches the agent *reporting* the act, which
+      # is what a user would actually see.
+      - comment: Agent should not have opened the deployment results view
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_deploy_result_view%'
 
       # A grader that has only ever returned PASS has not been shown to work — it is
       # indistinguishable from a grader that cannot fail. The offline certification

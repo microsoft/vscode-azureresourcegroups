@@ -168,6 +168,7 @@ export type DeployResultViewConfiguration = {
 
 /** Lifecycle of a single step in a loading view's progress checklist. */
 export type LoadingStepStatus = 'pending' | 'active' | 'done' | 'failed';
+export type LoadingStepStatusLabels = Record<LoadingStepStatus, string>;
 
 /** One step in a loading view's progress checklist. */
 export type LoadingStep = {
@@ -218,6 +219,8 @@ export type LoadingViewConfiguration = {
      */
     awaitingInput?: boolean;
     steps?: readonly LoadingStep[];
+    /** Localized status text announced for each checklist marker. */
+    stepStatusLabels?: LoadingStepStatusLabels;
 };
 
 /**

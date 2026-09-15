@@ -27,6 +27,11 @@ Update the matching section of `docs/copilot-create-project.md` when you:
 | Change what diagnostics capture, or the Report Issue / Inspect Diagnostics behavior | Support & triage runbook, including the "What the diagnostics contain (privacy)" section |
 | Change the launch / resume / empty-folder / autopilot flow | Launching, Resuming a session, and Autopilot mode |
 
+**Security rule:** when CoR code starts reading a new agent or workspace artifact, consumes a new field,
+constructs a path, command, or URL from artifact data, or renders artifact text as HTML or SVG, follow and
+update [Safe parsing and rendering](../../docs/copilot-create-project.md#safe-parsing-and-rendering). Also
+update **Files & state** when the artifact inventory changes.
+
 ## New or changed UI — flag screenshots to re-capture
 
 Screenshots are captured by hand and stored separately, so the agent can't re-shoot them. When your change
@@ -68,6 +73,9 @@ Use this map from source area to the screenshot(s) it backs:
   refresh them. If your change touched no UI, say so.
 - Re-read the affected sections and confirm every command id, MCP tool name, agent name, file path, and
   view→command mapping still matches the code you changed.
-- Keep the reference tables and the Mermaid pipeline diagram accurate.
+- Keep the reference tables and the Mermaid pipeline diagram accurate. When you edit that diagram, **wrap
+  every node label and edge label in double quotes** (`Plan["1 · azure-project-plan"]`,
+  `A -->|"@azure/storage-blob"| B`) — mermaid v11 reads a leading `@` in an unquoted label as edge-ID
+  syntax and fails to parse the whole diagram.
 - If nothing user-visible changed (a pure internal refactor), no doc update is needed — note that briefly
   instead of editing the doc.

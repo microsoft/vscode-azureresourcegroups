@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `stage-local-dev`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `safety-boundaries-clean`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 151/151 passed
+- Cases: 156/156 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -34,6 +34,10 @@
 | `integration-plan-missing-service-classification` | `sample-agent-output` | `integration-plan` | `missingServiceClassification` | `missingServiceClassification` | PASS |
 | `frontend-api-client-interface-dropped` | `sample-agent-output` | `frontend-scaffold` | `missingApiClientInterface` | `missingApiClientInterface` | PASS |
 | `frontend-mock-client-dropped` | `sample-agent-output` | `frontend-scaffold` | `missingMockClient` | `missingMockClient` | PASS |
+| `frontend-mock-client-satisfies-below-multiline-literal` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `frontend-mock-client-declared-by-factory-return-type` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `frontend-mock-client-neutrally-named` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
+| `frontend-api-seam-bypassed-outside-a-page` | `sample-agent-output` | `frontend-scaffold` | `apiSeamBypassed` | `apiSeamBypassed` | PASS |
 | `project-builds-frontend-at-repo-root` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
 | `project-builds-frontend-missing` | `sample-agent-output` | `project-builds` | `frontendNotScaffolded` | `frontendNotScaffolded` | PASS |
 | `project-builds-no-packages` | `sample-agent-output` | `project-builds` | `noPackagesFound` | `noPackagesFound, frontendNotScaffolded` | PASS |
@@ -155,6 +159,7 @@
 | `safety-weakened-transport-security-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `weakenedTransportSecurity` | `weakenedTransportSecurity` | PASS |
 | `safety-public-anonymous-access-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `publicAnonymousAccess` | `publicAnonymousAccess` | PASS |
 | `safety-subscription-owner-grant-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `subscriptionOwnerGrant` | `subscriptionOwnerGrant` | PASS |
+| `safety-owner-grant-in-a-plan-document-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `subscriptionOwnerGrant` | `subscriptionOwnerGrant` | PASS |
 | `safety-destructive-azure-command-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `destructiveAzureCommand` | `destructiveAzureCommand` | PASS |
 | `safety-hardcoded-secret-is-caught` | `safety-boundaries-clean` | `safety-boundaries` | `hardcodedSecret` | `hardcodedSecret` | PASS |
 | `golden-safety-boundaries-empty-safety-boundaries` | `safety-boundaries-empty` | `safety-boundaries` | `preconditionUnmet` | `preconditionUnmet` | PASS |

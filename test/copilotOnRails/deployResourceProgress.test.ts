@@ -12,8 +12,8 @@ import {
     parseDeployTarget,
     resourceTypeLabel,
     selectTrackedDeployments,
-    type ArmDeploymentLike,
     type ArmDeploymentOperationLike,
+    type ScopedDeploymentLike,
 } from '../../src/webviews/copilotOnRails/extension/utils/deployResourceProgress';
 
 function operation(id: string, provisioningState: string, resourceName?: string, resourceType?: string): ArmDeploymentOperationLike {
@@ -25,8 +25,17 @@ function armId(type: string, name: string): string {
     return `/subscriptions/s/resourceGroups/rg/providers/${type}/${name}`;
 }
 
-function deployment(name: string, provisioningState: string, timestamp?: Date): ArmDeploymentLike {
-    return { name, properties: { provisioningState, timestamp } };
+function deployment(name: string, provisioningState: string, timestamp?: Date, resourceGroupName?: string): ScopedDeploymentLike {
+    return { deployment: { name, properties: { provisioningState, timestamp } }, resourceGroupName };
+}
+
+/** Subscription-scoped deployment, as produced by the pipeline's `az deployment sub create`. */
+function subDeployment(name: string, provisioningState: string, timestamp?: Date): ScopedDeploymentLike {
+    return deployment(name, provisioningState, timestamp);
+}
+
+function rgDeployment(name: string, provisioningState: string, timestamp?: Date): ScopedDeploymentLike {
+    return deployment(name, provisioningState, timestamp, 'rg-office-dev');
 }
 
 suite('deployResourceProgress', () => {
@@ -85,7 +94,7 @@ suite('deployResourceProgress', () => {
             const id = armId('Microsoft.DBforPostgreSQL/flexibleServers', 'psql-app-dev');
             const steps = buildResourceSteps([operation(id, 'Running', 'psql-app-dev')]);
 
-            assert.strictEqual(steps[0].label, 'PostgreSQL server');
+            assert.strictEqual(steps[0].label, 'PostgreSQL server (Flexible)');
             assert.strictEqual(steps[0].note, 'psql-app-dev');
         });
 
@@ -195,9 +204,27 @@ suite('deployResourceProgress', () => {
     });
 
     suite('resourceTypeLabel', () => {
-        test('prefers the curated label and ignores casing', () => {
+        test('prefers the shared display name and ignores casing', () => {
             assert.strictEqual(resourceTypeLabel('microsoft.web/serverfarms'), 'App Service plan');
             assert.strictEqual(resourceTypeLabel('Microsoft.Web/serverfarms'), 'App Service plan');
+        });
+
+        test('singularizes the shared names, which are pluralized for tree group headers', () => {
+            assert.strictEqual(resourceTypeLabel('Microsoft.Storage/storageAccounts'), 'Storage account');
+            assert.strictEqual(resourceTypeLabel('Microsoft.Web/sites'), 'App Service');
+            // A trailing parenthetical is not part of the plural.
+            assert.strictEqual(resourceTypeLabel('Microsoft.DBforPostgreSQL/flexibleServers'), 'PostgreSQL server (Flexible)');
+            // A proper noun that merely ends in "s" must survive intact.
+            assert.strictEqual(resourceTypeLabel('Microsoft.Insights/components'), 'Application Insights');
+        });
+
+        test('names types the shared map classifies but does not have a display name for', () => {
+            assert.strictEqual(resourceTypeLabel('Microsoft.KeyVault/vaults'), 'Key vault');
+        });
+
+        test('uses a curated label for child resources the shared map does not classify', () => {
+            assert.strictEqual(resourceTypeLabel('Microsoft.Authorization/roleAssignments'), 'Role assignment');
+            assert.strictEqual(resourceTypeLabel('Microsoft.KeyVault/vaults/secrets'), 'Key vault secret');
         });
 
         test('falls back to a humanized label for unmapped types', () => {
@@ -218,7 +245,7 @@ suite('deployResourceProgress', () => {
                 { knownNames: ['known'], since, limit: 5 },
             );
 
-            assert.deepStrictEqual(names, ['known']);
+            assert.deepStrictEqual(names, [{ name: 'known', resourceGroupName: undefined }]);
         });
 
         test('includes running deployments regardless of timestamp', () => {
@@ -227,7 +254,7 @@ suite('deployResourceProgress', () => {
                 { knownNames: [], since, limit: 5 },
             );
 
-            assert.deepStrictEqual(names, ['running']);
+            assert.deepStrictEqual(names, [{ name: 'running', resourceGroupName: undefined }]);
         });
 
         test('excludes completed deployments that predate this run', () => {
@@ -245,7 +272,7 @@ suite('deployResourceProgress', () => {
                 { knownNames: [], since, limit: 5 },
             );
 
-            assert.deepStrictEqual(names, ['recent']);
+            assert.deepStrictEqual(names, [{ name: 'recent', resourceGroupName: undefined }]);
         });
 
         test('returns the newest first and caps how many ARM calls a poll will make', () => {
@@ -255,11 +282,44 @@ suite('deployResourceProgress', () => {
                 deployment('d3', 'Running', new Date('2026-01-01T10:02:00Z')),
             ];
 
-            assert.deepStrictEqual(selectTrackedDeployments(deployments, { knownNames: [], since, limit: 2 }), ['d2', 'd3']);
+            assert.deepStrictEqual(
+                selectTrackedDeployments(deployments, { knownNames: [], since, limit: 2 }).map((tracked) => tracked.name),
+                ['d2', 'd3'],
+            );
         });
 
         test('skips deployments with no name', () => {
-            assert.deepStrictEqual(selectTrackedDeployments([{ properties: { provisioningState: 'Running' } }], { knownNames: [], since, limit: 5 }), []);
+            assert.deepStrictEqual(selectTrackedDeployments([{ deployment: { properties: { provisioningState: 'Running' } } }], { knownNames: [], since, limit: 5 }), []);
+        });
+
+        test('carries each scope through so operations are read with the matching API', () => {
+            const tracked = selectTrackedDeployments(
+                [subDeployment('outer', 'Running', new Date('2026-01-01T10:02:00Z')), rgDeployment('inner', 'Running', new Date('2026-01-01T10:01:00Z'))],
+                { knownNames: [], since, limit: 5 },
+            );
+
+            assert.deepStrictEqual(tracked, [
+                { name: 'outer', resourceGroupName: undefined },
+                { name: 'inner', resourceGroupName: 'rg-office-dev' },
+            ]);
+        });
+
+        test('keeps the same name at both scopes apart rather than deduplicating it away', () => {
+            const tracked = selectTrackedDeployments(
+                [subDeployment('main', 'Running', new Date('2026-01-01T10:02:00Z')), rgDeployment('main', 'Running', new Date('2026-01-01T10:01:00Z'))],
+                { knownNames: [], since, limit: 5 },
+            );
+
+            assert.deepStrictEqual(tracked.map((entry) => entry.resourceGroupName), [undefined, 'rg-office-dev']);
+        });
+
+        test('reads a deployment repeated within one scope only once', () => {
+            const tracked = selectTrackedDeployments(
+                [rgDeployment('main', 'Running', new Date('2026-01-01T10:02:00Z')), rgDeployment('main', 'Running', new Date('2026-01-01T10:01:00Z'))],
+                { knownNames: [], since, limit: 5 },
+            );
+
+            assert.deepStrictEqual(tracked, [{ name: 'main', resourceGroupName: 'rg-office-dev' }]);
         });
     });
 

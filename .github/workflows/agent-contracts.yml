@@ -95,6 +95,14 @@ jobs:
         run: npm run phases:check
         working-directory: evals
 
+      # The seed four scaffold/local-dev stimuli start from stands in for the planner's
+      # output. It drifted until it failed `validate-project-plan` outright, and nothing
+      # noticed for months: `certify` covers the certification fixtures and `drift` covers
+      # resources/agents/**, but the document between them was covered by neither.
+      - name: Check the seeded plan is one the planner would emit
+        run: npm run seed:contract
+        working-directory: evals
+
       # Run through the evals package so the spec is actually linted: a bare
       # `vally lint` at the repo root discovers no skills and silently passes.
       - name: Lint eval specs

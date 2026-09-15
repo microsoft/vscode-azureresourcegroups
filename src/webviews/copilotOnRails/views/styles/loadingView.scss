@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './disabledButton';
+
 .loadingView {
     display: flex;
     flex-direction: column;
@@ -132,6 +134,18 @@
     border: 1px solid var(--vscode-descriptionForeground);
 }
 
+.loadingView .visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .loadingView .stepText {
     display: flex;
     flex-direction: column;
@@ -141,7 +155,7 @@
     min-width: 0;
 }
 
-.loadingView .loadingStep > .stepText > .stepLabel {
+.loadingView .loadingStep>.stepText>.stepLabel {
     display: flex;
     align-items: baseline;
     gap: 8px;
