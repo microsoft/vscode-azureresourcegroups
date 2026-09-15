@@ -1,19 +1,19 @@
 {
     "schemaVersion": "1",
     "id": "crud-react-functions-postgres",
-    "prompt": "Build a customer support ticket application with a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users should create, assign, comment on, and close tickets.",
-    "baselinePrompt": "Build a complete customer support ticket application using a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users must be able to create, assign, comment on, and close tickets. Implement all frontend, backend, and configuration code, comprehensive automated tests for the ticket workflows, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "prompt": "Build a customer support ticket application with a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and sign-in with work accounts. Users should create, assign, comment on, and close tickets.",
+    "baselinePrompt": "Build a complete customer support ticket application using a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and sign-in with work accounts. Users must be able to create, assign, comment on, and close tickets. Implement all frontend, backend, and configuration code, comprehensive automated tests for the ticket workflows, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
     "tags": {
         "archetype": "crud",
         "frontend": "react",
         "backend": "functions",
         "database": "postgres",
-        "auth": "mock",
+        "auth": "entra-id",
         "complexity": "medium"
     },
     "requirementsAnswers": {
         "dataStores": ["PostgreSQL"],
-        "auth": "Mock auth middleware"
+        "auth": "Microsoft Entra ID"
     },
     "validation": {
         "profile": "standard",

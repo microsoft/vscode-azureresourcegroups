@@ -131,9 +131,34 @@ These are asked once for the whole project. Always emit all of them:
 | # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `No datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one), or `No datastore required` |
-| 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
+| 2 | `auth` | `auth` | Sign-in | How should people sign in to your app? | no | **yes** | `No sign-in` (exclusive), `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Microsoft Entra External ID` if the app has end users with their own data, else `No sign-in` |
 
 > The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
+
+##### The `auth` question asks who signs in, NOT how sign-in is stubbed locally
+
+> ⛔ **Never offer a mock, stub, or test-token option here, and never recommend one.**
+>
+> This question is a **product** decision: which identity provider the app's *end users* sign in
+> with once it is running in Azure. It is the only auth decision the user is qualified to make at
+> planning time, and it is the one the deploy phase needs in order to suggest
+> `entra-app-registration` for the right provider.
+>
+> **How sign-in behaves before deployment is not a choice and must not be asked.** Every
+> pre-deployment phase runs against mock auth, unconditionally:
+>
+> | Phase | Auth | Why |
+> |---|---|---|
+> | scaffold | mock — frontend auto-logs-in on mount | No backend exists yet; the preview must land on real content rather than a login wall |
+> | integrate | mock | The frontend is wired to a backend on `localhost`; there is no IdP, redirect URI, or app registration to authenticate against |
+> | local development | mock | Same — F5 debugging cannot reach a real IdP |
+> | deploy | the chosen provider | The first point where an app registration, redirect URIs, and secrets exist |
+>
+> So `No sign-in` and a named provider differ in what gets *built and deployed*, not in how the
+> app behaves at F5. Offering "mock auth" alongside real providers asks the user to choose a
+> local implementation detail as though it were a product requirement — and an answer of "mock"
+> carries no information about what the deployed app should do, which is the one thing this
+> question exists to capture.
 
 ##### App Type is derived, not asked
 
@@ -233,19 +258,18 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "rationale": "Photo files → Blob Storage; relational data → PostgreSQL."
     },
     {
-      "id": "auth", "category": "auth", "header": "Authentication",
-      "question": "Does your app need authentication?",
+      "id": "auth", "category": "auth", "header": "Sign-in",
+      "question": "How should people sign in to your app?",
       "multiSelect": false, "allowFreeformInput": true,
       "options": [
-        { "label": "No auth", "description": "Public app, no login required" },
-        { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" },
+        { "label": "No sign-in", "description": "Public app — anyone can use it without an account" },
         { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts" },
         { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins" },
         { "label": "Auth0", "description": "Third-party IdP — social and enterprise connections" },
         { "label": "Clerk", "description": "Drop-in user management with prebuilt UI" }
       ],
-      "recommendedChoice": "Mock auth middleware", "status": "needs_input", "answer": null,
-      "rationale": "App handles user data — start with mock auth for testability."
+      "recommendedChoice": "Microsoft Entra External ID", "status": "needs_input", "answer": null,
+      "rationale": "Each person sees only their own photos, so the app needs accounts for external users."
     }
   ]
 }
@@ -256,6 +280,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 - **Services & IDs:** one `services` entry per detected/planned service; per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`), with `serviceId` matching the service.
 - **Language options:** frontend services offer only `TypeScript` / `JavaScript`; backend/worker services offer `TypeScript`, `Python`, `C# (.NET)`.
 - **Always emit both shared questions** (`dataStores`, `auth`), and **never emit an `appType` question** — App Type is derived from `services` (see the derivation table above).
+- **`auth` names an identity provider, never a stub.** `No sign-in` is exclusive. Do not offer or recommend "mock auth", "test tokens", or any other pre-deployment stand-in — every phase before deploy uses mock auth regardless of the answer. See the callout above.
 - **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` **`true`** (always — even when a listed option fits). Omit it for free-text feature questions.
 - **`multiSelect`:** only `dataStores` is `true`; its `answer` and `recommendedChoice` are always `string[]`.
 - **Answers:** `inferred` → fill `answer`; `needs_input` → `answer: null` (`[]` for `dataStores`). Always provide `recommendedChoice`.
