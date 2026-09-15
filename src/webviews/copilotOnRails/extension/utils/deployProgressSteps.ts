@@ -164,7 +164,7 @@ export function buildDeployProgressMessage(steps: readonly LoadingStep[], signal
     const activeId = steps.find((step) => step.status === 'active')?.id;
     switch (activeId) {
         case deployProgressStepIds.provision:
-            return vscode.l10n.t('Copilot is creating your Azure resources and deploying your code. Follow along in the Chat view.');
+            return vscode.l10n.t('Copilot is preparing to create your Azure resources. You may be asked in the Chat view to confirm your deployment.');
         case deployProgressStepIds.verify:
             return vscode.l10n.t('Copilot is health-checking the deployment. The results will open here when it finishes.');
         case deployProgressStepIds.scaffold:

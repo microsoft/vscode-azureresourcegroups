@@ -5,6 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { getAzureResourcesService } from "../../../services/AzureResourcesService";
 import {
     APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB,
     APP_ONBOARD_CONTEXT_FILE_GLOB,
@@ -13,7 +14,6 @@ import {
     DEPLOY_RESULT_FILE_GLOBS,
     findProjectFiles,
 } from "../../../tree/project/projectPlanFiles";
-import { getAzureResourcesService } from "../../../services/AzureResourcesService";
 import { resolveSubscription } from "../../../utils/copilotOnRails/deploymentInventoryCapture";
 import { type LoadingStep, type LoadingViewConfiguration } from "../views/utils/viewConfigTypes";
 import { closeLoadingView, openLoadingView, updateLoadingView } from "./openLoadingView";
@@ -378,11 +378,11 @@ async function readSessionDeployResult(contextUri: vscode.Uri | undefined): Prom
             // The active session has not written a deploy result yet.
         }
     }
-    const rootResult = (await readNewestMatch([DEPLOY_RESULT_FILE_GLOB]))?.content;
-    if (!rootResult || (activeSessionId && deployResultSessionId(rootResult) !== activeSessionId)) {
+    const rootResult = await readNewestMatch([DEPLOY_RESULT_FILE_GLOB]);
+    if (!rootResult || (activeSessionId && deployResultSessionId(rootResult.content) !== activeSessionId)) {
         return undefined;
     }
-    return rootResult;
+    return rootResult.content;
 }
 
 /**
