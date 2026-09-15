@@ -20,6 +20,21 @@ Your job is to add the live implementation and repoint that one file. Because pa
 
 After this step, a search of the frontend `src/` for `mock` / `mockData` / `previewState` must find nothing that is still imported. The app fetches everything from the live backend.
 
+> ⛔ **Mock *auth* is the one exception, and it stays.** This rule is about the **data** seam.
+> The auth context the scaffold built — the one that auto-logs-in on mount — must still be in
+> place and still auto-logging-in when you finish.
+>
+> You are wiring the frontend to a backend on `localhost`. There is no identity provider, app
+> registration, or redirect URI to authenticate against, so replacing mock auth with a real one
+> would leave the app stuck at a login wall it cannot pass, and would break F5 debugging in the
+> phase that follows yours.
+>
+> The provider named in the plan's `auth` answer (Entra ID, Auth0, Clerk, …) is wired at
+> **deploy**, which is the first phase where those things exist. Do not wire it, do not add an
+> SDK for it, and do not add `VITE_`/app-setting placeholders for its client id or tenant.
+>
+> A search for `mock` will match the auth context. That is expected — leave it.
+
 ---
 
 ## Replacement recipe (one-file swap)
