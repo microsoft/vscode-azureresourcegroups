@@ -74,6 +74,18 @@ The Azure Resources extension fully supports running on [vscode.dev](https://vsc
 
 ## Features
 
+### Create New Project with Copilot
+
+Turn a one-sentence idea into a running, Azure-ready application. The extension drives GitHub Copilot
+through a fixed pipeline of specialized agents — plan → scaffold → integrate → debug → deploy — and
+surfaces each step in a native VS Code webview, so you review and approve the work as it happens.
+
+Start it from the **Azure Project** view in the Explorer sidebar (or an empty window's welcome view)
+by clicking **Create New Project With Copilot**.
+
+📖 **[Read the full guide](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/docs/copilot-create-project.md)** —
+what each stage does, the artifacts it writes, and how to troubleshoot a run.
+
 ### Resource and Workspace views
 
 Use the Resources explorer to create and manage Azure resources. Use the Workspace explorer to create files and deploy.
