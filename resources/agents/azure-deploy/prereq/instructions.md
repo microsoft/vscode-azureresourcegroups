@@ -57,6 +57,13 @@ Then: `az account show` → merge `{id, name, tenantId}` into `context.json.azur
 
 Scan for project files. Detect components, `repo{}`, `detectedInfra[]`, `detectedServices[]`. Classify Terraform providers. Check CLI availability. Stack detection conflicts: user explicit statement wins (write to `context.json`, mark scan as override); scan-only → confirm with user; multiple stacks → show all and ask (see [component-mapping.md](references/component-mapping.md)); no code → [zero-code-path.md](references/zero-code-path.md).
 
+> ⛔ **Preserve Azure Functions service roots.** A directory with `host.json` plus an Azure Functions SDK or
+> worker signal (`@azure/functions`, `Microsoft.NET.Sdk.Functions`, Functions Python decorators, or a
+> `FUNCTIONS_WORKER_RUNTIME` setting) is an Azure Functions component. Record its exact path and identify its
+> framework as Azure Functions in both `context.json.components[]` and `prereq-output.json.components[]`.
+> Do not classify HTTP-triggered Functions as a generic REST API. When a SPA and Functions root both exist,
+> record two components even if the frontend calls the backend through `/api`.
+
 > If no project files, no Dockerfile, AND no index.html → ⛔ read [zero-code-path.md](references/zero-code-path.md).
 
 > ⛔ **Cloud SDK early gate.** Grep for `aws-sdk|@aws-sdk|boto3|google-cloud|@google-cloud|firebase`. If functional deps found → read [cloud-sdk-migration.md](references/cloud-sdk-migration.md), then `ask_user`: **"Redirect to Azure Cloud Migrate"** (set `routeToSkill: "azure-cloud-migrate"`) · **"Continue evaluation anyway"** (finish readiness eval + SDK→Azure mapping, then STOP at Step 8 — no plan until the deps are swapped) · **"Cancel"**.
