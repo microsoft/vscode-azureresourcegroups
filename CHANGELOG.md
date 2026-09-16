@@ -5,11 +5,10 @@
 ## 0.13.0 - 2026-09-15
 
 ### Added
-* **Create New Project with Copilot.** Turn a one-sentence idea into a running, Azure-ready application. The extension drives GitHub Copilot through a fixed pipeline of specialized agents — plan → scaffold → integrate → debug → deploy — and surfaces each step in a native VS Code webview so you review and approve the work as it happens. See [Create New Project with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/docs/copilot-create-project.md) for the full guide.
-* An **Azure Project** view that tracks how far the project has progressed and links to the artifacts each stage produced
-* Local development setup with generated `launch.json` and `tasks.json`, plus PostgreSQL and Azurite emulators, so the generated project is debuggable with F5
-* Steer `azure-deploy` to run outstanding database migrations after a successful deploy instead of leaving them as a TODO, using a tiered access ladder that prefers running the migration inside the deployed app (no network change) over modifying the database firewall
-* Add the `open_database_migration_access` and `close_database_migration_access` MCP tools. When a migration genuinely requires local database access, they add a single-IP firewall rule and guarantee its removal — including after a crash or abandoned session — instead of relying on the agent to remember to restore it
+* **Create New Project with Copilot.** Turn a one-sentence idea into a running, Azure-ready application. The extension drives GitHub Copilot through a fixed pipeline of specialized agents — plan → scaffold → integrate → debug → deploy — and surfaces each step in a native VS Code webview so you can review and approve the work as it happens. See [Create New Project with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/docs/copilot-create-project.md) for the full guide.
+* You can find the entrypoint in our new **Azure Project** view under the Explorer's tab. This view helps track how far the project has progressed and links to important artifacts produced at each stage.
+
+    <img src="docs/images/copilot-create-project/01-launch-azure-project-view.png" alt="Create New Project With Copilot in the Azure Project view" />
 
 ## 0.12.7 - 2026-06-11
 
