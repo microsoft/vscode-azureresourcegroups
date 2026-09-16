@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T04:41:56.369Z",
+  "generatedAt": "2026-09-16T16:38:55.728Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -14,7 +14,9 @@
     "unapproved-plan-refusal",
     "api-only-no-datastore",
     "reference-iac-bicep",
+    "reference-iac-deployed",
     "safety-boundaries-clean",
+    "reference-frontend-integrated",
     "safety-boundaries-empty"
   ],
   "outcome": "passed",
@@ -1702,6 +1704,28 @@
       "durationMs": 0
     },
     {
+      "id": "golden-reference-iac-deployed-iac-compiles",
+      "tier": "offline",
+      "fixture": "reference-iac-deployed",
+      "validator": "iac-compiles",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "iac-compiles-imperative-provisioning-is-charged-to-the-agent",
+      "tier": "offline",
+      "fixture": "reference-iac-deployed",
+      "validator": "iac-compiles",
+      "expected": "imperativeProvisioning",
+      "actual": [
+        "imperativeProvisioning"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "golden-safety-boundaries-clean-safety-boundaries",
       "tier": "offline",
       "fixture": "safety-boundaries-clean",
@@ -1803,6 +1827,78 @@
       "expected": "hardcodedSecret",
       "actual": [
         "hardcodedSecret"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-reference-frontend-integrated-frontend-seam-live",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "seam-reverted-to-mock",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "seamStillMocked",
+      "actual": [
+        "seamStillMocked",
+        "liveClientUnresolved",
+        "mockStillImported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "live-client-is-a-renamed-mock",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "liveClientIssuesNoRequests",
+      "actual": [
+        "liveClientIssuesNoRequests"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "live-client-loses-its-interface-annotation",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "liveClientUntyped",
+      "actual": [
+        "liveClientUntyped"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "mock-client-left-behind",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "mockClientRetained",
+      "actual": [
+        "mockClientRetained"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "page-reaches-past-the-seam-to-mocks",
+      "tier": "offline",
+      "fixture": "reference-frontend-integrated",
+      "validator": "frontend-seam-live",
+      "expected": "mockStillImported",
+      "actual": [
+        "mockStillImported"
       ],
       "passed": true,
       "durationMs": 0
