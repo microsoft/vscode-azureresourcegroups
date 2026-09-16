@@ -27,6 +27,13 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      // Only when this App Service is an API called by a browser frontend on a DIFFERENT hostname.
+      // Omit entirely for a full-stack app that serves its own UI — that is same-origin and needs no CORS.
+      // See bicep-patterns.md § Cross-Origin (CORS).
+      cors: {
+        allowedOrigins: [ 'https://${staticWebApp.properties.defaultHostname}' ]
+        supportCredentials: false
+      }
     }
   }
 }
