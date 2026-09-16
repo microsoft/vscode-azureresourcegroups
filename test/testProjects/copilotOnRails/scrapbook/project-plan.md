@@ -12,6 +12,8 @@
 
 **App Type**: SPA + API
 
+**API Login**: Yes
+
 **Mode**: NEW
 
 **Deployment Plan**: No deployment plan found
@@ -207,19 +209,19 @@ project-root/
 
 ## 9. Route Definitions
 
-| # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
-|---|--------|------|-------------|-------------|--------------|------|-------------|
-| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | None | 200, 503 |
-| 2 | POST | `/api/pairs` | Create a pairing invitation | `{ partnerId }` | `{ pair }` | Mock | 201, 409, 422 |
-| 3 | GET | `/api/pairs` | List user's pairs | — | `{ pairs[] }` | Mock | 200 |
-| 4 | PATCH | `/api/pairs/:id/accept` | Accept a pairing invitation | — | `{ pair }` | Mock | 200, 404, 403 |
-| 5 | DELETE | `/api/pairs/:id` | Remove a pairing | — | `{ success }` | Mock | 200, 404, 403 |
-| 6 | POST | `/api/photos` | Upload a photo (multipart) | `{ file, caption?, pairId }` | `{ photo }` | Mock | 201, 422 |
-| 7 | GET | `/api/photos` | List photos in a pair's scrapbook | `?pairId=` | `{ photos[] }` | Mock | 200, 403 |
-| 8 | GET | `/api/photos/:id` | Get single photo with metadata and AI labels | — | `{ photo, labels }` | Mock | 200, 404 |
-| 9 | PATCH | `/api/photos/:id` | Update photo caption | `{ caption }` | `{ photo }` | Mock | 200, 404, 422 |
-| 10 | DELETE | `/api/photos/:id` | Delete a photo | — | `{ success }` | Mock | 200, 404, 403 |
-| 11 | GET | `/api/photos/timeline` | Photos grouped by date for timeline view | `?pairId=` | `{ groups[] }` | Mock | 200 |
+| # | Method | Path | Description | Request Body | Response Body | Status Codes |
+|---|--------|------|-------------|-------------|--------------|-------------|
+| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | 200, 503 |
+| 2 | POST | `/api/pairs` | Create a pairing invitation | `{ partnerId }` | `{ pair }` | 201, 409, 422 |
+| 3 | GET | `/api/pairs` | List user's pairs | — | `{ pairs[] }` | 200 |
+| 4 | PATCH | `/api/pairs/:id/accept` | Accept a pairing invitation | — | `{ pair }` | 200, 404, 403 |
+| 5 | DELETE | `/api/pairs/:id` | Remove a pairing | — | `{ success }` | 200, 404, 403 |
+| 6 | POST | `/api/photos` | Upload a photo (multipart) | `{ file, caption?, pairId }` | `{ photo }` | 201, 422 |
+| 7 | GET | `/api/photos` | List photos in a pair's scrapbook | `?pairId=` | `{ photos[] }` | 200, 403 |
+| 8 | GET | `/api/photos/:id` | Get single photo with metadata and AI labels | — | `{ photo, labels }` | 200, 404 |
+| 9 | PATCH | `/api/photos/:id` | Update photo caption | `{ caption }` | `{ photo }` | 200, 404, 422 |
+| 10 | DELETE | `/api/photos/:id` | Delete a photo | — | `{ success }` | 200, 404, 403 |
+| 11 | GET | `/api/photos/timeline` | Photos grouped by date for timeline view | `?pairId=` | `{ groups[] }` | 200 |
 
 ---
 

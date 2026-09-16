@@ -9,7 +9,7 @@ cleans up old photos from the database and blob storage based on a retention pol
 <!-- A bit of a contrived example, but wanted to see how it handeled adding a third service -->
 - **Worker:** TypeScript timer-triggered cleanup worker (`cleanup-worker`)
 - **Data stores:** PostgreSQL + Blob Storage
-- **Auth:** Mock auth middleware
+- **API Login:** Yes
 
 ## Model
 

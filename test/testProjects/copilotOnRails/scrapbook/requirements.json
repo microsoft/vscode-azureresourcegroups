@@ -217,40 +217,24 @@
     {
       "id": "auth",
       "category": "auth",
-      "question": "Does your app need authentication?",
-      "header": "Authentication",
-      "answer": "Mock auth middleware",
+      "question": "Does this app need user login?",
+      "header": "API Login",
+      "answer": "Yes",
       "status": "confirmed",
-      "rationale": "App has user pairing and personal photos — needs auth. Mock auth recommended for local testability.",
+      "rationale": "Pairs and shared photos are private, per-user data.",
       "options": [
         {
-          "label": "No auth",
-          "description": "Public app, no login required"
+          "label": "Yes",
+          "description": "Add a user sign-in flow and authenticated API access"
         },
         {
-          "label": "Mock auth middleware",
-          "description": "HMAC-signed test tokens — testable without an IdP"
-        },
-        {
-          "label": "Microsoft Entra ID",
-          "description": "Workforce identity — sign in with org or Microsoft accounts"
-        },
-        {
-          "label": "Microsoft Entra External ID",
-          "description": "Customer identity — sign-up plus social logins"
-        },
-        {
-          "label": "Auth0",
-          "description": "Third-party IdP — social and enterprise connections"
-        },
-        {
-          "label": "Clerk",
-          "description": "Drop-in user management with prebuilt UI"
+          "label": "No",
+          "description": "No user sign-in or authenticated API access"
         }
       ],
-      "recommendedChoice": "Mock auth middleware",
+      "recommendedChoice": "Yes",
       "multiSelect": false,
-      "allowFreeformInput": true
+      "allowFreeformInput": false
     }
   ],
   "executionMode": "guided"

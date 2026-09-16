@@ -24,6 +24,8 @@ export interface ScaffoldPlanTelemetry {
     planSectionTitles: string;
     /** Reported app type (e.g. `spa + api`) from Project Overview. Normalized to a lowercase token, or `unknown`. */
     appType: string;
+    /** Whether the approved plan enables user-facing API login (`yes`, `no`, or `unknown`). */
+    apiLogin: string;
 
     /** Total run-prerequisite rows. */
     runPrereqTotalCount: number;
@@ -93,6 +95,7 @@ export function getScaffoldPlanTelemetry(planData: ScaffoldPlanData): ScaffoldPl
         planSectionCount: planData.sections.length,
         planSectionTitles: getSectionTitles(planData),
         appType: getAppType(planData),
+        apiLogin: getApiLogin(planData),
 
         serviceCount: services.count,
         serviceLanguages: services.languages,
@@ -130,6 +133,14 @@ function getAppType(planData: ScaffoldPlanData): string {
     const section = findSection(planData, 'Project Overview');
     const value = section && findKeyValue(section, 'App Type');
     return (value && normalizeToken(value)) || 'unknown';
+}
+
+/** Reads the binary `API Login` value from Project Overview. */
+function getApiLogin(planData: ScaffoldPlanData): string {
+    const section = findSection(planData, 'Project Overview');
+    const value = section && findKeyValue(section, 'API Login');
+    const normalized = value && normalizeToken(value);
+    return normalized === 'yes' || normalized === 'no' ? normalized : 'unknown';
 }
 
 /**

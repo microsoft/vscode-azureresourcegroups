@@ -187,7 +187,8 @@ Every page that displays data MUST cover all four states with real library primi
 - [ ] Every `form` region has at least one field with a visible validation state (warning/error) and an inline message.
 - [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
-- [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).
+- [ ] No `any` types; the four-state contract still holds; locally seeded identity works when `API Login` is `Yes`, and no auth UI exists when it is `No`.
+- [ ] When `API Login` is `Yes`, logging out reveals a visible **Create account** button on the login page, and that button opens a complete create-account page with validation and error states.
 - [ ] The scaffolded UI **reproduces the approved preview at `.azure/.preview-temp/<slug>.html` and adds the production-only layer** — same regions, same brand color, same density and populated content, now with real library primitives, real webfont, motion, dark mode, and real imagery the static preview could not include. If a generated page looks **less** polished than the preview, the page has failed the bar.
 
 ---

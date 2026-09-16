@@ -40,7 +40,7 @@ suite('requirementsTelemetryUtils', () => {
                 dataStores: 'blob storage,postgresql',
                 hasDatabase: true,
 
-                auth: 'microsoft entra id',
+                auth: 'yes',
             };
 
             assert.deepStrictEqual(telemetry, expected);
@@ -71,7 +71,7 @@ suite('requirementsTelemetryUtils', () => {
                 dataStores: 'blob storage,postgresql',
                 hasDatabase: true,
 
-                auth: 'mock auth middleware',
+                auth: 'yes',
             };
 
             assert.deepStrictEqual(telemetry, expected);

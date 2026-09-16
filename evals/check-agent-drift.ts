@@ -153,6 +153,24 @@ const contracts: Contract[] = [
         grader: "plan-structure-valid (Route Definitions)",
     },
     {
+        file: "azure-project-scaffold/instructions.md",
+        name: "api-login-create-account-flow",
+        pattern: /login page MUST contain a visible \*\*Create account\*\* button that opens a dedicated create-account page/,
+        grader: "API Login scaffold contract (create-account control and page)",
+    },
+    {
+        file: "azure-debug-plan/references/inventory.md",
+        name: "derived-auth-api-test-inventory",
+        pattern: /include implemented registration, login, and current-user endpoints when `API Login` is enabled/,
+        grader: "API test collection inventory preserves derived authentication routes",
+    },
+    {
+        file: "azure-debug-generate/references/api-test-collections.md",
+        name: "derived-auth-api-test-generation",
+        pattern: /include implemented registration, login, and current-user endpoints when `API Login` is enabled/,
+        grader: "API test collection generation preserves derived authentication routes",
+    },
+    {
         // The sequenced compound task is reachable both directly and as a compound's
         // `preLaunchTask`, so it is the task likeliest to be invoked twice — and it was
         // the one task whose literal template omitted `runOptions`. A real run copied the

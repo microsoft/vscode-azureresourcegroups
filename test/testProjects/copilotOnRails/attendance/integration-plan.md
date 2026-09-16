@@ -11,7 +11,7 @@ Hand-off brief for `azure-project-integrate`. Scaffold is built and clean (all 3
 - **Health endpoint**: `GET /api/health` → `{ status: "healthy"|"degraded"|"unhealthy", services: { database: bool, storage: bool } }`. `unhealthy` → HTTP 503, others → 200.
 - **OpenAPI spec**: `GET /api/openapi.json`
 - **Env file**: copy `.env.example` → `.env` at repo root; `api/local.settings.json` already has Azurite + local Postgres defaults wired for `func start`.
-- **Auth**: Microsoft Entra ID. Locally, when `AZURE_AD_TENANT_ID`/`AZURE_AD_CLIENT_ID` are unset and `NODE_ENV !== 'production'`, `src/middleware/auth.ts` returns a mock dev identity (`userId: 'dev-user'`) — no real token required for smoke testing.
+- **API Login**: Yes. `src/services/auth.ts` owns account creation, credential verification, and JWT issue/validation behind an application interface. `POST /api/auth/register` creates an account with a stored password hash; `POST /api/auth/login` issues a short-lived token; `GET /api/auth/me` returns the current user. Production signing configuration is required.
 
 ## Frontend
 
@@ -24,22 +24,25 @@ Hand-off brief for `azure-project-integrate`. Scaffold is built and clean (all 3
   - `web/src/mocks/data.ts`
   - `web/src/api/previewState.ts` and the dev-only corner `MockStateSwitcher` component (`web/src/components/MockStateSwitcher.tsx`) — remove its usage from `web/src/App.tsx` (or wherever it's mounted) once mock states are no longer needed.
   - Local mock/demo types can stay if they match `shared` — prefer switching frontend type imports to the `shared` package (see below) where shapes match exactly.
-- **Auth**: `web/src/auth/AuthContext.tsx` currently auto-logs-in with a mock identity — leave as-is for local dev against the mock backend identity; wire to real Entra ID only when preparing for production deploy (out of scope here).
+- **Auth**: `web/src/auth/AuthContext.tsx` currently auto-logs-in for the mock preview. Replace that behavior with the live registration, login, and current-user API while preserving the create-account page, login, logout, and protected-navigation UI.
 
 ## API routes (mirror method-for-method in the live client)
 
 | # | Method | Path | Request | Response | Auth | Status codes |
 |---|--------|------|---------|----------|------|--------------|
 | 1 | GET | `/api/health` | — | `{ status, services }` | None | 200, 503 |
-| 2 | GET | `/api/policy` | — | `{ requiredDays, periodWeeks, periodStartDay }` | Entra ID (mock in dev) | 200, 401, 404 |
-| 3 | PUT | `/api/policy` | `{ requiredDays, periodWeeks, periodStartDay }` | same shape | Entra ID | 200, 401, 422 |
-| 4 | GET | `/api/entries?month=YYYY-MM` | — | `{ entries: [{ date, status }] }` | Entra ID | 200, 401 |
-| 5 | POST | `/api/entries` | `{ date, status }` | `{ date, status }` | Entra ID | 201, 401, 422 |
-| 6 | DELETE | `/api/entries/{date}` | — | — | Entra ID | 204, 401, 404 |
-| 7 | GET | `/api/compliance/summary?periods=N` | — | `{ periods: [{ period, required, actual, compliant }] }` | Entra ID | 200, 401 |
-| 8 | GET | `/api/plans?from&to` | — | `{ plans: [{ date, plannedStatus }] }` | Entra ID | 200, 401 |
-| 9 | POST | `/api/plans` | `{ date, plannedStatus }` | `{ date, plannedStatus }` | Entra ID | 201, 401, 422 |
-| 10 | GET | `/api/compliance/comparison?from&to` | — | `{ periods: [{ period, planned, actual }] }` | Entra ID | 200, 401 |
+| 2 | POST | `/api/auth/register` | `{ email, password, displayName }` | `{ user }` or `{ token, user }` | None | 201, 409, 422 |
+| 3 | POST | `/api/auth/login` | `{ email, password }` | `{ token, user }` | None | 200, 401, 422 |
+| 4 | GET | `/api/auth/me` | — | `{ user }` | JWT | 200, 401 |
+| 5 | GET | `/api/policy` | — | `{ requiredDays, periodWeeks, periodStartDay }` | JWT | 200, 401, 404 |
+| 6 | PUT | `/api/policy` | `{ requiredDays, periodWeeks, periodStartDay }` | same shape | JWT | 200, 401, 422 |
+| 7 | GET | `/api/entries?month=YYYY-MM` | — | `{ entries: [{ date, status }] }` | JWT | 200, 401 |
+| 8 | POST | `/api/entries` | `{ date, status }` | `{ date, status }` | JWT | 201, 401, 422 |
+| 9 | DELETE | `/api/entries/{date}` | — | — | JWT | 204, 401, 404 |
+| 10 | GET | `/api/compliance/summary?periods=N` | — | `{ periods: [{ period, required, actual, compliant }] }` | JWT | 200, 401 |
+| 11 | GET | `/api/plans?from&to` | — | `{ plans: [{ date, plannedStatus }] }` | JWT | 200, 401 |
+| 12 | POST | `/api/plans` | `{ date, plannedStatus }` | `{ date, plannedStatus }` | JWT | 201, 401, 422 |
+| 13 | GET | `/api/compliance/comparison?from&to` | — | `{ periods: [{ period, planned, actual }] }` | JWT | 200, 401 |
 
 `status`/`plannedStatus` values: `"in-office" | "remote"`. Dates are `YYYY-MM-DD`.
 
@@ -63,15 +66,16 @@ Hand-off brief for `azure-project-integrate`. Scaffold is built and clean (all 3
 
 ## Services (Essential vs Enhancement)
 
-All three services in this app are classified **Essential** (no Enhancement/optional services):
+Both Azure services in this app are classified **Essential** (no Enhancement/optional services):
 - **PostgreSQL** — `DATABASE_URL` — primary data store (`api/src/services/database.ts`, `PostgresDatabaseService`)
-- **Blob Storage** — `STORAGE_CONNECTION_STRING` — required by the Functions host; also health-checked (`api/src/services/storage.ts`, `BlobStorageService`)
-- **Microsoft Entra ID** — `AZURE_AD_TENANT_ID`, `AZURE_AD_CLIENT_ID` — auth; falls back to mock dev identity locally when unset (`api/src/middleware/auth.ts`)
+- **Blob Storage** — local Azurite client in explicit Development; Azure endpoint plus managed identity otherwise (`api/src/services/storage.ts`)
+
+API Login is an application feature, not an Azure service. Its production signing settings are required, but they do not replace managed identity for Azure service clients.
 
 ## Smoke test checklist
 
 1. Start Postgres + Azurite (docker-compose — not yet generated; `azure-debug-plan`/`azure-debug-generate` will produce this after integration).
 2. Run migrations (no seed data).
 3. `npm run start --workspace=api`, confirm `GET /api/health` returns `200` with `database: true, storage: true`.
-4. Exercise each of the 10 routes above with a `dev-user` identity (no auth header needed locally).
+4. Create a temporary account through `/api/auth/register`, log in, and exercise each protected route with the returned local session.
 5. Wire `web/src/api/index.ts` to the live client, delete mock files, run `npm run dev --workspace=web`, confirm the app renders real (initially empty) data instead of the seeded mock dataset.

@@ -174,7 +174,8 @@ those simply plan a single `frontend` service with **No datastore required**.
 ## Stage 2 — Review requirements
 
 The plan agent writes `.azure/requirements.json` and opens the **Requirements** view. Questions are grouped
-per service (backend, frontend, worker) plus shared questions (data stores, auth). Answers Copilot could
+per service (backend, frontend, worker) plus shared data-stores and **API Login** questions. API Login is a
+`Yes`/`No` choice about user-facing sign-in and authenticated application API access. Answers Copilot could
 infer are pre‑selected; the rest are pre‑filled with a recommended choice. Review each one and click
 **Submit**.
 
@@ -183,7 +184,11 @@ infer are pre‑selected; the rest are pre‑filled with a recommended choice. R
 </p>
 
 Submitting writes your confirmed answers back to `.azure/requirements.json` and re‑invokes the plan agent to
-generate the plan.
+generate the plan. The plan shows only `API Login: Yes` or `No`; it does not ask the user to select an
+identity provider. When login is enabled, the scaffold agent builds the frontend and API authentication
+flow. Every login-enabled frontend includes a **Create account** button on its login page and a dedicated
+account-creation page. Backend services use managed identity for Azure service access regardless of the API
+Login answer.
 
 ## Stage 3 — Review & approve the plan
 
@@ -257,8 +262,9 @@ When done it opens the **Scaffold Next Steps** view — a "What's next?" card th
 
 Choosing **Local Development** starts **`azure-debug-plan`**, which scans the project, classifies its services
 and dependencies, and writes `.azure/vscode-debug-plan.md`. After you approve, **`azure-debug-generate`**
-produces the debugging artifacts — `docker-compose` for emulators, VS Code `launch.json` / `tasks.json`, and
-API tests — then opens the **Debug Next Steps** view. Like the plan preview, the debug plan's **Prerequisites**
+produces the debugging artifacts: `docker-compose` for emulators, VS Code `launch.json` / `tasks.json`, and
+API tests for the implemented endpoints, including generated authentication routes that do not appear in the
+project plan. It then opens the **Debug Next Steps** view. Like the plan preview, the debug plan's **Prerequisites**
 section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
 plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
 attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
