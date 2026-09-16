@@ -99,7 +99,7 @@ When selected, the generation phase produces lightweight, runnable API test scri
 
 | Generate | Service | Description |
 |----------|---------|-------------|
-| [x] | Scrapbook API | <details><summary>HTTP Endpoints (12)</summary><br>GET /api/health<br>GET /api/openapi.json<br>POST /api/pairs<br>GET /api/pairs<br>PATCH /api/pairs/{id}/accept<br>DELETE /api/pairs/{id}<br>POST /api/photos<br>GET /api/photos<br>GET /api/photos/{id}<br>PATCH /api/photos/{id}<br>DELETE /api/photos/{id}<br>GET /api/photos/timeline<br><br></details> |
+| [x] | Scrapbook API | <details><summary>HTTP Endpoints (15)</summary><br>GET /api/health<br>GET /api/openapi.json<br>POST /api/auth/register<br>POST /api/auth/login<br>GET /api/auth/me<br>POST /api/pairs<br>GET /api/pairs<br>PATCH /api/pairs/{id}/accept<br>DELETE /api/pairs/{id}<br>POST /api/photos<br>GET /api/photos<br>GET /api/photos/{id}<br>PATCH /api/photos/{id}<br>DELETE /api/photos/{id}<br>GET /api/photos/timeline<br><br></details> |
 | [x] | Cleanup Worker | <details><summary>Triggers (1)</summary><br>timerTrigger — cleanupExpiredPhotos (daily at 2:00 AM UTC)<br><br></details> |
 
 ---

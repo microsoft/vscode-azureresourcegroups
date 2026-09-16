@@ -94,7 +94,7 @@ graph LR
 
 | Generate | Service | Description |
 |----------|---------|-------------|
-| [x] | Attendance Compliance API | <details><summary>HTTP Endpoints (10)</summary><br>GET /api/health<br>GET /api/policy<br>PUT /api/policy<br>GET /api/entries<br>POST /api/entries<br>DELETE /api/entries/{date}<br>GET /api/compliance/summary<br>GET /api/plans<br>POST /api/plans<br>GET /api/compliance/comparison<br><br></details> |
+| [x] | Attendance Compliance API | <details><summary>HTTP Endpoints (13)</summary><br>GET /api/health<br>POST /api/auth/register<br>POST /api/auth/login<br>GET /api/auth/me<br>GET /api/policy<br>PUT /api/policy<br>GET /api/entries<br>POST /api/entries<br>DELETE /api/entries/{date}<br>GET /api/compliance/summary<br>GET /api/plans<br>POST /api/plans<br>GET /api/compliance/comparison<br><br></details> |
 
 ---
 
