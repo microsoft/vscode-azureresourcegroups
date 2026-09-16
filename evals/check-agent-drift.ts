@@ -153,6 +153,12 @@ const contracts: Contract[] = [
         grader: "plan-structure-valid (Route Definitions)",
     },
     {
+        file: "azure-project-scaffold/instructions.md",
+        name: "api-login-create-account-flow",
+        pattern: /login page MUST contain a visible \*\*Create account\*\* button that opens a dedicated create-account page/,
+        grader: "API Login scaffold contract (create-account control and page)",
+    },
+    {
         // The sequenced compound task is reachable both directly and as a compound's
         // `preLaunchTask`, so it is the task likeliest to be invoked twice — and it was
         // the one task whose literal template omitted `runOptions`. A real run copied the

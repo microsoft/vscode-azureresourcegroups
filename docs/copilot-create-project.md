@@ -186,7 +186,9 @@ infer are pre‑selected; the rest are pre‑filled with a recommended choice. R
 Submitting writes your confirmed answers back to `.azure/requirements.json` and re‑invokes the plan agent to
 generate the plan. The plan shows only `API Login: Yes` or `No`; it does not ask the user to select an
 identity provider. When login is enabled, the scaffold agent builds the frontend and API authentication
-flow. Backend services use managed identity for Azure service access regardless of the API Login answer.
+flow. Every login-enabled frontend includes a **Create account** button on its login page and a dedicated
+account-creation page. Backend services use managed identity for Azure service access regardless of the API
+Login answer.
 
 ## Stage 3 — Review & approve the plan
 
