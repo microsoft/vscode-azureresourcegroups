@@ -687,7 +687,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </header>
 ```
 
-> The header shows the **signed-in** app chrome (search, notifications, user avatar) — the preview is the authenticated app, never a login screen.
+> When `API Login` is `Yes`, show the signed-in app chrome (search, notifications, user avatar). The planning preview still opens on the main authenticated app, never the login screen. When `API Login` is `No`, omit user identity and logout controls; do not imply that the app has accounts.
 
 ### `nav` (top horizontal nav)
 ```html

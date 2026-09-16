@@ -126,12 +126,14 @@ Use `category: "service"` for all per-service questions. The webview groups them
 
 ##### Shared questions (no `serviceId`)
 
-These are asked once for the whole project. Always emit all of them:
+These are asked once for the whole project. Always emit both:
 
-| # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
-|---|---|---|---|---|---|---|---|---|
-| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `No datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one), or `No datastore required` |
-| 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
+| `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
+|---|---|---|---|---|---|---|---|
+| `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `No datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one), or `No datastore required` |
+| `auth` | `auth` | API Login | Does this app need user login? | no | no | `Yes`, `No` | `Yes` for accounts, private/per-user data, or signed-in experiences; otherwise `No` |
+
+The `auth` question covers only user-facing application login and authenticated API access. It does not select Microsoft Entra ID, another identity provider, managed identity, API keys, or any Azure service credential. Infer `Yes` when the app has accounts, private/per-user data, or signed-in experiences. Infer `No` for public apps with no user identity. The scaffold agent chooses the stack-appropriate API authentication implementation. Backend-to-Azure communication always uses managed identity in production and is never a requirements choice.
 
 > The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
 
@@ -187,8 +189,8 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "id": "functions-api:features", "category": "service", "serviceId": "functions-api",
       "header": "Features", "question": "Describe the features or API routes for Functions API.",
       "multiSelect": false,
-      "recommendedChoice": "Auth, photo upload/list/delete, AI captions",
-      "status": "inferred", "answer": "Auth, photo upload/list/delete, AI captions",
+      "recommendedChoice": "Photo upload/list/delete, AI captions",
+      "status": "inferred", "answer": "Photo upload/list/delete, AI captions",
       "rationale": "Distilled from the user's prompt."
     },
     {
@@ -233,19 +235,15 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "rationale": "Photo files → Blob Storage; relational data → PostgreSQL."
     },
     {
-      "id": "auth", "category": "auth", "header": "Authentication",
-      "question": "Does your app need authentication?",
-      "multiSelect": false, "allowFreeformInput": true,
+      "id": "auth", "category": "auth", "header": "API Login",
+      "question": "Does this app need user login?",
+      "multiSelect": false, "allowFreeformInput": false,
       "options": [
-        { "label": "No auth", "description": "Public app, no login required" },
-        { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" },
-        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts" },
-        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins" },
-        { "label": "Auth0", "description": "Third-party IdP — social and enterprise connections" },
-        { "label": "Clerk", "description": "Drop-in user management with prebuilt UI" }
+        { "label": "Yes", "description": "Add a user sign-in flow and authenticated API access" },
+        { "label": "No", "description": "No user sign-in or authenticated API access" }
       ],
-      "recommendedChoice": "Mock auth middleware", "status": "needs_input", "answer": null,
-      "rationale": "App handles user data — start with mock auth for testability."
+      "recommendedChoice": "Yes", "status": "inferred", "answer": "Yes",
+      "rationale": "The app stores private, per-user photos."
     }
   ]
 }
@@ -255,8 +253,9 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 - **Services & IDs:** one `services` entry per detected/planned service; per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`), with `serviceId` matching the service.
 - **Language options:** frontend services offer only `TypeScript` / `JavaScript`; backend/worker services offer `TypeScript`, `Python`, `C# (.NET)`.
-- **Always emit both shared questions** (`dataStores`, `auth`), and **never emit an `appType` question** — App Type is derived from `services` (see the derivation table above).
-- **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` **`true`** (always — even when a listed option fits). Omit it for free-text feature questions.
+- **Always emit both shared questions** (`dataStores`, `auth`), and **never emit an `appType`, identity-provider, or Azure credential question**. App Type is derived from `services` (see the derivation table above).
+- **`auth` is strictly binary:** its only options, answer values, and recommendation values are `Yes` and `No`. Never put a provider, protocol, token type, or Azure credential in this question.
+- **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` `false`. Omit it for free-text feature questions.
 - **`multiSelect`:** only `dataStores` is `true`; its `answer` and `recommendedChoice` are always `string[]`.
 - **Answers:** `inferred` → fill `answer`; `needs_input` → `answer: null` (`[]` for `dataStores`). Always provide `recommendedChoice`.
 - **No datastore:** `No datastore required` is an exclusive option. When selected or inferred, it must be the only value in `answer` and `recommendedChoice`. Never combine it with a concrete datastore.
@@ -273,7 +272,7 @@ Once the file is written, **stop**. Do NOT print the JSON, summarize inferences,
 
 Always write `.azure/requirements.json` and hand it off to the requirements webview, even when the prompt is fully unambiguous and every question is `inferred` in Step 2a. Inferred answers are pre-selected so review remains quick, but the user must still have an opportunity to confirm or change them before plan generation.
 
-This holds for **small, frontend-only projects too**. A prompt like *"a simple unit converter web app — nothing needs to be saved, no accounts, no backend, just a clean little frontend tool"* is a complete, valid project: emit exactly one `services` entry with `role: "frontend"`, its `language`/`framework`/`features` questions, and both shared questions — with `dataStores` recommended and answered as `["No datastore required"]` and `auth` recommended as `No auth`. Do **not** shortcut this by writing `index.html` or any other app code, and do **not** skip the webview because "there is nothing to ask".
+This holds for **small, frontend-only projects too**. A prompt like *"a simple unit converter web app — nothing needs to be saved, no accounts, no backend, just a clean little frontend tool"* is a complete, valid project: emit exactly one `services` entry with `role: "frontend"`, its `language`/`framework`/`features` questions, `dataStores` set to `["No datastore required"]`, and `auth` set to `No`. Do **not** shortcut this by writing `index.html` or any other app code, and do **not** skip the webview because "there is nothing to ask".
 
 #### 2f. Re-entry — reading the answered file
 

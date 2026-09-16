@@ -42,9 +42,9 @@ Requires an approved plan. Verify before starting:
 2. **Track progress** — Update plan status as you go: Approved → In Progress → Awaiting Integration. Do not defer status updates. (The `azure-project-integrate` agent advances it to `Integrated`.)
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
 4. **Azure Functions v4** — Always v4 programming model (Node.js v4, Python v2, .NET isolated). Prioritize Azure services. Runtimes: TypeScript, Python, C#.
-5. **Service abstraction & DI** — All Azure SDK calls behind injectable interfaces. Handlers NEVER import SDKs directly. **CRITICAL: Step 4 MUST produce interface AND concrete implementation per service.** Interface-only = #1 cause of runtime crashes. Concrete impl is what the app uses at runtime. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+5. **API auth and Azure client boundaries** — Read `API Login` from the plan. When it is `Yes`, scaffold user-facing login across the frontend and API behind a small application auth interface. Separately, put every Azure SDK client behind a client-provider interface. Handlers and domain code NEVER import Azure SDKs, inspect the environment, or choose client implementations. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 6. **Modular, one function per file** — Each Function own file. Each service own module. Extract shared utilities to `services/functions/src/utils/` — no duplication, no unused stubs. Prefix unused params with `_`. **DRY**: Same helper in 2+ files → extract to `services/functions/src/utils/` and import. **Proactive**: Before writing handlers, identify common patterns (password hashing, entity sanitization, response formatting) and pre-create shared utils. See [architecture.md](.github/agents/shared-references/architecture.md).
-7. **Environment-driven config** — Connection strings switch local/Azure via env vars. Validate required vars on startup, fail fast. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+7. **Managed identity in production** — Every production client used for backend-to-Azure communication MUST authenticate with managed identity (`DefaultAzureCredential` or the runtime equivalent) and a resource endpoint. Select an emulator-backed local client only when the runtime environment is explicitly `Development`. Every other value, including missing or misspelled values, selects the managed-identity client and fails startup if its endpoint configuration is invalid. Never use account keys, connection-string secrets, API keys, or a local emulator as a production fallback. Keep the environment check in the composition root. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](.github/agents/shared-references/error-handling.md).
 9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
 10. **Database write integrity** — Handlers performing multi-table writes MUST use `database.transaction()`. Document the collection-to-table mapping so the integrate agent can build matching schema migrations. (The integrate agent owns schema migrations and seed data; the scaffold does not create them.) See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
@@ -126,7 +126,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
 | Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
-| Extract plan details | Routes, services, entity types, language, runtime, framework, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
+| Extract plan details | Routes, services, entity types, language, runtime, framework, **API Login**, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — the plan's design section must be completed before scaffolding. Section 5 is load-bearing for Rule 13 / Step 1 quality bar.** |
 | Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
 | Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates the frontend. |
@@ -156,7 +156,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 > **Run as a sub-agent (parallel with backend).** The orchestrator delegates frontend generation (sub-steps **F1–F4**) to a dedicated **Frontend Sub-Agent** so it runs concurrently with backend Phase A/B. The sub-agent generates + builds `services/web/` and returns a single report. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md) for the sub-agent brief and hand-back contract.
 
-**Goal**: Standalone frontend with mock data, generated and built. The integrate agent later wires it to the real backend. **Auto-authenticated** — if app has auth, seed mock auth state so the app lands on the main view (dashboard, feed), NOT a login page.
+**Goal**: Standalone frontend with mock data, generated and built. The integrate agent later wires it to the real backend. When `API Login` is `Yes`, include the login UI and auth state, but seed local identity so the preview lands on the main view (dashboard, feed), NOT the login page.
 
 > ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npm run build` — MUST run against the **frontend folder** (typically `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** — `--prefix` loads the frontend's `package.json` no matter where the shell starts, so it can't accidentally run from the root. When using a binary directly (e.g. `npx vite build`), pass `cwd: "services/web"` on the same terminal call.
 
@@ -168,7 +168,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 > **✅ Checkpoint**:
 > 1. Frontend builds zero errors (`npm --prefix services/web run build` — cwd-independent; **never** a bare `npx vite build` from the workspace root)
 > 2. No `any` types in `.ts`/`.tsx`
-> 3. Auto-authenticated — mock auth state seeded so the app lands on main content on first load, with the signed-in user read from the seam (`api.getCurrentUser()`), not imported from `src/mocks/`
+> 3. When `API Login` is `Yes`, local identity state is seeded so the app lands on main content on first load, with the signed-in user read from the seam (`api.getCurrentUser()`), not imported from `src/mocks/`
 > 4. **API seam intact** — `src/api/` declares an `ApiClient` interface (never `type ApiClient = typeof mockClient`), the mock is declared as `ApiClient`, `src/api/index.ts` is the one-line swap point, and **no file outside `src/api/` imports `src/mocks/` or `mockClient`**. Reference data with no plan route (assignee names, the signed-in user) gets an `ApiClient` method backed by the mock — it is never imported directly. See [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) → Load-bearing seam rule.
 > 5. **No UX approval prompt** — the design was already approved during planning via `.azure/.preview-temp/`. Do NOT call `ask_user` for "do you approve this UI?".
 > 6. **Preview-embeddable dev server** — `vite.config`'s `server` sets `host: true`, `allowedHosts: true`, `strictPort: false` (Angular: `--host 0.0.0.0 --disable-host-check`; Next.js: `-H 0.0.0.0`); the `dev`/`start` script serves and prints a `http://localhost:<port>/` URL (never `build --watch`); no `X-Frame-Options`/`frame-ancestors` meta CSP in `index.html`; and you did NOT start your own dev server or an auto-start dev task. The `open_frontend_preview_view` tool starts and owns the dev server for the **Approve UI** preview — these keep its webview iframe from hanging or rendering blank (which would leave the user unable to approve). See [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) → Preview compatibility.
@@ -245,8 +245,9 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 |------|---------|
 | Create `config` module | `services/config.ts` / `services/config.py` / `Services/Config.cs` |
 | Create `.env.example` | All required env vars with placeholders and comments |
-| Create `local.settings.json` | Azure Functions local settings with emulator defaults |
-| Implement env validation | On startup, check required vars set. Fail fast with clear error listing missing. |
+| Create `local.settings.json` | Azure Functions local settings with emulator defaults and `"AZURE_FUNCTIONS_ENVIRONMENT": "Development"` so local provider selection is explicit |
+| Implement env validation | Validate the variables required by the selected providers at startup. Missing or unknown environment means production, so missing production configuration fails fast. |
+| Keep selection centralized | Read the environment once in the startup composition root. Application code receives interfaces and contains no environment checks. |
 
 **Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md)
 
@@ -256,31 +257,61 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 ### Step 4: Service Abstraction Layer
 
-**Goal**: One module per Azure service, with injectable interfaces and concrete implementations.
+**Goal**: Implement user-facing API authentication when selected, and isolate every Azure client behind local and managed-identity providers.
 
-> ⚠️ **CRITICAL — DO NOT SKIP CONCRETE IMPLEMENTATIONS**
->
-> MUST produce **two files per service**: interface and concrete implementation. Interface-only scaffolding is #1 cause of runtime failures — the app crashes at startup because the registry has nothing to auto-initialize. **Every interface MUST have corresponding concrete implementation before checkpoint.**
+`API Login` is authoritative. Do not infer or override it. It controls application user login only; it never changes how backend services authenticate to Azure.
+
+#### API login
+
+When `API Login` is `Yes`, scaffold the complete frontend-to-API flow. When it is `No`, do not add login pages, auth endpoints, token middleware, mock users, or protected-route wrappers.
 
 | Task | Details |
 |------|---------|
-| Create service interface/protocol | Define contract (TS interface / Python Protocol / C# interface). **Document auto-managed fields** (e.g., `updated_at`, `created_at`, `id`) in comments. **IDatabaseService MUST include `transaction()` method** for atomic multi-table writes. |
-| Create concrete implementation | Implements interface with Azure SDK. **MUST strip auto-managed fields** from caller data in `update()` and `create()` before building queries. **Transaction MUST use BEGIN/COMMIT/ROLLBACK.** |
-| Create service factory/registry | Factory/DI that returns real impl from config. **`getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered** — calling without prior `registerServices()` MUST construct instances from config, NOT throw. **MUST use correct import style** — ESM uses static imports or `await import()`, NOT `require()`. **Enhancement construction wrapped in try/catch** (Rule 9). |
+| Define the auth interface | Model application behavior such as `createAccount(input)`, `login(credentials)`, `authenticate(request)`, and `getCurrentUser()`. Keep token and credential logic out of handlers and UI components. |
+| Add the API flow | Add registration, login, and current-user endpoints even though the plan intentionally omits auth routes. Registration validates input, rejects duplicate accounts, and stores only a strong password hash. Protect every non-health, non-auth API route by default unless its product behavior is explicitly public. |
+| Choose a stack-appropriate implementation | Reuse an existing auth system when present. Otherwise default to a REST login flow that verifies stored password hashes and issues a short-lived signed JWT. Verify signature, algorithm, issuer, audience, and expiry on every protected request. Require production signing configuration; never ship a hard-coded or generated-at-startup production secret. |
+| Add the frontend flow | Add login, logout, current-user state, protected navigation, and authenticated API calls. The login page MUST contain a visible **Create account** button that opens a dedicated create-account page. The create-account page MUST submit to the registration flow, show field and duplicate-account errors, and return the user to login or establish the new session after success. Keep the token out of source code and fixture imports. Prefer an HttpOnly, Secure, SameSite cookie when the chosen stack supports it; otherwise keep a bearer token in memory rather than long-lived browser storage. |
+| Test the boundary | Cover successful and failed account creation, duplicate accounts, successful and failed login, invalid/expired tokens, logout, current-user lookup, protected-route rejection, and authorization between users. |
+
+Managed identity is not an end-user login mechanism. Never use a managed identity token as the application's user session.
+
+#### Azure client providers
+
+> ⚠️ **CRITICAL — DO NOT SKIP EITHER AZURE CLIENT IMPLEMENTATION**
+>
+> Every Azure client interface MUST have both an emulator-backed local implementation and a managed-identity production implementation. Select once at startup and inject the selected interface. Do not scatter `isDevelopment` checks through handlers or services.
+
+| Task | Details |
+|------|---------|
+| Define the client-provider interface | Model only the Azure client behavior the application needs. Handlers and domain services depend on this interface, never an environment variable or credential. |
+| Implement local behavior | Point the Azure SDK client at Azurite or the planned emulator. Never embed local selection inside the implementation. |
+| Implement production behavior | Use the Azure resource endpoint with managed identity (`DefaultAzureCredential` or the runtime equivalent). Do not accept account keys, SAS tokens, or connection-string secrets for production Azure communication. |
+| Select once at startup | A factory/composition root checks for the exact development marker, constructs the matching providers, validates endpoint configuration, and injects the interfaces. Missing or invalid production configuration fails startup. |
+| Create service registry | `getServices()` MUST auto-initialize selected clients when nothing was pre-registered. ESM uses static imports or `await import()`, NOT `require()`. Enhancement construction follows Rule 9 without substituting a local provider. |
+| Leave breadcrumbs | Use explicit names such as `AzuriteBlobClientProvider` and `ManagedIdentityBlobClientProvider`. Keep the interface, both implementations, and factory together; document settings in `.env.example`; set the development marker in `local.settings.json`. |
 
 **Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md)
 
 > **📋 File Verification** — Before checkpoint, verify on disk:
 >
-> For EACH service in plan:
+> When `API Login` is `Yes`:
+> - [ ] auth interface and implementation
+> - [ ] registration, login, and current-user endpoints
+> - [ ] frontend login/session flow, including a visible **Create account** button and dedicated create-account page
+> - [ ] authentication and authorization tests
+>
+> For each Azure service in the plan:
 > - [ ] `src/services/interfaces/I{Service}Service.ts` — interface
-> - [ ] `src/services/{service}.ts` — **concrete implementation** (imports SDK, implements interface)
+> - [ ] local client provider — emulator behavior
+> - [ ] production client provider — Azure endpoint plus managed identity
 >
 > Additionally:
-> - [ ] `src/services/registry.ts` — `initializeServices()` constructs concrete instances
+> - [ ] `src/services/registry.ts` — `initializeServices()` selects Azure client providers once and constructs them
 > - [ ] `getServices()` calls `initializeServices()` when `services === null` (lazy auto-init)
+> - [ ] application code depends only on auth/client interfaces and contains no Azure-client environment checks
+> - [ ] client selection tests prove explicit Development uses emulators, missing/other values use managed identity, and invalid production config fails
 >
-> **If any concrete implementation missing, DO NOT proceed.** The app will fail to start at runtime.
+> **If an API Login flow is incomplete or either Azure client implementation is missing, DO NOT proceed.**
 
 > **✅ Checkpoint**: All interfaces, concrete implementations, and registry exist. `getServices()` auto-initializes. `tsc` zero errors.
 
@@ -293,6 +324,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 | Task | Details |
 |------|---------|
 | Create shared types | Entity types, API request/response contracts in `services/shared/` |
+| Create auth contracts when selected | When `API Login` is `Yes`, add credential, session/current-user, and login response types without exposing password hashes or signing secrets |
 | Create validation schemas | Zod (Node.js) / Pydantic (Python) / FluentValidation (.NET) — **one per endpoint accepting input** |
 | Create path param schemas | UUID format validation for path params (e.g., `:id`) |
 | Create file upload validation | Size limit and MIME type validation for uploads |
@@ -321,6 +353,8 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 > ❌ **CRITICAL**: Implement ONE route at a time. Verify compiles. THEN start next.
 
+When `API Login` is `Yes`, implement the derived auth endpoints and middleware before the plan's feature routes. The plan omits auth route details by design; this is the one allowed addition to its route inventory. Protect feature routes according to the Step 4 API login rule.
+
 For **each** route in plan:
 
 | Task | Details |
@@ -329,7 +363,7 @@ For **each** route in plan:
 | Use transactions for multi-table writes | Any handler writing 2+ tables MUST use `database.transaction()` |
 | Wrap Enhancement services | External services classified Enhancement MUST have try/catch with fallback (see [resilience.md](.github/agents/shared-references/resilience.md)) |
 | Validate file uploads server-side | Check file size and MIME type before processing |
-| Validate path params before DB queries | When auth middleware extracts userId from token, **validate format** (e.g., UUID) before DB query. Malformed ID on typed column causes 500 instead of 401. Most common runtime error mocked tests miss. |
+| Validate path params before DB queries | When the auth service supplies a user ID, **validate its format** (e.g., UUID) before a DB query. A malformed ID on a typed column causes 500 instead of 401. |
 | Verify response shape | `jsonBody` must match Route Definitions |
 | Verify collection names | Must map to the documented collection-to-table mapping (Rule 10) |
 | Extract shared utilities | Duplicated helpers → `services/functions/src/utils/` (Rule 6). **After each handler**, grep for helpers in 2+ files, extract immediately. Consider handler wrapper if >8 handlers share try/catch boilerplate. Prefix unused params with `_`. |
@@ -426,7 +460,7 @@ For **each** route in plan:
 | Clean up the HTML preview | If `.azure/.preview-temp/` exists, delete the whole folder — its contents were a transient mock-up consumed during scaffolding and should not ship in the repo. Use a portable command (see Cross-platform command discipline): `node -e "require('fs').rmSync('.azure/.preview-temp', {recursive: true, force: true})"`. Do **NOT** use `rm -rf` or `Remove-Item -Recurse -Force` directly — those are not cross-platform. |
 | Update plan status | Set to `Awaiting Integration` — signals the scaffold built clean but the frontend still uses mock data and migrations/live wiring are pending (the `azure-project-integrate` agent's job) |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
-| **Write the integration artifact** | Write `.azure/integration-plan.md` — the hand-off brief the `azure-project-integrate` agent consumes. Include: backend folder + run command + port + health path; frontend folder + build/dev commands + the **API seam to swap** (`services/web/src/api/index.ts` — repoint from `mockClient` to the live client) plus the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, local mock types, and the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the full API route inventory (method + path) so the live client mirrors the `ApiClient` interface method-for-method; the database type + migration tool + migration directory + connection env vars (state explicitly that **NO seed data** is to be created); the shared-types package + import alias; the service list (Essential vs Enhancement). Keep it concise — paths and commands, not prose. |
+| **Write the integration artifact** | Write `.azure/integration-plan.md` — the hand-off brief the `azure-project-integrate` agent consumes. Include: backend folder + run command + port + health path; frontend folder + build/dev commands + the **API seam to swap** (`services/web/src/api/index.ts` — repoint from `mockClient` to the live client) plus the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, local mock types, and the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the full API route inventory (method + path) so the live client mirrors the `ApiClient` interface method-for-method; when `API Login` is `Yes`, the registration, login, and current-user endpoints, auth middleware, create-account and session files, and required signing configuration; the database type + migration tool + migration directory + connection env vars (state explicitly that **NO seed data** is to be created); the shared-types package + import alias; the service list (Essential vs Enhancement). Keep it concise — paths and commands, not prose. |
 | **Open the frontend preview & UI-approval gate** | **Only when the plan has a frontend AND not in autopilot.** Call the `open_frontend_preview_view` tool with `{ "frontendFolder": "services/web" }`. Set `frontendFolder` only when it isn't the default `services/web` (e.g. a product-named app); otherwise call with `{}`. This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header and a feedback box — mirroring the plan-approval UX. **The webview owns the hand-off**: clicking **Approve UI** triggers `copilotOnRails.startProjectIntegrate` itself, and the feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `start_project_integrate`, do NOT call `vscode_askQuestions`. If the plan has **no frontend**, skip this row and use the direct hand-off row below. |
 | **Hand off to the Integrate agent** | **Use this row only when there is NO frontend, or in autopilot mode** (the preview gate is skipped). Call the `start_project_integrate` tool with no arguments (`{}`). This starts a **new chat session** running `azure-project-integrate`, which reads the artifact and its instruction file to wire the frontend to live data, smoke-test the backend, create the migrations, and verify end-to-end. Do **NOT** call `vscode_askQuestions` — the hand-off is the next step. |
 

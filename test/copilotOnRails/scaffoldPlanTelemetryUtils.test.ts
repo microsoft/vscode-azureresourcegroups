@@ -23,6 +23,7 @@ suite('scaffoldPlanTelemetryUtils', () => {
                 planSectionCount: 9,
                 planSectionTitles: 'project overview,attendance compliance api — azure functions,attendance compliance web app — web app,services required,prerequisites,design system & ui,project structure,route definitions,next steps',
                 appType: 'spa + api',
+                apiLogin: 'yes',
 
                 serviceCount: 2,
                 serviceLanguages: 'typescript',
@@ -31,8 +32,8 @@ suite('scaffoldPlanTelemetryUtils', () => {
                 servicePackageManagers: 'npm',
                 serviceTestRunners: 'vitest',
 
-                azureServiceCount: 3,
-                azureServiceTypes: 'blob storage,microsoft entra id,postgresql',
+                azureServiceCount: 2,
+                azureServiceTypes: 'blob storage,postgresql',
                 hasDatabase: true,
 
                 runPrereqTotalCount: 3,
@@ -49,7 +50,7 @@ suite('scaffoldPlanTelemetryUtils', () => {
 
                 routeCount: 10,
                 routeMethods: 'delete,get,post,put',
-                authenticatedRouteCount: 9,
+                authenticatedRouteCount: 0,
             };
 
             assert.deepStrictEqual(telemetry, expected);
@@ -65,6 +66,7 @@ suite('scaffoldPlanTelemetryUtils', () => {
                 planSectionCount: 10,
                 planSectionTitles: 'project overview,backend — scrapbook api,frontend — scrapbook web,worker — cleanup worker,services required,prerequisites,design system & ui,project structure,route definitions,next steps',
                 appType: 'spa + api',
+                apiLogin: 'yes',
 
                 serviceCount: 3,
                 serviceLanguages: 'typescript',
@@ -91,7 +93,7 @@ suite('scaffoldPlanTelemetryUtils', () => {
 
                 routeCount: 11,
                 routeMethods: 'delete,get,patch,post',
-                authenticatedRouteCount: 10,
+                authenticatedRouteCount: 0,
             };
 
             assert.deepStrictEqual(telemetry, expected);
@@ -106,6 +108,7 @@ suite('scaffoldPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.planSectionCount, 0);
             assert.strictEqual(telemetry.planSectionTitles, '');
             assert.strictEqual(telemetry.appType, 'unknown');
+            assert.strictEqual(telemetry.apiLogin, 'unknown');
             assert.strictEqual(telemetry.serviceCount, 0);
             assert.strictEqual(telemetry.serviceLanguages, '');
             assert.strictEqual(telemetry.azureServiceCount, 0);

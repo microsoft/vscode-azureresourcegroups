@@ -47,4 +47,4 @@ The table below shows common SDK-to-service mappings — this is **not exhaustiv
 
 ## Step 3: API Test Collection Inventory
 
-For each service, identify whether it exposes testable HTTP endpoints or triggers and provide a brief summary for the plan. Detailed endpoint parsing happens during the generation phase.
+For each service, identify whether it exposes testable HTTP endpoints or triggers and provide a brief summary for the plan. Inventory the implemented route and trigger registrations in the workspace, not only the route table in `.azure/project-plan.md`. The project plan intentionally omits derived authentication routes, so include implemented registration, login, and current-user endpoints when `API Login` is enabled. Detailed endpoint parsing happens during the generation phase.

@@ -148,12 +148,13 @@ curl -i -X POST "http://localhost:7071/admin/functions/{FunctionName}" \
 
 When generating API test collections during Phase 2:
 
-1. Create one top-level subdirectory per service: `api-test-collections/{service-id}/`, where `{service-id}` is derived from the plan's **Service Label** column (see [generate.md](generate.md) § Service ID Derivation). Only generate for services whose **Generate** column is checked in the plan.
-2. Within each service directory, generate one subdirectory per trigger/endpoint found during inventory
-3. Name the trigger directory after the trigger: `{trigger-type}-{function-or-endpoint-name}` (e.g., `http-GetOrder`, `blob-ProcessUpload`)
-4. Create an `invoke` script (`.sh` on macOS/Linux, `.ps1` on Windows) with the appropriate pattern from this file, substituting discovered values (function name, container name, queue name, etc.)
-5. Create a `sample-data.json` or `sample-message.json` next to the invoke script when the test requires a body
-6. On macOS/Linux, make the script executable (`chmod +x`)
+1. Resolve endpoints from the implemented route registrations, not only `.azure/project-plan.md`. The project plan intentionally omits derived authentication routes, so include implemented registration, login, and current-user endpoints when `API Login` is enabled.
+2. Create one top-level subdirectory per service: `api-test-collections/{service-id}/`, where `{service-id}` is derived from the plan's **Service Label** column (see [generate.md](generate.md) § Service ID Derivation). Only generate for services whose **Generate** column is checked in the plan.
+3. Within each service directory, generate one subdirectory per trigger/endpoint found during inventory.
+4. Name the trigger directory after the trigger: `{trigger-type}-{function-or-endpoint-name}` (e.g., `http-GetOrder`, `blob-ProcessUpload`).
+5. Create an `invoke` script (`.sh` on macOS/Linux, `.ps1` on Windows) with the appropriate pattern from this file, substituting discovered values (function name, container name, etc.).
+6. Create a `sample-data.json` or `sample-message.json` next to the invoke script when the test requires a body.
+7. On macOS/Linux, make the script executable (`chmod +x`).
 
 > **Do not generate timer test scripts** unless the user explicitly requests it — they're rarely needed for local debugging.
 

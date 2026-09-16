@@ -58,9 +58,9 @@ suite('localDebugPlanTelemetryUtils', () => {
 
                 apiTestServiceOfferedCount: 2,
                 apiTestServiceSelectedCount: 2,
-                apiTestHttpEndpointCount: 12,
+                apiTestHttpEndpointCount: 15,
                 apiTestTriggerCount: 1,
-                apiTestTotalCount: 13,
+                apiTestTotalCount: 16,
 
                 convenienceScriptOfferedCount: 4,
                 convenienceScriptSelectedCount: 4,
@@ -114,9 +114,9 @@ suite('localDebugPlanTelemetryUtils', () => {
 
                 apiTestServiceOfferedCount: 1,
                 apiTestServiceSelectedCount: 1,
-                apiTestHttpEndpointCount: 10,
+                apiTestHttpEndpointCount: 13,
                 apiTestTriggerCount: 0,
-                apiTestTotalCount: 10,
+                apiTestTotalCount: 13,
 
                 convenienceScriptOfferedCount: 4,
                 convenienceScriptSelectedCount: 4,

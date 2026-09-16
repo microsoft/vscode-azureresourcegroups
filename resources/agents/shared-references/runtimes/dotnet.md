@@ -142,6 +142,7 @@ Then hand-author `Functions.csproj` (see below) — the `func init` template use
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
     "ASPNETCORE_ENVIRONMENT": "Development",
 
     "ConnectionStrings:AppDb": "Host=localhost;Port=5432;Database=appdb;Username=localdev;Password=localdevpassword",
@@ -254,18 +255,19 @@ builder.UseMiddleware<ExceptionMiddleware>();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseNpgsql(config.GetConnectionString("AppDb")));
 
-// ---------- Azure Storage: Managed Identity in Azure, connection string locally ----------
+// ---------- Azure Storage: explicit local emulator or Managed Identity ----------
 builder.Services.AddSingleton(sp =>
 {
-    var storage = config.GetConnectionString("Storage")
-        ?? throw new InvalidOperationException("ConnectionStrings:Storage not configured");
+    if (config["AZURE_FUNCTIONS_ENVIRONMENT"] == "Development")
+    {
+        var localStorage = config.GetConnectionString("Storage")
+            ?? throw new InvalidOperationException("ConnectionStrings:Storage not configured");
+        return new BlobServiceClient(localStorage);
+    }
 
-    // If the config holds a blob service URI, authenticate with Managed Identity.
-    // If it holds a classic connection string ("UseDevelopmentStorage=true" / "DefaultEndpointsProtocol=..."),
-    // construct a client from it directly.
-    return storage.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-        ? new BlobServiceClient(new Uri(storage), new DefaultAzureCredential())
-        : new BlobServiceClient(storage);
+    var storageEndpoint = config["Storage:Endpoint"]
+        ?? throw new InvalidOperationException("Storage:Endpoint not configured");
+    return new BlobServiceClient(new Uri(storageEndpoint), new DefaultAzureCredential());
 });
 
 // ---------- Redis ----------
@@ -285,20 +287,20 @@ await host.RunAsync();
 
 > **About App Insights:** Worker 2.x integrates telemetry via **OpenTelemetry** (`Microsoft.Azure.Functions.Worker.OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter`). The older `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` pair is still supported but OpenTelemetry is the going-forward path in the Learn docs.
 
-> **Production deployment pattern**: in App Settings, set `ConnectionStrings:Storage` to the **blob service URI** (e.g., `https://myaccount.blob.core.windows.net`) and grant the Function App's managed identity the `Storage Blob Data Contributor` role. The code above detects the URI form and automatically uses `DefaultAzureCredential`. The same pattern works for Cosmos, Service Bus, Key Vault, SQL — all support URI + Managed Identity auth.
+> **Production deployment pattern**: in App Settings, set `Storage:Endpoint` to the blob service URI (e.g., `https://myaccount.blob.core.windows.net`) and grant the Function App's managed identity the `Storage Blob Data Contributor` role. Only exact `AZURE_FUNCTIONS_ENVIRONMENT=Development` selects the local connection string. The same pattern works for Cosmos, Service Bus, Key Vault, SQL, and PostgreSQL token auth.
 
 ### Managed Identity — Quick Reference
 
 | Resource | Production config value | Code |
 |----------|------------------------|------|
-| Blob Storage | `ConnectionStrings:Storage=https://<account>.blob.core.windows.net` | `new BlobServiceClient(new Uri(cs), new DefaultAzureCredential())` |
-| Queue Storage | `ConnectionStrings:Storage` (same account) | `new QueueServiceClient(new Uri(cs + "queue/..."), cred)` |
+| Blob Storage | `Storage:Endpoint=https://<account>.blob.core.windows.net` | `new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential())` |
+| Queue Storage | `Storage:QueueEndpoint=https://<account>.queue.core.windows.net` | `new QueueServiceClient(new Uri(endpoint), new DefaultAzureCredential())` |
 | Cosmos DB | `CosmosDb:AccountEndpoint=https://<acct>.documents.azure.com:443/` | `new CosmosClient(endpoint, new DefaultAzureCredential())` |
 | Key Vault | `KeyVault:Uri=https://<vault>.vault.azure.net/` | `new SecretClient(new Uri(uri), new DefaultAzureCredential())` |
 | PostgreSQL Flexible Server | Entra token auth — `Npgsql` + token provider | See [EF Core + Entra](https://learn.microsoft.com/azure/postgresql/flexible-server/how-to-azure-ad) |
 | Service Bus | `ServiceBus:FullyQualifiedNamespace=<ns>.servicebus.windows.net` | `new ServiceBusClient(fqns, new DefaultAzureCredential())` |
 
-Use `DefaultAzureCredential` everywhere — it picks up the Function App's managed identity in Azure and the developer's `az login` / VS Code credentials locally. Never ship connection strings with account keys.
+Use `DefaultAzureCredential` for every production Azure client. Explicit Development uses the planned local emulator instead. Never ship connection strings with account keys.
 
 ---
 
@@ -1037,7 +1039,7 @@ public class AskAi(IOptions<OpenAiOptions> opts) { /* opts.Value.ApiKey */ }
 | Blob Storage | `Azure.Storage.Blobs` | Managed Identity via `DefaultAzureCredential` |
 | Queue Storage | `Azure.Storage.Queues` | Managed Identity |
 | Cosmos DB | `Microsoft.Azure.Cosmos` | Managed Identity |
-| PostgreSQL (EF Core) | `Npgsql.EntityFrameworkCore.PostgreSQL` + `Microsoft.EntityFrameworkCore` | Entra token or connection string |
+| PostgreSQL (EF Core) | `Npgsql.EntityFrameworkCore.PostgreSQL` + `Microsoft.EntityFrameworkCore` | Managed identity / Entra token in production; local connection string only in Development |
 | Redis | `StackExchange.Redis` | Entra token (Azure Cache for Redis Enterprise) or access key |
 | Service Bus | `Azure.Messaging.ServiceBus` | Managed Identity |
 | Key Vault | `Azure.Security.KeyVault.Secrets` | Managed Identity |

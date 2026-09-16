@@ -44,7 +44,7 @@ export interface RequirementsTelemetry {
     /** Whether a database data store is selected. */
     hasDatabase: boolean;
 
-    /** Authentication choice, normalized to lowercase, or `none`. */
+    /** Binary API Login answer (`yes` or `no`), normalized to lowercase, or `none`. */
     auth: string;
 }
 

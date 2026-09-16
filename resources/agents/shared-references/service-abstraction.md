@@ -6,13 +6,12 @@
 
 ## Core Principle
 
-**Same application code runs against mocks (tests), local emulators (dev), and Azure services (production).** Only difference is which implementation is injected:
+Keep two concerns separate:
 
-- **Tests**: In-memory mock (pre-registered via `setup.ts` / `conftest.py`)
-- **Local dev**: Real SDK pointing to emulator (via azure-debug-plan skill's docker-compose)
-- **Azure**: Real SDK pointing to Azure services (via managed identity)
+- **Application user authentication** exists only when the plan says `API Login: Yes`. It authenticates people using the application.
+- **Azure client authentication** is never a product choice. Backend-to-Azure communication uses emulator clients in explicit development and managed identity everywhere else.
 
-Function handlers NEVER import Azure SDKs directly. They receive services via dependency injection.
+Both concerns use small application-facing interfaces. Function handlers NEVER import Azure SDKs directly, construct credentials, or parse login tokens themselves. They receive auth services and Azure clients through dependency injection.
 
 > ⚠️ **Auto-initialization requirement**: Service registry's `getServices()` MUST auto-initialize with concrete implementations at runtime. User runs `func start` after `npm run build` — no manual `registerServices()` call, no startup script. Tests override via `registerServices()` with mocks before each test.
 
@@ -27,15 +26,76 @@ Function handlers NEVER import Azure SDKs directly. They receive services via de
 │              Function Handler                    │
 │  (receives services — no SDK imports)            │
 ├─────────────────────────────────────────────────┤
-│              Service Interface                   │
-│  IStorageService │ IDatabaseService │ ICacheService
-├─────────────────┬───────────────────────────────┤
-│ Real Impl       │ Mock Impl                      │
-│ (Azure SDK)     │ (in-memory Map/Dict/List)      │
-│ ↓               │ ↓                              │
-│ Azurite/Azure   │ No external deps               │
-└─────────────────┴───────────────────────────────┘
+│          Application-facing interfaces           │
+│  AuthService  │  BlobClientProvider  │  Database │
+├───────────────┼──────────────────────┼───────────┤
+│ User sessions │ Local / managed ID   │ Data impl │
+└───────────────┴──────────────────────┴───────────┘
 ```
+
+---
+
+## API login contract
+
+Read the `API Login` value from the approved plan:
+
+- `No`: do not scaffold user login, token middleware, login UI, or mock users.
+- `Yes`: define a small auth interface for the behavior the application needs, then scaffold login end to end across the frontend and API.
+
+If the workspace already has an auth system, preserve it. Otherwise use a stack-appropriate REST API flow. A typical implementation verifies a stored password hash, issues a short-lived signed JWT, and verifies its signature, algorithm, issuer, audience, and expiry before protected requests. Put that behavior behind an interface such as `login(credentials)`, `authenticate(request)`, and `getCurrentUser()`. Require signing configuration in production. Never hard-code a signing secret or generate a new production secret at startup.
+
+Managed identity does not authenticate application users. Never use a managed identity access token as a user session.
+
+## Azure client provider contract
+
+Apply this pattern to every Azure service client:
+
+1. Define the smallest interface that expresses the client behavior the application needs. Do not expose SDK types unless the application genuinely operates on them.
+2. Implement it once for the local emulator and once for Azure with managed identity. Tests may register an in-memory implementation independently.
+3. Select the implementation once in the startup composition root, then inject it into handlers and domain services.
+4. Select local only when the platform environment is exactly `Development`. Missing, empty, misspelled, staging, and production values all select the managed-identity implementation.
+5. Validate the selected implementation before the app serves requests. Invalid production endpoint configuration must stop startup. Never recover by selecting an emulator, account key, SAS token, API key, or secret-bearing connection string.
+6. Keep environment checks out of the rest of the codebase.
+7. Keep the interface, both implementations, and factory together or under one provider folder. Use explicit names, document endpoints in `.env.example`, and put `"AZURE_FUNCTIONS_ENVIRONMENT": "Development"` in `local.settings.json`.
+
+This Blob Storage example shows the shape:
+
+```typescript
+import { DefaultAzureCredential } from '@azure/identity';
+import { BlobServiceClient } from '@azure/storage-blob';
+
+export interface BlobClientProvider {
+  getClient(): BlobServiceClient;
+}
+
+export class AzuriteBlobClientProvider implements BlobClientProvider {
+  getClient(): BlobServiceClient {
+    return BlobServiceClient.fromConnectionString(
+      requireSetting('AZURITE_CONNECTION_STRING'),
+    );
+  }
+}
+
+export class ManagedIdentityBlobClientProvider implements BlobClientProvider {
+  getClient(): BlobServiceClient {
+    const account = requireSetting('AZURE_STORAGE_ACCOUNT');
+    return new BlobServiceClient(
+      `https://${account}.blob.core.windows.net`,
+      new DefaultAzureCredential(),
+    );
+  }
+}
+
+export function createBlobClientProvider(): BlobClientProvider {
+  if (process.env.AZURE_FUNCTIONS_ENVIRONMENT === 'Development') {
+    return new AzuriteBlobClientProvider();
+  }
+
+  return new ManagedIdentityBlobClientProvider();
+}
+```
+
+Call the factory from the composition root, not from request handlers. Mirror the same boundary in Python with a `Protocol` and in .NET with an interface plus startup DI registration. Use the equivalent managed-identity credential for every other Azure client.
 
 ---
 
@@ -95,49 +155,32 @@ export interface ICacheService {
 
 > ⚠️ **Use flat config structure** (not nested objects). Canonical shape — tests and implementation must agree. Flat fields are simpler (`config.databaseUrl` not `config.database.url`), avoid ambiguity when multiple agents scaffold independently.
 >
-> Only list env vars project uses. `REQUIRED_VARS` array drives validation and documentation. **Enhancement service vars** (e.g., `AZURE_OPENAI_ENDPOINT`) are NOT required — accessed via `process.env` directly, may be `undefined`.
+> Only list env vars the project uses. Provider factories validate the settings needed by the selected implementation. **Enhancement service vars** (e.g., `AZURE_OPENAI_ENDPOINT`) are NOT required — accessed via `process.env` directly, may be `undefined`.
 
 ```typescript
 // services/config.ts
 export interface AppConfig {
-  databaseUrl: string;
-  storageConnectionString: string;
-  jwtSecret: string;
-  azureOpenAiEndpoint: string | undefined;  // Optional — Enhancement service
-  azureOpenAiApiKey: string | undefined;    // Optional — Enhancement service
-  nodeEnv: string;
+  environment: string;
+  azureOpenAiEndpoint: string | undefined;  // Optional Enhancement service
 }
 
-const REQUIRED_VARS = ['DATABASE_URL', 'STORAGE_CONNECTION_STRING', 'JWT_SECRET'] as const;
-
-export function validateEnvironment(): string[] {
-  const missing: string[] = [];
-  for (const varName of REQUIRED_VARS) {
-    if (!process.env[varName]) {
-      missing.push(varName);
-    }
+export function requireSetting(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
   }
-  return missing;
+  return value;
 }
 
 export function loadConfig(): AppConfig {
-  const missing = validateEnvironment();
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}\n\nCopy .env.example to .env and fill in the values.`
-    );
-  }
-
   return {
-    databaseUrl: process.env.DATABASE_URL!,
-    storageConnectionString: process.env.STORAGE_CONNECTION_STRING!,
-    jwtSecret: process.env.JWT_SECRET!,
+    environment: process.env.AZURE_FUNCTIONS_ENVIRONMENT ?? 'Production',
     azureOpenAiEndpoint: process.env.AZURE_OPENAI_ENDPOINT,
-    azureOpenAiApiKey: process.env.AZURE_OPENAI_API_KEY,
-    nodeEnv: process.env.NODE_ENV ?? 'development',
   };
 }
 ```
+
+Provider constructors or factories call `requireSetting` for the selected implementation's settings. For example, a local PostgreSQL provider may require `DATABASE_URL`, while its production provider requires the Azure PostgreSQL host/database names and obtains an Entra access token with `DefaultAzureCredential`. Do not require local emulator settings in production or production resource settings in explicit development mode. The default environment is `Production`, never `Development`.
 
 ### Concrete Implementation (PostgreSQL Example)
 
@@ -176,7 +219,7 @@ export function loadConfig(): AppConfig {
 - `registerServices(registry)` — stores provided services (used by tests)
 - `getServices()` — returns services; auto-initializes if none registered
 - `clearServices()` — resets to null (used in test teardown)
-- `initializeServices()` — creates concrete instances; Essential services can throw, Enhancement services wrapped in try/catch with no-op fallback
+- `initializeServices()` — selects local or production providers once, validates them, and creates concrete instances; Essential services can throw, Enhancement services use an explicit no-op fallback rather than a local implementation
 
 ### Usage in Function Handlers
 
