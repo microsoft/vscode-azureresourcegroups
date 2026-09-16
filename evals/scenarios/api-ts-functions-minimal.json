@@ -1,0 +1,41 @@
+{
+    "schemaVersion": "1",
+    "id": "api-ts-functions-minimal",
+    "prompt": "Build a minimal backend-only TypeScript Azure Functions API with health, list, and create endpoints for ephemeral notes, no database, no authentication, and unit tests.",
+    "baselinePrompt": "Build a complete minimal backend-only ephemeral notes project using a TypeScript Azure Functions API with health, list, and create endpoints, no database, no authentication, and unit tests. Implement all application code and configuration, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging the API, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "typescript-functions",
+        "database": "none",
+        "auth": "none",
+        "complexity": "low"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["No datastore required"],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 5
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 90,
+            "probes": [
+                {
+                    "name": "health endpoint",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200,
+                    "debugPort": 9229,
+                    "debugProtocol": "cdp"
+                }
+            ]
+        }
+    }
+}

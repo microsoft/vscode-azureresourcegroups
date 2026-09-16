@@ -1,0 +1,23 @@
+# expect: stackKnownGapBinaryNotRequired
+# Declares a gap for a binary this stack never needs. Nothing here could be red
+# for that reason, so the declaration can only mislead whoever reads it.
+schemaVersion: 1
+id: gap-for-unrequired-binary
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps:
+  - gates: [runtime-app-starts]
+    reason: functionsHostUnavailable
+    binary: func
+    tracking: this stack is not a Functions app and never calls func
+phases: [plan]

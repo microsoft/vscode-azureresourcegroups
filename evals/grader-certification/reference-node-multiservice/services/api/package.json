@@ -1,0 +1,19 @@
+{
+    "name": "@app/api",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "start": "node dist/index.js",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@azure/storage-blob": "^12.26.0",
+        "pg": "^8.13.1"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.2",
+        "vitest": "^2.1.8"
+    }
+}

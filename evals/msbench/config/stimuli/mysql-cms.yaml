@@ -1,0 +1,129 @@
+# Stimulus `mysql-cms`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# Written to reach product logic that already exists and currently cannot fire.
+#
+# `scaffold/scripts/scaffold-conformance.ps1` carries three MySQL-specific BLOCK
+# rules — DB-TLS-ON (`require_secure_transport`), MYSQL-NO-NETWORK-BLOCK (an
+# empty `delegatedSubnetResourceId` is rejected by ARM with
+# `LinkedInvalidPropertyId`) and the MySQL half of DB-LOGIN-NOT-RESERVED. Every
+# one of them is gated on a MySQL resource appearing in the IaC, and no stimulus
+# in this suite has ever asked for MySQL: the datastore corpus is PostgreSQL,
+# Cosmos, or nothing. Three rules were written against real deployment failures
+# and have never had the chance to run.
+#
+# ── What a real run showed, which reversed this file's assertion twice ────────
+#
+# First draft asserted `MySQL`. I then talked myself out of it from the docs:
+# `azure-project-plan/requirements.md` fixes the `dataStores` option set — `No
+# datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`,
+# `CosmosDB`, `Redis`, `Azure SQL` — and pins `allowFreeformInput: false`. MySQL
+# appears nowhere in it, so asserting MySQL looked like demanding a contract
+# violation: a harness fault wearing a finding's clothes. I weakened the needle
+# to `SQL`, reasoning it would match the two legal relational stores.
+#
+# Run 2026083159733325 showed both steps were wrong.
+#
+# The agent recommended `["MySQL", "Blob Storage"]`. It did not substitute a
+# listed store — it *extended the option list*, emitting `{"label": "MySQL",
+# "description": "MySQL relational database"}` while still correctly setting
+# `allowFreeformInput: false`. Graded against that real artifact:
+#
+#     --assert-datastore-includes=MySQL       MATCH
+#     --assert-datastore-includes=PostgreSQL  no match
+#     --assert-datastore-includes=Azure SQL   no match
+#     --assert-datastore-includes=SQL         MATCH  <- only because "MySQL"
+#                                                       contains "SQL"
+#
+# So `SQL` passed for the wrong reason and cannot distinguish "substituted a
+# legal store" from "invented an option" — the exact question it was rewritten to
+# ask. The assertion is back to `MySQL`, which is now backed by measurement
+# rather than by reading the option table.
+#
+# The doc and the product disagree, and the product looks right: Azure Database
+# for MySQL is a real service, `scaffold-conformance.ps1` already carries MySQL
+# BLOCK rules, and the agent reaches for it when asked. The incomplete thing is
+# the option list in `requirements.md`. That is a doc gap to raise, not something
+# to encode into a weaker gate.
+#
+# ── A second run reversed it once more, and is why this is a probe ────────────
+#
+# Run 2026083177939774 ran the corrected `MySQL` needle and went RED, with:
+#
+#     Expected a datastore matching "MySQL" in recommendedChoice, got: Blob Storage
+#
+# Same prompt, same needle, opposite outcome. The artifact explains it. The agent
+# understood the constraint completely — 28 mentions of MySQL, an explicit
+# "Tech constraint: MySQL database (team already knows it)" in its reasoning —
+# and then emitted `recommendedChoice: ["Blob Storage"]` with this rationale:
+#
+#     "Blob Storage is mandatory for image uploads. Team prefers MySQL for
+#      relational data (Azure Database for MySQL), which will be configured in
+#      the plan."
+#
+# Its `options` array was the canonical seven from `requirements.md` line 133,
+# unextended, with `allowFreeformInput: false`. So across two runs the agent met
+# the same unsatisfiable choice and resolved it two different ways:
+#
+#   run 2026083159733325  invented a MySQL option   -> user intent kept, spec broken
+#   run 2026083177939774  obeyed the fixed list     -> spec kept, user intent lost
+#
+# There is no third outcome where both hold, because the option table makes that
+# combination impossible. Run 2's result is the worse of the two on the merits: a
+# CMS whose structured requirements name no relational datastore at all.
+#
+# That is a product finding, not a harness one, and it is not this suite's to fix
+# from a stimulus. Asserting `MySQL` would be correct and would also be red on
+# roughly every other run — a shared suite cannot carry that. So the check below
+# is RECORDED, NOT ASSERTED, joining the four other constraint-fidelity probes in
+# this suite. The evidence still lands in `session.sqlite` on every run, so the
+# day the option list gains MySQL this flips back to an assertion by deleting one
+# line (`assertZeroExitCode: false`) — and until then, nothing is being hidden.
+#
+# Two runs establish that both behaviours occur. They do NOT establish a rate;
+# do not quote one.
+
+promptSteps:
+  - text: |
+      We're rebuilding our marketing site as a small CMS — editors log in, write
+      articles, upload images, and publish them. Our team already knows MySQL and
+      we have existing tooling around it, so please use MySQL for the database.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      - comment: requirements.json satisfies the requirements contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+
+      # Substring, so the exact product name ("Azure Database for MySQL - Flexible
+      # Server") can change without this becoming a test of Azure's marketing copy.
+      #
+      # Recorded, not asserted: see the header. The agent cannot legally select
+      # MySQL today, so this is red about as often as it is green, and the cause
+      # is a gap in the `dataStores` option table rather than anything the agent
+      # or this harness does wrong. Delete `assertZeroExitCode: false` to re-arm
+      # once that table lists MySQL.
+      - comment: Probe; does requirements.json carry the user's stated MySQL preference?
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-datastore-includes=MySQL
+        assertZeroExitCode: false
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      - comment: Triage; which question ids did the agent capture?
+        exec: 'grep -o "\"id\": *\"[^\"]*\"" .azure/requirements.json 2>/dev/null | head -40'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

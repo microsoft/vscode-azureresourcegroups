@@ -1,0 +1,7 @@
+# expect: containerBinaryNoteMissing
+# Refusing a stack outright needs a reason the reader can check.
+schemaVersion: 1
+verifiedOn: '2026-08-25'
+binaries:
+  node: { status: present, evidence: measured }
+  docker: { status: unavailable, evidence: asserted }

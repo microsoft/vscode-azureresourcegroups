@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `scaffold` — the project-scaffold phase.
+#
+# See config/phases/plan.yaml for what a phase file is and why the layer exists.
+# This one drives `azure-project-scaffold`, whose contract starts by *reading* an
+# already-approved `.azure/project-plan.md` rather than writing one, so the
+# defining difference from the plan phase is that the workspace is not empty
+# when turn 0 begins.
+
+# The agent under test. As in the plan phase, it ships inside the VSIX via
+# contributes.chatAgents, but custom modes are resolved from the workspace's
+# .github/agents — so the script below seeds it there too.
+chatMode: azure-project-scaffold
+
+# Turned OFF here, and this is the key that makes the rest of the phase's
+# assertion style non-negotiable.
+#
+# The default is `true`: the whole workspace filesystem is snapshotted into the
+# `files` table after *every* step. Scaffolding runs a real `npm install` and a
+# real build, so a snapshot would copy `node_modules` into session.sqlite once
+# per step. The schema's own description names that outcome — snapshotting every
+# file after each step "can produce multi-gigabyte session.sqlite files (and time
+# out the run)".
+#
+# The cost of turning it off is that `files` is empty, and the schema is explicit
+# about how that is enforced:
+#
+#   "To avoid silent/confusing results, the run fails fast if snapshotting is
+#    disabled while any assertion queries the 'files' table."
+#
+# So every artifact assertion in a scaffold stimulus must be `exec:`, not SQL over
+# `files`. What still works with snapshotting off, per the same description:
+# exec/command assertions, tool-call assertions, and LLM-response assertions —
+# which between them cover everything these stimuli need. `build-config.ts`
+# re-implements that fail-fast locally, so the mistake costs milliseconds here
+# rather than a paid run that fails in-container.
+snapshotWorkspace: false
+
+# Two jobs, in order.
+#
+# 1. Seed the agent definition, unpacked from the VSIX we just installed rather
+#    than cloned from GitHub — identical to the plan phase, for the identical
+#    reason: it keeps the instructions exactly in step with the build under test,
+#    where cloning a branch would let the two drift and silently grade the wrong
+#    version of the prompt.
+#
+# 2. Copy in the starting workspace, if there is one. `assets/workspace/` is
+#    written by stage-workspace.ts from the stimulus's `# seed:` directive, and is
+#    absent for `# seed: none` — hence the guard, which is what lets
+#    scaffold-missing-plan share this phase with the seeded stimuli instead of
+#    needing a phase of its own. The `.` suffix copies the *contents*, so
+#    `.azure/` lands at the workspace root rather than nested.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/
+  if [ -d /agent/assets/workspace ]; then
+    cp -r /agent/assets/workspace/. /workspace/
+  fi
+  ls -la /workspace/ /workspace/.azure 2>&1 || true

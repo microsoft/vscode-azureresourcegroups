@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `deploy-scaffold` — the IaC-generation half of the deploy agent.
+#
+# See config/phases/plan.yaml for what a phase file is and why the layer exists.
+#
+# ── Why the deploy agent gets a phase that never deploys ──────────────────────
+#
+# `azure-deploy` covers two very different jobs, and the product already separates
+# them. Its `scaffold` sub-phase generates Bicep or Terraform and validates it;
+# its `deploy` sub-phase provisions. Only the first is affordable to grade, and
+# the split is not one this harness invented to make that true —
+# `azure-deploy/scaffold/references/subagent-validate.md` states it as a rule the
+# agent must follow:
+#
+#   "Do NOT create or modify Azure resources — validation is syntax-only
+#    (`bicep build` / `terraform validate`), never `az deployment sub create`."
+#   "Do NOT run `what-if` or `terraform plan` — deploy runs the mandatory what-if
+#    with real secret params. Scaffold validates syntax only."
+#
+# So this phase grades a contract the agent already has, at the boundary the agent
+# already draws. There is no `deploy` phase that provisions, and adding one would
+# mean a metered Azure subscription and a real spend per run — which is a decision
+# about money, not about coverage.
+#
+# The corollary is that a run of this phase reaching Azure is itself a finding.
+# The stimulus asserts that no provisioning tool call was made, so an agent that
+# ignores the rule above fails rather than quietly costing money.
+chatMode: azure-deploy
+
+# Off, for the same reason as the scaffold phase: `files` snapshots the whole
+# workspace after every step, and the schema fails a run fast if snapshotting is
+# disabled while an assertion queries `files`. Every artifact check in this
+# phase's stimuli is therefore an `exec:` grader.
+#
+# IaC generation writes only text, so the multi-gigabyte session.sqlite risk that
+# forced the scaffold phase's hand does not apply here. It is off anyway because
+# the README's preference for `exec:` graders over SQL-over-`files` is independent
+# of that risk, and a phase that permits both invites the weaker form.
+snapshotWorkspace: false
+
+# Identical to the scaffold phase: unpack the agent definitions from the VSIX
+# under test rather than cloning them, so the instructions cannot drift from the
+# build being graded, then copy in the starting workspace if the stimulus seeded
+# one.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/
+  if [ -d /agent/assets/workspace ]; then
+    cp -r /agent/assets/workspace/. /workspace/
+  fi
+  ls -la /workspace/ /workspace/.azure 2>&1 || true
+  # The Bicep CLI is a separate download and is NOT implied by `az`. Measured in
+  # run 2026082773787007: the container has az 2.89.1 and `bicep=MISSING`, with
+  # `az bicep version` reporting "Bicep CLI not found".
+  #
+  # Installed here rather than left to the first `az bicep build` because the
+  # agent's own validation step runs that command too — so without this the agent
+  # is graded on a toolchain its instructions assume and the container lacks.
+  # Non-fatal: if the download fails the grader reports a harness fault by design,
+  # which is a better outcome than a phase that cannot start.
+  az bicep install && az bicep version || echo "WARNING: bicep unavailable; iac-compiles will report a harness fault"

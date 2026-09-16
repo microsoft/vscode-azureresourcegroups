@@ -1,0 +1,13 @@
+# expect: gateArgValue
+# an arg that is not a flag; it would be passed to the grader as a positional argument and silently ignored.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: bad arg
+    phases: [plan]
+    requires: {}
+    args:
+      - value: require-health
+        when: { project.healthPath: present }

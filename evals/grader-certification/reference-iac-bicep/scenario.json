@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-reference-iac-bicep",
+    "prompt": "Build a task tracking API backed by PostgreSQL, then generate the Azure infrastructure to host it on Container Apps.",
+    "baselinePrompt": "Create a task tracking API backed by a PostgreSQL database. It exposes REST endpoints to create, list, update and delete tasks. Generate the Azure infrastructure needed to host it on Container Apps, including the managed environment, the database, and the role assignments that let the app reach the database using a managed identity.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "node",
+        "database": "postgres",
+        "auth": "managed-identity",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ],
+        "auth": "Managed identity"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": false,
+        "test": false,
+        "lint": "skip",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}
