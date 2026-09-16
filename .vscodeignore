@@ -37,3 +37,6 @@ component-detection-pip-report.json
 esbuild.mjs
 eslint.config.mjs
 .nvmrc
+
+# Whitelist changelog images
+!docs/images/copilot-create-project/01-launch-azure-project-view.png
