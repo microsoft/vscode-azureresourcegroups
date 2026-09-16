@@ -61,7 +61,8 @@ feature:
 3. **Integrates** the pieces — wires the frontend to live backend data, creates the database schema, and
    smoke‑tests every endpoint so the app actually runs.
 4. **Configures local debugging** — emulators, VS Code launch/task configs, and API tests.
-5. **Prepares deployment** — generates Bicep/Terraform, `azure.yaml`, and Dockerfiles ready for `azd up`.
+5. **Deploys to Azure** — selects services, generates and validates Bicep/Terraform, provisions the
+   resources, deploys each application service, and checks the live endpoints.
 
 You approve the work at each gate. Nothing is deployed to Azure and no code is submitted anywhere without
 your explicit action.
@@ -99,7 +100,7 @@ flowchart TD
     Next2 -->|"start_deployment"| Deploy
 
     subgraph Deploy["6 · azure-deploy"]
-        DepPlan["prepare-plan.json"] --> Progress["Deployment progress view"] --> Infra["Bicep/Terraform + azure.yaml"] --> AzdPkg["Validate: azd package"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
+        DepPlan["prepare-plan.json"] --> Progress["Deployment progress view"] --> Infra["Bicep/Terraform"] --> Arm["Provision with ARM"] --> CodeDeploy["Deploy each app service"] --> DepResult["deploy-result.json"] --> ResultView["Deployment results view"]
     end
 
     StartupReport -.-> Plan
@@ -107,7 +108,7 @@ flowchart TD
     StartupReport -.-> Integrate
     StartupReport -.-> Debug
     StartupReport -.-> Deploy
-    Deploy --> Done(["azd up"])
+    Deploy --> Done(["Live Azure deployment"])
 ```
 
 Each box is a **chat agent** (a `*.agent.md` under `resources/agents/`). Agents hand off to each other by
@@ -291,8 +292,7 @@ machine** — if it isn't started, generation asks before starting it. You can s
 ## Stage 7 — Deploy to Azure
 
 Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
-`.azure/prepare-plan.json` (or, when it runs with a deploy session, to
-`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`, and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
+`.copilot-azure/sessions/{id}/prepare-plan.json` and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. Existing service boundaries are preserved: for example, a scaffolded SPA and Azure Functions API remain a frontend service and a separate Function App. Static Web Apps can host the frontend, but the agent must not convert the Functions project into an SWA-managed API or switch its authentication provider to `azureStaticWebApps`. After you approve, the agent generates and validates Bicep or Terraform, provisions it through Azure Resource Manager, deploys each application service through its service-specific channel, and health-checks the result. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built-in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
 
@@ -428,7 +428,7 @@ calls from later turns in the same chat are ignored.
 | 3 | `azure-project-integrate` | `.azure/integration-plan.md` | migrations, live‑wired frontend | `start_local_development` |
 | 4 | `azure-debug-plan` | project source | `.azure/vscode-debug-plan.md` | `start_azure_debug_generate` |
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
-| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
+| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, Dockerfiles, `deploy-result.json` | Live, health-checked Azure deployment |
 
 After a successful deploy, `azure-deploy` also **runs the project's outstanding database migrations**
 rather than leaving them as a manual next step. It reaches the database in tier order — inside the
@@ -475,7 +475,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
-| `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
+| `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
 | `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |

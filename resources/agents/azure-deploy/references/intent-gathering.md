@@ -28,6 +28,11 @@
 
 Prereq has written `prereq-output.json` and `context.json.components[]` — this is the authoritative source for all downstream phases (prepare and scaffold consume `context.json`, not `prereq-output.json`). 
 
+Present the detected component boundaries before asking questions. Include each deployable component's path,
+framework, and intended Azure compute model. For a SPA plus Azure Functions project, state both mappings
+explicitly: the frontend remains its own hosting service and the backend remains a separate Function App.
+Do not infer an SWA-managed API merely because the frontend uses `/api` routes.
+
 Confirm the Azure target ("☁️ **Azure target**: {subscriptionName} ({subscriptionId})"). If the user wants a different subscription, write to `context.json.overrides[]`.
 
 **Present scan results first, then ask only what prereq didn't answer** (≤2 if mostly covered, ≤4 if gaps):

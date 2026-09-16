@@ -4,11 +4,18 @@ Component→Azure service selection. Apply `context.json.intent` as modifiers, `
 
 ## Hosting
 
+> ⛔ **Existing framework beats generic component type.** If a component path contains a `host.json` file
+> and an Azure Functions SDK or worker configuration, select Azure Functions for that component. Do not
+> route it through the generic REST/GraphQL API row, merge it into a frontend service, or package it as an
+> SWA-managed API. When a SPA and Functions component coexist, `services[]` must contain separate frontend
+> and Azure Functions entries whose `component` values match the detected component names.
+
 > ⛔ **Implicit dependencies:** When selecting Container Apps and the component has a Dockerfile (or `hasDockerfile: true` in prereq), **ALWAYS include Container Registry (Basic)** in `services[]`. Container Apps requires ACR to host custom images — omitting it forces an imperative add during deploy, wasting a healing round. ACR Basic is $0.17/day (~$5/mo).
 
 | Component Type | Primary Service | Alternatives | Selection Signal |
 |---------------|----------------|-------------|-----------------|
 | SPA Frontend | Static Web Apps | Blob + CDN | React/Vue/Angular, no SSR |
+| Existing Azure Functions project | Azure Functions (Flex Consumption) | Azure Functions Premium | `host.json` plus Functions SDK or worker configuration |
 | SSR Web App | Container Apps | App Service, AKS | Next.js/Nuxt, server-rendered |
 | REST/GraphQL API | Container Apps | App Service, Functions, AKS | Express/Fastify/Flask/FastAPI |
 | Background Worker | Container Apps (scale-to-zero) | Functions, AKS | Celery/Bull/Agenda, no HTTP |
@@ -18,6 +25,13 @@ Component→Azure service selection. Apply `context.json.intent` as modifiers, `
 | GPU/ML Workloads | AKS | Azure ML | GPU requirements, training workloads |
 
 **Stack shortcuts:** Containers (Docker, microservices) → Container Apps or AKS. Serverless (event-driven, variable traffic) → Functions. Traditional web (PaaS preference) → App Service.
+
+**Frontend plus Functions:** Default to a detached frontend host and a separately deployed Function App.
+For Static Web Apps, configure the Function App CORS allowlist with the SWA origin. Do not change the
+Function App's runtime, authentication provider, or app settings to `azureStaticWebApps`. Only link the
+existing Function App as an SWA backend when `context.json.overrides[]` records explicit user approval for
+`linkFunctionsToStaticWebApp`; linking does not remove the Function App service or change its deployment
+channel.
 
 **AKS vs Container Apps:** Use Container Apps when scale-to-zero needed, no K8s expertise, or KEDA-driven event processing. Delegate AKS planning to the `azure-kubernetes` agent.
 

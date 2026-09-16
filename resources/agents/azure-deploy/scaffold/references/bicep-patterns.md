@@ -199,9 +199,12 @@ module api './modules/api.bicep' = {
 resource never references the backend in Bicep. The backend may therefore reference the frontend hostname
 freely. Do **not** add the API URL to the SWA resource to "pair" them — that is what creates a cycle.
 
-**Alternative that removes CORS entirely:** linking the API as a SWA backend makes the frontend call
-`/api/*` on its own origin, so no preflight occurs at all. That changes the deploy topology, so prefer the
-explicit `cors` block above unless the plan already calls for a linked backend.
+**Alternative that removes CORS entirely:** linking an existing Function App as an SWA backend makes the
+frontend call `/api/*` on its own origin, so no preflight occurs. This is allowed only when
+`context.json.overrides[]` records explicit user approval for `linkFunctionsToStaticWebApp`. The Function
+App remains a separate resource and uses the Functions deployment channel. Never move or copy its source
+into an SWA API directory, emit SWA `buildProperties.apiLocation`, or change the backend's runtime or
+authentication provider to `azureStaticWebApps`.
 
 **Self-review check:** If the plan has a browser frontend AND a separate HTTP API resource, verify the API's
 `siteConfig.cors.allowedOrigins` contains the frontend origin. **FLAGGED** if absent — the app will deploy

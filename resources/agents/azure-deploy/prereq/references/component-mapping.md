@@ -7,6 +7,7 @@ Determine if each detected component maps to a known Azure service.
 | Component Type | Mappable Azure Services |
 |----------------|------------------------|
 | SPA / Static Site | Static Web Apps, Blob + CDN |
+| Existing Azure Functions project | Azure Functions |
 | SSR Web App | Container Apps, App Service |
 | REST / GraphQL API | Container Apps, App Service, Functions |
 | Background Worker | Container Apps, Functions |
@@ -20,6 +21,22 @@ Determine if each detected component maps to a known Azure service.
 | Some components need clarification | ⚠️ WARN |
 | Unknown component type, can't map | ⚠️ WARN — ask user for context |
 | Component is fundamentally incompatible | ❌ FAIL |
+
+## Preserve Existing Compute Models
+
+The table above describes what can host newly designed components. It does not permit replatforming an
+existing component whose framework already selects a compute model.
+
+- `host.json` plus an Azure Functions SDK or worker signal identifies an Azure Functions project. Map it to
+  Azure Functions even when all of its triggers are HTTP triggers.
+- Keep separate service roots as separate components. A SPA root and a Functions root produce a frontend
+  component and a backend component.
+- Static Web Apps may host the frontend, but an existing Functions root must not become an SWA-managed API.
+  Do not move or copy its source under an SWA API directory and do not change its runtime or authentication
+  provider to `azureStaticWebApps`.
+- A detached Static Web App plus Function App with explicit CORS is the default. Linking the separately
+  deployed Function App as an SWA backend requires explicit user approval and must be recorded in
+  `context.json.overrides[]`.
 
 ## Step 2: Existing Infrastructure Check
 

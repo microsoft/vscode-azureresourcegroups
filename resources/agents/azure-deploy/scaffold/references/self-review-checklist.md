@@ -50,6 +50,7 @@ Validate against pattern files loaded at Steps 3–5 and [rbac-roles.md](rbac-ro
 | ⛔ No `Microsoft.KeyVault/vaults` resource | No Key Vault is created — app-internal secrets are stored on the compute resource → any KV resource is ⛔ **FLAGGED** | `bicep-patterns-security.md` § No Key Vault |
 | App-internal secrets passed as `@secure()` params → App Service `appSettings` / CA native `secrets` | `bicep-patterns-security.md` § Secrets |
 | Prereq `warnings[]` each have a corresponding IaC fix | Read [`env-var-secrets.md`](env-var-secrets.md) for SSL/TLS fixes |
+| Detected Azure Functions topology preserved | Every Azure Functions component in `context.json.components[]` has a planned Azure Functions service and a `Microsoft.Web/sites` Function App resource. If an SWA frontend is also present, no `buildProperties.apiLocation`, SWA-managed API source copy, or `azureStaticWebApps` backend auth/runtime setting appears. Missing or merged Function App → `FLAGGED`. |
 | Container Apps: two-phase ACR wiring, `registries` populated when ACR in plan, port alignment | `bicep-container-apps.md` |
 | ⛔ BuildKit Dockerfile without `Dockerfile.azure` | `hasBuildKitSyntax == true` but no `Dockerfile.azure` in `files[]` → ⛔ **MANDATORY FAIL**. ACR does not support BuildKit. |
 | ⛔ Role assignment `scope` targets specific resource, not `resourceGroup()` | `rbac-roles.md` |
