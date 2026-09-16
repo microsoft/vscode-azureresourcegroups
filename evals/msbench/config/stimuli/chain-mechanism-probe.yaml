@@ -1,0 +1,172 @@
+# phase: chain-probe
+#
+# Stimulus `chain-mechanism-probe` — the cheapest run that can answer the two
+# questions a phase chain is blocked on.
+#
+#   1. Does `promptSteps[].chatMode` actually change which agent answers?
+#   2. Does step 1 inherit step 0's conversation?
+#
+# Both are currently assumptions. (1) is schema-declared and runner-unverified.
+# (2) has never been asked, and matters more.
+#
+# WHY THIS RUN EXISTS RATHER THAN A DIRECT ATTEMPT AT THE CHAIN
+#
+# The alternative was to build the four-phase chain and read the failure. That
+# costs a full product run — the scaffold phase alone was 874s and ~2.6M tokens —
+# and it answers ambiguously: a chain that misbehaves could be the runner
+# ignoring `chatMode`, or the agents behaving badly, or the transcript growing
+# past what the models handle. This run separates the harness question from the
+# product question, so the expensive run only has to answer one of them.
+#
+# WHAT WAS ALREADY SETTLED WITHOUT A RUN, AND WHY IT IS NOT ASKED HERE
+#
+# The other candidate mechanism was to let the *product* drive the transition:
+# the scaffold agent calls `start_project_integrate`, and the flow moves on. That
+# was refuted by reading the source rather than by running anything.
+# `launchAgentChat` (src/commands/copilotOnRails/openChatWithAgent.ts:141) does:
+#
+#     await vscode.commands.executeCommand('workbench.action.chat.newChat');
+#     await vscode.commands.executeCommand('workbench.action.chat.open', { mode: agentName, query });
+#
+# with the comment "Fresh chat session per phase hand-off: agents coordinate
+# through the `.azure/*` plan files on disk, not chat history". Every hand-off in
+# the flow takes that path. `promptSteps` drives ONE session, so the product's
+# hand-off would move the work into a session the harness is not watching, and
+# the run would read as an agent that stopped after turn 0. No run needed to know
+# that, and none was spent.
+#
+# WHY QUESTION 2 IS THE IMPORTANT ONE
+#
+# Question 1 is binary and its failure is loud: if the override is ignored, the
+# same agent answers twice and assertion 3 goes red. Question 2 is quiet, and it
+# decides two separate things.
+#
+#   Fidelity. The product gives every phase a FRESH session — that is what the
+#   `newChat` above is. If the runner instead relabels the mode inside one
+#   conversation, then a "chain" has each phase inheriting its predecessor's
+#   transcript, which is a shape the product never produces. The chain would
+#   still run; it would just be testing something the product does not do.
+#
+#   Cost. Shared transcript is the superlinear curve already measured here: one
+#   extra turn multiplied total tokens by 6.3x, because every step re-sends a
+#   transcript that is itself growing. Across four phases that is the difference
+#   between a run that fits inside `agentSeconds: 4500` and one that does not.
+#
+# So assertion 4 is the one to read first. It is also the one most likely to be
+# misread: see its comment for why a green there is weaker evidence than it looks.
+
+promptSteps:
+  # ─── Turn 0: azure-project-plan (inherited from the phase) ─────────────────
+  #
+  # No `chatMode` key, deliberately. This step takes the phase's top-level mode,
+  # which establishes the baseline: whatever answers here is what the config says
+  # should answer. If the override in step 1 changes nothing, both turns look
+  # like this one.
+  #
+  # The marker phrase is the instrument for question 2. It has to be a string
+  # that cannot plausibly appear in step 1's answer by chance, and that the agent
+  # will emit verbatim — hence a nonsense token rather than an English phrase.
+  - text: |
+      Reply with exactly this word and nothing else: ZEBRAFISH-7741
+
+      Do not create, modify or read any files. Do not call any tools. Do not
+      explain. This is a connectivity check.
+    assertions:
+      # Liveness sentinel — must come first, and one per turn. Every other check
+      # in this stimulus is about which agent spoke and what it could see; all of
+      # them pass trivially against an empty table.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # Question 2's setup, asserted rather than assumed. If the agent did not
+      # emit the marker, assertion 4 below cannot distinguish "step 1 could not
+      # see step 0" from "there was nothing to see" — a false green on the
+      # question this run exists to answer.
+      - comment: Turn 0 emitted the marker, so the inheritance check below is meaningful
+        query: SELECT COUNT(*) > 0 FROM llm_responses WHERE response LIKE '%ZEBRAFISH-7741%'
+
+  # ─── Turn 1: azure-debug-plan, via the per-step override ───────────────────
+  #
+  # THE MECHANISM UNDER TEST. `azure-debug-plan` is chosen because it is a real
+  # shipped agent, it is a plausible later phase in a real chain, and its
+  # instructions differ enough from `azure-project-plan` that an agent running
+  # under it can say so. Nothing about this turn requires it to do debug work.
+  - chatMode: azure-debug-plan
+    text: |
+      Two questions. Answer both in one short reply, nothing else.
+
+      First: state the name of the chat mode or agent you are currently running
+      as, exactly as it is configured.
+
+      Second: state whether any earlier message exists in this conversation. If
+      one does, quote it verbatim. If this is the first message you have seen,
+      reply with exactly: NO-PRIOR-CONTEXT
+
+      Do not create, modify or read any files. Do not call any tools.
+    assertions:
+      # Second sentinel. A run that completes turn 0 and dies before turn 1 would
+      # otherwise leave every check below vacuously true — and this stimulus is
+      # unusually exposed to that, because two of its three remaining assertions
+      # are negative.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # QUESTION 1: did the override take effect?
+      #
+      # Scoped to step 1 by the implied stepIndex filter, so this is specifically
+      # "the agent answering the SECOND turn named the overridden mode". A green
+      # here means the runner honours `promptSteps[].chatMode` and mechanism (a)
+      # is real.
+      #
+      # Deliberately matched on the mode name rather than on behaviour. Behaviour
+      # would be the stronger evidence, but it costs a real product run to
+      # observe and would fail for reasons unrelated to the mechanism.
+      - comment: Turn 1 ran under the overridden chat mode
+        query: SELECT COUNT(*) > 0 FROM llm_responses WHERE response LIKE '%azure-debug-plan%'
+
+      # QUESTION 2: does turn 1 inherit turn 0's conversation?
+      #
+      # READ THIS ONE FIRST, and read it carefully — a green is weaker evidence
+      # than it looks.
+      #
+      #   RED   => the runner relabels the mode within ONE conversation. The
+      #            chain would work, but every phase would inherit its
+      #            predecessor's transcript: unfaithful to the product, which
+      #            starts a fresh session per hand-off, and expensive, since the
+      #            transcript compounds across four phases.
+      #
+      #   GREEN => turn 1 could not see the marker. That is CONSISTENT with a
+      #            fresh session per step, which is what we want — but it is not
+      #            proof of one. An agent that was told "reply with only X" may
+      #            simply not have quoted the earlier message even though it
+      #            could see it. The companion assertion below is what makes the
+      #            green mean something: the agent is asked to say NO-PRIOR-CONTEXT
+      #            explicitly, so silence and denial are distinguishable.
+      #
+      # Both are needed. Neither alone settles it.
+      - comment: Turn 1 did not reproduce turn 0's marker
+        query: SELECT COUNT(*) = 0 FROM llm_responses WHERE response LIKE '%ZEBRAFISH-7741%'
+
+      # The other half of question 2. An explicit denial is positive evidence of
+      # a fresh session, where the absence above is only an absence.
+      #
+      # This is the assertion most likely to go red for a boring reason — the
+      # agent paraphrasing rather than emitting the exact token. If it is red
+      # while the assertion above is green, read the transcript before concluding
+      # anything: that combination is ambiguous by construction, and the raw
+      # response says which it was.
+      - comment: Turn 1 reported no prior context, so the absence above is a denial rather than silence
+        query: SELECT COUNT(*) > 0 FROM llm_responses WHERE response LIKE '%NO-PRIOR-CONTEXT%'
+
+      # Recorded, never asserted. `assertZeroExitCode: false` puts the output in
+      # the `exec` table without generating a check, so it cannot fail the run or
+      # change the assertion count.
+      #
+      # Worth reading whenever any assertion above is red: an unresolved custom
+      # mode silently opens the default Agent rather than erroring, which looks
+      # identical from the outside to "the runner ignored chatMode" and has a
+      # completely different fix. This lists what the phase script actually
+      # seeded, which separates the two.
+      - comment: Fingerprint; seeded agent definitions and environment
+        assertZeroExitCode: false
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "--- seeded agents ---"; ls -la /workspace/.github/agents/ 2>&1 | head -30'

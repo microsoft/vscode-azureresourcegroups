@@ -5,13 +5,12 @@
 
 import { callWithTelemetryAndErrorHandling, IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { gitHubCopilotForAzureExtensionId } from '../constants';
 import { settingUtils } from '../utils/settingUtils';
 import { askAgentAboutResourcePrompt } from './askAgentAboutResource';
 
-const GitHubCopilotForAzureExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
-
 export function registerChatStandInParticipantIfNeeded(context: vscode.ExtensionContext): void {
-    const ghcp4aInstalled = vscode.extensions.getExtension(GitHubCopilotForAzureExtensionId) !== undefined;
+    const ghcp4aInstalled = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId) !== undefined;
     const enableChatStandIn = vscode.workspace.getConfiguration('azureResourceGroups').get<boolean | undefined>('enableChatStandIn');
 
     if (ghcp4aInstalled || // If the GitHub Copilot for Azure extension is already installed, don't register the chat participant
@@ -55,7 +54,7 @@ async function chatStandIn(
 
 async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
     try {
-        await vscode.commands.executeCommand('workbench.extensions.installExtension', GitHubCopilotForAzureExtensionId);
+        await vscode.commands.executeCommand('workbench.extensions.installExtension', gitHubCopilotForAzureExtensionId);
     } catch {
         // Almost certainly the user cancelled the installation
         context.telemetry.properties.result = 'Canceled';

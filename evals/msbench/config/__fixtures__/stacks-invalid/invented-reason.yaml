@@ -1,0 +1,23 @@
+# expect: stackKnownGapReason
+# A reason code no grader emits. gate-health groups always-N/A gates by reason,
+# so an invented code produces a red that cannot be grouped with anything — which
+# is the situation the declaration exists to prevent.
+schemaVersion: 1
+id: invented-reason
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps:
+  - gates: [runtime-app-starts]
+    reason: somethingWentWrong
+    tracking: a code that reads fine and groups with nothing
+phases: [plan]

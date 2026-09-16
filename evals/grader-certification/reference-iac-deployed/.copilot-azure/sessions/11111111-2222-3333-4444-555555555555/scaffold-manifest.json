@@ -1,0 +1,38 @@
+{
+    "sessionId": "grader-reference-iac-bicep",
+    "scaffoldCompletedUtc": "2026-08-27T00:00:00Z",
+    "iacFormat": "bicep",
+    "targetScope": "resourceGroup",
+    "entryPoint": "infra/main.bicep",
+    "deployCommand": "az deployment group create --resource-group ${AZURE_RESOURCE_GROUP} --template-file infra/main.bicep",
+    "files": [
+        {
+            "path": "infra/main.bicep",
+            "purpose": "Container Apps managed environment and the user-assigned identity the app authenticates with"
+        }
+    ],
+    "selfReview": {
+        "findings": [
+            {
+                "area": "resource types",
+                "rating": "VERIFIED",
+                "detail": "Every resource type and API version resolves in the pinned Bicep type index, so none of them fall back to an unvalidated BCP081 shape."
+            }
+        ]
+    },
+    "validationResult": {
+        "status": "Validated",
+        "checks": [
+            {
+                "name": "bicep build",
+                "passed": true,
+                "detail": "az bicep build --file infra/main.bicep --stdout completed with no errors and no BCP diagnostics."
+            },
+            {
+                "name": "RBAC review",
+                "passed": true,
+                "detail": "The identity is declared for the app to consume; no role assignments are required by this template."
+            }
+        ]
+    }
+}

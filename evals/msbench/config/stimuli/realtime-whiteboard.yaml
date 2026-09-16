@@ -1,0 +1,59 @@
+# Stimulus `realtime-whiteboard`.
+# Concatenated onto config/base.yaml by build-config.ts.
+#
+# Every app this suite has planned follows the same request/response shape: a
+# browser asks, a server answers, the connection closes. A collaborative
+# whiteboard cannot work that way — it needs a connection that stays open and a
+# way to fan changes out to everyone else looking at the same board.
+#
+# That reaches hosting decisions nothing here has needed. A persistent
+# connection constrains the compute choice (Static Web Apps cannot terminate
+# one), usually pulls in a dedicated service such as Web PubSub or SignalR, and
+# raises the multi-instance question the CRUD apps never raise: with more than
+# one replica, two users on the same board can land on different instances
+# unless something carries messages between them.
+#
+# Schema-only assertion. A service count would be the obvious check and is the
+# wrong one — a defensible plan here is frontend + API, or frontend + API +
+# a realtime service, or frontend + API + a Redis backplane, and pinning an
+# exact number would fail correct plans for being differently correct. The
+# triage records which shape was chosen so a later flag can be written against
+# what the product actually does rather than what this comment guesses.
+
+promptSteps:
+  - text: |
+      I want to build a collaborative whiteboard — a few people open the same
+      board and can draw on it together, and everyone sees the strokes appear as
+      they happen. Cursors should show where other people are. It needs to feel
+      instant, not like it's refreshing.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Wording is pinned to photo-app-requirements.yaml: same exec means same
+      # gate, and the comment is that gate's only identifier in stored results.
+      - comment: requirements.json satisfies the requirements contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Triage; are the files-asserted paths on disk at all?
+        exec: 'echo ".azure/requirements.json: $(test -f .azure/requirements.json && echo present || echo absent)"'
+        assertZeroExitCode: false
+
+      # Recorded, not asserted. Shows whether the persistent-connection
+      # requirement reached the plan, and which shape was chosen for it.
+      - comment: Triage; how did the planner handle the persistent-connection requirement?
+        exec: 'grep -io "websocket\|web pubsub\|signalr\|socket\|realtime\|real-time\|redis\|backplane\|polling" .azure/requirements.json 2>/dev/null | sort | uniq -c | head -20'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

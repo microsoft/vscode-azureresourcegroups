@@ -1,0 +1,257 @@
+{
+  "schemaVersion": "2",
+  "generatedAt": "2026-07-21T00:00:00.000Z",
+  "mode": "NEW",
+  "summary": "A shared photo scrapbook app where users pair with another individual and share special moments via photos with AI-generated labels, plus a background cleanup worker.",
+  "workspaceSignals": {
+    "decision": "NEW",
+    "decisionReason": "Workspace is empty — no existing project files detected.",
+    "detectedFiles": []
+  },
+  "services": [
+    {
+      "id": "scrapbook-api",
+      "label": "Scrapbook API",
+      "role": "backend"
+    },
+    {
+      "id": "scrapbook-web",
+      "label": "Scrapbook Web",
+      "role": "frontend"
+    },
+    {
+      "id": "cleanup-worker",
+      "label": "Cleanup Worker",
+      "role": "worker"
+    }
+  ],
+  "questions": [
+    {
+      "id": "scrapbook-api:language",
+      "category": "service",
+      "question": "Which programming language for Scrapbook API?",
+      "header": "Language",
+      "answer": "TypeScript",
+      "status": "confirmed",
+      "rationale": "TypeScript is the most popular choice for Azure Functions APIs with modern tooling.",
+      "options": [
+        {
+          "label": "TypeScript",
+          "description": "Node.js + TypeScript on Azure Functions"
+        },
+        {
+          "label": "Python",
+          "description": "Python on Azure Functions"
+        },
+        {
+          "label": "C# (.NET)",
+          "description": "Isolated worker on .NET 10"
+        }
+      ],
+      "recommendedChoice": "TypeScript",
+      "multiSelect": false,
+      "allowFreeformInput": false,
+      "serviceId": "scrapbook-api"
+    },
+    {
+      "id": "scrapbook-api:features",
+      "category": "service",
+      "question": "Describe the features or API routes for Scrapbook API.",
+      "header": "Features",
+      "answer": "User pairing, photo upload with AI-generated labels, shared scrapbook feed, photo metadata CRUD",
+      "status": "confirmed",
+      "rationale": "Distilled from the user's prompt: pairing, shared photo scrapbook, AI-generated labels.",
+      "recommendedChoice": "User pairing, photo upload with AI-generated labels, shared scrapbook feed, photo metadata CRUD",
+      "multiSelect": false,
+      "serviceId": "scrapbook-api"
+    },
+    {
+      "id": "scrapbook-web:language",
+      "category": "service",
+      "question": "Which programming language for Scrapbook Web?",
+      "header": "Language",
+      "answer": "TypeScript",
+      "status": "confirmed",
+      "rationale": "TypeScript provides type safety for a better development experience.",
+      "options": [
+        {
+          "label": "TypeScript",
+          "description": "TypeScript with type safety"
+        },
+        {
+          "label": "JavaScript",
+          "description": "Plain JavaScript"
+        }
+      ],
+      "recommendedChoice": "TypeScript",
+      "multiSelect": false,
+      "allowFreeformInput": false,
+      "serviceId": "scrapbook-web"
+    },
+    {
+      "id": "scrapbook-web:framework",
+      "category": "service",
+      "question": "Which frontend framework for Scrapbook Web?",
+      "header": "Framework",
+      "answer": "React + Vite",
+      "status": "confirmed",
+      "rationale": "React is the most common pick for SPA + API on Azure.",
+      "options": [
+        {
+          "label": "React + Vite",
+          "description": "React with Vite bundler"
+        },
+        {
+          "label": "Vue + Vite",
+          "description": "Vue with Vite bundler"
+        },
+        {
+          "label": "Angular",
+          "description": "Angular CLI"
+        },
+        {
+          "label": "Svelte",
+          "description": "Svelte + Vite"
+        }
+      ],
+      "recommendedChoice": "React + Vite",
+      "multiSelect": false,
+      "allowFreeformInput": true,
+      "serviceId": "scrapbook-web"
+    },
+    {
+      "id": "scrapbook-web:features",
+      "category": "service",
+      "question": "Describe the features or pages for Scrapbook Web.",
+      "header": "Features",
+      "answer": "Pairing flow, photo upload page, shared scrapbook gallery with AI labels, timeline view",
+      "status": "confirmed",
+      "rationale": "Derived from the user's description of a shared photo scrapbook with pairing.",
+      "recommendedChoice": "Pairing flow, photo upload page, shared scrapbook gallery with AI labels, timeline view",
+      "multiSelect": false,
+      "serviceId": "scrapbook-web"
+    },
+    {
+      "id": "cleanup-worker:language",
+      "category": "service",
+      "question": "Which programming language for Cleanup Worker?",
+      "header": "Language",
+      "answer": "TypeScript",
+      "status": "confirmed",
+      "rationale": "TypeScript keeps the worker consistent with the API for shared types and easier maintenance.",
+      "options": [
+        {
+          "label": "TypeScript",
+          "description": "Node.js + TypeScript on Azure Functions"
+        },
+        {
+          "label": "Python",
+          "description": "Python on Azure Functions"
+        },
+        {
+          "label": "C# (.NET)",
+          "description": "Isolated worker on .NET 10"
+        }
+      ],
+      "recommendedChoice": "TypeScript",
+      "multiSelect": false,
+      "allowFreeformInput": false,
+      "serviceId": "cleanup-worker"
+    },
+    {
+      "id": "cleanup-worker:features",
+      "category": "service",
+      "question": "Describe the features or tasks for Cleanup Worker.",
+      "header": "Features",
+      "answer": "Timer-triggered job to delete old photos from database and blob storage based on retention policy",
+      "status": "confirmed",
+      "rationale": "User explicitly stated a background service that deletes old photos, with room for future tasks.",
+      "recommendedChoice": "Timer-triggered job to delete old photos from database and blob storage based on retention policy",
+      "multiSelect": false,
+      "serviceId": "cleanup-worker"
+    },
+    {
+      "id": "dataStores",
+      "category": "data",
+      "question": "Which data stores does your app need?",
+      "header": "Data Stores",
+      "answer": [
+        "Blob Storage",
+        "PostgreSQL"
+      ],
+      "status": "confirmed",
+      "rationale": "Photos stored in Blob Storage; user pairs and photo metadata in PostgreSQL. Azure Functions also requires a storage account.",
+      "options": [
+        {
+          "label": "Blob Storage",
+          "description": "Store files and images"
+        },
+        {
+          "label": "Queue Storage",
+          "description": "Async message queue"
+        },
+        {
+          "label": "PostgreSQL",
+          "description": "Relational database"
+        },
+        {
+          "label": "CosmosDB",
+          "description": "NoSQL document database"
+        },
+        {
+          "label": "Redis",
+          "description": "In-memory cache"
+        },
+        {
+          "label": "Azure SQL",
+          "description": "Managed SQL Server"
+        }
+      ],
+      "recommendedChoice": [
+        "Blob Storage",
+        "PostgreSQL"
+      ],
+      "multiSelect": true,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "auth",
+      "category": "auth",
+      "question": "Does your app need authentication?",
+      "header": "Authentication",
+      "answer": "Mock auth middleware",
+      "status": "confirmed",
+      "rationale": "App has user pairing and personal photos — needs auth. Mock auth recommended for local testability.",
+      "options": [
+        {
+          "label": "No auth",
+          "description": "Public app, no login required"
+        },
+        {
+          "label": "Mock auth middleware",
+          "description": "HMAC-signed test tokens — testable without an IdP"
+        },
+        {
+          "label": "Microsoft Entra ID",
+          "description": "Workforce identity — sign in with org or Microsoft accounts"
+        },
+        {
+          "label": "Microsoft Entra External ID",
+          "description": "Customer identity — sign-up plus social logins"
+        },
+        {
+          "label": "Auth0",
+          "description": "Third-party IdP — social and enterprise connections"
+        },
+        {
+          "label": "Clerk",
+          "description": "Drop-in user management with prebuilt UI"
+        }
+      ],
+      "recommendedChoice": "Mock auth middleware",
+      "multiSelect": false,
+      "allowFreeformInput": true
+    }
+  ],
+  "executionMode": "guided"
+}

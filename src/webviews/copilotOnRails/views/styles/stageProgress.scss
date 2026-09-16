@@ -1,0 +1,92 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.stageProgressTop {
+    margin-bottom: 4px;
+}
+
+.stageProgress {
+    display: flex;
+    flex-direction: column;
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 8px;
+    overflow: hidden;
+    // When the viewport (or zoom) gets too narrow to fit all steps at their
+    // natural width, scroll horizontally instead of squashing the labels.
+    overflow-x: auto;
+}
+
+.stageProgressSteps {
+    margin: 0;
+    display: flex;
+    width: 100%;
+}
+
+.stageProgressStep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    flex: 1 1 0;
+    min-width: max-content;
+    padding: 10px 14px;
+    border-bottom: 2px solid transparent;
+}
+
+.stageProgressMarker {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vscode-descriptionForeground);
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-widget-border);
+    flex-shrink: 0;
+}
+
+.stageProgressLabel {
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--vscode-descriptionForeground);
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.stageProgressStep.completed {
+    .stageProgressMarker {
+        color: var(--vscode-descriptionForeground);
+        background: var(--vscode-editor-background);
+        border-color: var(--vscode-focusBorder);
+        opacity: 0.75;
+    }
+
+    .stageProgressLabel {
+        color: var(--vscode-descriptionForeground);
+        opacity: 1;
+    }
+}
+
+.stageProgressStep.current {
+    border-bottom-color: var(--vscode-focusBorder);
+    background: color-mix(in srgb, var(--vscode-focusBorder) 8%, transparent);
+
+    .stageProgressMarker {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+    }
+
+    .stageProgressLabel {
+        color: var(--vscode-foreground);
+        font-weight: 700;
+    }
+}

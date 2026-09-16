@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-safety-boundaries-clean",
+    "prompt": "Build a small task tracker with a Node API, Blob Storage for attachments and PostgreSQL for records.",
+    "baselinePrompt": "Create a small task tracker with a Node.js API, Blob Storage for file attachments and a PostgreSQL database for task records. Include build, test and lint scripts, a local run configuration, and the deployment files needed to host it.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "none",
+        "backend": "node",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

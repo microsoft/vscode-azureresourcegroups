@@ -14,7 +14,9 @@
         "noImplicitReturns": true,
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
+        "allowImportingTsExtensions": true,
         "baseUrl": "./",
+        "ignoreDeprecations": "5.0",
         "paths": {
             "*": [
                 "node_modules/@types/*",
@@ -28,6 +30,8 @@
         ".vscode-test",
         "gulpfile.ts",
         "**/dist",
-        "**/out"
+        "**/out",
+        "evals",
+        "src/webviews/copilotOnRails/views"
     ]
 }

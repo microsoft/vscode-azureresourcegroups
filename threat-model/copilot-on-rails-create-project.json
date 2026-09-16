@@ -1,0 +1,385 @@
+{
+  "version": "2.4.0",
+  "summary": {
+    "title": "Copilot on Rails — Create Project (Azure Resources VS Code extension)",
+    "owner": "Nathan Turinski",
+    "description": "Threat model for the Copilot-on-Rails create-project feature: the plan/scaffold/integrate/deploy webviews, the MCP tool + LLM agent flow, the local dev-server preview, and deployment into the developer's Azure subscription. STRIDE-per-element. Mitigations cited to source files where they exist in the extension.",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [],
+    "reviewer": "",
+    "diagramTop": 1,
+    "threatTop": 10,
+    "diagrams": [
+      {
+        "id": 0,
+        "title": "Create Project — data flow (STRIDE)",
+        "diagramType": "STRIDE",
+        "placeholder": "New STRIDE diagram description",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.4.0",
+        "cells": [
+          {
+            "shape": "trust-boundary-box",
+            "position": { "x": 20, "y": 60 },
+            "size": { "width": 1000, "height": 640 },
+            "angle": 0,
+            "attrs": { "body": { "stroke": "#8a2be2", "strokeWidth": 3, "strokeDasharray": "10,5", "fill": "transparent" }, "label": { "text": "Developer machine" } },
+            "visible": true,
+            "zIndex": 0,
+            "id": "tb-machine",
+            "data": { "type": "tm.BoundaryBox", "name": "Developer machine", "description": "Local trust boundary — VS Code, extension host, webviews, dev server.", "isTrustBoundary": true, "hasOpenThreats": false, "threats": [] }
+          },
+          {
+            "shape": "trust-boundary-box",
+            "position": { "x": 1060, "y": 60 },
+            "size": { "width": 340, "height": 640 },
+            "angle": 0,
+            "attrs": { "body": { "stroke": "#8a2be2", "strokeWidth": 3, "strokeDasharray": "10,5", "fill": "transparent" }, "label": { "text": "Developer's Azure subscription" } },
+            "visible": true,
+            "zIndex": 0,
+            "id": "tb-azure",
+            "data": { "type": "tm.BoundaryBox", "name": "Developer's Azure subscription", "description": "Cloud trust boundary — control plane and the app the developer deploys.", "isTrustBoundary": true, "hasOpenThreats": false, "threats": [] }
+          },
+          {
+            "shape": "trust-boundary-box",
+            "position": { "x": 210, "y": 250 },
+            "size": { "width": 130, "height": 130 },
+            "angle": 0,
+            "attrs": { "body": { "stroke": "#00799e", "strokeWidth": 2, "strokeDasharray": "6,4", "fill": "transparent" }, "label": { "text": "Webview sandbox" } },
+            "visible": true,
+            "zIndex": 0,
+            "id": "tb-webview",
+            "data": { "type": "tm.BoundaryBox", "name": "Webview sandbox", "description": "VS Code webview iframe with nonce CSP; preview HTML runs in a sandboxed srcDoc iframe with author scripts stripped.", "isTrustBoundary": true, "hasOpenThreats": false, "threats": [] }
+          },
+          {
+            "shape": "actor",
+            "position": { "x": 60, "y": 290 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Developer" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 2,
+            "id": "developer",
+            "data": { "type": "tm.Actor", "name": "Developer", "description": "Authenticated VS Code user driving the create-project flow.", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "providesAuthentication": true, "threats": [] }
+          },
+          {
+            "shape": "process",
+            "position": { "x": 240, "y": 280 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Webview (renderer)" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "webview",
+            "data": {
+              "type": "tm.Process",
+              "name": "Webview (renderer)",
+              "description": "Requirements / plan / deploy / preview React views. postMessage bridge to the extension host.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                { "id": "t-xss-preview", "title": "XSS via planner/LLM-generated preview HTML", "status": "Mitigated", "severity": "High", "type": "Tampering", "description": "Generated plan-preview HTML could carry inline scripts that execute in the view.", "mitigation": "Author-supplied executable content is stripped before it reaches the sandboxed srcDoc iframe (previewPagesReader.ts); only a nonce-stamped navigation bridge runs (UiPreviewCard.tsx). CSP is script-src 'nonce-…'.", "modelType": "STRIDE", "number": 1 },
+                { "id": "t-inline-script", "title": "Spoofed/injected inline script in webview", "status": "Mitigated", "severity": "Medium", "type": "Tampering", "description": "Injected inline script attempts to run in the webview document.", "mitigation": "Nonce-based CSP; a script without the correct nonce is ignored by the browser.", "modelType": "STRIDE", "number": 2 }
+              ]
+            }
+          },
+          {
+            "shape": "process",
+            "position": { "x": 440, "y": 280 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Extension host + MCP tools" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "extension",
+            "data": {
+              "type": "tm.Process",
+              "name": "Extension host + MCP tools",
+              "description": "CoR extension: view controllers, MCP tool handlers, orchestration of the agent flow.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                { "id": "t-msg-forge", "title": "Forged / malformed webview→extension message", "status": "Open", "severity": "Medium", "type": "Elevation of privilege", "description": "onDidReceiveMessage handlers switch on a `command` string and act on `data`/`prompt` payloads (e.g. ScaffoldPlanViewController, RequirementsViewController). A crafted message could drive unintended executeCommand/agent actions.", "mitigation": "Add explicit schema validation + allow-list on inbound message command and payload; reject unknown shapes. Keep executeCommand targets to a fixed, non-parameterized set.", "modelType": "STRIDE", "number": 3 }
+              ]
+            }
+          },
+          {
+            "shape": "process",
+            "position": { "x": 660, "y": 140 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Copilot LLM / agent" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "agent",
+            "data": {
+              "type": "tm.Process",
+              "name": "Copilot LLM / agent",
+              "description": "Model-driven agent that plans, scaffolds, and edits code via MCP tools.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                { "id": "t-prompt-injection", "title": "Prompt injection via tool / file content", "status": "Open", "severity": "Medium", "type": "Tampering", "description": "Untrusted content in files or tool output could steer the agent into unintended edits or commands.", "mitigation": "Treat all tool output as untrusted; retain the human approval gates at plan/deploy; least-privilege MCP tool scopes; do not auto-execute destructive actions without confirmation.", "modelType": "STRIDE", "number": 4 }
+              ]
+            }
+          },
+          {
+            "shape": "process",
+            "position": { "x": 440, "y": 460 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Local dev server" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "devserver",
+            "data": {
+              "type": "tm.Process",
+              "name": "Local dev server",
+              "description": "Frontend dev server spawned for the Approve-UI preview (devServerManager.ts), embedded in an iframe.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "threats": [
+                { "id": "t-devserver-lan", "title": "Dev server reachable on the LAN / DNS rebinding", "status": "Open", "severity": "Medium", "type": "Information disclosure", "description": "The extension runs the generated project's own dev/start script unmodified (devServerManager.ts) and does not set host or allowedHosts, so binding follows the scaffold's framework defaults. Vite and most defaults bind to loopback only; LAN exposure occurs only if a generated dev config binds to 0.0.0.0/all interfaces. The extension normalizes 0.0.0.0/[::] to localhost solely for the webview embed URL, which does not change the actual bind address (so an exposed bind could be masked).", "mitigation": "Mitigation belongs in the scaffold templates: ensure generated dev-server configs bind to loopback and set restrictive allowedHosts so the preview is never LAN-reachable. Scope the webview frame-src to the dev-server URI (FrontendPreviewViewController.ts). These settings must never ship in production config.", "modelType": "STRIDE", "number": 5 }
+              ]
+            }
+          },
+          {
+            "shape": "store",
+            "position": { "x": 660, "y": 470 },
+            "size": { "width": 120, "height": 60 },
+            "angle": 0,
+            "attrs": { "text": { "text": ".azure/* artifacts" }, "topLine": { "stroke": "#333333" }, "bottomLine": { "stroke": "#333333" } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "artifacts",
+            "data": {
+              "type": "tm.Store",
+              "name": ".azure/* artifacts",
+              "description": "On-disk plan / requirements / integration / deployment artifacts.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "isALog": false,
+              "storesCredentials": false,
+              "threats": [
+                { "id": "t-artifacts-disclosure", "title": "Local disclosure of endpoints/config in artifacts", "status": "Open", "severity": "Low", "type": "Information disclosure", "description": "Other local users/processes could read endpoints/config from .azure/* artifacts.", "mitigation": "Keep secrets out of artifacts (endpoints only); document what is stored; rely on infra outputs / managed identity for real secrets.", "modelType": "STRIDE", "number": 6 }
+              ]
+            }
+          },
+          {
+            "shape": "store",
+            "position": { "x": 660, "y": 600 },
+            "size": { "width": 120, "height": 60 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Usage telemetry" }, "topLine": { "stroke": "#333333" }, "bottomLine": { "stroke": "#333333" } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "telemetry",
+            "data": {
+              "type": "tm.Store",
+              "name": "Usage telemetry",
+              "description": "Feature usage / diagnostics events sent to Microsoft telemetry.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "isALog": true,
+              "storesCredentials": false,
+              "threats": [
+                { "id": "t-telemetry-pii", "title": "Personal data / online identifiers in telemetry", "status": "Open", "severity": "Medium", "type": "Information disclosure", "description": "Developer identity or typed content could leak into telemetry.", "mitigation": "Scrub PII; honor VS Code telemetry opt-out; cross-reference the Privacy Review (MPS 02.05.01).", "modelType": "STRIDE", "number": 7 }
+              ]
+            }
+          },
+          {
+            "shape": "actor",
+            "position": { "x": 1120, "y": 150 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Azure control plane" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 2,
+            "id": "controlplane",
+            "data": {
+              "type": "tm.Actor",
+              "name": "Azure control plane",
+              "description": "ARM / provisioning endpoint the extension authenticates to with the developer's identity.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": true,
+              "providesAuthentication": true,
+              "threats": [
+                { "id": "t-deploy-privilege", "title": "Over-broad permissions on generated deploy", "status": "Open", "severity": "Medium", "type": "Elevation of privilege", "description": "Generated infra could grant broader rights than needed; limited audit of what the agent provisions.", "mitigation": "Generate least-privilege managed-identity role assignments; surface the plan for approval; record deployed resources.", "modelType": "STRIDE", "number": 8 }
+              ]
+            }
+          },
+          {
+            "shape": "process",
+            "position": { "x": 1120, "y": 300 },
+            "size": { "width": 100, "height": 100 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Generated app (Functions)" }, "body": { "stroke": "#333333", "strokeWidth": 1.5 } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "app",
+            "data": {
+              "type": "tm.Process",
+              "name": "Generated app (Functions)",
+              "description": "The backend the developer scaffolds and deploys.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                { "id": "t-stub-identity", "title": "Stubbed identity = auth bypass (x-user-id: default-user)", "status": "Mitigated", "severity": "High", "type": "Spoofing", "description": "A hardcoded caller identity would collapse every request to one user and bypass auth.", "mitigation": "No-stubbed-identity rule in the integrate agent: identity is read from the plan's real Identity Transport; missing identity returns a genuine 401.", "modelType": "STRIDE", "number": 9 }
+              ]
+            }
+          },
+          {
+            "shape": "store",
+            "position": { "x": 1120, "y": 470 },
+            "size": { "width": 120, "height": 60 },
+            "angle": 0,
+            "attrs": { "text": { "text": "Generated app DB" }, "topLine": { "stroke": "#333333" }, "bottomLine": { "stroke": "#333333" } },
+            "visible": true,
+            "zIndex": 3,
+            "id": "db",
+            "data": {
+              "type": "tm.Store",
+              "name": "Generated app DB",
+              "description": "The datastore provisioned for the generated app (e.g. PostgreSQL).",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "isALog": false,
+              "storesCredentials": true,
+              "threats": [
+                { "id": "t-conn-string", "title": "Connection-string / secret exposure", "status": "Mitigated", "severity": "High", "type": "Information disclosure", "description": "DATABASE_URL could be shipped as a placeholder or committed secret.", "mitigation": "Production Source = Infra output / Managed identity (keyless); never a placeholder; deploy provisions the real value.", "modelType": "STRIDE", "number": 10 }
+              ]
+            }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "developer" },
+            "target": { "cell": "webview" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["interacts"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-dev-webview",
+            "data": { "type": "tm.Flow", "name": "interacts (UI)", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": false, "isPublicNetwork": false, "protocol": "", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "webview" },
+            "target": { "cell": "extension" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["postMessage"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-webview-ext",
+            "data": { "type": "tm.Flow", "name": "postMessage", "description": "onDidReceiveMessage / postMessage bridge.", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": false, "isPublicNetwork": false, "protocol": "postMessage", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "extension" },
+            "target": { "cell": "agent" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["MCP"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-ext-agent",
+            "data": { "type": "tm.Flow", "name": "MCP tool calls", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": true, "isPublicNetwork": true, "protocol": "https", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "extension" },
+            "target": { "cell": "artifacts" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["read/write"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-ext-artifacts",
+            "data": { "type": "tm.Flow", "name": "read/write artifacts", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": false, "isPublicNetwork": false, "protocol": "file", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "webview" },
+            "target": { "cell": "devserver" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["iframe embed"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-webview-devserver",
+            "data": { "type": "tm.Flow", "name": "iframe embed", "description": "Preview iframe points at the dev-server URI.", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": false, "isEncrypted": false, "isPublicNetwork": false, "protocol": "http", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "extension" },
+            "target": { "cell": "telemetry" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["usage events"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-ext-telemetry",
+            "data": { "type": "tm.Flow", "name": "usage events", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": false, "isEncrypted": true, "isPublicNetwork": true, "protocol": "https", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "extension" },
+            "target": { "cell": "controlplane" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["auth + deploy"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-ext-controlplane",
+            "data": { "type": "tm.Flow", "name": "auth + deploy", "description": "Crosses into the Azure subscription trust boundary.", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": true, "isPublicNetwork": true, "protocol": "https", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "controlplane" },
+            "target": { "cell": "app" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["provisions"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-cp-app",
+            "data": { "type": "tm.Flow", "name": "provisions", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": false, "isEncrypted": true, "isPublicNetwork": true, "protocol": "https", "threats": [] }
+          },
+          {
+            "shape": "flow",
+            "source": { "cell": "app" },
+            "target": { "cell": "db" },
+            "vertices": [],
+            "connector": "smooth",
+            "labels": ["query"],
+            "width": 200,
+            "height": 100,
+            "zIndex": 5,
+            "id": "f-app-db",
+            "data": { "type": "tm.Flow", "name": "query", "description": "", "outOfScope": false, "reasonOutOfScope": "", "hasOpenThreats": false, "isBidirectional": true, "isEncrypted": true, "isPublicNetwork": false, "protocol": "tcp", "threats": [] }
+          }
+        ]
+      }
+    ]
+  }
+}

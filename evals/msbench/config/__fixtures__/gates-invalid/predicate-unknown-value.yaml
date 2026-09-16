@@ -1,0 +1,13 @@
+# expect: gatePredicateUnknownValue
+# `postgress` is a typo. It can never be a datastore value, so the condition
+# matches nothing and silently unwires the gate on every stack — and a gate wired
+# nowhere reads as a clean run.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: typo value
+    phases: [plan]
+    requires:
+      project.datastore: [postgress]
