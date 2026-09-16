@@ -48,7 +48,7 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 > ℹ️ **Proxy detected:** Attendance Compliance Web App proxies `/api` requests to Attendance Compliance API on `http://localhost:7071` (via `web/vite.config.ts`). The compound config starts the API before the web app.
 
-> ℹ️ Microsoft Entra ID is also an Essential dependency (auth), but it has no local emulator — `api/src/middleware/auth.ts` falls back to a mock `dev-user` identity locally when `AZURE_AD_TENANT_ID`/`AZURE_AD_CLIENT_ID` are unset, so no additional debug wiring is required for it.
+> ℹ️ API Login uses the same REST/JWT contract locally and in production. Local settings provide development-only signing configuration. `AZURE_FUNCTIONS_ENVIRONMENT=Development` controls Azure emulator clients, not whether user login exists.
 
 ---
 

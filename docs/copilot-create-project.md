@@ -174,7 +174,8 @@ those simply plan a single `frontend` service with **No datastore required**.
 ## Stage 2 — Review requirements
 
 The plan agent writes `.azure/requirements.json` and opens the **Requirements** view. Questions are grouped
-per service (backend, frontend, worker) plus shared questions (data stores, auth). Answers Copilot could
+per service (backend, frontend, worker) plus shared data-stores and **API Login** questions. API Login is a
+`Yes`/`No` choice about user-facing sign-in and authenticated application API access. Answers Copilot could
 infer are pre‑selected; the rest are pre‑filled with a recommended choice. Review each one and click
 **Submit**.
 
@@ -183,7 +184,9 @@ infer are pre‑selected; the rest are pre‑filled with a recommended choice. R
 </p>
 
 Submitting writes your confirmed answers back to `.azure/requirements.json` and re‑invokes the plan agent to
-generate the plan.
+generate the plan. The plan shows only `API Login: Yes` or `No`; it does not ask the user to select an
+identity provider. When login is enabled, the scaffold agent builds the frontend and API authentication
+flow. Backend services use managed identity for Azure service access regardless of the API Login answer.
 
 ## Stage 3 — Review & approve the plan
 

@@ -13,6 +13,8 @@
 
 **App Type**: SPA + API
 
+**API Login**: Yes
+
 **Mode**: NEW
 
 **Deployment Plan**: No deployment plan found
@@ -52,7 +54,6 @@
 |---------------|------------|---------------------|----------------------|----------------|
 | Blob Storage | Backing storage account required by the Azure Functions host (`AzureWebJobsStorage`) | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` | Essential |
 | PostgreSQL | Primary data store for policies, attendance entries, and future plans | `DATABASE_URL` | `postgresql://localdev:localdevpassword@localhost:5432/attendance` | Essential |
-| Microsoft Entra ID | User sign-in and API authorization | `AZURE_AD_TENANT_ID`, `AZURE_AD_CLIENT_ID` | Mock auth middleware issuing a local dev identity | Essential |
 
 ---
 
@@ -178,18 +179,18 @@ project-root/
 
 ## 8. Route Definitions
 
-| # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
-|---|--------|------|-------------|-------------|--------------|------|-------------|
-| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | None | 200, 503 |
-| 2 | GET | `/api/policy` | Get the current attendance policy | — | `{ requiredDays, periodWeeks, periodStartDay }` | Entra ID | 200, 401, 404 |
-| 3 | PUT | `/api/policy` | Create or update the attendance policy | `{ requiredDays, periodWeeks, periodStartDay }` | `{ requiredDays, periodWeeks, periodStartDay }` | Entra ID | 200, 401, 422 |
-| 4 | GET | `/api/entries` | Get attendance entries for a calendar month | Query: `month` (`YYYY-MM`) | `{ entries: [{ date, status }] }` | Entra ID | 200, 401 |
-| 5 | POST | `/api/entries` | Record or update an in-office day entry | `{ date, status }` | `{ date, status }` | Entra ID | 201, 401, 422 |
-| 6 | DELETE | `/api/entries/{date}` | Clear an attendance entry | — | — | Entra ID | 204, 401, 404 |
-| 7 | GET | `/api/compliance/summary` | Get current + historical compliance summary | Query: `periods` | `{ periods: [{ period, required, actual, compliant }] }` | Entra ID | 200, 401 |
-| 8 | GET | `/api/plans` | Get future attendance plans | Query: `from`, `to` | `{ plans: [{ date, plannedStatus }] }` | Entra ID | 200, 401 |
-| 9 | POST | `/api/plans` | Create a future attendance plan entry | `{ date, plannedStatus }` | `{ date, plannedStatus }` | Entra ID | 201, 401, 422 |
-| 10 | GET | `/api/compliance/comparison` | Compare planned vs. actual compliance over time | Query: `from`, `to` | `{ periods: [{ period, planned, actual }] }` | Entra ID | 200, 401 |
+| # | Method | Path | Description | Request Body | Response Body | Status Codes |
+|---|--------|------|-------------|-------------|--------------|-------------|
+| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | 200, 503 |
+| 2 | GET | `/api/policy` | Get the current attendance policy | — | `{ requiredDays, periodWeeks, periodStartDay }` | 200, 401, 404 |
+| 3 | PUT | `/api/policy` | Create or update the attendance policy | `{ requiredDays, periodWeeks, periodStartDay }` | `{ requiredDays, periodWeeks, periodStartDay }` | 200, 401, 422 |
+| 4 | GET | `/api/entries` | Get attendance entries for a calendar month | Query: `month` (`YYYY-MM`) | `{ entries: [{ date, status }] }` | 200, 401 |
+| 5 | POST | `/api/entries` | Record or update an in-office day entry | `{ date, status }` | `{ date, status }` | 201, 401, 422 |
+| 6 | DELETE | `/api/entries/{date}` | Clear an attendance entry | — | — | 204, 401, 404 |
+| 7 | GET | `/api/compliance/summary` | Get current + historical compliance summary | Query: `periods` | `{ periods: [{ period, required, actual, compliant }] }` | 200, 401 |
+| 8 | GET | `/api/plans` | Get future attendance plans | Query: `from`, `to` | `{ plans: [{ date, plannedStatus }] }` | 200, 401 |
+| 9 | POST | `/api/plans` | Create a future attendance plan entry | `{ date, plannedStatus }` | `{ date, plannedStatus }` | 201, 401, 422 |
+| 10 | GET | `/api/compliance/comparison` | Compare planned vs. actual compliance over time | Query: `from`, `to` | `{ periods: [{ period, planned, actual }] }` | 200, 401 |
 
 ---
 

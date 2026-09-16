@@ -175,40 +175,24 @@
     {
       "id": "auth",
       "category": "auth",
-      "question": "Does your app need authentication?",
-      "header": "Authentication",
-      "answer": "Microsoft Entra ID",
+      "question": "Does this app need user login?",
+      "header": "API Login",
+      "answer": "Yes",
       "status": "confirmed",
-      "rationale": "Attendance records are personal and workforce-oriented, so organizational sign-in is the likely fit.",
+      "rationale": "Attendance records are private and tied to the signed-in user.",
       "options": [
         {
-          "label": "No auth",
-          "description": "Public app, no login required"
+          "label": "Yes",
+          "description": "Add a user sign-in flow and authenticated API access"
         },
         {
-          "label": "Mock auth middleware",
-          "description": "Testable local identity without an external provider"
-        },
-        {
-          "label": "Microsoft Entra ID",
-          "description": "Workforce identity with organizational sign-in"
-        },
-        {
-          "label": "Microsoft Entra External ID",
-          "description": "Customer identity with sign-up and social logins"
-        },
-        {
-          "label": "Auth0",
-          "description": "Third-party identity provider"
-        },
-        {
-          "label": "Clerk",
-          "description": "Drop-in user management"
+          "label": "No",
+          "description": "No user sign-in or authenticated API access"
         }
       ],
-      "recommendedChoice": "Microsoft Entra ID",
+      "recommendedChoice": "Yes",
       "multiSelect": false,
-      "allowFreeformInput": true
+      "allowFreeformInput": false
     }
   ],
   "executionMode": "guided"

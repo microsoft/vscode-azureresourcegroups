@@ -21,7 +21,7 @@ const CATEGORY_LABELS: Record<string, string> = {
     runtime: 'Language',
     frontend: 'Frontend',
     backend: 'Backend',
-    auth: 'Authentication',
+    auth: 'API Login',
     data: 'Data',
     storage: 'Storage',
     ai: 'AI',

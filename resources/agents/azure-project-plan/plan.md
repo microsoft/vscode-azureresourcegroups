@@ -18,6 +18,8 @@ metadata:
 ## ═══════════════════════════════════════════════════
 
 > **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first, treat its `answer` fields as authoritative, then generate the plan below. If the `dataStores` answer is `["No datastore required"]`, do not add a datastore resource to the plan and never render `No datastore required` as an Azure service; still include any non-datastore services required to host or run the app.
+>
+> Copy the binary `auth` answer into the Project Overview as `**API Login**: Yes` or `No`. This is the only authentication detail in the plan and its renderings. Do not name an identity provider, token type, credential strategy, protected route, or per-route auth value. The scaffold agent chooses the API authentication implementation when API Login is `Yes`. Backend-to-Azure communication uses managed identity and is not represented as a plan choice.
 
 ### Step 3: Generate Plan & Present for Approval
 
@@ -25,9 +27,9 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 > **🔒 STRUCTURAL CONTRACT — non-negotiable.** The plan-preview webview (opened by the `open_plan_view` tool) is a **structured parser**, not a markdown renderer. It only understands the exact skeleton below. If you improvise a different structure, the webview parses **zero sections** and shows the user a *"couldn't render this plan — didn't match the expected layout"* error instead of the plan.
 > - **Copy the skeleton below verbatim**, replacing only `{placeholders}`. Do **not** invent your own sections.
-> - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`, `## Authentication`) are **invalid** and will not render.
+> - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`) are **invalid** and will not render.
 > - Metadata at the top MUST be `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows — not front-matter, not a table.
-> - Do **NOT** add a generic architecture document, a `mermaid` diagram, a standalone `## Authentication` section, or any heading not present in the skeleton. Authentication, data stores, and architecture are captured **inside** the numbered sections (Services Required, the per-service stack sections, Route Definitions), never as their own improvised headings.
+> - Do **NOT** add a generic architecture document, a `mermaid` diagram, or any heading not present in the skeleton. Data stores and architecture are captured **inside** the numbered sections, never as their own improvised headings.
 > - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
 
 #### Plan Template
@@ -48,6 +50,8 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 **Goal**: {Brief description of what the user is building}. The project is designed so that every module is independently testable.
 
 **App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker — **derived from the detected services**, not asked}
+
+**API Login**: {Yes | No — copied from the `auth` requirements answer}
 
 **Mode**: {NEW | AUGMENT}
 
@@ -176,10 +180,10 @@ For each page above, list 3–6 representative records using that page's primary
 
 ## 8. Route Definitions
 
-| # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
-|---|--------|------|-------------|-------------|--------------|------|-------------|
-| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | None | 200, 503 |
-| {n} | {METHOD} | {/api/path} | {description} | {body or —} | {response shape} | {auth} | {codes} |
+| # | Method | Path | Description | Request Body | Response Body | Status Codes |
+|---|--------|------|-------------|-------------|--------------|-------------|
+| 1 | GET | `/api/health` | Health check | — | `{ status, services }` | 200, 503 |
+| {n} | {METHOD} | {/api/path} | {description} | {body or —} | {response shape} | {codes} |
 
 ---
 
@@ -197,7 +201,8 @@ For each page above, list 3–6 representative records using that page's primary
 
 0. **Self-check the structure BEFORE opening the view.** Re-read the `.azure/project-plan.md` you just wrote and confirm ALL of the following. If any check fails, **rewrite the file** to match the skeleton before continuing — do **not** open the view on a malformed plan (the webview would show a parse-error banner instead):
    - The top has `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows (not YAML front-matter, not a table).
-   - Every `##` heading matches `## <N>. <Title>` (numbered). There are **no** un-numbered `##` headings such as `## Overview`, `## Architecture`, `## Services`, `## Data Stores`, or `## Authentication`.
+   - `## 1. Project Overview` contains exactly one auth-related value: `**API Login**: Yes` or `No`.
+   - Every `##` heading matches `## <N>. <Title>` (numbered). There are **no** un-numbered `##` headings such as `## Overview`, `## Architecture`, `## Services`, or `## Data Stores`.
    - There is **no** `mermaid` block and **no** improvised section outside the fixed skeleton.
    - `## 1. Project Overview` exists and contains a `**Goal**:` row, and Section 5 (when a frontend exists) is `## N. Design System & UI` with a `**Component Library**:` row.
 1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
@@ -424,7 +429,7 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 
 | Type | Definition | Failure Behavior | Examples |
 |------|-----------|-----------------|---------|
-| **Essential** | Request cannot succeed without this service | Propagate error (4xx/5xx) | Database, auth provider, primary storage |
+| **Essential** | Request cannot succeed without this service | Propagate error (4xx/5xx) | Database, primary storage |
 | **Enhancement** | Request can succeed with degraded output | Catch error, use fallback, log warning | AI captions, email notifications, analytics |
 
 > **Key rule**: Enhancement service constructors MUST NOT throw. Defer config validation to method calls or wrap in try/catch.
@@ -459,7 +464,6 @@ All error responses follow this shape:
 | `BAD_REQUEST` | 400 | Malformed request |
 | `NOT_FOUND` | 404 | Resource doesn't exist |
 | `CONFLICT` | 409 | Duplicate resource |
-| `UNAUTHORIZED` | 401 | Missing/invalid auth token |
 | `FORBIDDEN` | 403 | Insufficient permissions |
 | `INTERNAL_ERROR` | 500 | Unhandled exception |
 

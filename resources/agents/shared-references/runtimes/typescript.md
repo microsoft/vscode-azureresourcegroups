@@ -42,6 +42,7 @@ npm install
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
     "NODE_ENV": "development",
     "STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
     "DATABASE_URL": "postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/appdb",
