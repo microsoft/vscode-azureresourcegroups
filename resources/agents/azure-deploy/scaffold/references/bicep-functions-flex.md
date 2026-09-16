@@ -86,6 +86,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      // Only when a browser frontend on a DIFFERENT hostname calls this API. Omit the whole `cors`
+      // block when there is no separate frontend — `staticWebApp` must be a real symbolic name in
+      // THIS file, or use the `allowedOrigin` param form for a cross-module frontend.
+      // See bicep-patterns.md § Cross-Origin (CORS).
+      cors: {
+        allowedOrigins: [ 'https://${staticWebApp.properties.defaultHostname}' ]
+        supportCredentials: false
+      }
       // ⛔ ONLY genuine app settings here — NEVER the deprecated keys listed above.
       appSettings: [
         // Identity-based host storage (shared-key access is disabled on the account).
@@ -144,3 +152,7 @@ output principalId string = functionApp.identity.principalId
 - **No** `basicPublishingCredentialsPolicies` on the Flex site → else `FLAGGED`.
 - `deployment.storage.authentication.type` is an identity type (not a connection string) when shared-key is
   disabled, and the app identity has a Storage Blob Data role on the account → else `FLAGGED`.
+- If the plan includes a browser frontend on a different hostname, `siteConfig.cors.allowedOrigins` contains
+  that frontend's origin → else `FLAGGED`. A missing `cors` block deploys cleanly and then fails every
+  browser call with `No 'Access-Control-Allow-Origin' header is present`. See
+  [bicep-patterns.md § Cross-Origin (CORS)](bicep-patterns.md).
