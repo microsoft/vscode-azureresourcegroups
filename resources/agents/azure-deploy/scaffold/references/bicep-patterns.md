@@ -125,6 +125,88 @@ Load multiple only if the plan includes multiple compute targets.
 
 > ⛔ **Native module deploy strategy.** If `prepare-plan.json.deployStrategy` exists, read [bicep-app-service.md § Native Module Deploy Strategy](bicep-app-service.md) and apply the startup command + app settings. `deployStrategy.startupCommand` → `appCommandLine`, `deployStrategy.requiredAppSettings` → `appSettings[]`. When no `deployStrategy` exists, do NOT set `appCommandLine`.
 
+## Cross-Origin (CORS) Between Frontend and Backend
+
+> ⛔ **If the frontend is served from a different hostname than the API, the API MUST declare the frontend
+> origin.** A Static Web App calling a Function App / App Service is *always* cross-origin — different
+> hostname means different origin, so the browser sends a preflight `OPTIONS` and blocks the response
+> unless the API returns `Access-Control-Allow-Origin`. A backend deployed with no `cors` block fails
+> **every** browser call with:
+> `No 'Access-Control-Allow-Origin' header is present on the requested resource`.
+> The API works fine from `curl` and from the portal test console, so this surfaces only in the browser.
+
+> ⛔ **Local success proves nothing here.** `local.settings.json` has `"Host": { "CORS": "*" }`, but that
+> file configures the **local Functions emulator only** — it is git-ignored and never deployed. F5 working
+> is not evidence that the deployed API allows the deployed frontend.
+
+Emit `cors` on the backend's `siteConfig`, alongside the frontend resource in the same module:
+
+```bicep
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  properties: {
+    siteConfig: {
+      cors: {
+        // staticSites → `defaultHostname`; the value has no scheme, so add https://
+        allowedOrigins: [ 'https://${staticWebApp.properties.defaultHostname}' ]
+        supportCredentials: false
+      }
+    }
+  }
+}
+```
+
+When the frontend and backend are in **different modules**, pass the origin instead of referencing across.
+Guard with `empty()` so the same module still compiles for an API with no browser frontend:
+
+```bicep
+// api module
+param allowedOrigin string = ''
+...
+    siteConfig: {
+      cors: {
+        allowedOrigins: empty(allowedOrigin) ? [] : [ allowedOrigin ]
+        supportCredentials: false
+      }
+    }
+
+// frontend module
+output defaultHostname string = staticWebApp.properties.defaultHostname
+
+// main.bicep
+module api './modules/api.bicep' = {
+  params: { allowedOrigin: 'https://${frontend.outputs.defaultHostname}' }
+}
+```
+
+> ⛔ **A symbolic reference only compiles inside the file that declares it.** `staticWebApp.properties...`
+> fails `bicep build` with **`BCP057: The name "staticWebApp" does not exist in the current context`**
+> whenever the SWA lives in another module — or when there is no frontend at all. Use the direct reference
+> only in the file that declares both; otherwise use the `allowedOrigin` param form above. For an API with
+> no browser frontend, leave `allowedOrigin` empty (or omit `cors` entirely).
+
+> ⛔ **Property casing differs by resource type.** `Microsoft.Web/staticSites` exposes
+> `properties.defaultHostname` (lowercase **n**); `Microsoft.Web/sites` exposes `properties.defaultHostName`
+> (capital **N**). Using the wrong one fails at `bicep build` — verify against the resource you are actually
+> referencing when the frontend is an App Service rather than a SWA.
+
+> ⛔ **`allowedOrigins: ['*']` cannot be combined with `supportCredentials: true`** — Azure rejects the pair.
+> Always emit the explicit origin; it is required anyway the moment cookie or bearer auth is added, and it
+> avoids re-work. Include any custom domain as an additional entry when one is configured.
+
+**No dependency cycle.** The frontend receives the API URL at **build** time (`VITE_API_BASE_URL` /
+`NEXT_PUBLIC_API_URL`, baked into the bundle from `deploy-result.json.endpoints[]` — see
+[deploy-checklist-template.md](../../deploy/references/deploy-checklist-template.md)), so the frontend
+resource never references the backend in Bicep. The backend may therefore reference the frontend hostname
+freely. Do **not** add the API URL to the SWA resource to "pair" them — that is what creates a cycle.
+
+**Alternative that removes CORS entirely:** linking the API as a SWA backend makes the frontend call
+`/api/*` on its own origin, so no preflight occurs at all. That changes the deploy topology, so prefer the
+explicit `cors` block above unless the plan already calls for a linked backend.
+
+**Self-review check:** If the plan has a browser frontend AND a separate HTTP API resource, verify the API's
+`siteConfig.cors.allowedOrigins` contains the frontend origin. **FLAGGED** if absent — the app will deploy
+successfully and then fail on first use.
+
 ## Service Tagging
 
 > ⛔ **You MUST read [iac-generation-rules.md § Session Tags](iac-generation-rules.md).** All resources MUST include the 5 AppOnboard session tags. Pass `tags` object from `main.bicep` into every module.
