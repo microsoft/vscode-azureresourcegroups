@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1000" viewBox="0 0 1030 1000" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1050" viewBox="0 0 1030 1050" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
   <title id="title">Current Copilot: separate registry and MCP client lanes</title>
   <desc id="desc">VS Code reads the declaration from its MCP registry and forwards it to the MCP client inside Copilot's runtime. A note on that forwarding step identifies the omitted VS Code resolver callback, not a missing direct call from the runtime. The client receives a placeholder instead of the live server address and credential. The intended MCP server and extension handler are shown to locate the unreached destination. This is a source-based cold-start prediction, not a runtime trace.</desc>
   <style>text{font-family:Arial,sans-serif}.title{font-size:23px;font-weight:700}.name{font-size:16px;font-weight:700}.small{font-size:12px;fill:#53657d}.section{font-size:13px;font-weight:700;fill:#53657d;letter-spacing:1px}.danger{fill:#b42318;font-weight:700}.warning{fill:#925400;font-weight:700}.lane{stroke:#b7c6d8;stroke-dasharray:4 5}.setup{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 4;fill:none}.call{stroke:#087f5b;stroke-width:2;fill:none}.missing{stroke:#b42318;stroke-width:2;stroke-dasharray:6 5;fill:none}.unreached{stroke:#94a3b8;stroke-width:2;stroke-dasharray:4 6;fill:none}</style>
-  <rect width="1030" height="1000" fill="#fff"/>
+  <rect width="1030" height="1050" fill="#fff"/>
   <text x="25" y="35" class="title">Current implementation: same code, Copilot selected</text>
-  <text x="25" y="61">VS Code keeps the server definition. Copilot's runtime owns the MCP connection.</text>
+  <text x="25" y="61">VS Code forwards connection settings, but the code path shown never fills in the real server address.</text>
   <rect x="615" y="86" width="390" height="772" rx="12" fill="#f1f7ff" stroke="#c5daf4"/>
   <text x="810" y="108" text-anchor="middle" class="small">SERVER + HANDLERS SHARE THE EXTENSION HOST</text>
   <rect x="20" y="125" width="160" height="90" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
@@ -13,57 +13,58 @@
   <rect x="210" y="125" width="180" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
   <text x="300" y="150" text-anchor="middle" class="name">VS Code</text>
   <text x="300" y="171" text-anchor="middle" class="name">MCP registry</text>
-  <text x="300" y="197" text-anchor="middle" class="small">Server definitions</text>
+  <text x="300" y="197" text-anchor="middle" class="small">Connection instructions</text>
   <rect x="415" y="125" width="180" height="90" rx="8" fill="#e5f6ee" stroke="#83b99e"/>
   <text x="505" y="150" text-anchor="middle" class="name">Copilot runtime</text>
   <text x="505" y="171" text-anchor="middle" class="name">MCP client</text>
-  <text x="505" y="197" text-anchor="middle" class="small">Owns the MCP connection</text>
+  <text x="505" y="197" text-anchor="middle" class="small">Sends tool requests</text>
   <rect x="630" y="125" width="150" height="90" rx="8" fill="#eee" stroke="#bcc3cd"/>
   <text x="705" y="155" text-anchor="middle" class="name">MCP server</text>
-  <text x="705" y="181" text-anchor="middle" class="small">Setup not reached</text>
+  <text x="705" y="181" text-anchor="middle" class="small">Not started in this flow</text>
   <rect x="820" y="125" width="170" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
   <text x="905" y="155" text-anchor="middle" class="name">VS Code extension</text>
-  <text x="905" y="181" text-anchor="middle" class="small">Unchanged activation</text>
+  <text x="905" y="181" text-anchor="middle" class="small">Runs CoR actions</text>
   <path d="M100 215V850 M300 215V850 M505 215V850 M705 215V850 M905 215V850" class="lane"/>
-  <text x="25" y="242" class="section">SETUP: REGISTRATION STILL WORKS</text>
+  <text x="25" y="242" class="section">SETUP: VS CODE GETS THE PLACEHOLDER ADDRESS</text>
   <path d="M905 276H300" class="setup"/>
-  <text x="602" y="264" text-anchor="middle">Activation: register MCP provider + tool-registration callback</text>
+  <text x="602" y="264" text-anchor="middle">VS Code API: registerMcpServerDefinitionProvider(...)</text>
   <path d="M300 318H905" class="setup"/>
-  <text x="602" y="306" text-anchor="middle">Request declaration: provideMcpServerDefinitions</text>
+  <text x="602" y="306" text-anchor="middle">VS Code callback: provideMcpServerDefinitions()</text>
   <path d="M905 360H300" class="setup"/>
-  <text x="602" y="348" text-anchor="middle">Initial declaration: http://invalid.invalid</text>
+  <text x="602" y="348" text-anchor="middle">Callback return: placeholder address http://invalid.invalid</text>
   <path d="M300 402H505" class="setup"/>
-  <text x="402" y="382" text-anchor="middle">Forward initial declaration</text>
-  <text x="402" y="397" text-anchor="middle" class="small">To Copilot SDK mcpServers</text>
+  <text x="402" y="382" text-anchor="middle">VS Code writes .mcp.json</text>
+  <text x="402" y="397" text-anchor="middle" class="small">Host passes settings to Copilot</text>
   <path d="M402 405V419" stroke="#b42318" stroke-width="1.5" fill="none"/>
   <rect x="250" y="420" width="710" height="44" rx="6" fill="#fff1f0" stroke="#e89b95"/>
-  <text x="605" y="438" text-anchor="middle" class="danger">VS Code forwards without invoking resolveMcpServerDefinition first.</text>
-  <text x="605" y="455" text-anchor="middle" class="small">The runtime receives configuration, not a callable VS Code extension callback.</text>
+  <text x="605" y="438" text-anchor="middle" class="danger">VS Code skips the startup callback, resolveMcpServerDefinition(...).</text>
+  <text x="605" y="455" text-anchor="middle" class="small">Passing the settings file does not start the server or replace the placeholder address.</text>
   <path d="M905 488H719" class="unreached"/>
   <path d="M705 481L719 495 M705 495L719 481" stroke="#94a3b8" stroke-width="3"/>
-  <text x="805" y="476" text-anchor="middle" class="small">Listener startup not reached</text>
+  <text x="805" y="476" text-anchor="middle" class="small">No JS call to start the socket server</text>
   <path d="M705 530H891" class="unreached"/>
   <path d="M891 523L905 537 M891 537L905 523" stroke="#94a3b8" stroke-width="3"/>
-  <text x="805" y="518" text-anchor="middle" class="small">No live socket URI + nonce</text>
+  <text x="805" y="518" text-anchor="middle" class="small">No JS return of address + secret</text>
   <rect x="379" y="551" width="251" height="76" rx="8" fill="#fff1f0" stroke="#e89b95"/>
-  <text x="505" y="576" text-anchor="middle" class="danger">BREAK: only placeholder known</text>
-  <text x="505" y="598" text-anchor="middle">Not the extension's endpoint.</text>
-  <text x="505" y="617" text-anchor="middle" class="small">No successful MCP tool discovery here.</text>
-  <text x="25" y="651" class="section">TOOL CALL: COPILOT'S MCP CLIENT CANNOT REACH THIS SERVER YET</text>
-  <path d="M100 687H505" class="call"/>
-  <text x="302" y="675" text-anchor="middle">Chat request via existing Agent Host messaging</text>
+  <text x="505" y="576" text-anchor="middle" class="danger">Only the placeholder is known</text>
+  <text x="505" y="598" text-anchor="middle">This is not the server's address.</text>
+  <text x="505" y="617" text-anchor="middle" class="small">The client cannot reach CoR's tools.</text>
+  <text x="25" y="651" class="section">EXPECTED CONSEQUENCE: NO REQUEST REACHES THE EXTENSION</text>
+  <path d="M100 695H505" class="call"/>
+  <text x="302" y="675" text-anchor="middle">Prompt: open the Next Steps screen</text>
+  <text x="302" y="690" text-anchor="middle" class="small">VS Code / Agent Host internal messaging</text>
   <path d="M505 729H691" class="unreached"/>
   <path d="M691 722L705 736 M691 736L705 722" stroke="#94a3b8" stroke-width="3"/>
-  <text x="605" y="717" text-anchor="middle" class="small">No MCP tools/call reaches server</text>
+  <text x="605" y="709" text-anchor="middle" class="small">No HTTP POST /mcp reaches server</text>
+  <text x="605" y="724" text-anchor="middle" class="small">Intended connection: Unix socket</text>
   <path d="M705 771H891" class="unreached"/>
   <path d="M891 764L905 778 M891 778L905 764" stroke="#94a3b8" stroke-width="3"/>
-  <text x="805" y="759" text-anchor="middle" class="small">No named tool dispatch</text>
+  <text x="805" y="759" text-anchor="middle" class="small">No JS function call to a CoR tool</text>
   <rect x="813" y="789" width="185" height="54" rx="7" fill="#f3f5f8" stroke="#c6d0df"/>
   <text x="905" y="811" text-anchor="middle">No VS Code command</text>
   <text x="905" y="831" text-anchor="middle" class="small">Invoked through this MCP path</text>
-  <rect x="25" y="879" width="980" height="68" rx="8" fill="#fff8eb" stroke="#e7c991"/>
-  <text x="43" y="903" class="warning">BASELINE PREDICTION: resolver-owned startup is absent from host forwarding.</text>
-  <text x="43" y="928">Prototype 1 supplies a live endpoint, then observes a separate URI rejection. Keep authentication.</text>
+  <rect x="25" y="879" width="980" height="44" rx="8" fill="#fff8eb" stroke="#e7c991"/>
+  <text x="43" y="903" class="warning">Source-code prediction, not a recorded error from this unchanged setup.</text>
   <g id="arrowheads">
     <g fill="#2563eb">
       <polygon points="300,276 312,270 312,282"/>
@@ -71,7 +72,7 @@
       <polygon points="300,360 312,354 312,366"/>
       <polygon points="505,402 493,396 493,408"/>
     </g>
-    <polygon points="505,687 493,681 493,693" fill="#087f5b"/>
+    <polygon points="505,695 493,689 493,701" fill="#087f5b"/>
     <g fill="#94a3b8">
       <polygon points="733,488 743,482 743,494"/>
       <polygon points="877,530 867,524 867,536"/>
@@ -79,5 +80,7 @@
       <polygon points="877,771 867,765 867,777"/>
     </g>
   </g>
-  <text x="25" y="978" class="small">Crosses mark missing / unreached steps, including the intended MCP destination. Source-based prediction, not a runtime trace.</text>
+  <text x="25" y="976">The registry-to-client arrow summarizes a generated .mcp.json file and host settings delivery. It is not HTTP.</text>
+  <text x="25" y="1000">If reached, the server would require a secret and an owner-only socket directory. Neither control is removed.</text>
+  <text x="25" y="1027" class="small">Blue: setup settings. Green: user prompt. Crosses: no communication took place. JS means JavaScript inside the extension.</text>
 </svg>

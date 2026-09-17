@@ -1,61 +1,63 @@
 # MCP transport comparison
 
-[Overview and diagrams](README.md) | [Direct socket](01-direct-socket.md) | [Stdio bridge](02-stdio-bridge.md) | [Loopback HTTP](03-loopback-http.md)
+[Overview and diagrams](README.md) | [Current implementation](00-current-implementation.md) | [Direct socket](01-direct-socket.md) | [Stdio bridge](02-stdio-bridge.md) | [Stdio security](stdio-bridge-security.md) | [Loopback HTTP](03-loopback-http.md) | [Loopback security](loopback-security.md)
 
 ## I. Prototype results
 
-Results apply to the [recorded runtime](README.md#evidence-boundary). Protocol checks are not model-invocation proof.
+We compared three ways for a chat agent to reach CoR's tools inside VS Code. Each experiment tried to identify the receiving window and open the existing Next Steps screen.
 
 | Prototype | Feasibility and observed result | Blocker or qualification |
 | --- | --- | --- |
-| 1. Direct socket | Not viable as tested. Ready URI, zero sessions/effects. | `invalid MCP server URL: invalid format`; alternate formats TBD. |
-| 2. Stdio bridge | Feasible. Current child passed Local and Copilot command/view calls; 16 protocol scenarios. | Same definition/listener, sequential clients; not concurrent workflow proof. |
-| 3. Loopback HTTP | Feasible. Original real Copilot command/view once each; 15 checks. | Local follow-up stopped before native enablement; not a transport failure. |
+| 1. Direct socket | Copilot rejected the socket address before connecting. | Other address formats remain untested. |
+| 2. Stdio bridge | Copilot ran both tools using the current Node stdio bridge. | The trial covered two test tools, not the complete CoR workflow. |
+| 3. Loopback HTTP | Copilot ran both tools using authenticated loopback HTTP. | The successful trial predates the final launch-script cleanup. |
 
-Neither proves the full CoR workflow. Unequal test inventories are not benchmarks.
+Results apply only to the [tested installation](README.md#evidence-boundary).
 
 ## II. Implementation comparison
 
-Both feasible options retain activation-owned registration and extension-host handlers. Copilot owns connection, not registration.
+Both options use the VS Code MCP registry for setup metadata, not tool requests. Both end with an in-process JavaScript call from the MCP server to a CoR handler. They differ between the MCP client and server.
 
 | Concern | 2. Stdio bridge | 3. Loopback HTTP |
 | --- | --- | --- |
-| Implementation | Stdio/private-HTTP relay, frame guard, discovery fallback. | Direct HTTP, listener-local sessions, limits, awaited disposal. |
-| Maintenance | Own protocol adaptation; retain backend. | Fewer layers; upstream the experimental server copy. |
-| Process/runtime | One VS Code-owned Node child; environment/exit handling. | No helper; request pressure stays in extension host. |
-| Package reuse | Public `startInProcHttpServer`; Node-only bridge. | Locked 1.0.0 Hono adaptation with license, not archived Express. |
+| Registered metadata | Bridge command, script and lease containing socket URI, nonce, expiry and instance. | Loopback URL and nonce header. |
+| Request route | JSON-RPC over stdin/stdout, then authenticated HTTP over an owner-protected Unix socket. | Authenticated HTTP over TCP to `127.0.0.1:<port>/mcp`. |
+| Implementation | Translates two transports and handles a startup-version difference. | Client connects directly using ordinary HTTP. |
+| Process and runtime | Copilot owns one child using VS Code's Node runtime. The extension cannot kill it directly. | No child. The extension owns and directly closes the listener. |
+| Maintenance | Framing, forwarding, cancellation, protocol fallback and bridge cleanup. | Authentication, Host and Origin checks, limits and listener cleanup. |
+| Rebuild | An old bridge can retain old code until it exits, but its revoked nonce cannot reach a new server. | Stopping the extension host stops all prototype code. |
+| Package reuse | Reuses the existing private server unchanged. | Adapts package 1.0.0's Hono server; changes should move upstream rather than remain copied. |
 
-Stdio avoids a second server implementation but must maintain protocol relaying. HTTP removes child management, not server ownership.
+HTTP has fewer process and transport boundaries. Stdio preserves the existing server package and its owner-protected socket.
 
 ## III. Security comparison
 
-Shipping requires authenticated, window-bound calls, extension-enforced approvals, resource bounds and revocation. Current Local already has private IPC, nonce authentication, a 0700 Unix directory and SDK host protection. It is not a fully secured baseline.
+The [current implementation](00-current-implementation.md#protections-and-limits-we-already-have) uses an owner-protected Unix socket plus a nonce. This is the existing security baseline rather than compatibility evidence. Both options still need correct window selection and approval for sensitive tools.
 
-| Area | Current Local baseline | 2. Stdio: added risk and remaining work | 3. HTTP: added risk and remaining work |
+| Question | Current implementation | 2. Stdio: what changes | 3. HTTP: what changes |
 | --- | --- | --- | --- |
-| Exposure/auth | Private socket, nonce; no TCP. | Keeps IPC; guards/fallback implemented. Harden child packaging, environment and framing. | TCP admits local-user/browser attempts. Loopback/auth/Host/Origin/limits tested; validate OS/network behavior. |
-| Bootstrap/secrets | Resolver supplies credential. | Environment/config carry lease; scope delivery with host. | Ready URL/header forwarded; same storage work plus port/credential refresh. |
-| OS permissions | Unix 0700; no explicit Windows DACL. | Preserve ownership checks; validate Windows/remote strategy. | No filesystem gate; loopback does not select an OS user. |
-| Revocation/resources | Module-wide session map, early startup return, incomplete bounds. | Inherits gaps despite readiness probe/one-hour lease; harden backend and child shutdown. | Local sessions, bounds, 30-minute lease/Stop implemented; productionize cleanup/upstream integration. |
+| Exposure | Owner-only socket directory. | Same socket restriction; child-process pipes have no address. Trust the bridge executable and launch definition. | Any local process can try the port. Nonce, Host, Origin and limit checks protect requests. |
+| Bootstrap | Callback returns address and nonce. | Registry passes a serialized lease in the child environment; bridge deletes it after reading. | Registry passes URL and nonce header to the client. |
+| Credential risks | Retained settings or logs. | Retained launch settings, logs, early environment inheritance or compromised bridge. | Retained settings, logs or stolen bearer nonce. |
+| OS work | Validate Unix and Windows private-endpoint permissions. | Also validate child launch and bridge exit. | Validate loopback binding and exposure; TCP does not restrict callers to one user. |
+| Revocation | Server shutdown. | Stop, disposal or lease expiry; verify orphan cleanup. | Stop, disposal or lease expiry; verify restart cleanup. |
 
-Both trials found credential files at 0644 under 0755 directories, protected by profile root 0700. Ordinary F5 is not covered. Retention/ACL/sync require host integration; the extension cannot erase all copies. Neither isolates malicious same-user processes.
+Lease duration is policy, not a transport property. Both trials retained secrets in generated settings protected by an owner-only outer profile directory; normal profiles still need validation. The extension cannot erase every VS Code copy.
 
-Shared full-catalog work includes window binding, scoped bootstrap and operation-specific approval for database firewall changes and deployment workflows. A nonce is not per-chat identity or human consent. Same-host capabilities need not automatically use full OAuth; remote/shared service authorization is a separate design.
+Neither nonce identifies a person or chat, grants user consent, or protects against same-user malware. Stdio narrows who can connect but adds a trusted adapter process. HTTP accepts more local connection attempts but has fewer moving parts. Both share the same in-process authorization requirements.
 
-Relative to Local, stdio needs less new endpoint-access protection but more child/protocol work. HTTP has broader exposure, with protections already implemented. Stdio still needs shared-package lifecycle hardening; HTTP already addresses session ownership, limits and disposal. Full-tool authorization and credential-retention work are comparable.
+## IV. Copilot compatibility
 
-## IV. Local and Copilot compatibility
+| Prototype | Copilot connection | Copilot model calls |
+| --- | --- | --- |
+| 1 | Address rejected before MCP connection | No call |
+| 2 | Connected through stdio bridge | Both test tools passed |
+| 3 | Connected through loopback HTTP | Both test tools passed in the original trial |
 
-| Prototype | Local connection/discovery | Local model invocation | Copilot connection/discovery | Copilot model invocation |
-| --- | --- | --- | --- | --- |
-| 1 | Proven, earlier Test-mode control | TBD | Failed for tested URI | None, blocked before connection |
-| 2 | Proven, current definition | Proven marker/view | Proven, current definition | Proven marker/view with current child |
-| 3 | Expected from native HTTP support; TBD | TBD, enablement incomplete | Proven, original trial | Proven marker/view, original trial |
-
-"Expected" is source support, not a measured call. Stdio used one unchanged definition/listener sequentially. HTTP's follow-up completed Workspace Trust but not native enablement: no listener, definition or calls, and no fresh Copilot trial. Local HTTP and alternate socket formats remain TBD. Standalone CLI, Windows, remote operation, all 17 tools, allowlists, workflow approvals, handoffs and resume remain untested.
+Neither successful trial covered Windows, remote hosts, all 17 CoR tools, agent tool restrictions, handoffs or resume.
 
 ## V. Conclusion
 
-Prefer stdio for private IPC, package reuse and now-proven basic dual-client invocation, despite its extra process and protocol maintenance. HTTP offers fewer processes and better prototype listener ownership, but broader reachability and server upstreaming work.
+Prefer loopback HTTP. Both options passed the Copilot trial, while loopback HTTP has one request transport, no child process, no protocol adapter and extension-owned shutdown. Its TCP port accepts connection attempts from local processes, but strict loopback binding, a short-lived nonce, Host and Origin validation, and resource limits provide concrete controls for that exposure.
 
-This is a transport choice, not approval to replace the full CoR workflow. HTTP's dual-client evidence remains incomplete; both options need command policy and credential lifecycle work before expanding the catalog.
+This recommendation depends on adding loopback support to the shared in-process MCP package rather than maintaining a copied server in this extension. The package already contains the MCP-over-HTTP routing and session machinery, so the remaining work is a contained listener and lifecycle change. Neither option should expose the full CoR workflow without the approval, window-binding and secret-handling work above.

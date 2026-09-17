@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1100" viewBox="0 0 1030 1100" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1160" viewBox="0 0 1030 1160" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
   <title id="title">Actual authenticated loopback HTTP prototype</title>
   <desc id="desc">The VS Code extension registers a provider during opt-in activation and waits for trust and explicit window enablement. It starts an authenticated ephemeral loopback listener, then publishes the ready URL and nonce header through the metadata registry. Copilot's runtime MCP client connects directly. Named tools execute inside the same extension host as the MCP server. Real Copilot marker and Next Steps calls passed in the original trial before final launcher cleanup. A later Local follow-up stopped before native enablement and established no connection. No bridge process exists.</desc>
   <style>text{font-family:Arial,sans-serif}.title{font-size:23px;font-weight:700}.name{font-size:16px;font-weight:700}.small{font-size:12px;fill:#42546c}.section{font-size:13px;font-weight:700;fill:#42546c;letter-spacing:1px}.security{fill:#934100;font-weight:700}.lane{stroke:#b7c6d8;stroke-dasharray:4 5}.setup{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 4;fill:none}.call{stroke:#087f5b;stroke-width:2;fill:none}.result{stroke:#087f5b;stroke-width:2;stroke-dasharray:3 4;fill:none}</style>
-  <rect width="1030" height="1100" fill="#fff"/>
-  <text x="25" y="35" class="title">3. Authenticated loopback HTTP: no helper process</text>
-  <text x="25" y="61">Copilot connects directly to a loopback listener. Server and handlers stay in the extension host.</text>
+  <rect width="1030" height="1160" fill="#fff"/>
+  <text x="25" y="35" class="title">3. Loopback HTTP: TCP to the same machine, no helper</text>
+  <text x="25" y="61">MCP requests use HTTP at 127.0.0.1. The server still runs inside the VS Code extension host.</text>
   <rect x="615" y="86" width="390" height="899" rx="12" fill="#f1f7ff" stroke="#c5daf4"/>
   <text x="810" y="108" text-anchor="middle" class="small">SERVER + HANDLERS SHARE THE EXTENSION HOST</text>
   <rect x="20" y="125" width="160" height="90" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
@@ -13,57 +13,62 @@
   <rect x="210" y="125" width="180" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
   <text x="300" y="150" text-anchor="middle" class="name">VS Code</text>
   <text x="300" y="171" text-anchor="middle" class="name">MCP registry</text>
-  <text x="300" y="197" text-anchor="middle" class="small">Server definitions</text>
+  <text x="300" y="197" text-anchor="middle" class="small">Connection instructions</text>
   <rect x="415" y="125" width="180" height="90" rx="8" fill="#e5f6ee" stroke="#83b99e"/>
   <text x="505" y="150" text-anchor="middle" class="name">Copilot runtime</text>
   <text x="505" y="171" text-anchor="middle" class="name">MCP client</text>
-  <text x="505" y="197" text-anchor="middle" class="small">Owns the MCP connection</text>
+  <text x="505" y="197" text-anchor="middle" class="small">Sends tool requests</text>
   <rect x="630" y="125" width="150" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
   <text x="705" y="155" text-anchor="middle" class="name">MCP server</text>
-  <text x="705" y="181" text-anchor="middle" class="small">In-process library</text>
+  <text x="705" y="181" text-anchor="middle" class="small">Receives tool requests</text>
   <rect x="820" y="125" width="170" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
   <text x="905" y="155" text-anchor="middle" class="name">VS Code extension</text>
-  <text x="905" y="181" text-anchor="middle" class="small">Activation + handlers</text>
+  <text x="905" y="181" text-anchor="middle" class="small">Runs CoR actions</text>
   <path d="M100 215V973 M300 215V973 M505 215V973 M705 215V973 M905 215V973" class="lane"/>
-  <text x="25" y="242" class="section">SETUP: EXPLICIT ENABLEMENT BEFORE LIVE PUBLICATION</text>
+  <text x="25" y="242" class="section">SETUP: ASK PERMISSION, THEN START THE SERVER</text>
   <path d="M905 276H300" class="setup"/>
-  <text x="602" y="264" text-anchor="middle">Opt-in activation: register provider; initially no definition</text>
+  <text x="602" y="256" text-anchor="middle">VS Code API: registerMcpServerDefinitionProvider(...)</text>
+  <text x="602" y="271" text-anchor="middle" class="small">provideMcpServerDefinitions() initially returns no servers</text>
   <rect x="630" y="294" width="360" height="43" rx="7" fill="#fff4e8" stroke="#e7af70"/>
-  <text x="810" y="312" text-anchor="middle" class="security">Trusted local folder + explicit window approval</text>
-  <text x="810" y="328" text-anchor="middle" class="small">User enables the listener through normal VS Code UI</text>
+  <text x="810" y="312" text-anchor="middle" class="security">User trusts the folder and approves enablement</text>
+  <text x="810" y="328" text-anchor="middle" class="small">Native VS Code dialog, not an MCP request</text>
   <path d="M905 373H705" class="setup"/>
-  <text x="805" y="353" text-anchor="middle">Start authenticated listener</text>
-  <text x="805" y="368" text-anchor="middle" class="small">127.0.0.1, ephemeral port, two tools</text>
+  <text x="805" y="353" text-anchor="middle">JS call: start HTTP server</text>
+  <text x="805" y="368" text-anchor="middle" class="small">Bind 127.0.0.1; OS chooses a free port</text>
   <path d="M705 417H905" class="setup"/>
-  <text x="805" y="397" text-anchor="middle">Ready URL + nonce</text>
-  <text x="805" y="412" text-anchor="middle" class="small">Auth active before publication</text>
+  <text x="805" y="397" text-anchor="middle">Return URL + secret</text>
+  <text x="805" y="412" text-anchor="middle" class="small">JS return; authentication already active</text>
   <path d="M905 461H300" class="setup"/>
-  <text x="602" y="449" text-anchor="middle">S1 Provide http://127.0.0.1:&lt;port&gt;/mcp + Authorization header</text>
+  <text x="602" y="441" text-anchor="middle">Callback return: provideMcpServerDefinitions() supplies URL + header</text>
+  <text x="602" y="456" text-anchor="middle" class="small">Example URL: http://127.0.0.1:54321/mcp. Port 54321 is illustrative.</text>
   <path d="M300 505H505" class="setup"/>
-  <text x="402" y="485" text-anchor="middle">Host forwards metadata</text>
-  <text x="402" y="500" text-anchor="middle" class="small">Generated configuration</text>
+  <text x="402" y="485" text-anchor="middle">VS Code writes .mcp.json</text>
+  <text x="402" y="500" text-anchor="middle" class="small">Host passes settings to Copilot</text>
   <path d="M505 549H705" class="setup"/>
-  <text x="605" y="529" text-anchor="middle">Initialize / tools/list + nonce</text>
-  <text x="605" y="544" text-anchor="middle" class="small">Direct Streamable HTTP</text>
+  <text x="605" y="529" text-anchor="middle">Start MCP: HTTP POST /mcp</text>
+  <text x="605" y="544" text-anchor="middle" class="small">TCP 127.0.0.1:54321</text>
   <rect x="630" y="571" width="360" height="75" rx="7" fill="#fff4e8" stroke="#e7af70"/>
-  <text x="810" y="593" text-anchor="middle" class="security">S2 HTTP endpoint controls</text>
-  <text x="810" y="615" text-anchor="middle">Loopback, nonce, Host/Origin checks</text>
-  <text x="810" y="636" text-anchor="middle">Bounded requests + listener-local sessions</text>
+  <text x="810" y="593" text-anchor="middle" class="security">Checks on incoming HTTP requests</text>
+  <text x="810" y="615" text-anchor="middle">Secret, requested host, browser Origin</text>
+  <text x="810" y="636" text-anchor="middle">Limit request sizes and open connections</text>
   <text x="25" y="681" class="section">TOOL CALL: ORIGINAL COPILOT TRIAL PASSED</text>
-  <path d="M100 715H505" class="call"/>
-  <text x="302" y="703" text-anchor="middle">User request and scoped tool approval</text>
+  <path d="M100 723H505" class="call"/>
+  <text x="302" y="703" text-anchor="middle">Prompt and approval: open Next Steps</text>
+  <text x="302" y="718" text-anchor="middle" class="small">VS Code / Agent Host internal messaging</text>
   <path d="M505 759H705" class="call"/>
-  <text x="605" y="747" text-anchor="middle">S2 MCP tools/call + nonce</text>
+  <text x="605" y="739" text-anchor="middle">HTTP POST /mcp</text>
+  <text x="605" y="754" text-anchor="middle" class="small">TCP 127.0.0.1:54321; tools/call</text>
   <path d="M705 803H905" class="call"/>
-  <text x="805" y="791" text-anchor="middle">Dispatch named tool</text>
+  <text x="805" y="783" text-anchor="middle">Call the tool implementation</text>
+  <text x="805" y="798" text-anchor="middle" class="small">JavaScript function call, no network</text>
   <rect x="640" y="825" width="350" height="72" rx="7" fill="#fff4e8" stroke="#e7af70"/>
-  <text x="815" y="848" text-anchor="middle" class="security">S3 In-process execution checks</text>
-  <text x="815" y="869" text-anchor="middle">Trust, workspace, strict arguments</text>
-  <text x="815" y="889" text-anchor="middle" class="small">Fixed marker command or existing Next Steps handler</text>
+  <text x="815" y="848" text-anchor="middle" class="security">Extension checks before running the tool</text>
+  <text x="815" y="869" text-anchor="middle">Trusted folder, correct window, allowed inputs</text>
+  <text x="815" y="889" text-anchor="middle" class="small">Runs only the identification command or Next Steps tool</text>
   <path d="M905 919H705 M705 946H505 M505 973H100" class="result"/>
-  <text x="805" y="913" text-anchor="middle" class="small">Result</text>
-  <text x="605" y="940" text-anchor="middle" class="small">MCP result</text>
-  <text x="302" y="967" text-anchor="middle" class="small">Response in Chat; webview remains in VS Code</text>
+  <text x="805" y="913" text-anchor="middle" class="small">JavaScript return value</text>
+  <text x="605" y="940" text-anchor="middle" class="small">HTTP response over loopback TCP</text>
+  <text x="302" y="967" text-anchor="middle" class="small">VS Code / Agent Host message: show result in Chat</text>
   <g id="arrowheads" fill="#2563eb">
     <polygon points="300,276 312,270 312,282"/>
     <polygon points="705,373 717,367 717,379"/>
@@ -72,7 +77,7 @@
     <polygon points="505,505 493,499 493,511"/>
     <polygon points="705,549 693,543 693,555"/>
     <g fill="#087f5b">
-      <polygon points="505,715 493,709 493,721"/>
+      <polygon points="505,723 493,717 493,729"/>
       <polygon points="705,759 693,753 693,765"/>
       <polygon points="905,803 893,797 893,809"/>
       <polygon points="705,919 717,913 717,925"/>
@@ -80,8 +85,11 @@
       <polygon points="100,973 112,967 112,979"/>
     </g>
   </g>
-  <text x="25" y="1014">S1 Protect forwarded credentials. S2 Stop / 30-minute lease revokes the listener, not stored copies.</text>
-  <text x="25" y="1038">TCP has no Unix-directory permission gate. Loopback alone does not authenticate a user or browser.</text>
-  <text x="25" y="1062">S3 is not a network endpoint. A valid nonce does not grant consent for every CoR operation.</text>
-  <text x="25" y="1086" class="small">Blue: setup. Green: calls. Dotted green: results. No bridge, no separate MCP server executable.</text>
+  <text x="25" y="1014">Example: POST http://127.0.0.1:54321/mcp with JSON-RPC method tools/call.</text>
+  <text x="25" y="1037">Tool name: open_scaffold_next_steps_view, arguments {}. Port 54321 is illustrative; /mcp is the real HTTP path.</text>
+  <text x="25" y="1060">Requests include Authorization: Nonce &lt;secret&gt;. The .mcp.json file carries settings, not tool requests.</text>
+  <text x="25" y="1083">Stop or lease expiry closes the server. Saved copies of the secret can remain, but no longer grant access.</text>
+  <text x="25" y="1106">TCP has no socket-directory permission check. A local address alone does not authenticate a user or browser.</text>
+  <text x="25" y="1129">The original Copilot trial passed. The later Local attempt stopped before enablement, so it sent no request.</text>
+  <text x="25" y="1152" class="small">Blue: setup. Green: tool request. Dotted green: reply over the labeled connection. No helper or separate server executable.</text>
 </svg>

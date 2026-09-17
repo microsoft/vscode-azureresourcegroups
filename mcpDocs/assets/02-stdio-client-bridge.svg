@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" font-size="16px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">MCP client to Node stdio bridge transport</title>
+  <desc id="desc">The Copilot runtime MCP client launches the Node stdio bridge as a child process. The client writes MCP JSON-RPC requests to the bridge's standard input. The bridge writes MCP JSON-RPC results to standard output. The operating system supplies private pipe handles to the parent and child processes.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:24px;font-weight:700}.name{font-size:18px;font-weight:700}.small{font-size:14px;fill:#42546c}.request{stroke:#087f5b;stroke-width:3;fill:none}.reply{stroke:#087f5b;stroke-width:3;stroke-dasharray:5 5;fill:none}.note{fill:#934100;font-weight:700}</style>
+  <rect width="1040" height="420" fill="#fff"/>
+  <text x="25" y="40" class="title">Transport 1: MCP JSON-RPC through child-process pipes</text>
+  <rect x="65" y="105" width="300" height="115" rx="10" fill="#e5f6ee" stroke="#83b99e" stroke-width="2"/>
+  <text x="215" y="145" text-anchor="middle" class="name">Copilot runtime MCP client</text>
+  <text x="215" y="178" text-anchor="middle" class="small">Parent process</text>
+  <text x="215" y="201" text-anchor="middle" class="small">Chooses and launches the bridge</text>
+  <rect x="675" y="105" width="300" height="115" rx="10" fill="#ffedc8" stroke="#d9b469" stroke-width="2"/>
+  <text x="825" y="145" text-anchor="middle" class="name">Node stdio bridge process</text>
+  <text x="825" y="178" text-anchor="middle" class="small">Child process</text>
+  <text x="825" y="201" text-anchor="middle" class="small">Translates messages, contains no CoR tools</text>
+  <path d="M365 130H675" class="request"/>
+  <polygon points="675,130 659,122 659,138" fill="#087f5b"/>
+  <text x="520" y="104" text-anchor="middle">stdin: MCP JSON-RPC request</text>
+  <text x="520" y="123" text-anchor="middle" class="small">Example: {"method":"tools/call", ...}</text>
+  <path d="M675 195H365" class="reply"/>
+  <polygon points="365,195 381,187 381,203" fill="#087f5b"/>
+  <text x="520" y="243" text-anchor="middle">stdout: MCP JSON-RPC result</text>
+  <text x="520" y="264" text-anchor="middle" class="small">Diagnostic logs use stderr, not stdout</text>
+  <rect x="130" y="305" width="780" height="78" rx="8" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="520" y="333" text-anchor="middle" class="note">Safety comes from OS-owned pipe handles and launching the intended child.</text>
+  <text x="520" y="358" text-anchor="middle">The pipe adds no authentication or encryption. Strict framing, size limits and a trusted bridge path still matter.</text>
+  <text x="25" y="407" class="small">Solid green: request. Dotted green: reply. This hop does not use HTTP, a socket path or a TCP port.</text>
+</svg>

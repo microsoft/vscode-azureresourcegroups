@@ -1,64 +1,102 @@
-# CoR MCP transport experiments
+# Giving Copilot access to CoR tools
 
-**Stdio passed real Local and Copilot Chat command and webview calls using one definition. Loopback HTTP passed Copilot. Direct private-socket publication reached Copilot, but its URI was rejected before connecting.** These are two-tool feasibility results, not a completed Copilot on Rails migration.
+Copilot on Rails, or CoR, is the Azure Resource Groups extension's guided project-creation, debugging and deployment flow. Its chat tools can open VS Code screens and run extension actions. MCP, the Model Context Protocol, lets a chat agent request those actions.
 
-The goal is to keep MCP registration and named CoR handlers in the Azure Resource Groups extension while allowing Copilot's client to invoke them. All three prototypes register through `vscode.lm.registerMcpServerDefinitionProvider` during activation. None moves VS Code commands into a standalone server or exposes arbitrary command dispatch.
+VS Code Chat offers two ways to run an agent, **Local** and **Copilot**. They use different MCP clients. The question is how Copilot's client can reach tools that already run inside the extension, without moving those tools into another program.
 
-| Read | Result |
+A Node stdio bridge process let both clients use the existing server. Giving the server an ordinary local HTTP address also worked with Copilot. Giving Copilot the existing private-socket address did not work on the tested build.
+
+## Who does what
+
+| Diagram label | Meaning |
 | --- | --- |
-| [1. Direct socket](01-direct-socket.md) | Live URI rejected; alternate-format follow-up TBD |
-| [2. Stdio bridge](02-stdio-bridge.md) | Current launcher passed Local and Copilot on the same listener |
-| [3. Loopback HTTP](03-loopback-http.md) | Original Copilot trial passed; Local follow-up stopped before enablement |
-| [Comparison and recommendation](04-comparison.md) | Stdio preferred; full-workflow migration unproven |
+| Copilot Chat | The VS Code interface where the user sends a prompt and approves tools. |
+| MCP client | Connects to a server, asks which tools it offers, then requests a tool by name. |
+| VS Code MCP registry | Stores connection instructions. It does not carry tool requests. |
+| MCP server | Receives tool requests and calls the extension code that handles them. |
+| VS Code extension | Runs CoR actions inside the extension-host process, where VS Code runs extensions. |
+| JSON-RPC | The JSON message format MCP uses. `tools/call` means "run this named tool." |
+
+HTTP describes how requests are exchanged. A Unix socket or TCP supplies the connection underneath. These prototypes use HTTP over either kind of connection. The stdio design adds a separate hop through the Node stdio bridge process's standard input and output.
+
+For example, this MCP message requests the Next Steps screen. The same message can travel through stdio or in an HTTP request to `/mcp`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": { "name": "open_scaffold_next_steps_view", "arguments": {} }
+}
+```
 
 ## Current code
 
-[Local](#current-local) | [Copilot](#current-copilot) | [Prototype diagrams](#prototypes)
+[Current implementation reference](00-current-implementation.md) | [Local](#current-local) | [Copilot](#current-copilot) | [Prototype diagrams](#prototypes)
 
-The registry stores metadata. The active MCP client owns connection, discovery and calls. Server and handlers share the extension host; "in-process" does not mean there is no endpoint. CoR currently writes Local preference settings, but those do not override every explicit or remembered Copilot selection.
+Each diagram labels the communication method on its arrows, including replies. The server is extension code, not another executable. CoR currently prefers Local, though an explicitly selected Copilot chat can still use Copilot.
 
 ### Current Local
 
-VS Code resolves the placeholder, starts the private listener and connects with its socket-aware MCP client. Existing protections include nonce authentication and a mode-0700 Unix socket directory.
+The extension initially supplies a placeholder address. Before connecting, Local asks the extension's startup callback to replace it with the real socket address and a secret. Local then sends MCP requests as HTTP over that Unix socket, without a TCP port.
 
-![Current Local registration, resolution and MCP call flow](assets/00-current-local-flow.png)
+![Local asks the extension to start its server, then sends HTTP over a Unix socket](assets/00-current-local-flow.png)
 
 [SVG source](assets/00-current-local-flow.svg)
 
 ### Current Copilot
 
-The inspected forwarding path copies the declaration without invoking its resolver. The unchanged provider therefore supplies a placeholder, not a live endpoint. This is a source-predicted baseline, distinct from prototype 1's observed ready-URI rejection.
+Copilot receives connection settings through VS Code's generated configuration. Code inspection found that this path skips the startup callback, leaving Copilot with the placeholder. This is a prediction from source code. Prototype 1 separately tested a real address and observed a different failure.
 
-![Current code under Copilot, with the source-predicted missing resolution step](assets/00-current-copilot-flow.png)
+![Current Copilot receives only a placeholder because VS Code skips the server-start callback](assets/00-current-copilot-flow.png)
 
 [SVG source](assets/00-current-copilot-flow.svg)
 
 ## Prototypes
 
+| Read | How tool requests travel | What happened |
+| --- | --- | --- |
+| [1. Direct socket](01-direct-socket.md) | Intended: client sends HTTP over the existing Unix socket. | Copilot rejected the address before connecting. |
+| [2. Stdio bridge](02-stdio-bridge.md) | Client sends through stdin/stdout to the Node stdio bridge; the bridge sends HTTP over the Unix socket. | Local and Copilot both opened the requested screen. |
+| [3. Loopback HTTP](03-loopback-http.md) | Client sends HTTP over TCP to `127.0.0.1`, the same machine. | Copilot worked; Local testing stopped before server enablement. |
+
+[Compare implementation, security and remaining work](04-comparison.md).
+
 ### 1. Direct socket
 
-![Actual direct-socket prototype: live publication followed by URI rejection](assets/01-direct-socket.png)
+![Copilot receives a real socket address but rejects it before opening a connection](assets/01-direct-socket.png)
 
-[Report](01-direct-socket.md) | [SVG source](assets/01-direct-socket.svg). The listener existed; Copilot established no MCP session.
+[Report](01-direct-socket.md) | [SVG source](assets/01-direct-socket.svg). The server was ready, but no Copilot request reached it.
 
 ### 2. Stdio bridge
 
-![Current stdio implementation with separate registry, runtime client and bridge](assets/02-stdio-bridge.png)
+![Copilot sends through stdin to the Node stdio bridge process, which forwards HTTP over a Unix socket; replies return through stdout](assets/02-stdio-bridge.png)
 
-[Report](02-stdio-bridge.md) | [SVG source](assets/02-stdio-bridge.svg). Original Chat trial used standalone Node. Follow-up proved the current VS Code-owned child with both clients.
+[Report](02-stdio-bridge.md) | [Security assessment](stdio-bridge-security.md) | [SVG source](assets/02-stdio-bridge.svg). The stdio bridge now runs using VS Code's bundled Node runtime. Both clients passed with it.
 
 ### 3. Loopback HTTP
 
-![Actual loopback HTTP implementation with authenticated listener and no helper](assets/03-loopback-http.png)
+![Copilot sends HTTP over TCP to the same machine, then the server calls CoR code within the extension](assets/03-loopback-http.png)
 
-[Report](03-loopback-http.md) | [SVG source](assets/03-loopback-http.svg). Ordinary HTTP, same extension-host execution. Original Copilot success predates final launcher cleanup.
+[Report](03-loopback-http.md) | [SVG source](assets/03-loopback-http.svg). There is no stdio bridge process. The successful Copilot trial predates the final launch-script cleanup.
 
-Native language-model tools were considered but not built because the requirement is MCP. There is no fourth experiment.
+Native VS Code language-model tools could avoid this MCP connection, but were not built because the requirement is MCP.
 
 ## Evidence boundary
 
-Original trials ran September 12, 2026, from `feat/CoR` base `5dacef3a7ddbf090717e71dc94d56112a5e4e5be`, with locked `@microsoft/vscode-inproc-mcp` 1.0.0. Follow-up ran September 13. Environment: macOS 26.6.2 arm64; VS Code 1.137.0, commit `645f29cc3176500b4b5762ba887cf2a7f0ffdf2c`; installed Copilot `1.0.84-canary.70.gdb75d0d.unsigned`, SDK `1.0.13-preview.4`; extension-host Node 24.18.1, original bridge/test Node 22.18.0. This is not the public source's Copilot `1.0.83-2`.
+These tests exercised two tools, not the full CoR workflow. Original trials ran September 12, 2026, with follow-up on September 13.
 
-Package development moved from archived Docker Extensibility to [vscode-containers](https://github.com/microsoft/vscode-containers/tree/19fa49a6b8a8d4c2680ca2ce1140c0da252394c5/packages/vscode-inproc-mcp). Researched upstream source is not the installed artifact. Branch links open preserved local worktrees; none is published to origin.
+| Tested component | Version |
+| --- | --- |
+| CoR base commit | `feat/CoR` at `5dacef3a7ddbf090717e71dc94d56112a5e4e5be` |
+| MCP package | Locked `@microsoft/vscode-inproc-mcp` 1.0.0 |
+| Machine | macOS 26.6.2, arm64 |
+| VS Code | 1.137.0 at `645f29cc3176500b4b5762ba887cf2a7f0ffdf2c` |
+| Installed Copilot / SDK | `1.0.84-canary.70.gdb75d0d.unsigned` / `1.0.13-preview.4` |
+| Node | Extension host 24.18.1; original stdio bridge/test runner 22.18.0 |
+
+The installed Copilot differs from the public source's `1.0.83-2`. Results apply to the tested installation.
+
+The MCP package now lives in [vscode-containers](https://github.com/microsoft/vscode-containers/tree/19fa49a6b8a8d4c2680ca2ce1140c0da252394c5/packages/vscode-inproc-mcp), not the archived Docker Extensibility repository. The reports link local prototype branches, not published GitHub branches.
 
 Baseline sources: [package provider](https://github.com/microsoft/vscode-containers/blob/19fa49a6b8a8d4c2680ca2ce1140c0da252394c5/packages/vscode-inproc-mcp/src/vscode/registerMcpHttpProvider.ts#L15-L37), [host forwarding](https://github.com/microsoft/vscode/blob/645f29cc3176500b4b5762ba887cf2a7f0ffdf2c/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostMcpServerSupport.ts#L224-L328).

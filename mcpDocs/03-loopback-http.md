@@ -1,31 +1,31 @@
 # 3. Authenticated loopback HTTP
 
-[Overview](README.md) | [Previous: stdio bridge](02-stdio-bridge.md) | [Comparison](04-comparison.md)
+[Overview](README.md) | [Current implementation](00-current-implementation.md) | [Previous: stdio bridge](02-stdio-bridge.md) | [Security](loopback-security.md) | [Comparison](04-comparison.md)
 
 ## I. Introduction
 
-An ordinary loopback HTTP URL avoids the private-socket URI mismatch without a bridge executable. The MCP server and CoR handlers still run together inside the extension host. The tradeoff is a local TCP endpoint that needs protections beyond merely binding to localhost.
+The current implementation sends HTTP over a Unix socket. This experiment changes that connection to HTTP over TCP. It gives the server an ordinary HTTP URL whose address starts with `127.0.0.1`, which points back to the same machine. The server still runs inside the VS Code extension host, not as another executable.
 
 ## II. Hypothesis
 
-Copilot can consume a ready HTTP definition with a nonce header, invoke a fixed command and open the existing Next Steps view through a separate approved call. Missing or wrong credentials must cause no effects, and stopping the listener must invalidate the published connection.
+Copilot should connect using this URL and a temporary secret, then call a test command and open the existing Next Steps screen. Requests without the correct secret must be rejected without running tools. Stopping the server must prevent further access through the old connection settings.
 
 ## III. Investigation
 
-The opt-in provider registers during activation but publishes no definition until the user approves enablement in one trusted local folder. It starts an ephemeral `127.0.0.1` listener with authentication already active, then publishes the URL and header without a resolver placeholder. The implementation adapts the installed, locked package 1.0.0 Hono server with its MIT license retained. It does not copy the older Express source found in the primary containers checkout or assume researched upstream main matches the artifact. Listener-local sessions, Host/Origin validation, bounded requests and awaited shutdown replace the relevant package behaviors. Only `experimental_loopback_instance_marker` and `open_scaffold_next_steps_view` are exposed.
+The extension registers a settings provider when the experiment is enabled. It offers no server to clients until the user trusts the folder and approves starting it in that window. The operating system assigns an available local TCP port. Authentication is active before VS Code receives the URL and secret. The server checks the requested host and any Origin header, which identifies the website making a browser request. It also limits request sizes and connections. It exposes only a window-identification command and `open_scaffold_next_steps_view`. The implementation adapts the installed package 1.0.0's Hono HTTP server with its MIT license, not the archived project's older Express code.
 
-Fifteen protocol/provider checks passed. Real HTTP and SDK tests covered initialization, discovery, strict calls, unauthorized requests, two listeners, cancellation, limits and revocation; provider state was mocked. Automatic negotiation fell back to genuine initialization. The original normal Development-mode Copilot trial returned the correct marker with one command effect. A separately approved Next Steps call rendered the webview; extension diagnostics counted one start and one success. No workflow buttons were clicked. This supports the hypothesis, not a complete CoR workflow.
+Fifteen automated checks passed against real HTTP connections, with test substitutes for VS Code's provider API. They covered tool requests, denied access, cancellation, multiple connections and shutdown. In the original real Copilot Chat trial, the model called the command once and received the correct window identifier. After a separate approval, it opened the actual Next Steps screen once. Missing or wrong secrets returned HTTP 401, meaning unauthorized, and ran no tools. The Stop command closed the server. These results supported the hypothesis. We did not click the screen's debugging or deployment buttons.
 
-Live missing/wrong credentials returned 401 without effects, and Stop revoked the listener. Generated configuration retained the expired credential; revocation is not erasure. The September 13 follow-up tested unchanged BEFORE commit `493135aef262a62ebf0079348659da69fcd74930`, after the original trial's launcher cleanup. Workspace Trust completed but native window enablement did not, so no listener, HTTP definition or tool call existed in that run. Local remains TBD, not a transport failure; no fresh Copilot trial occurred. The separate SDK-only host check was also consent-blocked. Neither replaces the original real Copilot evidence.
+The September 13 follow-up attempted to test Local after the launch scripts had been cleaned up. The test trusted the folder but did not complete VS Code's confirmation to start the server. No server started, no connection settings were published and no tool ran. Local remains untested, not failed; there was no new Copilot trial either. A separate extension test using an MCP client instead of Chat also stopped at approval. The earlier Copilot result belongs to its earlier build. That trial also showed that VS Code retained the secret in generated configuration after Stop, although it no longer allowed access.
 
 ## IV. Diagram of what we built
 
-![Opt-in authenticated loopback listener, metadata forwarding and real Copilot tool effects](assets/03-loopback-http.png)
+![After user approval, the extension starts a local TCP server; Copilot sends HTTP requests to its /mcp path](assets/03-loopback-http.png)
 
 [SVG source](assets/03-loopback-http.svg)
 
-No helper sits between client and server. HTTP controls apply at the listener; trust and fixed-handler checks apply inside the extension. The nonce is a same-host capability, not OAuth, user approval or same-user isolation. The original Copilot pass predates final launcher cleanup.
+For example, `POST http://127.0.0.1:54321/mcp` carries a JSON-RPC `tools/call` request. Port 54321 is illustrative; `/mcp` is the real path. The server calls CoR through ordinary JavaScript functions and returns the result over HTTP. There is no second network connection inside the extension.
 
 ## V. Conclusion
 
-Loopback HTTP remains feasible on historical Copilot evidence; Local is not yet proven. In [microfish91-mcp-loopback-http-prototype](ghapp://sessions/53f75341-2a00-4057-a1a8-a0ea4ac64317), a local worktree not published to origin, BEFORE is `493135ae` and AFTER `f546e0d5190241b2acbfda046132a48f4b240639` adds only `docs/mcp-http-dual-harness-result.md`, with no implementation changes.
+HTTP worked with Copilot without a stdio bridge process, but Local still needs a completed trial. In [microfish91-mcp-loopback-http-prototype](ghapp://sessions/53f75341-2a00-4057-a1a8-a0ea4ac64317), a local worktree not published to origin, BEFORE `493135aef262a62ebf0079348659da69fcd74930` is the follow-up code; AFTER `f546e0d5190241b2acbfda046132a48f4b240639` adds only `docs/mcp-http-dual-harness-result.md`.

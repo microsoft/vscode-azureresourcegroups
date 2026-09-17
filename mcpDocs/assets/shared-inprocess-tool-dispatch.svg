@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="440" viewBox="0 0 1100 440" font-size="16px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">MCP server to Copilot on Rails tool handler call</title>
+  <desc id="desc">After validating and parsing a transport request, the MCP server dispatches the requested tool through a direct JavaScript function call to a registered Copilot on Rails handler in the same extension-host process. The handler may use a VS Code API to open a webview or run a command. The result returns through ordinary JavaScript calls.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:24px;font-weight:700}.name{font-size:18px;font-weight:700}.small{font-size:14px;fill:#42546c}.call{stroke:#087f5b;stroke-width:3;fill:none}.reply{stroke:#087f5b;stroke-width:3;stroke-dasharray:5 5;fill:none}.note{fill:#934100;font-weight:700}</style>
+  <rect width="1100" height="440" fill="#fff"/>
+  <text x="25" y="40" class="title">Final phase: dispatch the tool inside the extension host</text>
+  <rect x="25" y="75" width="1050" height="250" rx="12" fill="#f1f7ff" stroke="#c5daf4" stroke-width="2"/>
+  <text x="550" y="102" text-anchor="middle" class="small">ONE VS CODE EXTENSION-HOST PROCESS</text>
+  <rect x="65" y="135" width="270" height="110" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="200" y="175" text-anchor="middle" class="name">MCP server</text>
+  <text x="200" y="205" text-anchor="middle" class="small">Finds the registered tool handler</text>
+  <text x="200" y="228" text-anchor="middle" class="small">Passes arguments and cancellation</text>
+  <rect x="415" y="135" width="270" height="110" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="550" y="175" text-anchor="middle" class="name">CoR tool handler</text>
+  <text x="550" y="205" text-anchor="middle" class="small">Checks window and allowed inputs</text>
+  <text x="550" y="228" text-anchor="middle" class="small">Keeps approval rules for sensitive work</text>
+  <rect x="765" y="135" width="270" height="110" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="900" y="175" text-anchor="middle" class="name">VS Code API or controller</text>
+  <text x="900" y="205" text-anchor="middle" class="small">Example: open Next Steps</text>
+  <text x="900" y="228" text-anchor="middle" class="small">Runs the extension action</text>
+  <path d="M335 165H415 M685 165H765" class="call"/>
+  <polygon points="415,165 399,157 399,173" fill="#087f5b"/>
+  <polygon points="765,165 749,157 749,173" fill="#087f5b"/>
+  <path d="M765 220H685 M415 220H335" class="reply"/>
+  <polygon points="685,220 701,212 701,228" fill="#087f5b"/>
+  <polygon points="335,220 351,212 351,228" fill="#087f5b"/>
+  <text x="375" y="122" text-anchor="middle" class="small">JavaScript call</text>
+  <text x="725" y="122" text-anchor="middle" class="small">VS Code API call</text>
+  <rect x="125" y="350" width="850" height="60" rx="8" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="550" y="377" text-anchor="middle" class="note">There is no socket, HTTP request or process boundary in this phase.</text>
+  <text x="550" y="399" text-anchor="middle">Connection authentication does not replace authorization or user approval inside the tool.</text>
+  <text x="25" y="430" class="small">Solid green: function call. Dotted green: return value. All three components share one extension-host process.</text>
+</svg>

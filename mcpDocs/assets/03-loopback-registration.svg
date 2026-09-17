@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" font-size="16px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Loopback HTTP registration and connection-setting handoff</title>
+  <desc id="desc">After workspace trust and user approval, the VS Code extension starts the loopback MCP server. The server returns its temporary URL and nonce. The extension publishes those values through the VS Code MCP provider API. VS Code passes the connection settings to Copilot's MCP client. This phase passes metadata, not MCP tool requests.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:24px;font-weight:700}.name{font-size:18px;font-weight:700}.small{font-size:14px;fill:#42546c}.setup{stroke:#2563eb;stroke-width:3;stroke-dasharray:8 5;fill:none}.note{fill:#934100;font-weight:700}</style>
+  <rect width="1100" height="500" fill="#fff"/>
+  <text x="25" y="40" class="title">Phase 1: start the server and hand connection settings to the client</text>
+  <rect x="40" y="140" width="250" height="115" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="165" y="180" text-anchor="middle" class="name">VS Code extension</text>
+  <text x="165" y="212" text-anchor="middle" class="small">Waits for trust and approval</text>
+  <text x="165" y="235" text-anchor="middle" class="small">Starts the in-process server</text>
+  <rect x="425" y="140" width="250" height="115" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="550" y="180" text-anchor="middle" class="name">VS Code MCP registry</text>
+  <text x="550" y="212" text-anchor="middle" class="small">Stores connection metadata</text>
+  <text x="550" y="235" text-anchor="middle" class="small">May write generated .mcp.json</text>
+  <rect x="810" y="140" width="250" height="115" rx="10" fill="#e5f6ee" stroke="#83b99e" stroke-width="2"/>
+  <text x="935" y="180" text-anchor="middle" class="name">Copilot MCP client</text>
+  <text x="935" y="212" text-anchor="middle" class="small">Receives the URL and header</text>
+  <text x="935" y="235" text-anchor="middle" class="small">Has not sent a tool request yet</text>
+  <path d="M290 177H425" class="setup"/>
+  <polygon points="425,177 409,169 409,185" fill="#2563eb"/>
+  <text x="357" y="92" text-anchor="middle">VS Code provider API</text>
+  <text x="357" y="115" text-anchor="middle" class="small">Publish ready definition</text>
+  <path d="M675 177H810" class="setup"/>
+  <polygon points="810,177 794,169 794,185" fill="#2563eb"/>
+  <text x="742" y="92" text-anchor="middle">VS Code host handoff</text>
+  <text x="742" y="115" text-anchor="middle" class="small">Connection metadata</text>
+  <rect x="170" y="290" width="760" height="132" rx="8" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="550" y="320" text-anchor="middle" class="note">Published values</text>
+  <text x="550" y="350" text-anchor="middle">URL: http://127.0.0.1:54321/mcp</text>
+  <text x="550" y="377" text-anchor="middle">Header: Authorization: Nonce &lt;secret&gt;</text>
+  <text x="550" y="405" text-anchor="middle" class="small">Port 54321 is illustrative. The OS chooses an available port.</text>
+  <text x="25" y="465">Security consideration: authentication must be active before publication. Retained settings can expose the URL and nonce until expiry.</text>
+  <text x="25" y="488" class="small">Dashed blue arrows carry setup metadata. They do not carry MCP JSON-RPC tool requests.</text>
+</svg>

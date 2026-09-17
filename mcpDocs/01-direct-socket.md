@@ -1,31 +1,29 @@
 # 1. Direct private socket
 
-[Overview](README.md) | [Next: stdio bridge](02-stdio-bridge.md) | [Comparison](04-comparison.md)
-
 ## I. Introduction
 
-The existing package already serves MCP over authenticated private HTTP inside the extension host. Publishing its live socket URI directly could let Copilot reach the same server without a helper process, TCP listener or duplicate tool implementation.
+CoR's MCP server already runs inside the VS Code extension-host process. It receives HTTP requests through a Unix socket, a local communication channel addressed by a filesystem path rather than a TCP port. This experiment asked whether Copilot could use that same connection once it had the real address, without adding a stdio bridge process or TCP listener.
 
 ## II. Hypothesis
 
-If activation publishes a ready endpoint and authentication header, Copilot's MCP client can initialize, discover two named tools and invoke a fixed VS Code command. A separately approved Next Steps call should open the existing webview. Rejection before initialization would disprove this hypothesis for the supplied URI and tested runtime.
+Give Copilot the address of a running server and the secret required to access it. Copilot should then be able to list the tools, call a test command and open CoR's existing Next Steps screen. If it rejects the address before connecting, supplying the address alone is not enough.
 
 ## III. Investigation
 
-The opt-in provider used the package's public `startInProcHttpServer` export. It waited for an unauthorized HTTP response over the socket before publishing the URI and nonce, proving the listener was ready rather than trusting startup return. Concurrent enumeration shared one listener, and Local resolution returned that same endpoint. The narrow catalog contained `prototype_instance` and `open_scaffold_next_steps_view`. Strict inputs, Workspace Trust, the original local folder and extension lifetime constrained execution; no deployment or general command-dispatch tool was exposed.
+The [current implementation](00-current-implementation.md#what-happens-with-the-same-code-under-copilot) returns a placeholder until VS Code calls its server-start callback, a step the Copilot forwarding path skips. We changed the connection-settings provider to start the server itself, check that the socket accepted connections, then return the real address and an Authorization header containing a temporary secret. Only two tools were registered: `prototype_instance` to identify the receiving VS Code window, and `open_scaffold_next_steps_view` to open the existing Next Steps screen. The experiment required a trusted local folder and exposed no deployment actions.
 
-Twelve Node test groups passed against real private HTTP and MCP transports, with mocked VS Code effects. They covered publication, authentication rejection, fixed dispatch, argument validation, revocation and restart. An earlier Test-mode control also reached Running in VS Code's Local MCP client and discovered both tools. That was connection/discovery evidence, not a Local model invocation or a rendered view. The unchanged-provider control still published its placeholder after resolution, so manually starting Local was not a forwarding fix.
+The automated tests were controls for this experiment. A test program that understands Unix sockets sent real MCP requests to the prototype's server. It checked that valid calls reached the expected tool, missing secrets were rejected and shutdown stopped further access. Test functions stood in for VS Code commands, so these checks did not open a real screen. All twelve groups passed. Separately, VS Code's Local MCP client connected to the prototype and listed both tools, without a model calling them. These controls confirmed the server worked with a compatible client; they did not test Copilot's connector.
 
-The decisive real Copilot trial used normal Development mode. The live `unix:/.../mcp.sock#/mcp` URI and Authorization header reached the generated configuration, but the connector reported `invalid MCP server URL: invalid format`. Counters recorded provide=1, resolve=0, listener=1, MCP sessions=0, command calls=0 and view calls=0. Publication succeeded; connection did not. This was neither an authentication denial nor a handler failure. The exact parser rule and alternate socket formats remain unresolved, so the result does not establish that every Unix-socket representation or runtime is incompatible.
+The real Copilot trial tested that remaining question. VS Code forwarded the ready address, `unix:/.../mcp.sock#/mcp`, and secret, but Copilot reported `invalid MCP server URL: invalid format`. The server was running; Copilot established no MCP session and neither tool ran. This proves that publishing a real address succeeded, and disproves the hypothesis that this change alone enables direct access on the tested runtime. It does not rule out every socket format or future runtime. The experiment is valuable because it separates a working server from a client-connection failure: further work belongs in address handling or socket support, not CoR tools or weaker authentication.
 
 ## IV. Diagram of what we built
 
-![Live private endpoint publication succeeds, then Copilot rejects the URI before MCP connection](assets/01-direct-socket.png)
+![Copilot receives a real socket address but rejects it before sending any HTTP request](assets/01-direct-socket.png)
 
 [SVG source](assets/01-direct-socket.svg)
 
-Unlike the [current Copilot baseline](README.md#current-copilot), this implementation supplied a ready URI, not a placeholder. The diagram stops at the observed rejection. Nonce authentication and owner-only Unix directory access protect the listener; handler checks are in-process controls, not additional network endpoints.
+The diagram shows the real Copilot trial, not the successful controls. Blue arrows deliver the socket address and secret; the crossed arrow marks rejection before connection. In `unix:/.../mcp.sock#/mcp`, the part before `#` identifies the socket and `/mcp` is the HTTP path. No Copilot request reached the server's authentication checks or CoR code.
 
 ## V. Conclusion
 
-Publishing the ready definition fixed one compatibility gate but did not produce a Copilot connection on the [tested build](README.md#evidence-boundary); keep this as a bounded reproducer, not a viable transport yet. The implementation remains uncommitted in [microfish91-mcp-prototype-1-direct-socket](ghapp://sessions/a7a6f6a0-1163-4410-af48-92f0bcd860df), a local worktree not published to origin.
+First inspect Copilot's address parser and test any supported alternative format with an actual MCP call, since accepting a URL does not prove the client can open its socket. If HTTP-over-Unix-socket support is missing, pursuing this route requires a change in Copilot itself, a release carrying it, and testing across supported versions and operating systems. Fixing VS Code's skipped startup callback would not add that socket support; the existing ready-address implementation remains available as uncommitted code in [microfish91-mcp-prototype-1-direct-socket](ghapp://sessions/a7a6f6a0-1163-4410-af48-92f0bcd860df), a local worktree not published to origin.
