@@ -809,15 +809,24 @@ No Serilog. Inject `ILogger<T>` and log via structured parameters — Applicatio
 public class CreateItem(ILogger<CreateItem> logger)
 {
     [Function("CreateItem")]
-    public async Task<IResult> Run(...)
+    public async Task<IResult> Run(HttpRequest request, FunctionContext context)
     {
-        logger.LogInformation("Creating item {ItemName} in category {Category}", body.Name, body.Category);
+        var correlationId = request.Headers.TryGetValue("x-correlation-id", out var incoming)
+            ? incoming.ToString()
+            : context.InvocationId;
+        using var scope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["CorrelationId"] = correlationId,
+        });
+        logger.LogInformation("Handling {Operation}", "CreateItem");
         // ...
     }
 }
 ```
 
 Use `ILogger.BeginScope(...)` for request correlation; Application Insights ingests it automatically.
+Log only allowlisted operational fields. Never log request/response bodies, authorization/cookie headers,
+uploaded filenames, user-entered values, or personal identifiers.
 
 ---
 

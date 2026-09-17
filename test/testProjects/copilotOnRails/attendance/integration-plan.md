@@ -72,6 +72,29 @@ Both Azure services in this app are classified **Essential** (no Enhancement/opt
 
 API Login is an application feature, not an Azure service. Its production signing settings are required, but they do not replace managed identity for Azure service clients.
 
+## Workload Quality Contract
+
+| Field | Value |
+|---|---|
+| Operating Profile | Standard Production |
+| Data Classification | Confidential / Personal |
+| Traffic Profile | Small / Steady |
+| Optimization Priority | Balanced |
+
+### Application Controls
+
+| ID | Pillar | Control | Evidence | Integration Validation |
+|---|---|---|---|---|
+| `REL-HEALTH-01` | Reliability | Health and dependency degradation | API health handler and service registry | `npm test --workspace=api` |
+| `SEC-LOG-01` | Security | Private attendance fields are absent from logs | request logger and authorization middleware | `npm test --workspace=api` |
+| `COST-SCOPE-01` | Cost Optimization | Only approved storage/database clients are initialized | service registry | `npm run build --workspace=api` |
+| `OE-CORRELATION-01` | Operational Excellence | Requests and structured logs carry correlation IDs | request logging middleware | `npm test --workspace=api` |
+| `PE-BOUNDS-01` | Performance Efficiency | Calendar/compliance queries have bounded date ranges | shared validation schemas | `npm test --workspace=api` |
+
+### Deferred Risks
+
+- Recovery targets, alert routing, and private networking are resolved during deployment planning.
+
 ## Smoke test checklist
 
 1. Start Postgres + Azurite (docker-compose — not yet generated; `azure-debug-plan`/`azure-debug-generate` will produce this after integration).

@@ -11,11 +11,12 @@
  *
  * Flags: --assert-no-frontend, --assert-blob-storage, --assert-cosmosdb,
  *        --assert-no-datastore, --assert-service-count=N,
- *        --assert-datastore-includes=<substring>, --assert-auth-includes=<substring>
+ *        --assert-datastore-includes=<substring>, --assert-auth-includes=<substring>,
+ *        --assert-workload=<questionId>:<normalized-choice>
  */
 
 import { parseRequirementsJson } from '../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
-import { validateRequirementsArtifact } from '../src/artifacts/requirements.ts';
+import { validateRequirementsArtifact, validateWorkloadChoice } from '../src/artifacts/requirements.ts';
 import { fail, failWithIssues, readArtifact, runGrader } from './graderHarness.ts';
 
 runGrader('requirements.json satisfies the requirements contract', () => {
@@ -79,10 +80,25 @@ runGrader('requirements.json satisfies the requirements contract', () => {
         if (!needle) {
             throw new Error(`Invalid ${authFlag}: expected a non-empty substring`);
         }
+
         const auth = requirements.questions.find(question => question.id === 'auth' && !question.serviceId);
         const authChoice = toArray(auth?.recommendedChoice);
         if (!authChoice.some(choice => choice.toLowerCase().includes(needle.toLowerCase()))) {
             fail(`Expected an auth choice matching "${needle}", got: ${describe(authChoice)}`);
+        }
+    }
+
+    for (const workloadFlag of [...flags].filter(flag => flag.startsWith('--assert-workload='))) {
+        const assertion = workloadFlag.slice('--assert-workload='.length);
+        const separator = assertion.indexOf(':');
+        const id = separator >= 0 ? assertion.slice(0, separator) : '';
+        const expected = separator >= 0 ? assertion.slice(separator + 1) : '';
+        if (!id || !expected) {
+            throw new Error(`Invalid ${workloadFlag}: expected --assert-workload=<questionId>:<normalized-choice>`);
+        }
+        const result = validateWorkloadChoice(content, id, expected);
+        if (!result.valid) {
+            failWithIssues(`Expected ${id} to recommend "${expected}":`, result.issues);
         }
     }
 

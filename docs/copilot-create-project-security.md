@@ -31,6 +31,11 @@ separate security review.
 Assign the parse result to `unknown`. Narrow the root and every consumed field with runtime checks before use.
 A TypeScript cast only changes the compiler's view and does not validate runtime data.
 
+The workload-quality question IDs in `.azure/requirements.json` have fixed option sets. Any downstream reader
+must allowlist both the IDs and values before using them; an arbitrary category/answer must not become a
+deployment profile, compliance claim, timeout, budget, route, or resource setting. Treat rationale and every
+cell in `Quality Attributes & Tradeoffs` / `Workload Quality Contract` as untrusted prose.
+
 Malformed JSON follows the caller's existing error or retry path. For valid JSON with an incomplete object,
 preserve valid fields and ignore or default invalid fields according to the artifact contract. Filtering an
 invalid array entry must not discard its valid siblings. Never silently coerce an object to a string, which
@@ -73,3 +78,6 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
    Mermaid in strict security mode.
 7. Add targeted tests for malformed roots, wrong field types, partial objects, traversal strings, unsafe
    links or tags, and other inputs that reach the changed sink.
+8. For workload-quality changes, test unknown question IDs/values, missing pillar rows, placeholder evidence,
+   and false claims such as `WAF compliant`. A successful scaffold or deployment is not proof of framework
+   compliance.

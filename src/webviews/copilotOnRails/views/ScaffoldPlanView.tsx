@@ -545,6 +545,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const sections = plan.sections ?? [];
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number !== 1 && isServiceStackSection(s));
+    const qualitySection = sections.find(s => s.title.toLowerCase().includes('quality attributes'));
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
     const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
@@ -628,6 +629,16 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 )}
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
+
+                {qualitySection && (
+                    <SectionCard
+                        section={qualitySection}
+                        sectionIdx={sections.indexOf(qualitySection)}
+                        disabled={isAwaitingRevision}
+                        editedCells={editedCells}
+                        onTableCellChange={handleTableCellChange}
+                    />
+                )}
 
                 {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites', autopilot })} isRefreshing={isRefreshingPrereqs} />}
 

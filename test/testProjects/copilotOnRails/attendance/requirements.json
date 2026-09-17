@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "2",
+  "schemaVersion": "3",
   "generatedAt": "2026-07-21T00:00:00.000Z",
   "mode": "NEW",
   "summary": "A personal in-office attendance compliance application with interactive calendar tracking, configurable day-per-period targets, and future planning. It includes a web frontend and a persistent API-backed data store.",
@@ -191,6 +191,77 @@
         }
       ],
       "recommendedChoice": "Yes",
+      "multiSelect": false,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "operatingProfile",
+      "category": "deployment",
+      "question": "How will this app be used?",
+      "header": "Operating Profile",
+      "answer": "Standard Production",
+      "status": "confirmed",
+      "rationale": "The app stores ongoing employee attendance records and is intended for regular use.",
+      "options": [
+        { "label": "Development / Demo", "description": "A prototype, proof of concept, or temporary demonstration" },
+        { "label": "Standard Production", "description": "A production app with normal business availability expectations" },
+        { "label": "Business-Critical", "description": "An app whose outage or data loss would materially disrupt the business" }
+      ],
+      "recommendedChoice": "Standard Production",
+      "multiSelect": false,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "dataClassification",
+      "category": "compliance",
+      "question": "What is the most sensitive data this app will handle?",
+      "header": "Data Classification",
+      "answer": "Confidential / Personal",
+      "status": "confirmed",
+      "rationale": "Attendance records are private employee data.",
+      "options": [
+        { "label": "Public", "description": "Information intended for public access" },
+        { "label": "Internal", "description": "Business information intended only for the organization" },
+        { "label": "Confidential / Personal", "description": "Private, personal, or commercially sensitive information" },
+        { "label": "Regulated", "description": "Data subject to a legal, industry, or contractual compliance regime" }
+      ],
+      "recommendedChoice": "Confidential / Personal",
+      "multiSelect": false,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "trafficProfile",
+      "category": "scale",
+      "question": "What usage pattern should the app support?",
+      "header": "Traffic Profile",
+      "answer": "Small / Steady",
+      "status": "confirmed",
+      "rationale": "Attendance entry is a predictable internal workflow with modest traffic.",
+      "options": [
+        { "label": "Small / Steady", "description": "Low to moderate traffic without large spikes" },
+        { "label": "Bursty", "description": "Occasional sharp traffic spikes or event-driven work" },
+        { "label": "High Volume", "description": "Sustained high request, event, or data volume" },
+        { "label": "Latency Sensitive", "description": "Interactive operations with strict response-time expectations" }
+      ],
+      "recommendedChoice": "Small / Steady",
+      "multiSelect": false,
+      "allowFreeformInput": false
+    },
+    {
+      "id": "optimizationPriority",
+      "category": "operations",
+      "question": "What should architecture tradeoffs prioritize?",
+      "header": "Optimization Priority",
+      "answer": "Balanced",
+      "status": "confirmed",
+      "rationale": "No single cost, reliability, or latency constraint dominates the workload.",
+      "options": [
+        { "label": "Balanced", "description": "Balance cost, reliability, operability, and performance" },
+        { "label": "Lowest Cost", "description": "Prefer the lowest practical operating cost and accept documented tradeoffs" },
+        { "label": "Highest Reliability", "description": "Prefer availability and recoverability over lower cost" },
+        { "label": "Lowest Latency", "description": "Prefer interactive performance over lower cost" }
+      ],
+      "recommendedChoice": "Balanced",
       "multiSelect": false,
       "allowFreeformInput": false
     }

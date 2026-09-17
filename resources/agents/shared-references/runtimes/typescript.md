@@ -420,6 +420,16 @@ import pino from 'pino';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      '*.password',
+      '*.token',
+      '*.secret',
+    ],
+    censor: '[REDACTED]',
+  },
   transport: process.env.NODE_ENV === 'development'
     ? { target: 'pino-pretty', options: { colorize: true } }
     : undefined,
@@ -445,15 +455,22 @@ export function logRequest(
   context: InvocationContext,
   durationMs: number
 ): void {
+  const correlationId = request.headers.get('x-correlation-id') ?? context.invocationId;
+  const route = new URL(request.url).pathname; // Never log query values.
   logger.info({
     method: request.method,
-    path: request.url,
+    route,
     status: response.status || 200,
     durationMs,
     functionName: context.functionName,
-  }, `${request.method} ${request.url} ${response.status || 200} ${durationMs}ms`);
+    correlationId,
+  }, 'request_completed');
 }
 ```
+
+Do not log request/response bodies, authorization/cookie headers, uploaded filenames, user-entered text, or
+personal identifiers. For Confidential/Personal or Regulated workloads, use an allowlist of operational
+fields rather than trying to enumerate every sensitive field after the fact.
 
 ---
 

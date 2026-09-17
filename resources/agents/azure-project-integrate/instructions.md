@@ -11,14 +11,16 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical source for integrating a scaffolded Azure-centric project. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
 
-**North Star:** take a project that *builds* (frontend with mock data + backend) and make it *run, wired together, against a real schema*. You produce **schema migrations**, prove the **backend smoke-tests clean**, replace **mock data with live API calls**, and verify the **frontend and backend communicate end-to-end**. After integration, stop — do NOT prompt the user for next steps (unless in autopilot, where you hand off to local dev).
+**North Star:** take a project that *builds* (frontend with mock data + backend) and make it *run, wired together, against a real schema* without losing its approved workload-quality controls. You produce **schema migrations**, prove the **backend smoke-tests clean**, replace **mock data with live API calls**, verify the **Workload Quality Contract**, and confirm the **frontend and backend communicate end-to-end**. After integration, stop — do NOT prompt the user for next steps (unless in autopilot, where you hand off to local dev).
 
-## The four integration tasks (your entire scope)
+## The five integration tasks (your entire scope)
 
 1. **Migrations** — create the SQL / PostgreSQL schema migrations so the database tables exist. **No seed data.**
 2. **Backend smoke test** — start the backend and verify every endpoint registers and responds.
 3. **Wire frontend to LIVE data** — replace every mock data source in the frontend with real, typed API calls.
 4. **End-to-end wire-up** — run the frontend and backend together and verify they communicate.
+5. **Workload quality verification** — run every integration validation recorded in the artifact and append
+   evidence/results without claiming WAF compliance.
 
 > ⛔ **NEVER create seed data.** No `seed`, `seeds`, `seed-data`, `fixtures`, demo rows, or any file/folder/function named after seeding. You create **schema only**. Integration is proven by the app running against an empty-but-correct schema. If the scaffold left a `seeds/` directory, ignore it — do not extend it, do not depend on it, do not run it.
 
@@ -60,12 +62,13 @@ Requires a scaffolded project. Verify before starting:
 
 | Task | Details |
 |------|---------|
-| Read `.azure/integration-plan.md` | The scaffold agent wrote this for you. Extract: backend project path + run command + port; frontend project path + build/dev commands; the API route inventory (method + path); the database type + migration tool + migration directory + connection env vars; the **API seam to swap** (`src/api/index.ts`) + the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the shared-types/package location; the health endpoint. |
-| Read `.azure/project-plan.md` | Cross-check routes (Section 7), services (Section 4), entities/types, and the database choice. The plan is the source of truth where the artifact is silent. |
+| Read `.azure/integration-plan.md` | The scaffold agent wrote this for you. Extract: backend project path + run command + port; frontend project path + build/dev commands; the API route inventory (method + path); the database type + migration tool + migration directory + connection env vars; the **API seam to swap** (`src/api/index.ts`) + the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the shared-types/package location; the health endpoint; and the **Workload Quality Contract** (four answers, Application Controls, validations, Deferred Risks). |
+| Read quality reference | Read `.github/agents/shared-references/workload-quality.md`. Its safety boundaries and validation rules remain active during the live-data swap. |
+| Read `.azure/project-plan.md` | Cross-check routes, services, entities/types, database choice, and Quality Attributes & Tradeoffs. The plan is the source of truth where the artifact is silent. |
 | Scan the workspace | Confirm the folders the artifact names actually exist. List the frontend `src/` to locate the API seam (`src/api/` — `index.ts`, `mockClient.ts`) and the mock data (`src/mocks/`). List the backend functions folder to count handlers. List the migration directory. |
 | Check database type | If the plan/artifact specifies PostgreSQL or Azure SQL (relational), migrations are **mandatory** (Step 1). If the project uses only non-relational storage (Cosmos, Table, Blob), Step 1's SQL migrations are N/A — note it and skip to Step 2. |
 
-> **✅ Checkpoint**: Artifact loaded (or reconstructed from the plan + scan). You know: the backend run command, the frontend folder + commands, the full route list, the DB type + migration tool + directory, the API seam to repoint (`src/api/index.ts`), and the exact mock files to delete.
+> **✅ Checkpoint**: Artifact loaded (or reconstructed from the plan + scan). You know: the backend run command, the frontend folder + commands, the full route list, the DB type + migration tool + directory, the API seam to repoint (`src/api/index.ts`), the exact mock files to delete, and every application-control validation to run.
 
 ---
 
@@ -131,7 +134,7 @@ Requires a scaffolded project. Verify before starting:
 |------|---------|
 | Locate the seam | The scaffold left a stable `ApiClient` seam: `src/api/types.ts` (interface), `src/api/mockClient.ts` (mock impl), `src/api/index.ts` (the one-line swap point). Pages/hooks import only `api` from `src/api/`. Confirm this seam exists (artifact + scan). |
 | Replace local types with shared types | Point `src/api/types.ts` at the shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete the frontend's duplicated entity types. The `ApiClient` shape is unchanged. **No `any` types.** |
-| Build the live client | Add `src/api/client.ts` — a second implementation of the **same `ApiClient` interface** (typed `: ApiClient`), method-for-method against the route inventory, base URL from env. |
+| Build the live client | Add `src/api/client.ts` — a second implementation of the **same `ApiClient` interface** (typed `: ApiClient`), method-for-method against the route inventory, base URL from env. Every request has a finite timeout, preserves/creates a correlation ID, and never automatically retries a non-idempotent write. |
 | **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line wires every page/hook to live data — **no page or hook edits**. |
 | Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. |
 | Remove the mock layer | Delete `src/api/mockClient.ts` and `src/mocks/*` (and local types now sourced from shared). A lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
@@ -149,6 +152,7 @@ Requires a scaffolded project. Verify before starting:
 > - The Mock State Switcher (`src/api/previewState.ts` + corner switcher component) is deleted and no longer imported anywhere.
 > - The seam (`src/api/index.ts`) points at the live client; pages/hooks were not edited.
 > - The dev proxy targets the backend host.
+> - Live requests preserve finite timeouts, correlation, authorization, payload bounds, and safe retry/idempotency behavior from the Workload Quality Contract.
 
 ---
 
@@ -174,14 +178,40 @@ Requires a scaffolded project. Verify before starting:
 
 ---
 
-## STEP 5: Wrap Up
+## STEP 5: Workload Quality Contract Verification
 
-**Goal**: Confirm all four tasks pass, update status, and stop.
+**Goal**: prove that replacing emulators/mocks with live local services did not erase the controls the user
+approved.
+
+1. Read every row in `.azure/integration-plan.md` under `## Workload Quality Contract` →
+   `### Application Controls`.
+2. Confirm its evidence path/symbol still exists after integration.
+3. Run the exact `Integration Validation` command or probe. If a validation is missing, non-executable, or
+   only says "implemented", add a focused validation using the project's existing test runner.
+4. Verify at minimum:
+   - Enhancement failure degrades; Essential failure returns a structured error.
+   - Outbound operations have finite timeouts; retries are bounded and exclude non-idempotent writes.
+   - Authorization/validation match API Login and Data Classification.
+   - Representative sensitive values do not appear in captured logs.
+   - Correlation ID, pagination/payload bounds, and traffic-profile controls survive the live client.
+5. Fix failures within application/integration scope and re-run. Preserve architecture, compliance, RTO/RPO,
+   and other deployment-owned gaps under `Deferred Risks`; do not fabricate evidence.
+6. Append `### Integration Results` with one `PASS | FAIL | DEFERRED` row per control ID, the command/probe
+   run, and concise evidence. Never write `WAF compliant`, `WAF certified`, or `100% WAF aligned`.
+
+> **✅ Checkpoint**: Every listed control has real evidence and a result. No failed application control is
+> silently carried forward; deployment-owned risks remain explicit.
+
+---
+
+## STEP 6: Wrap Up
+
+**Goal**: Confirm all five tasks pass, update status, and stop.
 
 | Task | Details |
 |------|---------|
-| Confirm all four checkpoints passed | Migrations applied · backend smoke-tested · frontend on live data · end-to-end verified. |
-| Update the artifact | Mark `.azure/integration-plan.md` items complete (or append a short "Integration results" section: what was migrated, which endpoints passed, the mock files removed, the end-to-end evidence). |
+| Confirm all five checkpoints passed | Migrations applied · backend smoke-tested · frontend on live data · end-to-end verified · workload-quality controls verified. |
+| Update the artifact | Mark `.azure/integration-plan.md` items complete and append integration results: what was migrated, which endpoints passed, mock files removed, end-to-end evidence, and one quality-control result per ID. |
 | Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
 | **Open the Next Steps view, then stop** | Call the `open_scaffold_next_steps_view` tool with no arguments (`{}`) to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off via the `start_local_development` tool per the agent's autopilot rule.) |
@@ -191,8 +221,9 @@ Requires a scaffolded project. Verify before starting:
 > 2. Backend host starts, all endpoints register, `GET /api/health` → 200, probes return no schema/runtime `500`s.
 > 3. Frontend builds clean on live data; mock layer removed; no `any`.
 > 4. Frontend + backend ran together; a real `/api/...` request returned live data.
-> 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
-> 6. Opened the **Next Steps view** (the `open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
+> 5. Every workload-quality control has a `PASS`, `FAIL`, or deployment-owned `DEFERRED` result with evidence; no false compliance claim.
+> 6. `.azure/project-plan.md` = `Integrated`; artifact updated.
+> 7. Opened the **Next Steps view** (the `open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
 ---
 

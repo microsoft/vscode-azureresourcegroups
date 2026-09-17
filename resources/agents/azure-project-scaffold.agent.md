@@ -48,7 +48,11 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 **After the startup report and before you say anything to the user, read `.azure/project-plan.md` with the `read` tool.** The hand-off query that invoked you (e.g. *"The project plan has been approved. Execute the approved `.azure/project-plan.md`…"*) means the plan already exists on disk — do **not** assume the workspace is empty, and do **not** claim the file is missing until you have actually attempted to read it.
 
 - The plan lives at `<workspace-root>/.azure/project-plan.md`. If your read tool resolves relative paths, use the workspace-root-relative path `.azure/project-plan.md`. If a read returns "not found", the file may be open in another editor or the workspace root may differ — re-check the workspace folder and retry before concluding it is absent. Use `search`/`list` to locate `**/.azure/project-plan.md` if the direct read fails.
-- Once read, verify `Status: Approved` and that the plan has the API routes (Section 7) and Azure services (Section 4). If `Status` is still `Planning`, treat the plan as not-yet-approved.
+- Once read, verify `Status: Approved`, API routes, Azure services, and the `Quality Attributes & Tradeoffs`
+  section. If `Status` is still `Planning`, treat the plan as not-yet-approved. A legacy approved plan may
+  lack Quality Attributes; apply the baseline in
+  `.github/agents/shared-references/workload-quality.md` and record the missing workload targets as a
+  deferred risk rather than refusing to scaffold.
 
 > **Only if the plan genuinely cannot be found after you have actually attempted to read it** (and located it via search): **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first with the `azure-project-plan` agent."_ Do **NOT** start gathering requirements, do **NOT** ask "what kind of app would you like to build?", and do **NOT** write a plan yourself — planning is the `azure-project-plan` agent's job, not yours.
 
@@ -78,6 +82,10 @@ The integrate agent runs in a fresh session and does **not** see your chat histo
 - **Database**: type (PostgreSQL / Azure SQL / etc.), migration tool, migration directory, and the connection env vars. **Note explicitly that NO seed data is to be created.**
 - **Shared types**: the shared package/location and import alias (e.g. `@app/shared`) for the typed client.
 - **Services**: the service list and which are Essential vs Enhancement.
+- **Workload quality contract**: copy the four workload answers from the plan; list at least one concrete
+  application control for each WAF pillar with its stable control ID, generated evidence path/symbol, and
+  executable integration validation; preserve every deferred production, compliance, recovery, or numerical
+  target. Follow `.github/agents/shared-references/workload-quality.md`. Never claim WAF compliance.
 
 Keep it concise and factual — it is a checklist of paths and commands, not prose.
 
