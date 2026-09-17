@@ -54,11 +54,13 @@ the work as it happens.
 From an empty folder and a short description ("a task tracker with a React UI backed by PostgreSQL"), the
 feature:
 
-1. **Plans** the app — asks a few structured questions, then writes an approvable project plan with an
-   architecture, a design system, and API routes.
-2. **Scaffolds** the frontend, backend, database, and API routes from the approved plan.
+1. **Plans** the app — asks structured functional and workload-quality questions, then writes an approvable
+   project plan with an architecture, quality tradeoffs, a design system, and API routes.
+2. **Scaffolds** the frontend, backend, database, API routes, and application-level quality controls from the
+   approved plan.
 3. **Integrates** the pieces — wires the frontend to live backend data, creates the database schema, and
-   smoke‑tests every endpoint so the app actually runs.
+   verifies every endpoint and workload-quality control so the app actually runs without losing its
+   resilience/security/operations boundaries.
 4. **Configures local debugging** — emulators, VS Code launch/task configs, and API tests.
 5. **Deploys to Azure** — selects services, generates and validates Bicep/Terraform, provisions the
    resources, deploys each application service, and checks the live endpoints.
@@ -75,19 +77,19 @@ flowchart TD
     StartupReport{{"report_agent_launch<br/>once per chat session and agent"}}
 
     subgraph Plan["1 · azure-project-plan"]
-        Req["Requirements view"] --> PlanDoc[".azure/project-plan.md"] --> PlanView["Plan preview + approve"]
+        Req["Requirements + workload profile"] --> PlanDoc["Plan + quality tradeoffs"] --> PlanView["Plan preview + approve"]
     end
 
     Plan -->|"start_project_scaffold"| Scaffold
 
     subgraph Scaffold["2 · azure-project-scaffold"]
-        Gen["Generate frontend/backend/db"] --> Preview["Frontend preview + Approve UI"]
+        Gen["Generate app + quality controls"] --> Preview["Frontend preview + Approve UI"]
     end
 
     Scaffold -->|"start_project_integrate"| Integrate
 
     subgraph Integrate["3 · azure-project-integrate"]
-        Wire["Wire to live data + migrations"] --> Smoke["Smoke-test end-to-end"] --> Next1["Next Steps view"]
+        Wire["Wire to live data + migrations"] --> Smoke["Smoke-test + verify quality controls"] --> Next1["Next Steps view"]
     end
 
     Next1 -->|"start_local_development"| Debug
@@ -174,10 +176,19 @@ those simply plan a single `frontend` service with **No datastore required**.
 ## Stage 2 — Review requirements
 
 The plan agent writes `.azure/requirements.json` and opens the **Requirements** view. Questions are grouped
-per service (backend, frontend, worker) plus shared data-stores and **API Login** questions. API Login is a
-`Yes`/`No` choice about user-facing sign-in and authenticated application API access. Answers Copilot could
-infer are pre‑selected; the rest are pre‑filled with a recommended choice. Review each one and click
-**Submit**.
+per service (backend, frontend, worker) plus shared data-stores, **API Login**, and **workload quality**
+questions. The workload contract records:
+
+- **Operating Profile** — Development / Demo, Standard Production, or Business-Critical
+- **Data Classification** — Public, Internal, Confidential / Personal, or Regulated
+- **Traffic Profile** — Small / Steady, Bursty, High Volume, or Latency Sensitive
+- **Optimization Priority** — Balanced, Lowest Cost, Highest Reliability, or Lowest Latency
+
+These establish a lightweight contract informed by the
+[Azure Well-Architected Framework](https://learn.microsoft.com/azure/well-architected/what-is-well-architected-framework);
+they describe business intent, not Azure services or SKUs. API Login remains a `Yes`/`No` choice about
+user-facing sign-in and authenticated application API access. Answers Copilot could infer are pre‑selected;
+the rest are pre‑filled with a recommended choice. Review each one and click **Submit**.
 
 <p align="center">
   <img src="images/copilot-create-project/04-requirements-view.png" alt="Requirements view" />
@@ -196,6 +207,11 @@ The plan agent writes `.azure/project-plan.md` (with `**Status**: Planning`) and
 For apps with a UI, the preview also renders one **UI Preview** card per screen (each a sandboxed HTML
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
+
+The plan includes a **Quality Attributes & Tradeoffs** card. It carries the four approved workload answers
+and a five-pillar decision table covering Reliability, Security, Cost Optimization, Operational Excellence,
+and Performance Efficiency. Each row states the workload target, application response, planned validation,
+and deferred risk. It is a traceable decision record—not a WAF score or certification.
 
 Editable service-stack choices follow the service role and language. API, backend, and worker sections offer
 backend frameworks, while web app and frontend sections offer frontend frameworks. The view also recognizes
@@ -220,6 +236,10 @@ Approving flips the plan to `**Status**: Approved` and hands off to **`azure-pro
 ## Stage 4 — Scaffold & approve the UI
 
 The scaffold agent reads the approved plan and generates the frontend, backend, database, and API routes.
+It also applies the workload-quality contract to application code: dependency health and degradation,
+finite outbound timeouts, bounded retries, authorization and validation, sensitive-log redaction,
+correlation IDs, structured errors, and pagination/payload bounds. Profile-specific controls are applied
+without inventing Azure topology or numerical targets; those remain deployment decisions.
 When it finishes, for apps **with a frontend** it writes `.azure/integration-plan.md` and opens the
 **Frontend preview** view: it starts your app's dev server and renders the running app (with mock data) inside
 an iframe, topped by an **Approve UI** header and a feedback box.
@@ -250,6 +270,8 @@ The **`azure-project-integrate`** agent runs in a fresh session and reads `.azur
 - **Wires the frontend to live backend data**, replacing all mock data.
 - **Smoke‑tests the backend** so every endpoint responds.
 - Runs the frontend and backend together end‑to‑end.
+- Re-runs every validation in the handoff's **Workload Quality Contract**, appends evidence per control, and
+  preserves unresolved deployment/compliance/recovery risks.
 
 When done it opens the **Scaffold Next Steps** view — a "What's next?" card that drives the next hand‑off
 (set up **Local Development**, or **Deploy**).
@@ -422,9 +444,9 @@ calls from later turns in the same chat are ignored.
 
 | # | Agent | Reads | Writes | Hands off with |
 | --- | --- | --- | --- | --- |
-| 1 | `azure-project-plan` | your prompt | `.azure/requirements.json`, `.azure/project-plan.md` | `start_project_scaffold` |
-| 2 | `azure-project-scaffold` | `.azure/project-plan.md` | project source, `.azure/integration-plan.md` | `start_project_integrate` (or Approve UI) |
-| 3 | `azure-project-integrate` | `.azure/integration-plan.md` | migrations, live‑wired frontend | `start_local_development` |
+| 1 | `azure-project-plan` | your prompt | `.azure/requirements.json`, `.azure/project-plan.md` including workload quality targets/tradeoffs | `start_project_scaffold` |
+| 2 | `azure-project-scaffold` | approved plan and workload contract | project source, `.azure/integration-plan.md` with evidenced application controls | `start_project_integrate` (or Approve UI) |
+| 3 | `azure-project-integrate` | integration plan and quality validations | migrations, live‑wired frontend, control results | `start_local_development` |
 | 4 | `azure-debug-plan` | project source | `.azure/vscode-debug-plan.md` | `start_azure_debug_generate` |
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
 | 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, Dockerfiles, `deploy-result.json` | Live, health-checked Azure deployment |
@@ -469,10 +491,10 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 | Path | Written by | Contents |
 | --- | --- | --- |
-| `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
-| `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
+| `.azure/requirements.json` | plan agent | Schema v3 structured requirements answers, including the workload profile (statuses: inferred / needs_input / confirmed). A v2 artifact is upgraded and returned to the Requirements view before planning continues. |
+| `.azure/project-plan.md` | plan agent | The plan plus Quality Attributes & Tradeoffs. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
-| `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
+| `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes, including workload answers, application-control evidence, executable validations, and deferred risks. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
@@ -544,6 +566,9 @@ The diagnostics object has four fields:
 | `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
 
 `report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
+Requirements and plan telemetry include only the selected low-cardinality workload labels (for example,
+`standard production` or `bursty`), never project content, compliance details, numerical targets, or the
+free-text rationale.
 
 Privacy guarantees, by design:
 

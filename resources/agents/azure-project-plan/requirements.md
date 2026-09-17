@@ -85,6 +85,15 @@ Then set **`status`**:
 | `host.json` exists | Azure Functions already initialized — augment mode |
 | `zod` in dependencies | Validation library = zod |
 | `host.json` + `dotnet-isolated` worker runtime | Runtime = C#; Backend = Azure Functions isolated worker; Orchestration = docker-compose |
+| User says prototype, proof of concept, demo, experiment, or temporary | Operating Profile = `Development / Demo` |
+| User explicitly says production or describes recurring customer/employee use | Operating Profile = `Standard Production` |
+| User explicitly says mission-critical, business-critical, 24/7, or gives strict recovery/availability targets | Operating Profile = `Business-Critical` |
+| App handles private accounts, per-user content, or personal information | Data Classification = `Confidential / Personal` |
+| App handles diagnoses, payment-card data, or data explicitly subject to a legal/industry regime | Data Classification = `Regulated` |
+| User describes periodic spikes, batch windows, uploads, or event-driven fan-out | Traffic Profile = `Bursty` |
+| User gives sustained throughput or large-volume requirements | Traffic Profile = `High Volume` |
+| User gives a response-time target or says latency is critical | Traffic Profile = `Latency Sensitive` |
+| User explicitly prioritizes cost, reliability, or latency | Optimization Priority = `Lowest Cost`, `Highest Reliability`, or `Lowest Latency` respectively |
 
 Anything the user stated explicitly in their prompt ("build me a TypeScript Functions API with PostgreSQL") is also `inferred` — don't re-ask.
 
@@ -126,14 +135,26 @@ Use `category: "service"` for all per-service questions. The webview groups them
 
 ##### Shared questions (no `serviceId`)
 
-These are asked once for the whole project. Always emit both:
+These are asked once for the whole project. Always emit all six:
 
 | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
 |---|---|---|---|---|---|---|---|
 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `No datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one), or `No datastore required` |
 | `auth` | `auth` | API Login | Does this app need user login? | no | no | `Yes`, `No` | `Yes` for accounts, private/per-user data, or signed-in experiences; otherwise `No` |
+| `operatingProfile` | `deployment` | Operating Profile | How will this app be used? | no | no | `Development / Demo`, `Standard Production`, `Business-Critical` | Infer only from explicit signals; otherwise `Development / Demo` with `needs_input` |
+| `dataClassification` | `compliance` | Data Classification | What is the most sensitive data this app will handle? | no | no | `Public`, `Internal`, `Confidential / Personal`, `Regulated` | Infer from the app domain and data; otherwise `Internal` with `needs_input` |
+| `trafficProfile` | `scale` | Traffic Profile | What usage pattern should the app support? | no | no | `Small / Steady`, `Bursty`, `High Volume`, `Latency Sensitive` | Infer only from explicit signals; otherwise `Small / Steady` with `needs_input` |
+| `optimizationPriority` | `operations` | Optimization Priority | What should architecture tradeoffs prioritize? | no | no | `Balanced`, `Lowest Cost`, `Highest Reliability`, `Lowest Latency` | Infer only from explicit signals; otherwise `Balanced` with `needs_input` |
 
 The `auth` question covers only user-facing application login and authenticated API access. It does not select Microsoft Entra ID, another identity provider, managed identity, API keys, or any Azure service credential. Infer `Yes` when the app has accounts, private/per-user data, or signed-in experiences. Infer `No` for public apps with no user identity. The scaffold agent chooses the stack-appropriate API authentication implementation. Backend-to-Azure communication always uses managed identity in production and is never a requirements choice.
+
+The four workload questions establish a lightweight, requirements-driven Azure Well-Architected contract. They describe **business intent**, not Azure topology:
+
+- Do not ask the user to select Well-Architected pillars — all five pillars always apply.
+- Do not derive an Azure service, SKU, zone count, cache, queue, CDN, or network topology in this phase.
+- Do not claim that any answer is "WAF compliant", "WAF certified", or "100% WAF aligned". The framework guides decisions and tradeoffs; it is not a binary certification.
+- `Business-Critical` and `Regulated` are escalation signals. Record them faithfully; later planning and deployment phases must resolve measurable targets and unsupported platform requirements rather than silently downgrading them.
+- Product security baselines remain mandatory even when `Lowest Cost` or `Lowest Latency` is selected. An optimization priority controls tradeoffs, never whether security is applied.
 
 > The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
 
@@ -159,7 +180,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 ```json
 {
-  "schemaVersion": "2",
+  "schemaVersion": "3",
   "generatedAt": "{ISO date}",
   "mode": "{NEW | AUGMENT}",
   "summary": "{1–2 sentences describing what the user is building}",
@@ -244,6 +265,57 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       ],
       "recommendedChoice": "Yes", "status": "inferred", "answer": "Yes",
       "rationale": "The app stores private, per-user photos."
+    },
+    {
+      "id": "operatingProfile", "category": "deployment", "header": "Operating Profile",
+      "question": "How will this app be used?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "Development / Demo", "description": "A prototype, proof of concept, or temporary demonstration" },
+        { "label": "Standard Production", "description": "A production app with normal business availability expectations" },
+        { "label": "Business-Critical", "description": "An app whose outage or data loss would materially disrupt the business" }
+      ],
+      "recommendedChoice": "Standard Production", "status": "inferred", "answer": "Standard Production",
+      "rationale": "The prompt describes a recurring signed-in experience that stores durable user data."
+    },
+    {
+      "id": "dataClassification", "category": "compliance", "header": "Data Classification",
+      "question": "What is the most sensitive data this app will handle?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "Public", "description": "Information intended for public access" },
+        { "label": "Internal", "description": "Business information intended only for the organization" },
+        { "label": "Confidential / Personal", "description": "Private, personal, or commercially sensitive information" },
+        { "label": "Regulated", "description": "Data subject to a legal, industry, or contractual compliance regime" }
+      ],
+      "recommendedChoice": "Confidential / Personal", "status": "inferred", "answer": "Confidential / Personal",
+      "rationale": "Uploaded photos and uploader identity are private personal data."
+    },
+    {
+      "id": "trafficProfile", "category": "scale", "header": "Traffic Profile",
+      "question": "What usage pattern should the app support?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "Small / Steady", "description": "Low to moderate traffic without large spikes" },
+        { "label": "Bursty", "description": "Occasional sharp traffic spikes or event-driven work" },
+        { "label": "High Volume", "description": "Sustained high request, event, or data volume" },
+        { "label": "Latency Sensitive", "description": "Interactive operations with strict response-time expectations" }
+      ],
+      "recommendedChoice": "Bursty", "status": "inferred", "answer": "Bursty",
+      "rationale": "Photo uploads and metadata processing can arrive in short bursts."
+    },
+    {
+      "id": "optimizationPriority", "category": "operations", "header": "Optimization Priority",
+      "question": "What should architecture tradeoffs prioritize?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "Balanced", "description": "Balance cost, reliability, operability, and performance" },
+        { "label": "Lowest Cost", "description": "Prefer the lowest practical operating cost and accept documented tradeoffs" },
+        { "label": "Highest Reliability", "description": "Prefer availability and recoverability over lower cost" },
+        { "label": "Lowest Latency", "description": "Prefer interactive performance over lower cost" }
+      ],
+      "recommendedChoice": "Balanced", "status": "needs_input", "answer": null,
+      "rationale": "The prompt gives no dominant cost, reliability, or latency requirement."
     }
   ]
 }
@@ -253,9 +325,9 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 - **Services & IDs:** one `services` entry per detected/planned service; per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`), with `serviceId` matching the service.
 - **Language options:** frontend services offer only `TypeScript` / `JavaScript`; backend/worker services offer `TypeScript`, `Python`, `C# (.NET)`.
-- **Always emit both shared questions** (`dataStores`, `auth`), and **never emit an `appType`, identity-provider, or Azure credential question**. App Type is derived from `services` (see the derivation table above).
+- **Always emit all six shared questions** (`dataStores`, `auth`, `operatingProfile`, `dataClassification`, `trafficProfile`, `optimizationPriority`), and **never emit an `appType`, identity-provider, Azure credential, or WAF-pillar question**. App Type is derived from `services` (see the derivation table above).
 - **`auth` is strictly binary:** its only options, answer values, and recommendation values are `Yes` and `No`. Never put a provider, protocol, token type, or Azure credential in this question.
-- **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` `false`. Omit it for free-text feature questions.
+- **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` `false`, and every workload question `false`. Omit it for free-text feature questions.
 - **`multiSelect`:** only `dataStores` is `true`; its `answer` and `recommendedChoice` are always `string[]`.
 - **Answers:** `inferred` → fill `answer`; `needs_input` → `answer: null` (`[]` for `dataStores`). Always provide `recommendedChoice`.
 - **No datastore:** `No datastore required` is an exclusive option. When selected or inferred, it must be the only value in `answer` and `recommendedChoice`. Never combine it with a concrete datastore.
@@ -279,7 +351,11 @@ This holds for **small, frontend-only projects too**. A prompt like *"a simple u
 When re-invoked with a query mentioning submitted requirements (e.g. *"Requirements submitted at .azure/requirements.json..."*), or whenever `.azure/requirements.json` has all questions `confirmed`/`inferred`:
 
 1. Read `.azure/requirements.json`.
-2. Treat `answer` fields as authoritative — do not re-ask, do not re-emit the file.
-3. Switch to [`plan.md`](plan.md) and go directly to Step 3 (Generate Plan).
+2. **Upgrade before planning:** schema version `3` adds the four workload-quality questions. If the file has
+   `schemaVersion: "2"`, preserve its valid services and answers, add the four missing questions using the
+   inference/default rules above, set `schemaVersion` to `"3"`, write the upgraded file, and stop so the
+   requirements webview can review it. Do not generate a plan from a v2 file.
+3. For a v3 file, treat `answer` fields as authoritative — do not re-ask or re-emit the file.
+4. Switch to [`plan.md`](plan.md) and go directly to Step 3 (Generate Plan).
 
 > **✅ Checkpoint**: Requirements gathered (via inference + webview submission). Ready to generate plan — continue in [`plan.md`](plan.md).

@@ -44,11 +44,13 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 3. **Backend smoke test** — start the backend, verify every endpoint responds.
 4. **Wire frontend to live data** — replace every mock data source with real API calls.
 5. **End-to-end integration** — run frontend + backend together and confirm they are wired.
-6. **Stop** — announce completion and **stop**. Do not prompt for next steps.
+6. **Workload quality verification** — run every validation in the integration plan's Application Controls
+   table and preserve the approved timeout, retry, authorization, redaction, correlation, and bounds.
+7. **Stop** — announce completion and **stop**. Do not prompt for next steps.
 
 ### Read the hand-off artifact first (MANDATORY)
 
-**Trigger:** immediately after the startup report. Before doing any project work, read **`.azure/integration-plan.md`** — the scaffold agent wrote it specifically to brief you. It lists the backend run command, the frontend folder, the API routes, the database type and migration tool, the mock-data files to remove, and the shared-types location. If it is missing, fall back to `.azure/project-plan.md` and scan the workspace, but do **not** skip looking for it.
+**Trigger:** immediately after the startup report. Before doing any project work, read **`.azure/integration-plan.md`** — the scaffold agent wrote it specifically to brief you. It lists the backend run command, the frontend folder, the API routes, the database type and migration tool, the mock-data files to remove, the shared-types location, and the **Workload Quality Contract** with evidence and executable validations. Then read `.github/agents/shared-references/workload-quality.md`. If the artifact is missing, fall back to `.azure/project-plan.md` and scan the workspace, but do **not** skip looking for it.
 
 ### Never create seed data (LOAD-BEARING)
 
@@ -98,6 +100,8 @@ A scaffolded project that actually runs end-to-end:
 - The backend has been smoke-tested — every endpoint registers and responds.
 - SQL / PostgreSQL **schema migrations** exist and apply cleanly (no seed data).
 - The frontend and backend have been run **together** and verified to communicate.
+- Every application control in the Workload Quality Contract has been re-verified after the live-data swap;
+  results and residual risks are appended to `.azure/integration-plan.md`.
 
 ## Interruption recovery
 

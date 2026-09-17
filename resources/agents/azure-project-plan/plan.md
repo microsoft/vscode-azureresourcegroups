@@ -19,6 +19,10 @@ metadata:
 
 > **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first, treat its `answer` fields as authoritative, then generate the plan below. If the `dataStores` answer is `["No datastore required"]`, do not add a datastore resource to the plan and never render `No datastore required` as an Azure service; still include any non-datastore services required to host or run the app.
 >
+> ⛔ **Schema gate:** continue only when `schemaVersion` is `"3"` and all six shared questions are present.
+> A v2 file predates the workload-quality contract; return to [`requirements.md`](requirements.md) Step 2f
+> to upgrade it and reopen the Requirements view before generating a plan.
+>
 > Copy the binary `auth` answer into the Project Overview as `**API Login**: Yes` or `No`. This is the only authentication detail in the plan and its renderings. Do not name an identity provider, token type, credential strategy, protected route, or per-route auth value. The scaffold agent chooses the API authentication implementation when API Login is `Yes`. Backend-to-Azure communication uses managed identity and is not represented as a plan choice.
 
 ### Step 3: Generate Plan & Present for Approval
@@ -30,7 +34,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 > - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`) are **invalid** and will not render.
 > - Metadata at the top MUST be `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows — not front-matter, not a table.
 > - Do **NOT** add a generic architecture document, a `mermaid` diagram, or any heading not present in the skeleton. Data stores and architecture are captured **inside** the numbered sections, never as their own improvised headings.
-> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
+> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Quality Attributes & Tradeoffs` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
 
 #### Plan Template
 
@@ -101,7 +105,35 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ---
 
-## 5. Prerequisites
+## 5. Quality Attributes & Tradeoffs
+
+> Copy the four workload answers from `.azure/requirements.json` exactly. They are the approved business
+> intent that later scaffold, integration, and deployment sessions consume. Do not replace them with Azure
+> services, SKUs, regions, or topology.
+
+**Operating Profile**: {Development / Demo | Standard Production | Business-Critical}
+**Data Classification**: {Public | Internal | Confidential / Personal | Regulated}
+**Traffic Profile**: {Small / Steady | Bursty | High Volume | Latency Sensitive}
+**Optimization Priority**: {Balanced | Lowest Cost | Highest Reliability | Lowest Latency}
+
+| Pillar | Workload Target | Scaffold Response | Planned Validation | Deferred Risk |
+|--------|-----------------|-------------------|--------------------|---------------|
+| Reliability | {Availability, recoverability, and acceptable degraded behavior implied by the operating profile} | {Health model, dependency classification, timeouts, safe retries, transactions, and idempotency needs} | {Failure-mode and health tests the scaffold/integrate phases must produce} | {Specific unresolved target, or `None for the approved profile`} |
+| Security | {Protection appropriate to the data classification; security baseline is never optional} | {Authorization, validation, managed-identity boundary, and logging-redaction needs} | {Negative authorization, secret, and sensitive-log checks} | {Compliance/private-networking review still required, or `None`} |
+| Cost Optimization | {The approved optimization priority without overriding security or correctness} | {Avoid unjustified services/background work; preserve explicit cost tradeoffs} | {Dependency and resource inventory; deployment cost estimate later} | {Known cost-versus-quality tradeoff, or `None`} |
+| Operational Excellence | {Support and diagnosis needs implied by the operating profile} | {Structured logs, correlation IDs, actionable errors, health/readiness signals} | {Telemetry and diagnostic smoke tests} | {Alerting/runbook/24×7 response deferred to deployment, or `None`} |
+| Performance Efficiency | {Throughput/latency behavior implied by the traffic profile} | {Pagination and payload bounds, pooling, bounded concurrency; caching only if already planned} | {Boundary tests and, for High Volume/Latency Sensitive, a lightweight load-test command} | {Numeric target still to resolve before deployment, or `None`} |
+
+> **This table is a decision record, not a score.** Every row must contain a workload-specific target,
+> implementation response, validation, and explicit deferred risk. Never write `WAF compliant`,
+> `WAF certified`, `100% WAF aligned`, or claim that a successful scaffold/deployment satisfies the
+> framework. For `Business-Critical`, record unresolved availability/RTO/RPO targets as a deferred risk
+> that must be resolved before deployment; never invent numerical targets. For `Regulated`, record the
+> applicable compliance and private-networking review as unresolved unless the user explicitly supplied it.
+
+---
+
+## 6. Prerequisites
 
 Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md). Always produce **both** groups — `### Run` and `### Debug` — as two sub-tables under this section. The plan webview shows the Run group always and the Debug group only when the user turns on the Autopilot toggle, so do not omit either group yourself.
 
@@ -119,7 +151,7 @@ Every row resolves to just two states, following the status rules in [prerequisi
 
 ---
 
-## 6. Design System & UI
+## 7. Design System & UI
 
 
 > **MANDATORY when `services` contains a `frontend` service.** Skip only when there is no frontend service (derived App Type `API only` / `Background worker`). The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
@@ -154,7 +186,7 @@ Every row resolves to just two states, following the status rules in [prerequisi
 
 ### Sample Content
 
-> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain context (Sections 1–4).
+> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain and workload context (Sections 1–5).
 
 For each page above, list 3–6 representative records using that page's primary entity — a short table or bullet list per page, whatever fits the data shape. Use **real values from this app's domain** (real entity names, realistic numbers, real states) — a recipe app lists recipes, an issue tracker lists issues, a storefront lists products. **Never** emit generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum. The skeleton below shows the **format**, not the content — replace every `{...}` with your domain's records.
 
@@ -170,7 +202,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 7. Project Structure
+## 8. Project Structure
 
 ```
 {Generated directory tree for the chosen stack}
@@ -178,7 +210,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 8. Route Definitions
+## 9. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Status Codes |
 |---|--------|------|-------------|-------------|--------------|-------------|
@@ -187,7 +219,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations
@@ -204,7 +236,8 @@ For each page above, list 3–6 representative records using that page's primary
    - `## 1. Project Overview` contains exactly one auth-related value: `**API Login**: Yes` or `No`.
    - Every `##` heading matches `## <N>. <Title>` (numbered). There are **no** un-numbered `##` headings such as `## Overview`, `## Architecture`, `## Services`, or `## Data Stores`.
    - There is **no** `mermaid` block and **no** improvised section outside the fixed skeleton.
-   - `## 1. Project Overview` exists and contains a `**Goal**:` row, and Section 5 (when a frontend exists) is `## N. Design System & UI` with a `**Component Library**:` row.
+   - `## N. Quality Attributes & Tradeoffs` exists, contains all four workload key-value rows, and its table contains all five pillars with no blank target/response/validation/risk cells.
+   - `## 1. Project Overview` exists and contains a `**Goal**:` row, and the Design System section (when a frontend exists) contains a `**Component Library**:` row.
 1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
 2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call the `open_plan_view` tool. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
@@ -218,28 +251,28 @@ For each page above, list 3–6 representative records using that page's primary
 
 ### Step 3.5: Generate Frontend HTML/CSS Preview (parallel sub-agents)
 
-> **Skip entirely** when Section 6 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
+> **Skip entirely** when the Design System & UI section was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
 
 **Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a presentation-quality visual spec, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 
-**Inputs:** the just-written `.azure/project-plan.md` Section 6 (Color Palette, Typography, Pages, Style Direction, Component Library), the **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](../shared-references/frontend-quality-bar.md) (the fidelity-agnostic contract this preview and the eventual scaffold both satisfy), plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read the html-preview reference **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a), its `## Icons` block, and its `## Token → HTML recipes` to hand per-page slices to the sub-agents (Step 3.5b). The sub-agents never receive the Shared CSS.
+**Inputs:** the just-written `.azure/project-plan.md` Design System & UI section (Color Palette, Typography, Pages, Style Direction, Component Library), the **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](../shared-references/frontend-quality-bar.md) (the fidelity-agnostic contract this preview and the eventual scaffold both satisfy), plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read the html-preview reference **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a), its `## Icons` block, and its `## Token → HTML recipes` to hand per-page slices to the sub-agents (Step 3.5b). The sub-agents never receive the Shared CSS.
 
 #### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
 
 Both files MUST exist before the plan-preview webview opens, so the controller can render tabs in the loading state. Use the `create_file` tool — it's OS-agnostic and creates parent folders automatically.
 
-**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 6:
+**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from the Design System & UI section:
 
 ```css
 :root {
-    /* ── Brand colors (from Section 6 palette) ── */
-    --color-primary: {hex from Section 6};
+    /* ── Brand colors (from the Design System palette) ── */
+    --color-primary: {hex from the Design System section};
     --color-on-primary: {white or near-black, whichever contrasts better};
     --color-accent: {hex};
     --color-on-accent: {white or near-black};
 
     /* ── Surfaces (derive from the palette — do NOT assume a light theme) ── */
-    --color-surface: {hex — page background from Section 6};
+    --color-surface: {hex — page background from the Design System section};
     --color-surface-raised: {a card/panel tone that reads as raised against surface — #ffffff for a light theme, a step LIGHTER than surface for a dark one};
     --color-surface-sunken: color-mix(in srgb, var(--color-surface) 92%, var(--color-text) 6%);
 
@@ -254,7 +287,7 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --color-danger:  #dc2626;
 
     /* ── Typography ── */
-    --font-body: {typography from Section 6}, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: {typography from the Design System section}, system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-heading: var(--font-body);
     --text-xs: 11px;
     --text-sm: 13px;
@@ -312,7 +345,7 @@ a:hover { text-decoration: underline; }
 
 Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
 
-**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 6's Pages table:
+**`.azure/.preview-temp/manifest.json`** — one entry per page in the Design System section's Pages table:
 
 ```json
 {
@@ -327,7 +360,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 
 - `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. **Always update it, both during initial generation and when revising previews after user feedback**.
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
-- `route` is the path from Section 6's Pages table verbatim. Default to `/<slug>` when missing.
+- `route` is the path from the Design System section's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
 
 #### 3.5a-open. Open the plan view NOW — before fanning out
@@ -340,10 +373,10 @@ The instant `theme.css` and `manifest.json` exist, the agent workflow opens the 
 
 Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
 
-1. The page's row from Section 6's Pages table (page name, route, purpose, layout regions).
+1. The page's row from the Design System section's Pages table (page name, route, purpose, layout regions).
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
 3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
-4. **That page's records from Section 6's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
+4. **That page's records from the Design System section's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
 5. **Only the region recipes this page needs** — from the `## Token → HTML recipes` section you already read, copy just the recipes for the layout tokens in this page's row, plus the `## Icons` block (inline-SVG library — every page needs it), the `## Adapting sizing to the domain`, `## Wrapping a full page`, and `## Hard rules` sections. **Do NOT pass the `## Shared CSS` block** (~500 lines) — it was already baked into `theme.css` in Step 3.5a, and sub-agents link to `theme.css` rather than the CSS source. **Do NOT pass recipes for regions this page's layout doesn't name.**
 6. **State assignment (parent decides).** Distribute the three non-data states across the page set so each is depicted **at least once**: pick one data-bearing page to render in its `loading (skeleton)` state, one tab/section to render `empty`, and one page to show the `error (inline banner)`. Pass the matching recipe (and the instruction to use it) only to those assigned sub-agents; every other page renders the populated `data` state.
 7. The exact output path: `.azure/.preview-temp/<slug>.html`.
@@ -434,9 +467,9 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 
 > **Key rule**: Enhancement service constructors MUST NOT throw. Defer config validation to method calls or wrap in try/catch.
 
-### Component Library Defaults (Section 6 of the plan)
+### Component Library Defaults (Design System & UI section)
 
-> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 6 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
+> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into the Design System & UI section verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
 
 | Frontend framework | Default `Component Library` | Reasonable alternatives | Use the default unless... |
 |---------------|----------------------------|------------------------|---------------------------|
@@ -445,11 +478,11 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 | `Svelte` | **Skeleton UI** | Melt UI + Tailwind | user explicitly names one |
 | `Angular` | **Angular Material** | PrimeNG | user explicitly names one |
 | `None` (plain HTML / Static + API) | **Pico.css** + native form controls | Bulma, water.css | user explicitly names one |
-| `None` + `Background worker` | omit Section 6 entirely | \u2014 | always omit when there is no UI |
+| `None` + `Background worker` | omit the Design System & UI section entirely | \u2014 | always omit when there is no UI |
 
 > **Why this matters**: Without `Component Library:`, the scaffold step treats the region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the presentation-quality plan preview. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It is a **presentation-quality** preview — themed palette, real inline-SVG icons, elevation, populated content, and all four data states. What it leaves to the scaffold (raw-static limits) is narrow: real webfonts, JavaScript behavior, and real photos. The scaffolded app reproduces this look with the `Component Library` named in the plan and adds those production-only capabilities — it should look like the same product, brought to life, never less polished than the preview.
+> **Plan-preview note**: The plan-preview webview renders the Design System & UI section as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It is a **presentation-quality** preview — themed palette, real inline-SVG icons, elevation, populated content, and all four data states. What it leaves to the scaffold (raw-static limits) is narrow: real webfonts, JavaScript behavior, and real photos. The scaffolded app reproduces this look with the `Component Library` named in the plan and adds those production-only capabilities — it should look like the same product, brought to life, never less polished than the preview.
 
 ### Error Response Contract
 
@@ -471,7 +504,7 @@ All error responses follow this shape:
 
 > This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`services/functions`, `services/web`, `services/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 >
-> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in Section 7 and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
+> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in the Project Structure section and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
 
 ```
 project-root/

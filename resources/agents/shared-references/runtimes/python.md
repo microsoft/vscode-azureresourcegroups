@@ -497,20 +497,35 @@ def get_logger(name: str = "app"):
 ```python
 # middleware/request_logger.py
 import time
+import uuid
+import structlog.contextvars
 from logger import get_logger
 
 logger = get_logger("http")
 
-def log_request(method: str, path: str, status_code: int, start_time: float):
+def log_request(
+    method: str,
+    path: str,
+    status_code: int,
+    start_time: float,
+    incoming_correlation_id: str | None = None,
+):
     duration_ms = round((time.time() - start_time) * 1000, 2)
+    correlation_id = incoming_correlation_id or str(uuid.uuid4())
+    structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
     logger.info(
         "request_completed",
         method=method,
-        path=path,
+        route=path.split("?", 1)[0],
         status=status_code,
         duration_ms=duration_ms,
     )
+    return correlation_id
 ```
+
+Log only allowlisted operational fields. Never log request/response bodies, authorization/cookie headers,
+uploaded filenames, user-entered text, or personal identifiers. Clear bound context variables after the
+request completes so correlation data cannot leak into a later invocation.
 
 ---
 

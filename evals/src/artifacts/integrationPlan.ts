@@ -9,7 +9,8 @@
  * The integrate agent runs in a fresh session and never sees the scaffold chat, so this
  * file is the entire brief. `resources/agents/azure-project-scaffold.agent.md`
  * ("Integration hand-off artifact") enumerates exactly what it must carry, and each
- * assertion below maps to one of those bullets.
+ * assertion below maps to one of those bullets, including the workload-quality
+ * controls that must survive the fresh integration session.
  *
  * Two properties matter more than coverage here:
  *
@@ -24,6 +25,7 @@
 
 import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
 import { createValidationResult } from './validationTypes.ts';
+import { WORKLOAD_QUESTION_CONTRACT } from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
 
 /**
  * HTTP verb and a `/`-rooted path. The two may share one cell (`GET /api/items`) or sit
@@ -33,6 +35,7 @@ const ROUTE_PATTERN = /\b(GET|POST|PUT|PATCH|DELETE)\b[^\n]*?(\/[A-Za-z0-9/_\-{}
 
 /** Stores that imply schema migrations; a file or in-memory store legitimately has none. */
 const MIGRATING_STORE = /\b(postgres(?:ql)?|azure sql|sql server|mysql|mariadb|mongo(?:db)?|cosmos)\b/i;
+const FALSE_WAF_CLAIM = /\b(?:(?:WAF|Well[- ]Architected)\s+(?:compliant|certified|100%\s+aligned)|100%\s+(?:WAF|Well[- ]Architected)\s+aligned)\b/i;
 
 interface Section {
     heading: string;
@@ -51,6 +54,9 @@ export function validateIntegrationPlanArtifact(
 
     if (content.trim().length < 200) {
         issues.push(issue('artifactTooShort', '$', 'Integration plan is too short to brief the integrate agent.'));
+    }
+    if (FALSE_WAF_CLAIM.test(content)) {
+        issues.push(issue('falseWellArchitectedClaim', '$.quality', 'The integration plan may record evidence and risks, but must not claim WAF compliance or certification.'));
     }
 
     const sections = parseSections(content);
@@ -73,6 +79,12 @@ export function validateIntegrationPlanArtifact(
         validateDatabase(findSection(sections, /\b(database|data ?store|persistence|storage)\b/i), issues);
     }
     validateServices(findSection(sections, /^(azure )?services\b/i)?.body, issues);
+    validateQualityContract(
+        findSection(sections, /\bworkload quality contract\b/i),
+        findSection(sections, /\bapplication controls\b/i),
+        findSection(sections, /\bdeferred risks?\b/i),
+        issues,
+    );
 
     if (options.hasFrontend) {
         validateFrontend(findSection(sections, frontendHeading, backendHeading)?.body, issues);
@@ -80,6 +92,65 @@ export function validateIntegrationPlanArtifact(
     }
 
     return createValidationResult(issues);
+}
+
+const QUALITY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+    Object.values(WORKLOAD_QUESTION_CONTRACT).map(contract => [contract.planKey, contract.options]),
+);
+
+const QUALITY_PILLARS = [
+    'Reliability',
+    'Security',
+    'Cost Optimization',
+    'Operational Excellence',
+    'Performance Efficiency',
+] as const;
+
+function validateQualityContract(
+    contract: Section | undefined,
+    controls: Section | undefined,
+    deferredRisks: Section | undefined,
+    issues: ArtifactValidationIssue[],
+): void {
+    if (!contract) {
+        issues.push(issue('missingQualityContract', '$.quality', 'Integration plan must carry the approved Workload Quality Contract.'));
+        return;
+    }
+
+    for (const [field, allowed] of Object.entries(QUALITY_FIELDS)) {
+        const value = readField(contract.body, new RegExp(escapeRegex(field), 'i'));
+        if (!value) {
+            issues.push(issue('missingQualityProfileField', `$.quality.${field}`, `Workload Quality Contract must specify ${field}.`));
+        } else if (!(allowed as readonly string[]).includes(unwrapInlineMarkdown(value))) {
+            issues.push(issue('invalidQualityProfileField', `$.quality.${field}`, `${field} must be one of: ${allowed.join(', ')}.`));
+        }
+    }
+
+    const body = controls?.body ?? '';
+    if (!controls || !/\|\s*ID\s*\|\s*Pillar\s*\|\s*Control\s*\|\s*Evidence\s*\|\s*Integration Validation\s*\|/i.test(body)) {
+        issues.push(issue('missingApplicationControls', '$.quality.controls', 'Application Controls must use the ID | Pillar | Control | Evidence | Integration Validation table.'));
+        return;
+    }
+
+    const rows = body.split(/\r?\n/)
+        .filter(line => /^\s*\|/.test(line) && !/^\s*\|[\s:-]+\|/.test(line))
+        .map(line => line.split('|').slice(1, -1).map(cell => cell.trim()))
+        .filter(row => row[0]?.toLowerCase() !== 'id');
+
+    for (const pillar of QUALITY_PILLARS) {
+        const row = rows.find(value => value[1]?.toLowerCase() === pillar.toLowerCase());
+        if (!row) {
+            issues.push(issue('missingQualityControlPillar', '$.quality.controls', `Application Controls must include a ${pillar} control.`));
+            continue;
+        }
+        if (row.slice(0, 5).some(value => !value || /^(?:[-–—]|todo|tbd|implemented|done)$/i.test(value))) {
+            issues.push(issue('incompleteQualityControl', '$.quality.controls', `${pillar} control must name an ID, control, concrete evidence, and executable integration validation.`));
+        }
+    }
+
+    if (!deferredRisks || !deferredRisks.body.trim()) {
+        issues.push(issue('missingDeferredRisks', '$.quality', 'Workload Quality Contract must preserve Deferred Risks, including an explicit "None" when there are none.'));
+    }
 }
 
 /**
@@ -322,4 +393,15 @@ function validateSharedTypes(section: string | undefined, issues: ArtifactValida
 
 function issue(code: string, path: string, message: string): ArtifactValidationIssue {
     return { code, path, message };
+}
+
+function escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function unwrapInlineMarkdown(value: string): string {
+    return value.trim()
+        .replace(/^`([^`]+)`$/, '$1')
+        .replace(/^\*\*([^*]+)\*\*$/, '$1')
+        .trim();
 }

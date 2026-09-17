@@ -12,11 +12,11 @@
 >
 > **What this raw-static preview intentionally leaves to the scaffold** (raw-static limits, not a license to look unpolished): real webfonts (use system fonts), JavaScript (no working toggles — states are depicted statically), and real photos (use neutral placeholder blocks — a subtle surface + border with a muted icon or initials, **not** a brand-color gradient). Everything else — real inline-SVG icons, elevation, hover/focus styling, skeleton shimmer — the preview DOES do, and must.
 >
-> **Polish is about *treatment*; content is about *the plan*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 6 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
+> **Polish is about *treatment*; content is about *the plan*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Design System & UI Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
 >
 > **Audience:** the planner sub-agents that fan out from Step 3.5b. Each sub-agent owns one page and writes a single self-contained HTML file linking to the shared `./theme.css`. **No `<script>` tags** — the preview iframe is sandboxed without scripts. **No inline `<style>`** — all styling MUST come from `./theme.css`. Aim high: the scaffold reproduces this look with real primitives, so make it worth reproducing.
 >
-> **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Section 6 Pages table.
+> **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Design System & UI Pages table.
 
 ---
 
@@ -644,9 +644,9 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 For each layout token in the plan's Pages table, copy the corresponding snippet into the page's `<body>`. Tokens are **layout intent**, not literal element names.
 
 > **Every human-readable label and every count in these snippets is an illustrative placeholder — adapt it to the app, never ship it verbatim.** Source the replacements from the plan:
-> - **Nav / sidebar labels** → the page names from Section 6's Pages table (link to the app's actual pages, not "Overview / Library / Settings").
+> - **Nav / sidebar labels** → the page names from the Design System & UI Pages table (link to the app's actual pages, not "Overview / Library / Settings").
 > - **Table headers, form field labels, KPI labels** → the real fields of the page's primary entity.
-> - **Rows, cards, values, badge states** → the page's records from Section 6's **Sample Content** block, using the entity's real status values.
+> - **Rows, cards, values, badge states** → the page's records from the Design System & UI **Sample Content** block, using the entity's real status values.
 > - **Counts & sizing** → render as many KPI tiles, grid columns, table rows, list cards, tabs, and form fields as the plan's data actually calls for — the `repeat(4, …)` / `repeat(3, …)` and the three-row stubs below are **defaults, not quotas**. A 2-KPI dashboard renders two tiles; a 6-field form renders six fields. See *Adapting sizing to the domain* below.
 >
 > The literal strings left in the snippets (e.g. `Active`, `Owner`, `2 min ago`) only show the *shape*. A preview that still reads "Overview / Library / Settings" or "Jane Doe" has not been wired to the plan — that's the bug this contract exists to prevent. Only the **CSS / design tokens** (spacing scale, radii, the `theme.css` classes) stay fixed; all visible text and all counts are plan-driven.
@@ -843,7 +843,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </form>
 ```
 
-> Render **one field per real field** of this form's entity (from Section 6) — not a fixed three. Use input types that fit (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; tailor the submit label to the action (e.g. "Save", "Create", "Send").
+> Render **one field per real field** of this form's entity (from Design System & UI) — not a fixed three. Use input types that fit (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; tailor the submit label to the action (e.g. "Save", "Create", "Send").
 
 ### `table`
 ```html
@@ -876,7 +876,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Columns are the primary entity's real fields (as many as the entity has — not a fixed four); rows are the page's records from Section 6's Sample Content (one `<tr>` per record).
+> Columns are the primary entity's real fields (as many as the entity has — not a fixed four); rows are the page's records from the Design System & UI Sample Content (one `<tr>` per record).
 
 ### `actions` / `action-bar`
 ```html
@@ -991,9 +991,9 @@ The snippets above show a *shape*; the **counts and proportions** must follow th
 | **Grid / list cards** | 3 | One per record in this page's Sample Content. The grid auto-fills columns. |
 | **Table rows** | 3 | One `<tr>` per Sample Content record; columns = the entity's real fields. |
 | **Form fields** | 3 | One per real field of the entity (a sign-up form may have 6, a search box 1). |
-| **Nav / sidebar links** | 3 | One per page in Section 6's Pages table. |
+| **Nav / sidebar links** | 3 | One per page in the Design System & UI Pages table. |
 | **Tabs** | 3 | As many as the page's purpose implies. |
-| **Content density** | medium | A list-heavy admin tool packs rows tight; a marketing landing page leans hero + few cards. Let Section 6's Style Direction steer this. |
+| **Content density** | medium | A list-heavy admin tool packs rows tight; a marketing landing page leans hero + few cards. Let the Design System's Style Direction steer this. |
 
 These are the **only** things that should vary per page. The **design tokens** (`--space-*` scale, `--radius-*`, `--text-*`, the `.preview-*` class definitions) stay fixed — they are the shared contract the parent webview's palette/typography editors key off. Customize *what* and *how many*, never the spacing scale or class CSS.
 
@@ -1021,7 +1021,7 @@ Wrap the page body in `<div class="preview-root">` so the header → shell → f
 
 Pages without a sidebar can put `<section class="preview-main">` directly inside `.preview-root`.
 
-> **Only emit the regions this page's Layout actually lists.** The wrapper above shows the full nesting *order*, not a required set — drop any region the page's Section 6 Layout column doesn't name (no `sidebar` token → no `<aside>`; no `hero` token → no hero block; a bare `form` page is just `header + form`). Never add chrome a page didn't ask for to make it look fuller.
+> **Only emit the regions this page's Layout actually lists.** The wrapper above shows the full nesting *order*, not a required set — drop any region the page's Design System & UI Layout column doesn't name (no `sidebar` token → no `<aside>`; no `hero` token → no hero block; a bare `form` page is just `header + form`). Never add chrome a page didn't ask for to make it look fuller.
 
 ---
 

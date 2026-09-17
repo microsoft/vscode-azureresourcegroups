@@ -19,6 +19,30 @@ export type RequirementsRecommendedChoice = string | string[];
  */
 export type RequirementsExecutionMode = 'guided' | 'auto';
 
+/** Stable schema-v3 workload questions shared by parsing, telemetry, and certification. */
+export const WORKLOAD_QUESTION_CONTRACT = {
+    operatingProfile: {
+        category: 'deployment',
+        planKey: 'Operating Profile',
+        options: ['Development / Demo', 'Standard Production', 'Business-Critical'],
+    },
+    dataClassification: {
+        category: 'compliance',
+        planKey: 'Data Classification',
+        options: ['Public', 'Internal', 'Confidential / Personal', 'Regulated'],
+    },
+    trafficProfile: {
+        category: 'scale',
+        planKey: 'Traffic Profile',
+        options: ['Small / Steady', 'Bursty', 'High Volume', 'Latency Sensitive'],
+    },
+    optimizationPriority: {
+        category: 'operations',
+        planKey: 'Optimization Priority',
+        options: ['Balanced', 'Lowest Cost', 'Highest Reliability', 'Lowest Latency'],
+    },
+} as const;
+
 export interface RequirementsOption {
     label: string;
     description?: string;

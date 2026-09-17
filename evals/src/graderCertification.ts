@@ -23,7 +23,7 @@ import { validateLocalDebugPlanArtifact } from './artifacts/localDebugPlan.ts';
 import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
 import { validateProjectPackages } from './artifacts/projectPackages.ts';
-import { validateRequirementsArtifact } from './artifacts/requirements.ts';
+import { validateRequirementsArtifact, validateWorkloadChoice } from './artifacts/requirements.ts';
 import { validateScaffoldAbsence } from './artifacts/scaffoldAbsence.ts';
 import { validateServiceFidelity } from './artifacts/serviceFidelity.ts';
 import {
@@ -254,6 +254,12 @@ const OFFLINE_VALIDATORS: Record<
 > = {
     requirements: async workspace =>
         validateRequirementsArtifact(await readArtifact(workspace, '.azure/requirements.json'), { requireConfirmed: true }),
+    'requirements-workload': async workspace =>
+        validateWorkloadChoice(
+            await readArtifact(workspace, '.azure/requirements.json'),
+            'operatingProfile',
+            'development-demo',
+        ),
     'project-plan': async workspace =>
         validateProjectPlanArtifact(await readArtifact(workspace, '.azure/project-plan.md'), { expectedStatus: 'Integrated' }),
     'integration-plan': async (workspace, scenario) =>

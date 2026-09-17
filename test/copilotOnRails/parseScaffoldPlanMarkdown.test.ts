@@ -46,6 +46,7 @@ suite('parseScaffoldPlanMarkdown', () => {
                     'Attendance Compliance API — Azure Functions',
                     'Attendance Compliance Web App — Web App',
                     'Services Required',
+                    'Quality Attributes & Tradeoffs',
                     'Prerequisites',
                     'Design System & UI',
                     'Project Structure',
@@ -71,6 +72,18 @@ suite('parseScaffoldPlanMarkdown', () => {
         test('finds a keyValue from the overview section', () => {
             const section = getSection(parsedPlan, 'Project Overview');
             assert.strictEqual(findKeyValue(section, 'App Type'), 'SPA + API');
+        });
+
+        test('parses the workload quality contract', () => {
+            const section = getSection(parsedPlan, 'Quality Attributes');
+            assert.strictEqual(findKeyValue(section, 'Operating Profile'), 'Standard Production');
+            assert.strictEqual(findKeyValue(section, 'Data Classification'), 'Confidential / Personal');
+            const table = findTable(section, ['Pillar', 'Workload Target', 'Planned Validation']);
+            assert.ok(table);
+            assert.deepStrictEqual(
+                table.rows.map(row => row[0]),
+                ['Reliability', 'Security', 'Cost Optimization', 'Operational Excellence', 'Performance Efficiency'],
+            );
         });
 
         test('specializes the design system color palette and pages', () => {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { RequirementsData, RequirementsQuestion, RequirementsService } from "../../views/utils/parseRequirements";
+import { WORKLOAD_QUESTION_CONTRACT, type RequirementsData, type RequirementsQuestion, type RequirementsService } from "../../views/utils/parseRequirements";
 
 export const REQUIREMENTS_TELEMETRY_PREFIX = 'requirements.';
 
@@ -46,6 +46,15 @@ export interface RequirementsTelemetry {
 
     /** Binary API Login answer (`yes` or `no`), normalized to lowercase, or `none`. */
     auth: string;
+
+    /** Intended operating profile, normalized to lowercase, or `unknown`. */
+    operatingProfile: string;
+    /** Highest data classification selected for the workload, or `unknown`. */
+    dataClassification: string;
+    /** Expected traffic shape, normalized to lowercase, or `unknown`. */
+    trafficProfile: string;
+    /** Primary architecture tradeoff, normalized to lowercase, or `unknown`. */
+    optimizationPriority: string;
 }
 
 /**
@@ -78,6 +87,10 @@ export function getRequirementsTelemetry(data: RequirementsData): RequirementsTe
         hasDatabase: hasDatabase(questions),
 
         auth: getAuth(questions),
+        operatingProfile: getWorkloadAnswer(questions, 'operatingProfile'),
+        dataClassification: getWorkloadAnswer(questions, 'dataClassification'),
+        trafficProfile: getWorkloadAnswer(questions, 'trafficProfile'),
+        optimizationPriority: getWorkloadAnswer(questions, 'optimizationPriority'),
     };
 }
 
@@ -118,6 +131,16 @@ function getAuth(questions: RequirementsQuestion[]): string {
         return 'none';
     }
     return normalizeToken(q.answer) || 'none';
+}
+
+function getWorkloadAnswer(questions: RequirementsQuestion[], id: string): string {
+    const question = questions.find(q => q.id === id);
+    const contract = WORKLOAD_QUESTION_CONTRACT[id as keyof typeof WORKLOAD_QUESTION_CONTRACT];
+    if (!question || !contract || typeof question.answer !== 'string'
+        || !(contract.options as readonly string[]).includes(question.answer)) {
+        return 'unknown';
+    }
+    return normalizeToken(question.answer) || 'unknown';
 }
 
 function getDistinctSorted(values: string[]): string {
