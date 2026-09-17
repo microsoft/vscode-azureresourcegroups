@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1030" height="1080" viewBox="0 0 1030 1080" font-size="14px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Actual direct-socket prototype: ready publication, rejected URI</title>
+  <desc id="desc">The VS Code extension starts the private MCP listener and publishes its ready Unix socket URI and authentication header through the VS Code MCP registry. The registry contains metadata, not an MCP connection. Copilot's runtime MCP client receives that live definition but rejects its URI before initialization. One listener exists, with zero Copilot sessions, command calls or view calls. Server and extension handlers share one extension host.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:23px;font-weight:700}.name{font-size:16px;font-weight:700}.small{font-size:12px;fill:#42546c}.section{font-size:13px;font-weight:700;fill:#42546c;letter-spacing:1px}.security{fill:#934100;font-weight:700}.danger{fill:#a51d16;font-weight:700}.lane{stroke:#b7c6d8;stroke-dasharray:4 5}.setup{stroke:#2563eb;stroke-width:2;stroke-dasharray:7 4;fill:none}.call{stroke:#087f5b;stroke-width:2;fill:none}.blocked{stroke:#8a96a6;stroke-width:2;stroke-dasharray:4 6;fill:none}</style>
+  <rect width="1030" height="1080" fill="#fff"/>
+  <text x="25" y="35" class="title">1. Direct socket: Copilot receives the address but rejects it</text>
+  <text x="25" y="61">The server was running. No MCP request crossed the Unix socket from Copilot.</text>
+  <rect x="615" y="86" width="390" height="818" rx="12" fill="#f1f7ff" stroke="#c5daf4"/>
+  <text x="810" y="108" text-anchor="middle" class="small">SERVER + HANDLERS SHARE THE EXTENSION HOST</text>
+  <rect x="20" y="125" width="160" height="90" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
+  <text x="100" y="155" text-anchor="middle" class="name">Copilot Chat</text>
+  <text x="100" y="181" text-anchor="middle" class="small">UI using Copilot</text>
+  <rect x="210" y="125" width="180" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="300" y="150" text-anchor="middle" class="name">VS Code</text>
+  <text x="300" y="171" text-anchor="middle" class="name">MCP registry</text>
+  <text x="300" y="197" text-anchor="middle" class="small">Connection instructions</text>
+  <rect x="415" y="125" width="180" height="90" rx="8" fill="#e5f6ee" stroke="#83b99e"/>
+  <text x="505" y="150" text-anchor="middle" class="name">Copilot runtime</text>
+  <text x="505" y="171" text-anchor="middle" class="name">MCP client</text>
+  <text x="505" y="197" text-anchor="middle" class="small">Sends tool requests</text>
+  <rect x="630" y="125" width="150" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="705" y="155" text-anchor="middle" class="name">MCP server</text>
+  <text x="705" y="181" text-anchor="middle" class="small">Receives tool requests</text>
+  <rect x="820" y="125" width="170" height="90" rx="8" fill="#e0eeff" stroke="#96b8e5"/>
+  <text x="905" y="155" text-anchor="middle" class="name">VS Code extension</text>
+  <text x="905" y="181" text-anchor="middle" class="small">Runs CoR actions</text>
+  <path d="M100 215V892 M300 215V892 M505 215V892 M705 215V892 M905 215V892" class="lane"/>
+  <text x="25" y="242" class="section">SETUP: GIVE VS CODE A REAL ADDRESS, NOT THE PLACEHOLDER</text>
+  <path d="M905 276H300" class="setup"/>
+  <text x="602" y="264" text-anchor="middle">VS Code API: registerMcpServerDefinitionProvider(...)</text>
+  <path d="M300 318H905" class="setup"/>
+  <text x="602" y="306" text-anchor="middle">VS Code callback: provideMcpServerDefinitions()</text>
+  <path d="M905 360H705" class="setup"/>
+  <text x="805" y="340" text-anchor="middle">Start socket server</text>
+  <text x="805" y="355" text-anchor="middle" class="small">JS: startInProcHttpServer(...)</text>
+  <path d="M705 402H905" class="setup"/>
+  <text x="805" y="382" text-anchor="middle">Return address + secret</text>
+  <text x="805" y="397" text-anchor="middle" class="small">JS return; socket readiness checked</text>
+  <path d="M905 446H300" class="setup"/>
+  <text x="602" y="434" text-anchor="middle">Callback return: unix:/.../mcp.sock#/mcp + Authorization header</text>
+  <path d="M300 490H505" class="setup"/>
+  <text x="402" y="470" text-anchor="middle">VS Code writes .mcp.json</text>
+  <text x="402" y="485" text-anchor="middle" class="small">Host passes settings to Copilot</text>
+  <text x="25" y="531" class="section">COPILOT CANNOT USE THIS ADDRESS FORMAT</text>
+  <path d="M100 573H505" class="call"/>
+  <text x="302" y="553" text-anchor="middle">Prompt: call prototype_instance</text>
+  <text x="302" y="568" text-anchor="middle" class="small">VS Code / Agent Host internal messaging</text>
+  <rect x="250" y="590" width="385" height="95" rx="8" fill="#fff1f0" stroke="#df8d87"/>
+  <text x="442" y="616" text-anchor="middle" class="danger">Copilot reports</text>
+  <text x="442" y="640" text-anchor="middle">invalid MCP server URL: invalid format</text>
+  <text x="442" y="664" text-anchor="middle" class="small">Rejected before the server could check the secret</text>
+  <path d="M505 726H691" class="blocked"/>
+  <path d="M691 719L705 733 M691 733L705 719" stroke="#8a96a6" stroke-width="3"/>
+  <text x="602" y="706" text-anchor="middle" class="small">No HTTP POST /mcp was sent</text>
+  <text x="602" y="721" text-anchor="middle" class="small">Unix socket connection never opened</text>
+  <rect x="640" y="748" width="350" height="64" rx="7" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="815" y="772" text-anchor="middle" class="security">Server accepts HTTP over its Unix socket</text>
+  <text x="815" y="795" text-anchor="middle">Requires secret; owner-only socket directory</text>
+  <path d="M705 850H891" class="blocked"/>
+  <path d="M891 843L905 857 M891 857L905 843" stroke="#8a96a6" stroke-width="3"/>
+  <text x="805" y="838" text-anchor="middle" class="small">No JS function call to a CoR tool</text>
+  <text x="805" y="878" text-anchor="middle" class="danger">0 command calls; 0 view calls</text>
+  <rect x="25" y="925" width="980" height="100" rx="8" fill="#f3f5f8" stroke="#c6d0df"/>
+  <text x="43" y="948">Address example: unix:/.../mcp.sock#/mcp. Before #: socket path. After #: HTTP request path.</text>
+  <text x="43" y="970">A compatible client would send POST /mcp over that socket, without a TCP port. Copilot did not.</text>
+  <text x="43" y="992">The generated .mcp.json contains connection settings, not tool traffic. Keep the included secret private.</text>
+  <text x="43" y="1014">Directory mode 0700 restricts access to its owner. No real socket path or credential is reproduced here.</text>
+  <g id="arrowheads" fill="#2563eb">
+    <polygon points="300,276 312,270 312,282"/>
+    <polygon points="905,318 893,312 893,324"/>
+    <polygon points="705,360 717,354 717,366"/>
+    <polygon points="905,402 893,396 893,408"/>
+    <polygon points="300,446 312,440 312,452"/>
+    <polygon points="505,490 493,484 493,496"/>
+    <polygon points="505,573 493,567 493,579" fill="#087f5b"/>
+  </g>
+  <text x="25" y="1055" class="small">Blue: setup settings. Green: user prompt. Crosses: no communication took place. JS means JavaScript inside the extension.</text>
+</svg>

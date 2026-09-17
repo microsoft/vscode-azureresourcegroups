@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="440" viewBox="0 0 1040 440" font-size="16px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Node stdio bridge to MCP server transport</title>
+  <desc id="desc">The Node stdio bridge sends authenticated HTTP POST requests to the MCP server through a local Unix socket. The socket has an illustrative filesystem path. The MCP server and Copilot on Rails tool handlers share the VS Code extension-host process.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:24px;font-weight:700}.name{font-size:18px;font-weight:700}.small{font-size:14px;fill:#42546c}.request{stroke:#087f5b;stroke-width:3;fill:none}.reply{stroke:#087f5b;stroke-width:3;stroke-dasharray:5 5;fill:none}.note{fill:#934100;font-weight:700}</style>
+  <rect width="1040" height="440" fill="#fff"/>
+  <text x="25" y="40" class="title">Transport 2: authenticated HTTP over a Unix socket</text>
+  <rect x="40" y="105" width="280" height="115" rx="10" fill="#ffedc8" stroke="#d9b469" stroke-width="2"/>
+  <text x="180" y="145" text-anchor="middle" class="name">Node stdio bridge process</text>
+  <text x="180" y="178" text-anchor="middle" class="small">HTTP client</text>
+  <text x="180" y="201" text-anchor="middle" class="small">Receives the socket path and secret</text>
+  <rect x="690" y="82" width="320" height="166" rx="12" fill="#f1f7ff" stroke="#c5daf4" stroke-width="2"/>
+  <text x="850" y="107" text-anchor="middle" class="small">VS CODE EXTENSION HOST PROCESS</text>
+  <rect x="720" y="122" width="260" height="100" rx="8" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="850" y="158" text-anchor="middle" class="name">MCP server</text>
+  <text x="850" y="187" text-anchor="middle" class="small">Calls CoR tool handlers in-process</text>
+  <text x="850" y="208" text-anchor="middle" class="small">No separate server executable</text>
+  <path d="M320 130H690" class="request"/>
+  <polygon points="690,130 674,122 674,138" fill="#087f5b"/>
+  <text x="505" y="83" text-anchor="middle">HTTP POST /mcp</text>
+  <text x="505" y="105" text-anchor="middle" class="small">Unix socket: /.../mcp.sock</text>
+  <text x="505" y="125" text-anchor="middle" class="small">Authorization: Nonce &lt;secret&gt;</text>
+  <path d="M690 205H320" class="reply"/>
+  <polygon points="320,205 336,197 336,213" fill="#087f5b"/>
+  <text x="505" y="250" text-anchor="middle">HTTP response over the same Unix-socket connection</text>
+  <rect x="95" y="292" width="850" height="102" rx="8" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="520" y="322" text-anchor="middle" class="note">The socket is a named local endpoint, not a TCP listener.</text>
+  <text x="520" y="348" text-anchor="middle">Directory mode 0700 blocks other OS users. The nonce rejects callers without the current secret.</text>
+  <text x="520" y="373" text-anchor="middle">Neither control isolates malicious software already running as the same OS user.</text>
+  <text x="25" y="427" class="small">Solid green: request. Dotted green: reply. The socket path is illustrative; no credential value is shown.</text>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="530" viewBox="0 0 1200 530" font-size="16px" fill="#172b4d" role="img" aria-labelledby="title desc">
+  <title id="title">Stdio bridge registration and process launch</title>
+  <desc id="desc">The extension starts the Unix-socket MCP server, creates a connection lease containing the socket address and nonce, and registers a stdio launch definition with VS Code. The VS Code MCP registry passes the command, script and environment to Copilot's MCP client. The client launches the Node stdio bridge as a child process. This phase carries setup metadata, not MCP tool requests.</desc>
+  <style>text{font-family:Arial,sans-serif}.title{font-size:24px;font-weight:700}.name{font-size:18px;font-weight:700}.small{font-size:14px;fill:#42546c}.setup{stroke:#2563eb;stroke-width:3;stroke-dasharray:8 5;fill:none}.launch{stroke:#934100;stroke-width:3;fill:none}.note{fill:#934100;font-weight:700}</style>
+  <rect width="1200" height="530" fill="#fff"/>
+  <text x="25" y="40" class="title">Setup: register the launch definition, then start the bridge</text>
+  <rect x="25" y="145" width="245" height="125" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="147" y="182" text-anchor="middle" class="name">VS Code extension</text>
+  <text x="147" y="214" text-anchor="middle" class="small">Starts the Unix-socket server</text>
+  <text x="147" y="237" text-anchor="middle" class="small">Creates the connection lease</text>
+  <text x="147" y="260" text-anchor="middle" class="small">Registers a stdio definition</text>
+  <rect x="325" y="145" width="245" height="125" rx="10" fill="#e0eeff" stroke="#96b8e5" stroke-width="2"/>
+  <text x="447" y="182" text-anchor="middle" class="name">VS Code MCP registry</text>
+  <text x="447" y="214" text-anchor="middle" class="small">Stores launch metadata</text>
+  <text x="447" y="237" text-anchor="middle" class="small">May write generated .mcp.json</text>
+  <text x="447" y="260" text-anchor="middle" class="small">Does not carry tool requests</text>
+  <rect x="625" y="145" width="245" height="125" rx="10" fill="#e5f6ee" stroke="#83b99e" stroke-width="2"/>
+  <text x="747" y="182" text-anchor="middle" class="name">Copilot MCP client</text>
+  <text x="747" y="214" text-anchor="middle" class="small">Receives the launch definition</text>
+  <text x="747" y="237" text-anchor="middle" class="small">Creates stdin/stdout pipes</text>
+  <text x="747" y="260" text-anchor="middle" class="small">Starts the child process</text>
+  <rect x="925" y="145" width="245" height="125" rx="10" fill="#ffedc8" stroke="#d9b469" stroke-width="2"/>
+  <text x="1047" y="182" text-anchor="middle" class="name">Node stdio bridge</text>
+  <text x="1047" y="214" text-anchor="middle" class="small">Inherits the launch environment</text>
+  <text x="1047" y="237" text-anchor="middle" class="small">Reads and deletes the lease variable</text>
+  <text x="1047" y="260" text-anchor="middle" class="small">Connects to the Unix socket</text>
+  <path d="M270 187H325 M570 187H625" class="setup"/>
+  <polygon points="325,187 309,179 309,195" fill="#2563eb"/>
+  <polygon points="625,187 609,179 609,195" fill="#2563eb"/>
+  <text x="297" y="104" text-anchor="middle">VS Code provider API</text>
+  <text x="297" y="126" text-anchor="middle" class="small">Stdio launch definition</text>
+  <text x="597" y="104" text-anchor="middle">VS Code host handoff</text>
+  <text x="597" y="126" text-anchor="middle" class="small">Command, args and environment</text>
+  <path d="M870 207H925" class="launch"/>
+  <polygon points="925,207 909,199 909,215" fill="#934100"/>
+  <text x="897" y="104" text-anchor="middle">Child-process launch</text>
+  <text x="897" y="126" text-anchor="middle" class="small">VS Code executable in Node mode</text>
+  <rect x="115" y="325" width="970" height="145" rx="8" fill="#fff4e8" stroke="#e7af70"/>
+  <text x="600" y="355" text-anchor="middle" class="note">Registered launch definition</text>
+  <text x="600" y="385" text-anchor="middle">Command: VS Code's process.execPath</text>
+  <text x="600" y="412" text-anchor="middle">Argument: dist/mcpStdioBridge.js</text>
+  <text x="600" y="439" text-anchor="middle">Environment: AZURE_RESOURCES_MCP_STDIO_LEASE = { socket URI, nonce, expiry, instance, workspace }</text>
+  <text x="25" y="505">Security consideration: anyone who reads the serialized lease can use its nonce until revocation. Protect generated settings and logs.</text>
+  <text x="25" y="525" class="small">Dashed blue arrows carry registration metadata. The brown arrow starts a process. MCP JSON-RPC begins after this setup.</text>
+</svg>
