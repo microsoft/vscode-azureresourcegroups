@@ -89,10 +89,11 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
 /**
  * Ensures the flow starts from a suitable blank slate.
  * If no folder is open, or the open folder already contains project content, we offer the
- * native folder picker and reopen VS Code on the chosen folder.
+ * choice to create a subfolder or select an empty folder, then open the target as the
+ * project workspace.
  *
  * Returns true when the flow can continue in the current window, false when
- * we're reopening on a different folder (in which case the flow resumes
+ * we're opening a different folder (in which case the flow resumes
  * automatically via the pending-create marker). Throws if the user cancels or
  * picks a folder that isn't empty.
  */
@@ -103,22 +104,45 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         return true;
     }
 
-    const browse = vscode.l10n.t('Browse...');
+    const createSubfolder = vscode.l10n.t('Create in New Subfolder...');
+    const browse = vscode.l10n.t('Choose Empty Folder...');
+    const actions = currentFolder ? [createSubfolder, browse] : [browse];
     const choice = await vscode.window.showWarningMessage(
-        vscode.l10n.t('Creating a project with Copilot requires an empty folder.'),
+        vscode.l10n.t('Creating a project with Copilot requires a clean project folder.'),
         {
             modal: true,
             detail: currentFolder
-                ? vscode.l10n.t('"{0}" already contains files. Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.', folderName(currentFolder.uri))
-                : vscode.l10n.t('Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.'),
+                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. VS Code will open the project folder and pick this flow back up.', folderName(currentFolder.uri))
+                : vscode.l10n.t('Choose an empty folder to build in. VS Code will open it and pick this flow back up.'),
         },
-        browse,
+        ...actions,
     );
 
-    if (choice !== browse) {
+    let target: vscode.Uri;
+    let openInNewWindow = false;
+    if (choice === createSubfolder && currentFolder) {
+        target = await createProjectSubfolder(currentFolder.uri);
+        openInNewWindow = true;
+    } else if (choice === browse) {
+        target = await pickEmptyProjectFolder(currentFolder?.uri);
+    } else {
         throw new UserCancelledError('selectProjectFolder');
     }
 
+    if (!(await isFolderEmpty(target))) {
+        throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty project folder.', folderName(target)));
+    }
+
+    await writePendingCreateMarker(target);
+    if (openInNewWindow) {
+        await vscode.commands.executeCommand('vscode.openFolder', target, true);
+    } else {
+        await vscode.commands.executeCommand('vscode.openFolder', target);
+    }
+    return false;
+}
+
+async function pickEmptyProjectFolder(currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
     const picked = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
@@ -127,7 +151,7 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         title: vscode.l10n.t('Select an empty folder for your new project'),
         // Start one level up from the current folder, since the whole point is
         // to land somewhere other than where we are.
-        defaultUri: currentFolder ? vscode.Uri.joinPath(currentFolder.uri, '..') : undefined,
+        defaultUri: currentFolder ? vscode.Uri.joinPath(currentFolder, '..') : undefined,
     });
 
     const target = picked?.[0];
@@ -135,13 +159,73 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         throw new UserCancelledError('selectProjectFolder');
     }
 
-    if (!(await isFolderEmpty(target))) {
-        throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty folder.', folderName(target)));
+    return target;
+}
+
+async function createProjectSubfolder(parent: vscode.Uri): Promise<vscode.Uri> {
+    const input = await vscode.window.showInputBox({
+        title: vscode.l10n.t('Create a Project Subfolder'),
+        prompt: vscode.l10n.t('Enter a name for the new project folder inside "{0}".', folderName(parent)),
+        placeHolder: vscode.l10n.t('my-project'),
+        validateInput: async (value) => {
+            const validationMessage = validateProjectSubfolderName(value);
+            if (validationMessage) {
+                return validationMessage;
+            }
+
+            try {
+                const target = vscode.Uri.joinPath(parent, value.trim());
+                return (await pathExists(target))
+                    ? vscode.l10n.t('A file or folder with this name already exists.')
+                    : undefined;
+            } catch {
+                return vscode.l10n.t('Unable to check whether this folder name is available.');
+            }
+        },
+    });
+
+    if (input === undefined) {
+        throw new UserCancelledError('selectProjectFolder');
     }
 
-    await writePendingCreateMarker(target);
-    await vscode.commands.executeCommand('vscode.openFolder', target);
-    return false;
+    const validationMessage = validateProjectSubfolderName(input);
+    if (validationMessage) {
+        throw new Error(validationMessage);
+    }
+
+    const target = vscode.Uri.joinPath(parent, input.trim());
+    if (await pathExists(target)) {
+        throw new Error(vscode.l10n.t('"{0}" already exists. Choose a different project folder name.', folderName(target)));
+    }
+
+    await vscode.workspace.fs.createDirectory(target);
+    return target;
+}
+
+/** Returns a user-facing validation message when `value` is not a safe direct child folder name. */
+export function validateProjectSubfolderName(value: string): string | undefined {
+    const name = value.trim();
+    if (!name) {
+        return vscode.l10n.t('Enter a folder name.');
+    }
+
+    if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
+        return vscode.l10n.t('Enter a single folder name without path separators.');
+    }
+
+    return undefined;
+}
+
+async function pathExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.stat(uri);
+        return true;
+    } catch (error) {
+        if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
+            return false;
+        }
+        throw error;
+    }
 }
 
 async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {
