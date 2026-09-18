@@ -8,8 +8,6 @@
 * [[1881]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1881) Allow **Create New Project with Copilot** to create the project in a new subfolder or a selected empty folder. The project opens in a separate window so the current workspace remains unchanged.
 
 ### Engineering
-* [[1872]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1872) Remove the obsolete Copilot on Rails threat-model JSON artifact
-* [[1874]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1874) Remove vulnerable dependency declarations from the Go certification fixture
 * [[1875]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1875) Move Copilot on Rails artifact security guidance into dedicated instructions and documentation
 
 ## 0.13.0 - 2026-09-15
