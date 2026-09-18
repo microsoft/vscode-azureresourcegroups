@@ -112,15 +112,17 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
         {
             modal: true,
             detail: currentFolder
-                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. VS Code will open the project folder and pick this flow back up.', folderName(currentFolder.uri))
+                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. A new subfolder opens in a separate window; if VS Code asks you to trust it, select Trust and this flow will resume automatically.', folderName(currentFolder.uri))
                 : vscode.l10n.t('Choose an empty folder to build in. VS Code will open it and pick this flow back up.'),
         },
         ...actions,
     );
 
     let target: vscode.Uri;
+    let openInNewWindow = false;
     if (choice === createSubfolder && currentFolder) {
         target = await createProjectSubfolder(context, currentFolder.uri);
+        openInNewWindow = true;
     } else if (choice === chooseEmptyFolder) {
         target = await pickEmptyProjectFolder(context, currentFolder?.uri);
     } else {
@@ -132,7 +134,7 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     }
 
     await writePendingCreateMarker(target);
-    await vscode.commands.executeCommand('vscode.openFolder', target, { forceReuseWindow: true });
+    await vscode.commands.executeCommand('vscode.openFolder', target, { forceNewWindow: openInNewWindow });
     return false;
 }
 
