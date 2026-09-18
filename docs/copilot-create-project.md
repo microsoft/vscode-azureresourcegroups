@@ -138,9 +138,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
-  contains files, choose **Create in New Subfolder…** to create the project there without closing the current
-  workspace, or **Choose Empty Folder…** to build elsewhere. VS Code opens the selected project folder as its
-  own workspace and resumes automatically.
+  contains files, choose **Create in New Subfolder…** to create the project there, or **Choose Empty Folder…**
+  to build elsewhere. VS Code replaces the current workspace with the selected project folder and resumes
+  automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
   instructions into `.github/agents/`. You must accept — the agents can't run without them.
 
@@ -155,9 +155,9 @@ runs the `copilotOnRails.createProjectWithCopilot` command.
 </p>
 
 If the current folder isn't empty, you'll see this prompt first. **Create in New Subfolder…** asks for a
-direct child folder name, creates it, and opens it as its own workspace in a new window so the current
-workspace remains open. **Choose Empty Folder…** keeps the existing flow of selecting an empty folder and
-opening it as the project workspace.
+direct child folder name and creates it. **Choose Empty Folder…** selects an empty folder elsewhere. Both
+choices reuse the current window and replace its workspace root with the project folder, which keeps generated
+files isolated without introducing a separate window's Workspace Trust boundary.
 
 <p align="center">
   <img src="images/copilot-create-project/02-empty-folder-prompt.png" alt="Clean project folder modal with new subfolder and empty folder choices" />
@@ -356,8 +356,7 @@ The flow preserves project-folder handoffs and remembers where you left off thro
 
 - **A project-folder handoff.** When you create a subfolder or choose an empty folder at launch, the extension
   writes a short-lived marker into that target, opens it as the workspace root, removes the marker, and
-  resumes the create flow automatically. A newly created subfolder opens in a new window, leaving the parent
-  workspace open.
+  resumes the create flow automatically in the current window.
 - **A resume notification.** When you open a workspace that has an in‑progress Copilot project, the extension
   proactively shows a notification — *"You have an in‑progress Copilot project (&lt;phase&gt;). Would you like to
   resume?"* — with **Resume** / **Not now** (Source: **Azure Resources**). **Resume** picks the flow back up at
@@ -573,7 +572,7 @@ before submitting.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| *"Creating a project with Copilot requires a clean project folder."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder in a new window, or **Choose Empty Folder…** to build elsewhere. |
+| *"Creating a project with Copilot requires a clean project folder."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Either choice replaces the current workspace root with the clean project folder. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |

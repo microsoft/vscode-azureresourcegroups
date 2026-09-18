@@ -119,10 +119,8 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     );
 
     let target: vscode.Uri;
-    let openInNewWindow = false;
     if (choice === createSubfolder && currentFolder) {
         target = await createProjectSubfolder(context, currentFolder.uri);
-        openInNewWindow = true;
     } else if (choice === chooseEmptyFolder) {
         target = await pickEmptyProjectFolder(context, currentFolder?.uri);
     } else {
@@ -134,11 +132,7 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     }
 
     await writePendingCreateMarker(target);
-    if (openInNewWindow) {
-        await vscode.commands.executeCommand('vscode.openFolder', target, true);
-    } else {
-        await vscode.commands.executeCommand('vscode.openFolder', target);
-    }
+    await vscode.commands.executeCommand('vscode.openFolder', target, { forceReuseWindow: true });
     return false;
 }
 
