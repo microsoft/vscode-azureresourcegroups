@@ -23,9 +23,9 @@ import { registerWorkspaceResourceProvider } from './api/compatibility/registerW
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
-import { openScaffoldNextStepsViewTool } from './chat/tools/copilotOnRails/openScaffoldNextStepsViewTool';
+import { registerMcpTools } from './chat/tools/registerMcpTools';
+import { registerHelloWorldTool } from './chat/tools/experimentalLoopback/registerHelloWorldTool';
 import { getLoopbackPrototypeDefinition, registerLoopbackPrototype, stopLoopbackPrototype } from './chat/tools/experimentalLoopback/registerLoopbackPrototype';
-import { createPrototypeToolRegistrar, markerCommandId } from './chat/tools/experimentalLoopback/toolCatalog';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -34,6 +34,7 @@ import { createResourceGroup } from './commands/createResourceGroup';
 import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
+import { isScaffoldNextStepsViewOpen } from './webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { azureProjectId, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
@@ -69,7 +70,6 @@ import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/e
 import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
-import { isScaffoldNextStepsViewOpen } from './webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
@@ -153,29 +153,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             id: mcpServerId,
             serverLabel: mcpServerLabel,
             serverVersion: ext.version,
-            registerTools: createPrototypeToolRegistrar({
-                isTrusted: () => vscode.workspace.isTrusted && !vscode.env.remoteName
-                    && vscode.workspace.workspaceFolders?.length === 1
-                    && vscode.workspace.workspaceFolders[0].uri.scheme === 'file',
-                marker: async () => {
-                    const marker = await vscode.commands.executeCommand<string>(markerCommandId);
-                    if (!marker) {
-                        throw new Error('Prototype marker command returned no result');
-                    }
-                    return marker;
-                },
-                nextSteps: async execution => {
-                    const result = await openScaffoldNextStepsViewTool.execute(undefined, {
-                        signal: execution.mcpReq.signal,
-                        requestId: execution.mcpReq.id,
-                        sessionId: execution.sessionId,
-                    });
-                    if (!isScaffoldNextStepsViewOpen() || result?.message !== 'Opened the Next Steps view.') {
-                        throw new Error('Scaffold Next Steps view did not open');
-                    }
-                    return { message: 'Opened the Next Steps view.' };
-                },
-            }),
+            registerTools: server => {
+                registerMcpTools(server);
+                registerHelloWorldTool(server);
+            },
         });
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is

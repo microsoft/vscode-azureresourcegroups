@@ -410,18 +410,17 @@ silently so a stale copy can't make an agent follow outdated steps.
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
 ("Copilot Azure Resources Extension Tools"). Agents call them to open views and trigger the next stage.
 
-This experimental branch currently uses the [authenticated loopback HTTP prototype](../src/chat/tools/experimentalLoopback/README.md)
-instead of private IPC. It starts automatically at extension activation or after Workspace Trust
-is granted, provided exactly one local folder is open. No environment flag or enablement dialog
-is needed. Only `experimental_loopback_instance_marker` and `open_scaffold_next_steps_view` are
-exposed, so the full CoR pipeline below is not available through this temporary catalog.
-**Azure: Stop MCP HTTP Prototype** revokes access until **Azure: Enable MCP HTTP Prototype** or
-a window reload. Active listeners automatically renew their 30-minute credentials.
-Client tool approvals and the existing CoR views are unchanged. The linked guide covers F5 testing,
-manual Copilot checks, and credential handling.
+This experimental branch currently uses the authenticated loopback HTTP prototype instead of
+private IPC. It starts automatically at extension activation or after Workspace Trust is granted
+in a local window, including an empty F5 development window. No environment flag or enablement
+dialog is needed.
+The existing full MCP tool catalog is exposed through the authenticated listener. The listener
+stops when the extension host stops and restarts when the workspace folder changes. Client tool
+approvals and the existing CoR views are unchanged.
 
 | Tool | Effect |
 | --- | --- |
+| `hello_world` | Returns a fixed greeting to verify the experimental MCP connection. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |

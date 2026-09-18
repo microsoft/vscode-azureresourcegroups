@@ -46,8 +46,8 @@ The maintained private IPC implementation already has nonce authentication on MC
 
 TCP adds reachable local-network authority beyond the private socket's filesystem boundary. Prototype3 therefore binds explicitly to127.0.0.1, validates exact Host/request authority and present Origin, avoids permissive CORS, and uses a revocable256-bit per-listener capability. Auth, origin/host, loopback and resource-bound tests pass. The capability is not OAuth or proof of human consent.
 
-Listener-local sessions, awaited readiness, stale-session404, bounded shutdown, request/session/connection limits and execution-time trust checks are implemented improvements that also benefit private IPC. The two-tool catalog remains intentionally narrower than full CoR.
+Listener-local sessions, awaited readiness, stale-session404, shutdown, and request/session/connection limits are implemented improvements that also benefit private IPC. The current loopback wiring exposes the existing full CoR catalog; this broadens the prototype's tool authorization surface and is not a production-readiness claim.
 
 Production still needs full-tool operation authorization, safe host-owned credential storage/ACLs/retention/sync, pairing/window scope, real-client refresh/retry/concurrency validation and platform/remote testing. The earlier actual Copilot trial observed synthetic config0644 under0755 parents protected by an enclosing0700 profile; the revoked credential remained in historical config after Stop. Revocation worked, but the extension does not control downstream copies.
 
-See the [prototype guide](../src/chat/tools/experimentalLoopback/README.md) for reproduction and limits. No production-readiness or cross-platform claim follows from these results.
+See the experimental loopback implementation for reproduction and limits. No production-readiness or cross-platform claim follows from these results.

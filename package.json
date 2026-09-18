@@ -149,18 +149,6 @@
         },
         "commands": [
             {
-                "command": "azureResourceGroups.experimentalMcpHttp.enable",
-                "title": "%azureResourceGroups.experimentalMcpHttp.enable%",
-                "category": "Azure",
-                "enablement": "azureResourceGroups.experimentalMcpHttp"
-            },
-            {
-                "command": "azureResourceGroups.experimentalMcpHttp.stop",
-                "title": "%azureResourceGroups.experimentalMcpHttp.stop%",
-                "category": "Azure",
-                "enablement": "azureResourceGroups.experimentalMcpHttp"
-            },
-            {
                 "command": "copilotOnRails.inspectDiagnostics",
                 "title": "%copilotOnRails.inspectDiagnostics%",
                 "category": "Azure"
@@ -737,14 +725,6 @@
                 }
             ],
             "commandPalette": [
-                {
-                    "command": "azureResourceGroups.experimentalMcpHttp.enable",
-                    "when": "azureResourceGroups.experimentalMcpHttp"
-                },
-                {
-                    "command": "azureResourceGroups.experimentalMcpHttp.stop",
-                    "when": "azureResourceGroups.experimentalMcpHttp"
-                },
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
