@@ -138,9 +138,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
-  contains files, choose **Create in New Subfolder…** to create the project in a separate window without
-  changing the current workspace, or **Choose Empty Folder…** to build elsewhere. The project-folder handoff
-  resumes automatically after the target workspace opens.
+  contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
+  **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
+  changing the current workspace, then resumes automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
   instructions into `.github/agents/`. You must accept — the agents can't run without them.
 
@@ -158,7 +158,7 @@ If the current folder isn't empty, you'll see this prompt first. **Create in New
 direct child folder name, creates it, and opens it as the sole workspace root in a new window; the original
 window remains unchanged. If the new folder opens in Restricted Mode, select **Trust** in that window. VS Code
 does not allow extensions to grant Workspace Trust, but granting it activates the pending handoff and resumes
-the create flow automatically. **Choose Empty Folder…** retains the existing same-window handoff.
+the create flow automatically. **Choose Empty Folder…** also opens the selected folder in a new window.
 
 <p align="center">
   <img src="images/copilot-create-project/02-empty-folder-prompt.png" alt="Clean project folder modal with new subfolder and empty folder choices" />
@@ -357,8 +357,8 @@ The flow preserves project-folder handoffs and remembers where you left off thro
 
 - **A project-folder handoff.** When you create a subfolder or choose an empty folder at launch, the extension
   writes a short-lived marker into that target, opens it as the workspace root, removes the marker, and
-  resumes the create flow automatically. A new subfolder opens in a separate window and leaves the original
-  workspace unchanged. If that window starts in Restricted Mode, the marker remains until the user grants
+  resumes the create flow automatically. The target always opens in a separate window and leaves the original
+  workspace unchanged. If the new window starts in Restricted Mode, the marker remains until the user grants
   Workspace Trust, after which the extension activates and consumes it.
 - **A resume notification.** When you open a workspace that has an in‑progress Copilot project, the extension
   proactively shows a notification — *"You have an in‑progress Copilot project (&lt;phase&gt;). Would you like to
@@ -575,7 +575,7 @@ before submitting.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| *"Creating a project with Copilot requires a clean project folder."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder in a separate window, or **Choose Empty Folder…** to build elsewhere. |
+| *"Creating a project with Copilot requires a clean project folder."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |

@@ -15,6 +15,7 @@ import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
+export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
 
 export async function createProjectWithCopilot(context: IActionContext): Promise<void> {
     if (!(await ensureFreshWorkspace(context))) {
@@ -112,17 +113,15 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
         {
             modal: true,
             detail: currentFolder
-                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. A new subfolder opens in a separate window; if VS Code asks you to trust it, select Trust and this flow will resume automatically.', folderName(currentFolder.uri))
-                : vscode.l10n.t('Choose an empty folder to build in. VS Code will open it and pick this flow back up.'),
+                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. The project opens in a separate window; if VS Code asks you to trust it, select Trust and this flow will resume automatically.', folderName(currentFolder.uri))
+                : vscode.l10n.t('Choose an empty folder to build in. The project opens in a separate window and this flow resumes automatically.'),
         },
         ...actions,
     );
 
     let target: vscode.Uri;
-    let openInNewWindow = false;
     if (choice === createSubfolder && currentFolder) {
         target = await createProjectSubfolder(context, currentFolder.uri);
-        openInNewWindow = true;
     } else if (choice === chooseEmptyFolder) {
         target = await pickEmptyProjectFolder(context, currentFolder?.uri);
     } else {
@@ -134,7 +133,7 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     }
 
     await writePendingCreateMarker(target);
-    await vscode.commands.executeCommand('vscode.openFolder', target, { forceNewWindow: openInNewWindow });
+    await vscode.commands.executeCommand('vscode.openFolder', target, OPEN_PROJECT_FOLDER_OPTIONS);
     return false;
 }
 
