@@ -3,11 +3,13 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -16,8 +18,10 @@ import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
+export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
+export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
 
-export async function createProjectWithCopilot(context: IActionContext): Promise<void> {
+export async function createProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
     if (!(await ensureFreshWorkspace(context))) {
         return;
     }
@@ -98,7 +102,7 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
  * automatically via the pending-create marker). Throws if the user cancels or
  * picks a folder that isn't empty.
  */
-async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
+async function ensureFreshWorkspace(context: CopilotOnRailsContext): Promise<boolean> {
     const currentFolder = vscode.workspace.workspaceFolders?.[0];
 
     if (await isWorkspaceEmpty()) {
@@ -120,10 +124,13 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     );
 
     let target: vscode.Uri;
+    let selection: ProjectFolderSelection;
     if (choice === createSubfolder && currentFolder) {
         target = await createProjectSubfolder(context, currentFolder.uri);
+        selection = 'newSubfolder';
     } else if (choice === chooseEmptyFolder) {
         target = await pickEmptyProjectFolder(context, currentFolder?.uri);
+        selection = 'selectedEmptyFolder';
     } else {
         throw new UserCancelledError('selectProjectFolder');
     }
@@ -132,12 +139,17 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
         throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty project folder.', folderName(target)));
     }
 
+    recordProjectFolderSelection(context, selection);
     await writePendingCreateMarker(target);
     await vscode.commands.executeCommand('vscode.openFolder', target, OPEN_PROJECT_FOLDER_OPTIONS);
     return false;
 }
 
-async function pickEmptyProjectFolder(context: IActionContext, currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
+export function recordProjectFolderSelection(context: CopilotOnRailsContext, selection: ProjectFolderSelection): void {
+    setCorProp(context, PROJECT_FOLDER_SELECTION_TELEMETRY_KEY, selection);
+}
+
+async function pickEmptyProjectFolder(context: CopilotOnRailsContext, currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
     const picked = await context.ui.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
@@ -157,7 +169,7 @@ async function pickEmptyProjectFolder(context: IActionContext, currentFolder: vs
     return target;
 }
 
-async function createProjectSubfolder(context: IActionContext, parent: vscode.Uri): Promise<vscode.Uri> {
+async function createProjectSubfolder(context: CopilotOnRailsContext, parent: vscode.Uri): Promise<vscode.Uri> {
     const input = await context.ui.showInputBox({
         title: vscode.l10n.t('Create a Project Subfolder'),
         prompt: vscode.l10n.t('Enter a name for the new project folder inside "{0}".', folderName(parent)),
