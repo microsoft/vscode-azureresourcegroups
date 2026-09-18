@@ -25,6 +25,8 @@ import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
+import { getDirectSocketPrototypeMode } from './chat/tools/directSocketPrototype';
+import { registerDirectSocketPrototype } from './chat/tools/registerDirectSocketPrototype';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -147,12 +149,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
-        registerMcpHttpProvider(context, {
-            id: mcpServerId,
-            serverLabel: mcpServerLabel,
-            serverVersion: ext.version,
-            registerTools: (server) => registerMcpTools(server),
-        });
+        const directSocketPrototypeMode = getDirectSocketPrototypeMode(context);
+        if (directSocketPrototypeMode) {
+            registerDirectSocketPrototype(context, directSocketPrototypeMode);
+        } else {
+            registerMcpHttpProvider(context, {
+                id: mcpServerId,
+                serverLabel: mcpServerLabel,
+                serverVersion: ext.version,
+                registerTools: (server) => registerMcpTools(server),
+            });
+        }
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is
         // the guarantee the deploy agent's instructions cannot make: it runs regardless of how the
