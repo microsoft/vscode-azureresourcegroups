@@ -51,7 +51,7 @@ the work as it happens.
 
 ## What it does
 
-From an empty folder and a short description ("a task tracker with a React UI backed by PostgreSQL"), the
+From a clean project folder and a short description ("a task tracker with a React UI backed by PostgreSQL"), the
 feature:
 
 1. **Plans** the app — asks a few structured questions, then writes an approvable project plan with an
@@ -137,8 +137,10 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 - A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
   GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
-- **An empty folder.** The flow needs a clean workspace to build in. If the open folder already contains
-  files, you'll be asked to **Browse…** to an empty folder; VS Code reopens there and resumes automatically.
+- **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
+  contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
+  **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
+  changing the current workspace, then resumes automatically.
 - **Agent instruction files.** The first time an agent runs, the extension offers to download its
   instructions into `.github/agents/`. You must accept — the agents can't run without them.
 
@@ -152,10 +154,14 @@ runs the `copilotOnRails.createProjectWithCopilot` command.
   <img src="images/copilot-create-project/01-launch-azure-project-view.png" alt="Azure Project view with the Create New Project With Copilot button" />
 </p>
 
-If the current folder isn't empty, you'll see this prompt first:
+If the current folder isn't empty, you'll see this prompt first. **Create in New Subfolder…** asks for a
+direct child folder name, creates it, and opens it as the sole workspace root in a new window; the original
+window remains unchanged. If the new folder opens in Restricted Mode, select **Trust** in that window. VS Code
+does not allow extensions to grant Workspace Trust, but granting it activates the pending handoff and resumes
+the create flow automatically. **Choose Empty Folder…** also opens the selected folder in a new window.
 
 <p align="center">
-  <img src="images/copilot-create-project/02-empty-folder-prompt.png" alt="Empty-folder required modal" />
+  <img src="images/copilot-create-project/02-empty-folder-prompt.png" alt="Clean project folder modal with new subfolder and empty folder choices" />
 </p>
 
 ## Stage 1 — Describe your project
@@ -347,8 +353,13 @@ with **Azure: Open Deploy Results View**.
 
 ## Resuming a session
 
-The flow remembers where you left off in a workspace, through two affordances:
+The flow preserves project-folder handoffs and remembers where you left off through these affordances:
 
+- **A project-folder handoff.** When you create a subfolder or choose an empty folder at launch, the extension
+  writes a short-lived marker into that target, opens it as the workspace root, removes the marker, and
+  resumes the create flow automatically. The target always opens in a separate window and leaves the original
+  workspace unchanged. If the new window starts in Restricted Mode, the marker remains until the user grants
+  Workspace Trust, after which the extension activates and consumes it.
 - **A resume notification.** When you open a workspace that has an in‑progress Copilot project, the extension
   proactively shows a notification — *"You have an in‑progress Copilot project (&lt;phase&gt;). Would you like to
   resume?"* — with **Resume** / **Not now** (Source: **Azure Resources**). **Resume** picks the flow back up at
@@ -386,6 +397,8 @@ Autopilot runs the whole pipeline **unattended** — no approval gates, no Next 
 the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** when `.azure/project-plan.md`
 includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand off directly (e.g. scaffold →
 `start_project_integrate` → `start_local_development`) and skip the Frontend preview and Next Steps views.
+Project-folder selection still happens before autopilot starts; a non-empty workspace requires choosing a
+new subfolder or an empty folder so unattended generation cannot write over existing content.
 
 ---
 
@@ -469,6 +482,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 | Path | Written by | Contents |
 | --- | --- | --- |
+| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, is consumed immediately, and expires after ten minutes. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
@@ -561,7 +575,8 @@ before submitting.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| *"Creating a project with Copilot requires an empty folder."* | The open folder isn't empty. | Click **Browse…** and pick an empty folder; VS Code reopens there and resumes. |
+| *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
+| The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
