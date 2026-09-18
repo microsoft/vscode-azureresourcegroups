@@ -7,7 +7,8 @@
             "type": "extensionHost",
             "request": "launch",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "${workspaceFolder}"
             ],
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",

@@ -4,6 +4,9 @@ Investigation date: 2026-09-13. BEFORE revision:
 `493135aef262a62ebf0079348659da69fcd74930`.
 The AFTER evidence commit adds only this document; implementation is unchanged.
 
+This is a historical result. The branch now starts HTTP automatically without the earlier
+enablement dialog. These results do not claim UI validation of the newer startup behavior.
+
 ## Result
 
 **The same HTTP definition is designed for Local and Copilot, but real Local compatibility remains TBD.**

@@ -29,6 +29,7 @@
     ],
     "preview": true,
     "activationEvents": [
+        "onStartupFinished",
         "onFileSystem:azureResourceGroups",
         "workspaceContains:**/.azure/.pending-create",
         "workspaceContains:**/.azure/project-plan.md",
@@ -1037,8 +1038,6 @@
     },
     "scripts": {
         "test:mcp-http-prototype": "node --import tsx --test test/experimentalLoopback/*.node.ts",
-        "prototype:mcp-http": "npm run build && node --import tsx scripts/launchMcpHttpPrototype.mts",
-        "test:mcp-http-extension": "npm run build && node --import tsx scripts/launchMcpHttpPrototype.mts --verify-extension-host",
         "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
         "build:webviews": "node esbuild.copilotOnRailsViews.mjs",

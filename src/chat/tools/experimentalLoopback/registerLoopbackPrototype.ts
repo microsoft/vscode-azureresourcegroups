@@ -4,121 +4,101 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUUID } from 'node:crypto';
+import type { McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
-import { mcpServerId, mcpServerLabel } from '../../../constants';
-import type { LoopbackListener, LoopbackOptions } from './loopbackServer';
+import { LoopbackPrototypeLifecycle } from './loopbackPrototypeLifecycle';
+import type { LoopbackOptions } from './loopbackTypes';
 import { markerCommandId } from './toolCatalog';
 
-export const prototypeEnvironmentKey = 'AZURE_RESOURCES_MCP_HTTP_PROTOTYPE';
 const commandPrefix = 'azureResourceGroups.experimentalMcpHttp';
-let activeListener: LoopbackListener | undefined;
-let generation = 0;
+let lifecycle: LoopbackPrototypeLifecycle | undefined;
+let serverLabel = '';
+
+export interface LoopbackProviderOptions extends Pick<McpProviderOptions, 'id' | 'serverLabel' | 'serverVersion'> {
+    registerTools: LoopbackOptions['registerTools'];
+}
 
 export function getLoopbackPrototypeDefinition(): vscode.McpHttpServerDefinition | undefined {
-    return activeListener ? new vscode.McpHttpServerDefinition(
-        mcpServerLabel,
-        vscode.Uri.parse(activeListener.url.href),
-        { ...activeListener.headers },
-        activeListener.instanceId,
+    const listener = lifecycle?.listener;
+    return listener ? new vscode.McpHttpServerDefinition(
+        serverLabel,
+        vscode.Uri.parse(listener.url.href),
+        { ...listener.headers },
+        listener.instanceId,
     ) : undefined;
 }
 
 export async function stopLoopbackPrototype(): Promise<void> {
-    generation++;
-    const listener = activeListener;
-    activeListener = undefined;
-    await listener?.dispose();
+    await lifecycle?.stop();
 }
 
 export async function registerLoopbackPrototype(
     context: vscode.ExtensionContext,
-    registerTools: LoopbackOptions['registerTools'],
-    version: string,
-): Promise<boolean> {
-    if (process.env[prototypeEnvironmentKey] !== '1' || context.extensionMode === vscode.ExtensionMode.Production) {
-        return false;
-    }
+    options: LoopbackProviderOptions,
+): Promise<void> {
+    serverLabel = options.serverLabel;
     const output = vscode.window.createOutputChannel('Azure Resources MCP HTTP Prototype', { log: true });
     const changed = new vscode.EventEmitter<void>();
     const marker = randomUUID();
     let disposed = false;
-    let enabling = false;
     const trusted = (): boolean => vscode.workspace.isTrusted && !vscode.env.remoteName
         && vscode.workspace.workspaceFolders?.length === 1
         && vscode.workspace.workspaceFolders[0].uri.scheme === 'file';
+    const reportFailure = (): void => {
+        output.error('Prototype listener startup or shutdown failed');
+        if (!disposed) {
+            void vscode.window.showErrorMessage(vscode.l10n.t('The MCP HTTP prototype could not start or stop. See the Azure Resources MCP HTTP Prototype output channel.'));
+        }
+    };
+    lifecycle = new LoopbackPrototypeLifecycle({
+        id: options.id,
+        version: options.serverVersion,
+        registerTools: options.registerTools,
+        isEligible: trusted,
+        onChanged: () => changed.fire(),
+        onStarted: () => output.info(`Prototype ready. Window marker: ${marker}. Credential and endpoint omitted.`),
+        onInfo: message => output.info(message),
+        onError: message => output.error(message),
+        onFailure: reportFailure,
+    });
     context.subscriptions.push(output, changed);
     context.subscriptions.push(vscode.commands.registerCommand(markerCommandId, () => {
-        if (!activeListener || !trusted()) {
-            throw new Error('An enabled prototype and one trusted local folder are required');
+        if (!lifecycle?.listener || !trusted()) {
+            throw new Error('A running prototype and one trusted local folder are required');
         }
         output.info(`Fixed marker command invoked: ${marker}`);
         return marker;
     }));
-    context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider(mcpServerId, {
+    context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider(options.id, {
         onDidChangeMcpServerDefinitions: changed.event,
         provideMcpServerDefinitions: () => {
             const definition = getLoopbackPrototypeDefinition();
             return definition ? [definition] : [];
         },
     }));
-    const reportStop = (): void => {
-        void stopLoopbackPrototype().catch(() => output.error('Prototype listener shutdown failed'));
-    };
-    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(reportStop));
-    context.subscriptions.push({ dispose: () => { disposed = true; reportStop(); } });
+    context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
+        void lifecycle?.start().catch(reportFailure);
+    }));
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        void lifecycle?.restart().catch(reportFailure);
+    }));
+    context.subscriptions.push({ dispose: () => {
+        disposed = true;
+        void lifecycle?.dispose().catch(reportFailure);
+    } });
     context.subscriptions.push(vscode.commands.registerCommand(`${commandPrefix}.enable`, async () => {
-        if (enabling || activeListener) {
-            void vscode.window.showInformationMessage('The MCP HTTP prototype is already enabled or awaiting approval.');
-            return;
-        }
         if (disposed || !trusted()) {
-            throw new Error('The MCP HTTP prototype requires one trusted local folder and a development extension host.');
+            throw new Error('The MCP HTTP prototype requires one trusted local folder.');
         }
-        enabling = true;
-        const startGeneration = generation;
-        try {
-            const selection = await vscode.window.showWarningMessage(
-                vscode.l10n.t('Enable the experimental loopback MCP listener for 30 minutes? VS Code may write its short-lived credential into Agent Host plugin configuration. Only the marker and Scaffold Next Steps tools are exposed. Do not click workflow actions.'),
-                { modal: true },
-                'Enable for this window',
-            );
-            if (selection !== 'Enable for this window' || disposed || !trusted() || startGeneration !== generation) {
-                return;
-            }
-            const { startLoopbackServer } = await import('./loopbackServer.js');
-            if (disposed || !trusted() || startGeneration !== generation) {
-                return;
-            }
-            const listener = await startLoopbackServer({
-                id: mcpServerId,
-                version,
-                registerTools,
-                onError: message => output.error(message),
-                onDispose: () => {
-                    if (activeListener === listener) {
-                        activeListener = undefined;
-                    }
-                    if (!disposed) {
-                        changed.fire();
-                        output.info('Prototype credential revoked and listener stopped');
-                    }
-                },
-            });
-            if (disposed || !trusted() || startGeneration !== generation) {
-                await listener.dispose();
-                return;
-            }
-            activeListener = listener;
-            changed.fire();
-            output.info(`Prototype ready. Window marker: ${marker}. Credential and endpoint omitted.`);
-        } finally {
-            enabling = false;
-        }
+        await lifecycle?.enable();
     }));
     context.subscriptions.push(vscode.commands.registerCommand(`${commandPrefix}.stop`, async () => {
-        await stopLoopbackPrototype();
+        await lifecycle?.disable();
     }));
     await vscode.commands.executeCommand('setContext', commandPrefix, true);
-    output.info('Prototype available but disabled. Run Enable MCP HTTP Prototype to approve this window.');
-    return true;
+    output.info('Experimental HTTP is the default on this branch. Credentials may be stored in VS Code Agent Host configuration.');
+    if (!trusted()) {
+        output.info('Waiting for one trusted local folder before starting the HTTP listener.');
+    }
+    await lifecycle.start();
 }
