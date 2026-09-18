@@ -109,12 +109,12 @@ async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     const chooseEmptyFolder: vscode.MessageItem = { title: vscode.l10n.t('Choose Empty Folder...') };
     const actions = currentFolder ? [createSubfolder, chooseEmptyFolder] : [chooseEmptyFolder];
     const choice = await context.ui.showWarningMessage(
-        vscode.l10n.t('Creating a project with Copilot requires a clean project folder.'),
+        vscode.l10n.t('Choose where to create your project.'),
         {
             modal: true,
             detail: currentFolder
-                ? vscode.l10n.t('"{0}" already contains files. Create a new subfolder here or choose an empty folder elsewhere. The project opens in a separate window; if VS Code asks you to trust it, select Trust and this flow will resume automatically.', folderName(currentFolder.uri))
-                : vscode.l10n.t('Choose an empty folder to build in. The project opens in a separate window and this flow resumes automatically.'),
+                ? vscode.l10n.t('"{0}" contains files. Create a subfolder or choose an empty folder. The project opens in a new window.', folderName(currentFolder.uri))
+                : vscode.l10n.t('Choose an empty folder. The project opens in a new window.'),
         },
         ...actions,
     );

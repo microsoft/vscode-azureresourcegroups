@@ -575,7 +575,7 @@ before submitting.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| *"Creating a project with Copilot requires a clean project folder."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
+| *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
