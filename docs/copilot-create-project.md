@@ -480,6 +480,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 | Path | Written by | Contents |
 | --- | --- | --- |
+| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, is consumed immediately, and expires after ten minutes. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |

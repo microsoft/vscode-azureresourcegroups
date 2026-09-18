@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
@@ -16,8 +16,8 @@ import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
-export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    if (!(await ensureFreshWorkspace())) {
+export async function createProjectWithCopilot(context: IActionContext): Promise<void> {
+    if (!(await ensureFreshWorkspace(context))) {
         return;
     }
 
@@ -97,17 +97,17 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
  * automatically via the pending-create marker). Throws if the user cancels or
  * picks a folder that isn't empty.
  */
-async function ensureFreshWorkspace(): Promise<boolean> {
+async function ensureFreshWorkspace(context: IActionContext): Promise<boolean> {
     const currentFolder = vscode.workspace.workspaceFolders?.[0];
 
     if (await isWorkspaceEmpty()) {
         return true;
     }
 
-    const createSubfolder = vscode.l10n.t('Create in New Subfolder...');
-    const browse = vscode.l10n.t('Choose Empty Folder...');
-    const actions = currentFolder ? [createSubfolder, browse] : [browse];
-    const choice = await vscode.window.showWarningMessage(
+    const createSubfolder: vscode.MessageItem = { title: vscode.l10n.t('Create in New Subfolder...') };
+    const chooseEmptyFolder: vscode.MessageItem = { title: vscode.l10n.t('Choose Empty Folder...') };
+    const actions = currentFolder ? [createSubfolder, chooseEmptyFolder] : [chooseEmptyFolder];
+    const choice = await context.ui.showWarningMessage(
         vscode.l10n.t('Creating a project with Copilot requires a clean project folder.'),
         {
             modal: true,
@@ -121,10 +121,10 @@ async function ensureFreshWorkspace(): Promise<boolean> {
     let target: vscode.Uri;
     let openInNewWindow = false;
     if (choice === createSubfolder && currentFolder) {
-        target = await createProjectSubfolder(currentFolder.uri);
+        target = await createProjectSubfolder(context, currentFolder.uri);
         openInNewWindow = true;
-    } else if (choice === browse) {
-        target = await pickEmptyProjectFolder(currentFolder?.uri);
+    } else if (choice === chooseEmptyFolder) {
+        target = await pickEmptyProjectFolder(context, currentFolder?.uri);
     } else {
         throw new UserCancelledError('selectProjectFolder');
     }
@@ -142,8 +142,8 @@ async function ensureFreshWorkspace(): Promise<boolean> {
     return false;
 }
 
-async function pickEmptyProjectFolder(currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
-    const picked = await vscode.window.showOpenDialog({
+async function pickEmptyProjectFolder(context: IActionContext, currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
+    const picked = await context.ui.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
@@ -162,31 +162,23 @@ async function pickEmptyProjectFolder(currentFolder: vscode.Uri | undefined): Pr
     return target;
 }
 
-async function createProjectSubfolder(parent: vscode.Uri): Promise<vscode.Uri> {
-    const input = await vscode.window.showInputBox({
+async function createProjectSubfolder(context: IActionContext, parent: vscode.Uri): Promise<vscode.Uri> {
+    const input = await context.ui.showInputBox({
         title: vscode.l10n.t('Create a Project Subfolder'),
         prompt: vscode.l10n.t('Enter a name for the new project folder inside "{0}".', folderName(parent)),
         placeHolder: vscode.l10n.t('my-project'),
-        validateInput: async (value) => {
-            const validationMessage = validateProjectSubfolderName(value);
-            if (validationMessage) {
-                return validationMessage;
+        validateInput: validateProjectSubfolderName,
+        asyncValidationTask: async (value) => {
+            if (validateProjectSubfolderName(value)) {
+                return undefined;
             }
 
-            try {
-                const target = vscode.Uri.joinPath(parent, value.trim());
-                return (await pathExists(target))
-                    ? vscode.l10n.t('A file or folder with this name already exists.')
-                    : undefined;
-            } catch {
-                return vscode.l10n.t('Unable to check whether this folder name is available.');
-            }
+            const target = vscode.Uri.joinPath(parent, value.trim());
+            return (await AzExtFsExtra.pathExists(target))
+                ? vscode.l10n.t('A file or folder with this name already exists.')
+                : undefined;
         },
     });
-
-    if (input === undefined) {
-        throw new UserCancelledError('selectProjectFolder');
-    }
 
     const validationMessage = validateProjectSubfolderName(input);
     if (validationMessage) {
@@ -194,11 +186,11 @@ async function createProjectSubfolder(parent: vscode.Uri): Promise<vscode.Uri> {
     }
 
     const target = vscode.Uri.joinPath(parent, input.trim());
-    if (await pathExists(target)) {
+    if (await AzExtFsExtra.pathExists(target)) {
         throw new Error(vscode.l10n.t('"{0}" already exists. Choose a different project folder name.', folderName(target)));
     }
 
-    await vscode.workspace.fs.createDirectory(target);
+    await AzExtFsExtra.ensureDir(target);
     return target;
 }
 
@@ -216,25 +208,13 @@ export function validateProjectSubfolderName(value: string): string | undefined 
     return undefined;
 }
 
-async function pathExists(uri: vscode.Uri): Promise<boolean> {
-    try {
-        await vscode.workspace.fs.stat(uri);
-        return true;
-    } catch (error) {
-        if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
-            return false;
-        }
-        throw error;
-    }
-}
-
 async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {
     const files = await vscode.workspace.findFiles(filePath);
     if (!files.length) {
         return false;
     }
 
-    const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
+    const content = await AzExtFsExtra.readFile(files[0]);
     // [*_~]* allows markdown formatting (bold, italic, strikethrough) around "status"
     return new RegExp(`status[*_~]*\\s*:\\s*${expectedStatus}`, 'i').test(content);
 }
@@ -260,8 +240,8 @@ const EXTENSION_OWNED_ENTRIES: Record<string, ReadonlySet<string>> = {
 
 async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
     try {
-        const entries = await vscode.workspace.fs.readDirectory(folder);
-        for (const [name] of entries) {
+        const entries = await AzExtFsExtra.readDirectory(folder);
+        for (const { name } of entries) {
             if (IGNORED_ENTRIES.has(name)) {
                 continue;
             }
@@ -282,8 +262,8 @@ async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
 /** True when every entry in `folder` is either allowed or otherwise ignorable. */
 async function containsOnly(folder: vscode.Uri, allowed: ReadonlySet<string>): Promise<boolean> {
     try {
-        const entries = await vscode.workspace.fs.readDirectory(folder);
-        return entries.every(([name]) => allowed.has(name) || IGNORED_ENTRIES.has(name));
+        const entries = await AzExtFsExtra.readDirectory(folder);
+        return entries.every(({ name }) => allowed.has(name) || IGNORED_ENTRIES.has(name));
     } catch {
         return false;
     }
