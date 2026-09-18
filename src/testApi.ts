@@ -20,7 +20,6 @@ import type {
     ReconcileResult,
 } from "./utils/copilotOnRails/migrationFirewallAccess";
 import type { MigrationAccessLease } from "./utils/copilotOnRails/migrationFirewallRules";
-import type { McpHttpServerDefinition } from 'vscode';
 
 /**
  * Test-only API for accessing internal extension state.
@@ -72,10 +71,6 @@ export interface TestApi {
      * Testing utilities for mocking Azure services
      */
     testing: {
-        experimentalMcpHttp: {
-            getDefinition(): McpHttpServerDefinition | undefined;
-            isNextStepsViewOpen(): boolean;
-        };
         /**
          * Override the Azure service factory for testing
          */

@@ -25,7 +25,7 @@ import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzur
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { registerHelloWorldTool } from './chat/tools/experimentalLoopback/registerHelloWorldTool';
-import { getLoopbackPrototypeDefinition, registerLoopbackPrototype, stopLoopbackPrototype } from './chat/tools/experimentalLoopback/registerLoopbackPrototype';
+import { registerLoopbackPrototype, stopLoopbackPrototype } from './chat/tools/experimentalLoopback/registerLoopbackPrototype';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -34,7 +34,6 @@ import { createResourceGroup } from './commands/createResourceGroup';
 import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
-import { isScaffoldNextStepsViewOpen } from './webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { azureProjectId, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
@@ -328,10 +327,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getFocusViewTreeDataProvider: () => ext.focusViewTreeDataProvider,
                 },
                 testing: {
-                    experimentalMcpHttp: {
-                        getDefinition: getLoopbackPrototypeDefinition,
-                        isNextStepsViewOpen: isScaffoldNextStepsViewOpen,
-                    },
                     setOverrideAzureServiceFactory: (factory) => {
                         ext.testing.overrideAzureServiceFactory = factory;
                     },

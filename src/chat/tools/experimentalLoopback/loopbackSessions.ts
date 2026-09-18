@@ -16,7 +16,7 @@ interface SessionOptions {
     onError: (message: string) => void;
 }
 
-class LoopbackSession {
+class Session {
     public readonly server: McpServer;
     public readonly transport: WebStandardStreamableHTTPServerTransport;
     public lastUsed = Date.now();
@@ -24,7 +24,7 @@ class LoopbackSession {
     public constructor(
         options: SessionOptions,
         authority: string,
-        onInitialized: (id: string, session: LoopbackSession) => void,
+        onInitialized: (id: string, session: Session) => void,
         onClosed: (id: string) => void,
     ) {
         this.server = new McpServer({ name: options.id, version: options.version });
@@ -41,8 +41,8 @@ class LoopbackSession {
 
 export class LoopbackSessions {
     // F5 has one Agent Host client, so a fresh initialize replaces its stale session.
-    private active: { id: string; session: LoopbackSession } | undefined;
-    private pending: LoopbackSession | undefined;
+    private active: { id: string; session: Session } | undefined;
+    private pending: Session | undefined;
 
     public constructor(
         private readonly options: SessionOptions,
@@ -112,8 +112,8 @@ export class LoopbackSessions {
         await Promise.all(sessions.map(session => session.server.close()));
     }
 
-    private async replaceSession(): Promise<LoopbackSession | undefined> {
-        const session = new LoopbackSession(
+    private async replaceSession(): Promise<Session | undefined> {
+        const session = new Session(
             this.options,
             this.getAuthority(),
             (id, initialized) => {

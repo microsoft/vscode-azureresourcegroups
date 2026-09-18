@@ -30,7 +30,3 @@ export function openScaffoldNextStepsView(_context: CopilotOnRailsContext): void
         controller = undefined;
     });
 }
-
-export function isScaffoldNextStepsViewOpen(): boolean {
-    return controller !== undefined;
-}
