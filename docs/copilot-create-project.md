@@ -463,6 +463,12 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `open_database_migration_access` | Last‑resort database access for post‑deploy migrations. Adds a **single‑IP** firewall allow rule and records it first, so the extension can remove it even if the session dies. Refuses a server whose public network access is disabled or unconfirmed rather than opening it. |
 | `close_database_migration_access` | Removes the temporary rule that `open_database_migration_access` created and clears its record. Only ever removes rules the extension created, so it can't delete one from the generated infrastructure. |
 
+For the development-only direct socket compatibility experiment, see
+[Direct socket MCP prototype](copilot-mcp-direct-socket-prototype.md). Its explicit opt-in replaces this
+catalog with only `prototype_instance` and `open_scaffold_next_steps_view`. It does not change the
+production pipeline, agent handoffs, or existing webview UI. Its isolated diagnostics and internal test
+commands are documented separately.
+
 ## Files & state
 
 Everything the flow produces lives in the workspace, so it's inspectable and reversible.

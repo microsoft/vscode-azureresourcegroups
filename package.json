@@ -1024,6 +1024,7 @@
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
+        "prototype:mcp:direct": "node evals/prototypes/direct-socket.mjs",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor",
         "eval:drift": "node evals/check-agent-drift.ts",
