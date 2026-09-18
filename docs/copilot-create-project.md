@@ -443,6 +443,16 @@ silently so a stale copy can't make an agent follow outdated steps.
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
 ("Copilot Azure Resources Extension Tools"). Agents call them to open views and trigger the next stage.
 
+This experimental branch currently uses the [authenticated loopback HTTP prototype](../src/chat/tools/experimentalLoopback/README.md)
+instead of private IPC. It starts automatically at extension activation or after Workspace Trust
+is granted, provided exactly one local folder is open. No environment flag or enablement dialog
+is needed. Only `experimental_loopback_instance_marker` and `open_scaffold_next_steps_view` are
+exposed, so the full CoR pipeline below is not available through this temporary catalog.
+**Azure: Stop MCP HTTP Prototype** revokes access until **Azure: Enable MCP HTTP Prototype** or
+a window reload. Active listeners automatically renew their 30-minute credentials.
+Client tool approvals and the existing CoR views are unchanged. The linked guide covers F5 testing,
+manual Copilot checks, and credential handling.
+
 | Tool | Effect |
 | --- | --- |
 | `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |

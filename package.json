@@ -29,6 +29,7 @@
     ],
     "preview": true,
     "activationEvents": [
+        "onStartupFinished",
         "onFileSystem:azureResourceGroups",
         "onCommand:copilotOnRails.createProjectWithCopilot",
         "workspaceContains:**/.azure/.pending-create",
@@ -148,6 +149,18 @@
             ]
         },
         "commands": [
+            {
+                "command": "azureResourceGroups.experimentalMcpHttp.enable",
+                "title": "%azureResourceGroups.experimentalMcpHttp.enable%",
+                "category": "Azure",
+                "enablement": "azureResourceGroups.experimentalMcpHttp"
+            },
+            {
+                "command": "azureResourceGroups.experimentalMcpHttp.stop",
+                "title": "%azureResourceGroups.experimentalMcpHttp.stop%",
+                "category": "Azure",
+                "enablement": "azureResourceGroups.experimentalMcpHttp"
+            },
             {
                 "command": "copilotOnRails.inspectDiagnostics",
                 "title": "%copilotOnRails.inspectDiagnostics%",
@@ -726,6 +739,14 @@
             ],
             "commandPalette": [
                 {
+                    "command": "azureResourceGroups.experimentalMcpHttp.enable",
+                    "when": "azureResourceGroups.experimentalMcpHttp"
+                },
+                {
+                    "command": "azureResourceGroups.experimentalMcpHttp.stop",
+                    "when": "azureResourceGroups.experimentalMcpHttp"
+                },
+                {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
                 },
@@ -1017,6 +1038,7 @@
         ]
     },
     "scripts": {
+        "test:mcp-http-prototype": "node --import tsx --test test/experimentalLoopback/*.node.ts",
         "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
         "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
@@ -1036,6 +1058,7 @@
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
         "@microsoft/vscode-azext-eng": "^1.1.0-alpha.1",
+        "@modelcontextprotocol/client": "2.0.0-beta.4",
         "@modelcontextprotocol/server": "^2.0.0-beta.4",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
@@ -1057,6 +1080,7 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
+        "@hono/node-server": "2.1.0",
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
@@ -1064,6 +1088,7 @@
         "@microsoft/vscode-inproc-mcp": "^1.0.0",
         "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",
+        "hono": "4.13.7",
         "jsonc-parser": "^2.2.1",
         "semver": "^7.7.3",
         "uuid": "^14.0.0",
