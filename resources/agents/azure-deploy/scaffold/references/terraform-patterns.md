@@ -1,6 +1,6 @@
 # Terraform Patterns
 
-Alternative-path patterns for AppOnboard scaffold. Used when `.tf` files detected or user overrides `iacFormat`. Per-resource config comes from `mcp_azure_mcp_azureterraformbestpractices` at runtime — this file covers layout, provider, naming, state, tagging, and wiring.
+Alternative AppOnboard scaffold patterns when `.tf` files are detected or user overrides `iacFormat`. Runtime `mcp_azure_mcp_azureterraformbestpractices` supplies per-resource config; this file covers layout, provider, naming, state, tags, wiring.
 
 ## File Structure
 
@@ -26,11 +26,11 @@ infra/
 
 ### Non-Azure IaC coexistence (GCP/AWS TF already in repo)
 
-When `detectedInfraProvider.terraform` is `"gcp"`, `"aws"`, or `"multi"` (without `azurerm`), write Azure TF to a **separate directory** from existing non-Azure TF. Never overwrite or modify existing IaC files.
+When `detectedInfraProvider.terraform` is `"gcp"`, `"aws"`, or `"multi"` (without `azurerm`), write Azure TF separately from non-Azure TF. Never overwrite or modify existing IaC.
 
-**Output directory rule:** If existing TF is NOT at `infra/`, write to `infra/`. If existing TF IS at `infra/` (or any path containing `infra`), write to `infra-azure/`. Same module structure as default layout.
+**Output directory:** Existing TF outside `infra/` → write to `infra/`. Existing TF at `infra/` (or path containing `infra`) → write to `infra-azure/`. Use default module structure.
 
-Each Azure service gets its own module. `main.tf` orchestrates resource group + module calls.
+One module per Azure service. `main.tf` orchestrates resource group + modules.
 
 ## Provider Configuration
 
@@ -57,25 +57,25 @@ provider "azurerm" {
 }
 ```
 
-> ⛔ Never pin to exact patch versions (e.g., `= 4.1.0`). Use `~> 4.0` to allow minor/patch updates. `azurerm` manages API versions internally — if a resource isn't available in `azurerm`, use `azapi_resource` with the latest stable ARM API version.
+> ⛔ Never pin exact patches (e.g., `= 4.1.0`). Use `~> 4.0` for minor/patch updates. `azurerm` manages API versions; resources unavailable in `azurerm` use `azapi_resource` with latest stable ARM API version.
 
-> **Conditional access (AADSTS530084):** `azurerm` provider re-requests tokens that violate device-binding policies. Fix: (1) switch to Bicep, or (2) use service principal auth (`ARM_CLIENT_ID` + `ARM_CLIENT_SECRET` + `ARM_TENANT_ID`).
+> **Conditional access (AADSTS530084):** `azurerm` token re-requests violate device-binding policies. Fix: (1) switch to Bicep, or (2) use service principal auth (`ARM_CLIENT_ID` + `ARM_CLIENT_SECRET` + `ARM_TENANT_ID`).
 
 ## variables.tf
 
-Required variables: `environment_name` (string, default "dev"), `location` (string, default "eastus"), `subscription_id` (string), `session_id` (string), `deployed_by` (string). All configurable values MUST be variables — no hardcoded regions, names, or SKUs.
+Required: `environment_name` (string, default "dev"), `location` (string, default "eastus"), `subscription_id` (string), `session_id` (string), `deployed_by` (string). ALL configurable values MUST be variables; no hardcoded regions, names, SKUs.
 
 ## terraform.tfvars
 
-Populate from `prepare-plan.json`: `environment_name`, `location`, `subscription_id`, `session_id`. See naming-patterns.md for naming convention.
+From `prepare-plan.json`, populate `environment_name`, `location`, `subscription_id`, `session_id`. See naming-patterns.md.
 
 ## Backend
 
-Local backend by default: `backend "local" { path = "terraform.tfstate" }`. Recommend Azure Storage backend in `postDeployRecommendations[]` for production.
+Default local backend: `backend "local" { path = "terraform.tfstate" }`. Recommend Azure Storage backend in production `postDeployRecommendations[]`.
 
 ## Resource Group
 
-Use `rg-${var.project_name}-${var.environment_name}-${random_string.suffix.result}` with `tags = local.tags`. Suffix prevents collisions across AppOnboard sessions.
+Use `rg-${var.project_name}-${var.environment_name}-${random_string.suffix.result}` with `tags = local.tags`; suffix prevents AppOnboard session collisions.
 
 ## Naming Convention
 
@@ -96,11 +96,11 @@ locals {
 }
 ```
 
-Cross-reference naming with [prepare/references/naming-patterns.md](../../prepare/references/naming-patterns.md) — Terraform names must match `prepare-plan.json.naming.resources[]`.
+Cross-reference [prepare/references/naming-patterns.md](../../prepare/references/naming-patterns.md); Terraform names must match `prepare-plan.json.naming.resources[]`.
 
 ## Resource Tags — Mandatory
 
-Apply all 5 AppOnboard tags via `local.tags` — see [iac-generation-rules.md § Session Tags](iac-generation-rules.md) for tag names and values.
+Apply all 5 AppOnboard tags through `local.tags`; see [iac-generation-rules.md § Session Tags](iac-generation-rules.md).
 
 ```hcl
 locals {
@@ -114,7 +114,7 @@ locals {
 }
 ```
 
-> ⚠️ `timestamp()` changes on every plan. Add `lifecycle { ignore_changes = [tags["created-at"]] }` on every resource.
+> ⚠️ `timestamp()` changes every plan. Add `lifecycle { ignore_changes = [tags["created-at"]] }` to every resource.
 
 ## Secrets — App-Internal Only, Stored On-Compute (No Key Vault)
 
@@ -163,11 +163,11 @@ resource "azurerm_container_app" "app" {
 
 ## outputs.tf
 
-Export: `resource_group_name`, `app_url` (https://${hostname}), `resource_ids` (list of all deployed resource IDs for deploy-result.json).
+Export `resource_group_name`, `app_url` (https://${hostname}), `resource_ids` (all deployed resource IDs for deploy-result.json).
 
 ## Security Defaults
 
-Apply same security rules as Bicep — see [bicep-patterns-security.md](bicep-patterns-security.md). Terraform-specific syntax:
+Apply Bicep security rules from [bicep-patterns-security.md](bicep-patterns-security.md). Terraform syntax:
 
 | Rule | Terraform HCL |
 |------|---------------|

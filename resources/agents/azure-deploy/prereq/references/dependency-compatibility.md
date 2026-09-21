@@ -1,4 +1,4 @@
-﻿Dependency compatibility checks for Azure. Part of the [deployability check](deployability-check.md).
+﻿Azure dependency compatibility checks. Part of [deployability check](deployability-check.md).
 
 ## EOL / Unsupported Runtimes
 
@@ -7,9 +7,9 @@
 | 🔶 Major Migration | .NET Framework 4.x, ASP.NET Core 2.1, Python 2.x |
 | ❌ FAIL or 🔶 | Node.js < 18, Java < 11 — config-only upgrade → ❌ FAIL (fixable), API changes needed → 🔶 |
 
-> **Quick test:** ONE config value change, no import changes? → ❌ FAIL. Otherwise → 🔶.
+> **Quick test:** ONE config-value change, no import changes? → ❌ FAIL. Otherwise → 🔶.
 
-**Ecosystem-era check (Python):** ALL pinned deps pre-2018, no Python 3.10+ wheels → ❌ FAIL. Signals: `flask_script`, `werkzeug<1.0`, `itsdangerous<1.0`, imports from `werkzeug.contrib.*` / `flask.ext.*`.
+**Ecosystem-era check (Python):** ALL pinned deps pre-2018 with no Python 3.10+ wheels → ❌ FAIL. Signals: `flask_script`, `werkzeug<1.0`, `itsdangerous<1.0`, imports from `werkzeug.contrib.*` / `flask.ext.*`.
 
 ## EOL / Unmaintained Frameworks
 
@@ -27,11 +27,11 @@
 | README "deprecated"/"unmaintained" + EOL | 🔶 Major Migration |
 | README "deprecated"/"unmaintained" (current) | ⚠️ WARN |
 
-> **Remediation scope:** Fixing all blockers requires major upgrade OR >5 files → 🔶 Major Migration.
+> **Remediation scope:** All-blocker fix requires major upgrade OR >5 files → 🔶 Major Migration.
 
 ## Intentionally Vulnerable Applications
 
-Detect via **code structure first**, metadata second. These apps are designed to be exploited — vulnerability IS the product.
+Detect through **code structure first**, metadata second. These apps are exploit targets; vulnerability IS the product.
 
 **Code signals (check first):**
 - Directory `vulnerabilities/` with subdirs like `sqli/`, `xss/`, `csrf/`, `fi/` (file inclusion)
@@ -45,11 +45,11 @@ Detect via **code structure first**, metadata second. These apps are designed to
 
 **Verdict:** ≥2 code signals OR 1 code + 1 metadata → 🛑 HALT. Single metadata only → ⚠️ WARN (could be a disclosure).
 
-> ⛔ **🛑 HALT is a verdict, not an exit.** On 🛑 HALT your NEXT action MUST be the Step-4 write — persist all 3 artifacts (`prereq-output.json`, `context.json`, `readiness-report.md`) with `overallHealth: "blocked"` via the `create` tool, then read them back, BEFORE printing any halt summary to the user. A halt message with no `prereq-output.json` on disk is a failure — the deterministic `blocked` verdict must be persisted first, because the halt message can end the turn.
+> ⛔ **🛑 HALT is a verdict, not exit.** On 🛑 HALT, NEXT action MUST be Step-4 write: persist all 3 artifacts (`prereq-output.json`, `context.json`, `readiness-report.md`) with `overallHealth: "blocked"` via `create`, then read them back BEFORE any user halt summary. A halt without on-disk `prereq-output.json` fails; persist deterministic `blocked` verdict first because halt may end the turn.
 
 ## Non-Azure Cloud SDK Dependencies
 
-Functional cloud SDK deps → 🔶 blockers; classification and observability carve-out in [cloud-sdk-migration.md](cloud-sdk-migration.md). The redirect gate (instructions.md Step 2) and the deploy-blocking stop (instructions.md Step 8 Row 2) own all routing — no `routeToSkill` decision happens here.
+Functional cloud SDK deps → 🔶 blockers; classification and observability carve-out: [cloud-sdk-migration.md](cloud-sdk-migration.md). Redirect gate (instructions.md Step 2) and deploy-blocking stop (instructions.md Step 8 Row 2) own routing; no `routeToSkill` decision here.
 
 ## Platform-Specific Dependencies
 
@@ -61,9 +61,9 @@ Functional cloud SDK deps → 🔶 blockers; classification and observability ca
 | Local file system writes, file-based DBs | ⚠️ WARN — ephemeral on PaaS |
 | BuildKit Dockerfile syntax (`--mount`, `# syntax=`) | ⚠️ WARN `W-BUILDKIT` — set `buildRequirements.hasBuildKitSyntax: true`. **ACR `az acr build` does NOT support BuildKit** — scaffold must generate `Dockerfile.azure`. **fix:** "Generate ACR-compatible Dockerfile.azure" **fixPhase:** `scaffold` |
 | Jib container build (no Dockerfile) | ⚠️ WARN — note Jib path for scaffold |
-| Redis client without TLS config | ⚠️ WARN `W-REDIS-TLS` — **fix:** "Add TLS config" **fixPhase:** `prereq`. **Config key registration:** if the app uses a config library that requires keys to be pre-registered before env var override (Go/Viper `Unmarshal()`, Spring `@ConfigurationProperties`), the config file must also declare the TLS key (e.g., add `tlsEnabled: false` to YAML) — otherwise the env var is silently ignored. Detection: grep for `viper.Unmarshal`, `mapstructure`, `@ConfigurationProperties`. |
+| Redis client without TLS config | ⚠️ WARN `W-REDIS-TLS` — **fix:** "Add TLS config" **fixPhase:** `prereq`. **Config key registration:** config libraries requiring keys pre-registered before env override (Go/Viper `Unmarshal()`, Spring `@ConfigurationProperties`) also require TLS key in config (e.g., add `tlsEnabled: false` to YAML), or env var is silently ignored. Detect by grepping `viper.Unmarshal`, `mapstructure`, `@ConfigurationProperties`. |
 | PostgreSQL client with SSL disabled | ⚠️ WARN `W-PG-SSL` — **fix:** "Set SSL mode env var" **fixPhase:** `scaffold` |
-| MySQL client without TLS config | ⚠️ WARN `W-MYSQL-SSL` — **fix:** "Enable client TLS for Azure MySQL" **fixPhase:** `prereq`. Most MySQL drivers/ORMs need an in-code SSL option (no SSL env var like Postgres has), so this is a client-config change → prereq remediation batch (like `W-REDIS-TLS`), not IaC-only scaffold. Detection: MySQL in the plan (`mysql:*` in compose, or a MySQL driver/ORM — e.g. `mysql2`, `sequelize` dialect mysql, `typeorm`, `prisma`, `knex`) with no SSL/TLS option in the client config. |
+| MySQL client without TLS config | ⚠️ WARN `W-MYSQL-SSL` — **fix:** "Enable client TLS for Azure MySQL" **fixPhase:** `prereq`. Most MySQL drivers/ORMs require in-code SSL (unlike Postgres env var), so this is a client-config prereq remediation (like `W-REDIS-TLS`), not IaC-only scaffold. Detect MySQL in plan (`mysql:*` in compose, or driver/ORM — e.g. `mysql2`, `sequelize` dialect mysql, `typeorm`, `prisma`, `knex`) without client SSL/TLS option. |
 | Go Viper without env key replacer | ⚠️ WARN `W-VIPER-ENV` — **fix:** "Add SetEnvKeyReplacer call" **fixPhase:** `prereq` |
 | Licensed/proprietary SDKs | ⚠️ WARN |
 
@@ -96,7 +96,7 @@ Static lockfile analysis only.
 | Go | `import "C"` (cgo) | `.go` files |
 | PHP | `ext-*` requirements | `composer.json` |
 
-> ⛔ **Lockfile grep is the ONLY valid evidence.** Do NOT set `hasNativeModules` from package name alone. `prebuild-install` without `node-gyp` = prebuilt → `hasNativeModules: false`. Key: `bcrypt` ✅ native, `bcryptjs` ❌ JS. `psycopg2` ✅, `psycopg2-binary` ❌. `sharp` v0.33+ ❌ prebuilt. `canvas` ✅ always. No lockfile → `"unknown"`, ⚠️ WARN.
+> ⛔ **Lockfile grep is ONLY valid evidence.** Never set `hasNativeModules` from package name alone. `prebuild-install` without `node-gyp` = prebuilt → `hasNativeModules: false`. Key: `bcrypt` ✅ native, `bcryptjs` ❌ JS. `psycopg2` ✅, `psycopg2-binary` ❌. `sharp` v0.33+ ❌ prebuilt. `canvas` ✅ always. No lockfile → `"unknown"`, ⚠️ WARN.
 
 When `hasNativeModules: true`: `f1Viable: false`, `f1BlockReason: "native modules ({signal})"`. (F1/D1/Free are never offered regardless — see below.)
 
@@ -115,7 +115,7 @@ Prepare always selects **B1 (~$13/mo) minimum**; the signals above only push siz
 
 ## First-Run Initialization
 
-Detect init steps needed before first HTTP request — run automatically in dev but cause 500s on Azure.
+Detect init steps required before first HTTP request; they run automatically in dev but cause Azure 500s.
 
 | Framework | Signal | Init command |
 |-----------|--------|-------------|
@@ -128,7 +128,7 @@ Detect init steps needed before first HTTP request — run automatically in dev 
 
 **Seed/bootstrap:** Flask `@app.cli.command('deploy')` → `flask deploy`. Django `fixtures/` → `manage.py loaddata`. Seed commands: `required: false`.
 
-Migration framework + `migrations/` dir → ⚠️ WARN, write to `prereq-output.json.initCommands[]` (schema in [`prereq-schemas.ts`](prereq-schemas.ts)). ORM without `migrations/` dir → ✅ PASS. Prepare prepends required `initCommands` to `deployStrategy.startupCommand`; scaffold encodes in `appCommandLine`. Migrations are idempotent — safe on every cold start.
+Migration framework + `migrations/` dir → ⚠️ WARN; write `prereq-output.json.initCommands[]` (schema: [`prereq-schemas.ts`](prereq-schemas.ts)). ORM without `migrations/` dir → ✅ PASS. Prepare prepends required `initCommands` to `deployStrategy.startupCommand`; scaffold encodes into `appCommandLine`. Idempotent migrations are safe every cold start.
 
 ## Database & Storage
 

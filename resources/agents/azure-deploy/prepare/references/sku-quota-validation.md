@@ -1,28 +1,28 @@
 # SKU Quota Validation Procedure
 
-Pre-deploy quota and offer restriction checks. Read during prepare Step 5 before deploying.
+Pre-deploy quota/offer-restriction checks. Read in prepare Step 5.
 
-For SKU selection (budget tiers, modifier rules, defaults), see [sku-matrix.md](sku-matrix.md).
+For SKU budget tiers, modifiers, defaults, see [sku-matrix.md](sku-matrix.md).
 
 ## Quota Validation Procedure
 
-> ⛔ **Use `az rest`, NOT `az quota list`.** The `az quota list` CLI extension triggers a full extension metadata scan on startup. If ANY installed extension has a permission error (common: `azure-devops` WinError 5 on Windows), the entire command fails. `az rest` is a built-in command that bypasses extension loading entirely and hits the same REST API. Quota increases are free — you only pay for resources actually used.
+> ⛔ **Use `az rest`, NOT `az quota list`.** `az quota list` scans all extension metadata; ANY permission error (commonly `azure-devops` WinError 5 on Windows) fails it. Built-in `az rest` bypasses extensions and calls same REST API. Quota increases are free; only used resources cost.
 
-> ⛔ **`what-if` does NOT catch App Service quota errors.** `az deployment sub what-if` returns `Succeeded` even when the target SKU has limit=0. The quota rejection only surfaces at actual `az deployment sub create` time. This means the prepare-phase quota check is the ONLY pre-deploy safety net — do not skip or shortcut it.
+> ⛔ **`what-if` does NOT catch App Service quota errors.** `az deployment sub what-if` returns `Succeeded` for target SKU limit=0; rejection appears only at `az deployment sub create`. Prepare quota check is ONLY pre-deploy safety net; never skip/shortcut.
 
-> ⛔ **Do NOT use `az vm list-usage`, `az appservice list-locations`, or `mcp_azure_mcp_quota`** for quota checks. They return misleading data — see [Anti-Patterns](#anti-patterns) below.
+> ⛔ **Do NOT use `az vm list-usage`, `az appservice list-locations`, or `mcp_azure_mcp_quota`** for quota checks; data misleads. See [Anti-Patterns](#anti-patterns).
 
 ### Region Selection
 
-Build the scan list dynamically — do NOT hardcode a fixed set of regions:
+Build scan list dynamically; do NOT hardcode regions:
 
-1. **User's preferred region** — read `context.json.azure.region` or `context.json.overrides[]` for a region preference. If stated, scan that region first.
-2. **Nearest alternates** — add 3–4 regions geographically close to the user's preferred region from the global pool below.
-3. **If no user preference** — default to a well-supported region (e.g., `eastus2`) and scan 4 alternates from the user's likely geography (infer from subscription tenant location or ask).
+1. **User's preferred region** — read `context.json.azure.region` or `context.json.overrides[]`; scan stated region first.
+2. **Nearest alternates** — add 3–4 geographically close regions from global pool.
+3. **If no user preference** — default to well-supported region (e.g., `eastus2`) and 4 alternates from likely geography; infer subscription tenant location or ask.
 
 **Global region pool:** `eastus2`, `eastus`, `westus2`, `centralus`, `westeurope`, `northeurope`, `australiaeast`, `japaneast`, `southeastasia`, `brazilsouth`
 
-> **Agent: adapt shell syntax to detected environment.** PowerShell shown below; use equivalent syntax on bash/zsh (e.g., `for region in eastus eastus2 ...; do ... done`).
+> **Agent: adapt shell syntax to environment.** PowerShell shown; use bash/zsh equivalent (e.g., `for region in eastus eastus2 ...; do ... done`).
 
 > ⛔ **PowerShell `?` in URLs:** When building `az rest` URLs with variable interpolation, PowerShell may strip `?` from `?api-version=`. Always use the URL **inline in double quotes** (as shown below), NOT via a `$url` variable. If you must use a variable, wrap the `?` with a backtick: `` `?api-version= ``.
 

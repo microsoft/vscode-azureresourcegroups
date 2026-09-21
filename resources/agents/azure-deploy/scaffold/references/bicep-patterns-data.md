@@ -1,8 +1,8 @@
 # Bicep Patterns — Data Service Modules
 
-Bicep module templates for database and cache services. Read when the prepare plan includes PostgreSQL, MySQL, or Redis.
+Bicep database and cache modules. Read when prepare plan includes PostgreSQL, MySQL, or Redis.
 
-For core patterns (file structure, skeleton, naming, tagging), see [bicep-patterns.md](bicep-patterns.md). For security defaults, see [bicep-patterns-security.md](bicep-patterns-security.md).
+See [bicep-patterns.md](bicep-patterns.md) for file structure, skeleton, naming, tagging; [bicep-patterns-security.md](bicep-patterns-security.md) for security defaults.
 
 ## PostgreSQL Flexible Server Module — Entra-Only
 

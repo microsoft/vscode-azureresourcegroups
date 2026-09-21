@@ -1,6 +1,6 @@
 # Subagent Template — Cost Estimation (Step 6)
 
-Estimate monthly costs for planned Azure services using Azure Retail Prices API.
+Estimate planned Azure monthly cost via Azure Retail Prices API.
 
 ## References to Read Internally
 
@@ -50,4 +50,4 @@ Return JSON (≤500 tokens):
 
 ## Token Budget
 
-≤500 tokens for cost estimate report.
+Cost report ≤500 tokens.

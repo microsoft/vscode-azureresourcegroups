@@ -1,10 +1,10 @@
 # Subagent Template — IaC Generation (Steps 5–8)
 
-Generate deployment-ready IaC from `prepare-plan.json`. Follow the workflow below — each step specifies which reference to read and what to do with it.
+Generate deployment-ready IaC from `prepare-plan.json`. Each workflow step names required reference and action.
 
 ## Critical Rules
 
-- ⛔ **Do NOT invoke any other agents or hand off** — no external agent calls of any kind. Use the procedures in THIS file only.
+- ⛔ **Do NOT invoke other agents or hand off** — no external agent calls. Use THIS file only.
 - ⛔ **Do NOT generate `azure.yaml`**
 - ⛔ **Do NOT modify app source code** — only write files under `infra/` (and `Dockerfile.azure` if needed)
 - ⛔ **Do NOT run app build/test/lint commands** (`npm test`, `npm run build`, `pnpm build`, `python -m pytest`, `dotnet build`, etc.). Only validate generated IaC via `az bicep build`.
@@ -16,9 +16,9 @@ Generate deployment-ready IaC from `prepare-plan.json`. Follow the workflow belo
 | `prepare-plan.json` content | Session folder — services, naming, quotas, cost, deploymentVariables | YES (verbatim) |
 | `context.json.overrides` | `iacFormat`, `detectedInfraProvider` | YES |
 | `buildRequirements` | From `prereq-output.json` — runtime, deps, Dockerfiles | YES |
-| `warnings[]` | From `prereq-output.json` — prereq warnings requiring IaC fixes (env var overrides, config changes). Applied during Steps 3–4. | YES |
+| `warnings[]` | From `prereq-output.json` — warnings requiring IaC fixes (env var overrides, config changes), applied Steps 3–4. | YES |
 | Compute targets | App Service/Functions, Container Apps, or both + whether PostgreSQL/Redis present | YES |
-| `apiVersions` | Map of `resourceType → latestGAVersion` from main-thread MCP lookup. Use these versions in generated Bicep — do NOT use versions from training data. If `"MCP unavailable"` — see Step 1 for fallback. | YES |
+| `apiVersions` | `resourceType → latestGAVersion` map from main-thread MCP lookup. Use in generated Bicep; do NOT use training-data versions. If `"MCP unavailable"`, use Step 1 fallback. | YES |
 
 ## Output
 
@@ -33,31 +33,31 @@ Generate deployment-ready IaC from `prepare-plan.json`. Follow the workflow belo
 
 ### Step 1 — Read skeleton + tag patterns
 
-Read [bicep-patterns.md](bicep-patterns.md) (Bicep) OR [terraform-patterns.md](terraform-patterns.md) (Terraform) — NOT both.
+Read [bicep-patterns.md](bicep-patterns.md) (Bicep) OR [terraform-patterns.md](terraform-patterns.md) (Terraform), NOT both.
 
-**Do:** Extract the `main.bicep` skeleton structure (targetScope, parameters, variables, resource group, module calls). Extract the 5-tag block definition. Use `prepare-plan.json.naming` for all resource names — never derive names with `take()`, `substring()`, `uniqueString()`, or string manipulation. The 4-char session suffix in the plan names already provides uniqueness. ⛔ For each `resource 'Type@Version'` declaration, use the version from `apiVersions` input. If type missing from map, use version from reference file examples.
+**Do:** Extract `main.bicep` skeleton (targetScope, parameters, variables, resource group, module calls) and 5-tag block. Use `prepare-plan.json.naming` for every resource name; never derive with `take()`, `substring()`, `uniqueString()`, or string manipulation. Plan's 4-char session suffix provides uniqueness. ⛔ Every `resource 'Type@Version'` uses `apiVersions` input; missing types use reference examples.
 
-> ⛔ **If `apiVersions` is `"MCP unavailable"` or missing a resource type:** run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` for each missing provider — this filters to GA-only and picks the latest. NEVER fall back to training data — hallucinated API versions cause multiple deploy healing cycles.
+> ⛔ **If `apiVersions` is `"MCP unavailable"` or lacks resource type:** run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` per missing provider for latest GA. NEVER use training data; hallucinated API versions cause deploy healing cycles.
 
 ### Step 2 — Read compute-target patterns
 
-Read ONLY the compute-target reference(s) matching the plan, if the plan has multiple compute targets, read each matching file.:
+Read ONLY plan-matching compute references; for multiple targets, read each:
 - If plan has App Service/Functions → read [bicep-app-service.md](bicep-app-service.md).
 - If plan has Container Apps → read [bicep-container-apps.md](bicep-container-apps.md).
 - If plan has Static Web Apps → read [bicep-swa.md](bicep-swa.md).
 - If plan has BOTH → read both.
 
-**Do:** Generate compute module(s) using the patterns from each reference file. F1/D1 App Service: do NOT generate Dockerfile, do NOT add managed identity (OOM). App Service health probe: if `prereq-output.json.healthEndpoint` is non-null, set `siteConfig.healthCheckPath` to that value; otherwise omit (do NOT default to `/`).
+**Do:** Generate compute modules from matching patterns. F1/D1 App Service: do NOT generate Dockerfile, do NOT add managed identity (OOM). App Service health probe: non-null `prereq-output.json.healthEndpoint` → set `siteConfig.healthCheckPath`; otherwise omit (do NOT default to `/`).
 
 ### Step 3 — Read security patterns
 
-⛔ **You MUST read [bicep-patterns-security.md](bicep-patterns-security.md).** It contains Key Vault config, managed identity, HTTPS/TLS, and credential hygiene rules. Apply to every generated module.
+⛔ **You MUST read [bicep-patterns-security.md](bicep-patterns-security.md).** Apply its Key Vault, managed identity, HTTPS/TLS, credential hygiene rules to every module.
 
 ### Step 4 — Read generation rules
 
 Read [iac-generation-rules.md](iac-generation-rules.md).
 
-**Do:** Apply ALL rules from the reference file to every generated module. The file contains mandatory tag definitions, naming constraints, security patterns, env var completeness checks, and Dockerfile generation rules. Do NOT skip any section — every rule applies.
+**Do:** Apply ALL reference rules to every module: mandatory tags, naming constraints, security, env-var completeness, Dockerfile generation. Do NOT skip any section.
 
 ### Step 5 — Read env var + secrets wiring
 
@@ -67,7 +67,7 @@ Read [env-var-secrets.md](env-var-secrets.md).
 
 ### Step 6 — Generate data modules (if needed)
 
-ONLY if PostgreSQL, MySQL, or Redis is in the plan. Skip if none are present.
+ONLY when plan has PostgreSQL, MySQL, or Redis; otherwise skip.
 
 **PostgreSQL Flexible Server module** — **Entra-only** (`authConfig: { activeDirectoryAuth: 'Enabled', passwordAuth: 'Disabled', tenantId }`). NO `administratorLogin`/`administratorLoginPassword`. Add an `administrators` child resource setting the **deploying principal** as Entra admin (pass `entraAdminObjectId`/`entraAdminName`/`entraAdminType`). Include the `AllowAllAzureServicesAndResourcesWithinAzureIps` (`0.0.0.0`) firewall rule, extension allow-list (`azure.extensions` config: `uuid-ossp,pgcrypto,pg_trgm`), storage config (default 32 GB). Set the server `version` from `prepare-plan.json.services[].version` (capabilities-verified) — do NOT hardcode or guess. The app MI is granted a DB role post-deploy (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md)).
 
@@ -87,14 +87,14 @@ Wire DB/cache **connection parameters** (host, db name, MI username, SSL require
 3. `infra/main.parameters.json` — ARM JSON format (NOT `.bicepparam`). Include `environmentName`, `location`, `sessionId`, `deployedBy`, `createdAt`, and `entraAdminObjectId`/`entraAdminName` (Entra DB admin = deployer). ⛔ **`createdAt` value:** run `Get-Date -Format "o"` in terminal to get the current ISO 8601 timestamp — NEVER use a hardcoded or placeholder date. Do NOT include `@secure()` app-internal secret params (passed at deploy time). Deploy phase passes the deployer object id via `az ad signed-in-user show --query id -o tsv`.
 4. `infra/modules/{service}.bicep` — one module per service from the plan, PLUS `role-assignments.bicep` (AcrPull for Container Apps → ACR, and app-MI → resource data-plane roles per [rbac-roles.md](rbac-roles.md)). ⛔ **No Key Vault module and no Key Vault role assignments.**
 5. If `buildRequirements.hasBuildKitSyntax == true`: ⛔ create `{component}/Dockerfile.azure` per [dockerfile-generation.md § ACR Build Compatibility](dockerfile-generation.md).
-6. If Container Apps and component has NO Dockerfile: read [dockerfile-generation.md](dockerfile-generation.md) and generate one. Follow the layer ordering, port alignment, and security defaults from that reference — do NOT generate from memory.
+6. If Container Apps component has NO Dockerfile: read [dockerfile-generation.md](dockerfile-generation.md), then generate with its layer order, port alignment, security defaults. do NOT use memory.
 
-> ⛔ **Health probes for Container Apps:** Probe path priority: (1) `prereq-output.json.healthEndpoint` if non-null, (2) first detected GET route from the app, (3) `/` only if the app has a root handler. Do NOT default to `/` for APIs that only serve sub-paths — returns 404, blocks activation. For DB apps: use `/healthz` not `/readyz` (DB not wired in Phase 1).
+> ⛔ **Container Apps health probes:** Path priority: (1) non-null `prereq-output.json.healthEndpoint`, (2) first detected app GET route, (3) `/` only with root handler. Do NOT default to `/` for sub-path-only APIs; 404 blocks activation. DB apps use `/healthz`, not `/readyz` (DB unwired in Phase 1).
 
 ### Step 8 — Validate syntax
 
-**Do:** Run `az bicep build --file infra/main.bicep --stdout > $null`. If errors, fix and re-run (max 2 attempts). Do NOT use the `azure-validate` agent.
+**Do:** Run `az bicep build --file infra/main.bicep --stdout > $null`. Fix errors and retry (max 2). Do NOT use `azure-validate` agent.
 
 ### Step 9 — Return results
 
-**Do:** Return the list of generated files and any validation notes to the caller. Keep status report ≤1500 tokens.
+**Do:** Return generated file list and validation notes. Status ≤1500 tokens.

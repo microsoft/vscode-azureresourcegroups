@@ -1,10 +1,10 @@
 # Bicep — Static Web Apps Patterns
 
-SWA-specific Bicep patterns. For shared patterns (skeleton, naming, tags, security defaults, data modules), see [bicep-patterns.md](bicep-patterns.md).
+SWA Bicep patterns. For shared skeleton, naming, tags, security defaults, and data modules, see [bicep-patterns.md](bicep-patterns.md).
 
 ## Module Template
 
-SWA modules for token-based deploys (no GitHub CI/CD):
+SWA modules for token deploys (no GitHub CI/CD):
 
 ```bicep
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
@@ -18,10 +18,6 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
 
 > ⛔ **Standard SKU minimum — Free SWA is not offered.** Free Static Web Apps lack the configuration these apps need (custom authentication, configurable CORS, SLA, private endpoints, BYO API backends via managed identity). Always emit `sku: { name: 'Standard', tier: 'Standard' }`.
 
-> ⛔ **The API must allow this SWA's origin.** A SWA calling a Function App or App Service is cross-origin, so
-> the **backend** needs `siteConfig.cors.allowedOrigins` containing `https://${staticWebApp.properties.defaultHostname}`.
-> Nothing on the SWA resource itself fixes this. Omitting it deploys cleanly and then fails every browser
-> call with `No 'Access-Control-Allow-Origin' header is present`. See
-> [bicep-patterns.md § Cross-Origin (CORS)](bicep-patterns.md).
+> ⛔ **The API must allow this SWA's origin.** SWA calling Function App or App Service is cross-origin; **backend** needs `siteConfig.cors.allowedOrigins` containing `https://${staticWebApp.properties.defaultHostname}`. SWA resource cannot fix this. Omission deploys cleanly, then every browser call fails with `No 'Access-Control-Allow-Origin' header is present`. See [bicep-patterns.md § Cross-Origin (CORS)](bicep-patterns.md).
 
 > ⛔ **Detached SWA deploy:** Omit `repositoryUrl`, `branch`, and `buildProperties` entirely. These are only for GitHub Actions–connected deployments. Including `repositoryUrl: ''` causes `BadRequest: RepositoryUrl is invalid`.

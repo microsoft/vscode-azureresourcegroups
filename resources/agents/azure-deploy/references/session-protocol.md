@@ -2,60 +2,60 @@
 
 ## All Prompts Are Actionable
 
-> ⛔ **ALL prompts that activate this agent are actionable — go directly to Step 1.** Do NOT answer the user's question, give an overview of capabilities, or describe what AppOnboard can do before starting the pipeline. "Can Azure figure out my app?" and "Deploy my app" are the same action: Step 1 → Step 2 → scan. The user's phrasing (question vs command) does NOT change the workflow.
+> ⛔ **ALL activating prompts actionable; go directly to Step 1.** Before pipeline, never answer question, overview capabilities, or describe AppOnboard. "Can Azure figure out my app?" = "Deploy my app": Step 1 → Step 2 → scan. Question vs command never changes workflow.
 
 ## Session Check
 
-Resolve active session via pointer file.
+Resolve active session through pointer.
 
 > ⛔ **YOU MUST CREATE A SESSION BEFORE DOING ANY WORK — INCLUDING SCANNING**
 >
-> 1. **STOP** — Do not answer the user's question, scan code, or plan architecture yet
+> 1. **STOP** — Do not answer, scan code, or plan architecture yet
 > 2. **CHECK** — Read `.copilot-azure/sessions/active-session.json`.
->    - ⛔ **First, ensure the repo's `.gitignore` contains `.copilot-azure/`** (append if missing, create the file if absent) — this runs on EVERY path below, BEFORE any branch writes a session file, since session artifacts may hold deploy secrets.
->    - **Pointer exists** → ⛔ **You MUST read [`session-schemas.ts`](session-schemas.ts)** to get the exact field names and types for `AppOnboardContext`. Do not guess field names. Then read the pointed-to session's `context.json`. Display: "Found session from [lastModifiedUtc] — {statusSummary}." ⛔ **You MUST ask the user via `ask_user`: "Resume this session or start fresh?" Do NOT auto-resume.** This gate is mandatory — stale sessions from prior tests cause the agent to skip phase instructions.md reads and miss artifact writes.
->      - Resume → ⛔ **Refresh the deployment inventory baseline before any more provisioning.** Preserve the current `deploy-result.json.createdResources[]` and `orphanedResourceGroups[]`, then call `capture_deployment_inventory` with `phase: "baseline"`, using `context.json.sessionId` and `context.json.azure.subscriptionId`. If the subscription is missing or auth must be refreshed, complete the Azure login gate below first, but do not run `az deployment`, `az group create`, `az webapp deploy`, `az acr build`, or any other command that can create resources until the baseline call succeeds. This new baseline starts a resumed inventory segment: union later capture output with the preserved inventory by normalized resource ID and case-insensitive resource-group name; never discard cleanup evidence from before the resume. Then ⛔ **read the phase instructions.md for the NEXT phase** (derive from `completedPhases`). E.g., prereq done → read `prepare/instructions.md`, then continue from that phase.
->        - ⛔ **If `context.json.routeToSkill` is set:** The previous session was halted for migration (e.g., `azure-cloud-migrate`). The code has likely changed since then. **Do NOT skip prereq** — start fresh: clear `routeToSkill`, `routeReason`, remove `"prereq"` from `completedPhases`, and re-run from Step 2. This ensures the migrated codebase gets a clean 3-axis evaluation.
->        - ⛔ **If `completedPhases` includes `"prereq"` (and no `routeToSkill`):** Prereq already wrote `prereq-output.json` and `context.json.components[]`. Proceed to Step 2 (scope triage) — prereq may have been invoked standalone, so the user still needs to confirm the full pipeline. Skip Step 3 (prereq invocation), then continue to Step 4 (scan-informed intent gathering).
->      - Start fresh → generate a new UUID via `[guid]::NewGuid().ToString()`, create a new session folder, update `active-session.json` to point to the new session. Old session folder is never touched again.
->    - **Pointer missing but session folders exist** → list folders under `.copilot-azure/sessions/`. If 1 folder: adopt it (read its `context.json`, write `active-session.json` pointing to it, show summary). If 2+: show a numbered list with `statusSummary` + `lastModifiedUtc` from each, ask user to pick one or start fresh. Write pointer for the chosen session.
->    - **No sessions at all** → generate a UUID by running `[guid]::NewGuid().ToString()` in the terminal. ⛔ **You MUST generate the UUID via a terminal command — do NOT hardcode a placeholder like `a1b2c3d4-e5f6-7890-abcd-ef1234567890`.** Create the session directory: `New-Item -ItemType Directory -Path ".copilot-azure/sessions/{uuid}" -Force`. Then write a **minimal** `context.json` using the `create` tool — only these 3 fields are known immediately: `{ "sessionId": "{uuid}", "createdUtc": "{ISO 8601 now}", "intent": { "userPrompt": "{user's first message verbatim}" } }`. Write `active-session.json` with `activeSessionId: {uuid}` using the `create` tool.
-> 3. **PRUNE** — After resolving the active session, check remaining session folders. Delete any where `context.json.lastModifiedUtc` is >7 days ago. **Never delete the active session** (the one `active-session.json` points to).
-> 4. **VERIFY** — Confirm `context.json` exists and is valid JSON. If missing or malformed, halt and retry creation — do NOT continue to Step 2 without a verified session.
-> 5. **CONFIRM** — Begin your first response with: "Started session at `.copilot-azure/sessions/{uuid}/`" (new) or "Resuming session from [date] — {statusSummary}" (existing)
+>    - ⛔ **First ensure repo `.gitignore` contains `.copilot-azure/`**; append if missing, create file if absent. Run on EVERY path below BEFORE any branch writes session files because artifacts may hold deploy secrets.
+>    - **Pointer exists** → ⛔ **MUST read [`session-schemas.ts`](session-schemas.ts)** for exact `AppOnboardContext` fields/types; never guess. Read pointed session's `context.json`. Display: "Found session from [lastModifiedUtc] — {statusSummary}." ⛔ **Via `ask_user`, MUST ask: "Resume this session or start fresh?" Never auto-resume.** Mandatory gate prevents stale tests skipping phase instructions.md reads/artifact writes.
+>      - Resume → ⛔ **Refresh deployment inventory baseline before more provisioning.** Preserve current `deploy-result.json.createdResources[]` + `orphanedResourceGroups[]`; call `capture_deployment_inventory` with `phase: "baseline"`, `context.json.sessionId`, `context.json.azure.subscriptionId`. Missing subscription/auth refresh → complete Azure login gate first. Until baseline succeeds, never run `az deployment`, `az group create`, `az webapp deploy`, `az acr build`, or any resource-creating command. New baseline begins resumed inventory segment: union later capture with preserved inventory by normalized resource ID + case-insensitive resource-group name; never discard pre-resume cleanup evidence. Then ⛔ **read NEXT phase instructions.md**, derived from `completedPhases`. E.g., prereq done → read `prepare/instructions.md`, continue there.
+>        - ⛔ **If `context.json.routeToSkill` set:** Previous session halted for migration (e.g., `azure-cloud-migrate`); code likely changed. **Never skip prereq**. Start fresh: clear `routeToSkill`, `routeReason`, remove `"prereq"` from `completedPhases`, rerun Step 2. Gives migrated codebase clean 3-axis evaluation.
+>        - ⛔ **If `completedPhases` includes `"prereq"` without `routeToSkill`:** Prereq wrote `prereq-output.json` + `context.json.components[]`. Proceed Step 2 scope triage; standalone prereq still requires user full-pipeline confirmation. Skip Step 3 prereq invocation; continue Step 4 scan-informed intent.
+>      - Start fresh → generate UUID via `[guid]::NewGuid().ToString()`; create session folder; point `active-session.json` to new session. Never touch old folder again.
+>    - **Pointer missing, session folders exist** → list `.copilot-azure/sessions/`. 1 folder: adopt; read `context.json`, write pointing `active-session.json`, show summary. 2+: show numbered `statusSummary` + `lastModifiedUtc`, ask user choose or start fresh. Write chosen pointer.
+>    - **No sessions** → terminal-run `[guid]::NewGuid().ToString()`. ⛔ **MUST generate UUID through terminal; never hardcode placeholder such as `a1b2c3d4-e5f6-7890-abcd-ef1234567890`.** Create directory: `New-Item -ItemType Directory -Path ".copilot-azure/sessions/{uuid}" -Force`. Then write **minimal** `context.json` via `create`; only 3 immediately known fields: `{ "sessionId": "{uuid}", "createdUtc": "{ISO 8601 now}", "intent": { "userPrompt": "{user's first message verbatim}" } }`. Write `active-session.json` with `activeSessionId: {uuid}` via `create`.
+> 3. **PRUNE** — After active resolution, inspect remaining session folders. Delete those with `context.json.lastModifiedUtc` >7 days old. **Never delete active session** pointed to by `active-session.json`.
+> 4. **VERIFY** — Confirm existing valid-JSON `context.json`. Missing/malformed → halt + retry creation; never continue Step 2 unverified.
+> 5. **CONFIRM** — Start first response: "Started session at `.copilot-azure/sessions/{uuid}/`" (new) or "Resuming session from [date] — {statusSummary}" (existing)
 > 6. **THEN** proceed to Step 2
 >
-> ⛔ **Ordering: session FIRST, scanning SECOND.** If you scan the workspace or read project files before writing `context.json`, you have violated the session-first rule. The session must exist before ANY code analysis.
+> ⛔ **Order: session FIRST, scan SECOND.** Scanning workspace/reading project before writing `context.json` violates rule. Session must precede ANY code analysis.
 >
-> ⛔ **Shell fallback:** If PowerShell/terminal hangs on first attempt (no output after 10s), use the `create` tool directly for session directory and file writes. Do NOT retry shell commands more than once.
+> ⛔ **Shell fallback:** First PowerShell/terminal attempt hangs (no output after 10s) → use `create` directly for session directory + file writes. Never retry shell over once.
 >
-> ⛔ **Path scoping: ALL `create` tool calls for session artifacts MUST target `.copilot-azure/sessions/{active-session-id}/`.** Writing to any other session folder is forbidden.
+> ⛔ **Path scope: ALL session-artifact `create` calls MUST target `.copilot-azure/sessions/{active-session-id}/`.** Other session folders forbidden.
 
 ## CLI Availability
 
-Call `mcp_azure_mcp_extension_cli_install` with `cli-type: "az"` to verify Azure CLI is available. If missing, surface installation instructions before proceeding. Downstream phases (prepare, deploy) require it. Fallback: skip if MCP tool unavailable.
+Call `mcp_azure_mcp_extension_cli_install` with `cli-type: "az"` to verify Azure CLI. Missing → show install instructions before proceeding; prepare/deploy require it. MCP unavailable → skip fallback.
 
 ## Azure Login Gate
 
-**Azure login gate (mandatory):** Run `az account show --query "{id:id, name:name, tenantId:tenantId}" -o json` with a **15-second timeout** (PowerShell: `Start-Process` with `-Wait` or inline timeout; if command hangs beyond 15s, treat as failure). Also run `az ad signed-in-user show --query displayName -o tsv` (15-second timeout). After BOTH commands complete, merge ALL azure fields into `context.json.azure` in a **SINGLE update** — `subscriptionId`, `subscriptionName`, `tenantId`, and `userDisplayName`. Do NOT write separate updates for subscription and identity.
+**Azure login gate (mandatory):** Run `az account show --query "{id:id, name:name, tenantId:tenantId}" -o json` with **15-second timeout** (PowerShell `Start-Process` + `-Wait` or inline timeout; >15s = failure). Also run `az ad signed-in-user show --query displayName -o tsv` with 15-second timeout. After BOTH finish, merge ALL fields into `context.json.azure` in **ONE update**: `subscriptionId`, `subscriptionName`, `tenantId`, `userDisplayName`. Never separately update subscription/identity.
 
-> ⛔ **If `az account show` fails or hangs:** ⛔ **You MUST read [`subscription-resolution.md`](subscription-resolution.md)** and follow its fallback procedure. Do NOT proceed to Step 2 without a resolved subscription. Do NOT leave `context.json.azure` empty and continue. Every downstream phase (prepare, scaffold validation, deploy) requires Azure auth — proceeding without it produces incomplete results.
+> ⛔ **If `az account show` fails/hangs:** ⛔ **MUST read + follow [`subscription-resolution.md`](subscription-resolution.md)** fallback. Never proceed Step 2 unresolved or with empty `context.json.azure`. Every downstream phase (prepare, scaffold validation, deploy) requires Azure auth; omission yields incomplete results.
 
 ## User Identity Detection
 
-**User identity detection (for `deployed-by` tag):** Run `az ad signed-in-user show --query displayName -o tsv` (15-second timeout) alongside `az account show`. Fallback if `az ad` fails: use `az account show --query user.name -o tsv` (returns UPN/email). If both fail, leave empty — prepare phase will resolve. This value becomes the `deployed-by` tag on ALL resources — resolving it once here prevents inconsistent tag values across resources. **Merge into the SAME `context.json` update as the azure login gate — do NOT write separately.**
+**User identity detection (`deployed-by` tag):** Run `az ad signed-in-user show --query displayName -o tsv` (15-second timeout) alongside `az account show`. If `az ad` fails, use `az account show --query user.name -o tsv` (UPN/email). Both fail → leave empty; prepare resolves. Value tags ALL resources as `deployed-by`; one resolution prevents inconsistent tags. **Merge into SAME `context.json` update as login gate; never separately.**
 
 ## Subscription Detection Method
 
-> ⛔ **`az account show` is the ONLY subscription detection method in Step 1.** Do NOT call `mcp_azure_mcp_subscription_list` here — that tool returns ALL subscriptions across ALL tenants and causes a lengthy picker detour. `az account show` returns the CLI's active subscription in <1 second. MCP subscription list is reserved for prepare Step 1 when the user explicitly wants a different subscription.
+> ⛔ **`az account show` is Step 1's ONLY subscription detection.** Never call `mcp_azure_mcp_subscription_list` here; it returns ALL subscriptions across ALL tenants, causing long picker detour. `az account show` returns CLI active subscription in <1 second. Reserve MCP list for prepare Step 1 when user explicitly wants another subscription.
 
 ## Artifact Locations
 
 | Location | Artifacts |
 |----------|-----------|
 | `.copilot-azure/sessions/{uuid}/` | `context.json`, `prereq-output.json`, `prepare-plan.json`, `scaffold-manifest.json`, `deploy-result.json` |
-| `.copilot-azure/sessions/{uuid}/replaced-files/` | User files displaced by scaffold (existing IaC), stored at their original relative path (**mirror path** = same directory structure as the repo). Never overwritten or deleted — moved here so the original is preserved. |
+| `.copilot-azure/sessions/{uuid}/replaced-files/` | Scaffold-displaced user files (existing IaC), stored at original relative path (**mirror path** = repo directory structure). Never overwrite/delete; move here preserving original. |
 
 ## Phase-gated Reference Loading
 
-> ⛔ **Phase-gated reference loading.** Do NOT pre-read reference files for downstream phases. Read each phase's references only when entering that step. Scaffold references (bicep-patterns, self-review) are irrelevant during deploy; prepare references (service-mapping, pricing-guide) are irrelevant during scaffold. Each phase instructions.md specifies its own required reads.
+> ⛔ **Phase-gated references.** Never pre-read downstream references. Read phase references only upon step entry. Scaffold references (bicep-patterns, self-review) irrelevant during deploy; prepare references (service-mapping, pricing-guide) irrelevant during scaffold. Each phase instructions.md defines required reads.

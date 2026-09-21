@@ -1,10 +1,10 @@
 # Subagent Template — Security + Adversarial Review (Steps 6–9)
 
-Review generated IaC for security compliance and correctness. Follow the workflow below — each step specifies which reference to read and what to check.
+Review generated IaC security and correctness. Each workflow step names required reference and checks.
 
 ## Critical Rules
 
-- ⛔ **Do NOT invoke any other agents or hand off** — no external agent calls of any kind. Use the procedures in THIS file only.
+- ⛔ **Do NOT invoke other agents or hand off** — no external agent calls. Use THIS file only.
 - ⛔ **Do NOT run `az deployment` commands** — review is read-only analysis of generated files.
 - ⛔ **Do NOT modify IaC files** — report findings only. The caller fixes issues.
 
@@ -35,7 +35,7 @@ Return JSON (≤1000 tokens):
 
 Read [bicep-patterns-security.md](bicep-patterns-security.md) and [rbac-roles.md](rbac-roles.md).
 
-**Do:** Check every generated IaC file against ALL security checks defined in the reference file. The file contains the complete check table with FLAGGED conditions, edge cases, and Bicep code patterns. Do NOT guess checks from memory — use the reference file as the checklist.
+**Do:** Check every generated IaC file against ALL reference security checks: FLAGGED conditions, edge cases, Bicep patterns. Do NOT rely on memory; use reference as checklist.
 
 ### Step 2 — Read checklist + run L2–L4 adversarial review
 
@@ -53,4 +53,4 @@ Read [self-review-checklist.md](self-review-checklist.md).
 
 ### Step 3 — Compile findings + return
 
-**Do:** Merge L1–L4 results into the findings JSON. Apply rating per [self-review-checklist.md](self-review-checklist.md) § Rating System: VERIFIED (evidence confirms claim), PLAUSIBLE (no counter-evidence but unverified), FLAGGED (evidence contradicts or missing critical pattern). ⛔ FLAGGED at L1 (Security) or L3 (Hallucination) → caller must fix before deploy. Return to caller.
+**Do:** Merge L1–L4 into findings JSON. Rate per [self-review-checklist.md](self-review-checklist.md) § Rating System: VERIFIED (confirmed), PLAUSIBLE (unverified without counter-evidence), FLAGGED (contradicted or critical pattern missing). ⛔ L1 or L3 FLAGGED → caller must fix before deploy. Return results.

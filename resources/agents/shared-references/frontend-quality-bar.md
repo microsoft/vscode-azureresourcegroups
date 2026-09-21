@@ -1,33 +1,33 @@
 # Frontend Quality Bar — Render Layout Tokens with Real Library Primitives
 
-> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend Preview) and **Step 12** (Wire Frontend). This is the contract between the plan's Section 6 (Design System & UI) and the scaffolded JSX.
+> **Load BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend Preview) and **Step 12** (Wire Frontend). This contracts plan Section 6 (Design System & UI) to scaffolded JSX.
 
 ---
 
 ## Shared design-quality principles (fidelity-agnostic — the contract BOTH phases share)
 
-> **This section is the single design-quality contract read by _both_ rendering targets:**
-> - **Planning preview** (`azure-project-plan`) — renders these principles as **raw, static HTML/CSS** in `.azure/.preview-temp/` (no framework, no build step, no JavaScript, no network). See the raw-HTML/CSS rendering recipes in [`html-preview.md`](.github/agents/azure-project-plan/references/html-preview.md).
-> - **Scaffold app** (`azure-project-scaffold`) — renders the *same* principles with the **real `Component Library` primitives** from Section 6, using the per-library mapping in the rest of this file, and adds the production-only capabilities the static preview cannot show (real photos, motion, dark mode, webfont, library elevation).
+> **Single design-quality contract for _both_ rendering targets:**
+> - **Planning preview** (`azure-project-plan`) — renders these principles as **raw, static HTML/CSS** in `.azure/.preview-temp/` (no framework, build step, JavaScript, or network). See raw-HTML/CSS recipes in [`html-preview.md`](.github/agents/azure-project-plan/references/html-preview.md).
+> - **Scaffold app** (`azure-project-scaffold`) — renders the *same* principles with real Section 6 **`Component Library` primitives**, using mappings below, plus production-only capabilities unavailable in static preview (real photos, motion, dark mode, webfont, library elevation).
 >
-> Both targets must look like the **same professional product** at two fidelities. The planning preview is **not** a throwaway wireframe — it is a presentation-quality visual specification. The scaffold reproduces it faithfully and must **never regress below it**.
+> Both targets must show the **same professional product** at two fidelities. Planning preview is a presentation-quality visual specification, **not** a throwaway wireframe. Scaffold must reproduce it faithfully and **never regress below it**.
 
 Whatever the rendering target, every page MUST satisfy these six principles:
 
-1. **Presentation quality, not a sketch.** Balanced spacing rhythm, real depth (a multi-tier elevation scale — not a single flat border), consistent corner radius, a coherent themed palette, clear typographic hierarchy, and realistic populated content. The bar is "a screen a designer would show a stakeholder to sign off the look", never a gray boxy wireframe.
-2. **Theme from the brand color.** Derive the whole palette from Section 6's `primary` (plus `accent`/surfaces/text/muted/border). The planning preview expresses these as `:root` CSS custom properties; the scaffold wires them through the library's theme provider. Never ship the library's default brand color or hard-coded hexes in markup.
-3. **Render layout tokens as real structure.** A `header + hero + grid + footer` layout is real regions with real content — never raw placeholder `<div>`s. (Raw HTML/CSS renders styled semantic elements; the scaffold renders real library primitives per the mapping below.)
-4. **All four data states, at least once across the page set.** `data` (populated), `loading` (skeleton), `empty` (illustration/icon + call-to-action), `error` (inline banner + retry). The scaffold makes them reachable live via the Mock State Switcher; the planning preview depicts them statically.
-5. **Real iconography.** Named icons with consistent stroke weight — inline `<svg>` in the static preview, the library's official icon set in the scaffold. **Never** emoji, Unicode glyphs, or `viewBox="0 0 1 1"` placeholder shapes.
-6. **Every image slot is filled.** No empty tinted boxes. The static preview uses **neutral placeholder blocks** (a subtle surface + border with a muted icon or initials) — **not** brand-color gradients, which overstate how much the palette actually drives the design; the scaffold binds real image URLs from the mock data.
+1. **Presentation quality, not a sketch.** Use balanced spacing rhythm, real depth (multi-tier elevation, not one flat border), consistent corner radius, coherent themed palette, clear type hierarchy, and realistic populated content. Aim for stakeholder-ready designer work, never gray boxy wireframes.
+2. **Theme from the brand color.** Derive palette from Section 6 `primary` (plus `accent`/surfaces/text/muted/border). Planning preview uses `:root` CSS custom properties; scaffold uses library theme provider. Never ship library default brand color or hard-coded markup hexes.
+3. **Render layout tokens as real structure.** A `header + hero + grid + footer` layout means real regions and content, never raw placeholder `<div>`s. Raw HTML/CSS uses styled semantic elements; scaffold uses mapped library primitives below.
+4. **All four data states, at least once across the page set.** `data` (populated), `loading` (skeleton), `empty` (illustration/icon + call-to-action), `error` (inline banner + retry). Scaffold exposes them live via Mock State Switcher; planning preview depicts them statically.
+5. **Real iconography.** Use named icons with consistent stroke weight: inline `<svg>` in static preview, official library icon set in scaffold. **Never** emoji, Unicode glyphs, or `viewBox="0 0 1 1"` placeholder shapes.
+6. **Every image slot is filled.** No empty tinted boxes. Static preview uses **neutral placeholder blocks** (subtle surface + border with muted icon or initials), **not** brand-color gradients that overstate palette influence; scaffold binds real mock-data image URLs.
 
-> **Fidelity boundary — what only the scaffold does.** The static planning preview intentionally stops at what raw static files can do well: it uses **system fonts** (no remote webfont), **no JavaScript** (so no working theme toggle, no live state switching — states are depicted statically), and **neutral image placeholders** (no real photos). The scaffold adds real webfonts, motion, working dark mode, live four-state switching, and real imagery. That gap is the scaffold's value-add — it is **not** license for the planning preview to look unpolished.
+> **Fidelity boundary—scaffold-only behavior.** Static planning preview uses **system fonts** (no remote webfont), **no JavaScript** (no working theme toggle or live state switching; states appear statically), and **neutral image placeholders** (no real photos). Scaffold adds real webfonts, motion, working dark mode, live four-state switching, and real imagery. This value gap does **not** permit an unpolished planning preview.
 
 ---
 
 ## Core principle
 
-> **Layout tokens are layout INTENT, not implementation.** When the plan's Section 6 says a page's layout is `header + hero + grid + footer`, that does NOT mean produce four `<div>`s with placeholder text. It means **render the equivalent of those regions using the real `Component Library` named in Section 6, themed by the Section 6 Color Palette.**
+> **Layout tokens express INTENT, not implementation.** Section 6 layout `header + hero + grid + footer` does NOT mean four placeholder `<div>`s. **Render equivalent regions using the real Section 6 `Component Library`, themed by its Color Palette.**
 
 If you ever emit JSX like this:
 
@@ -41,7 +41,7 @@ If you ever emit JSX like this:
 </div>
 ```
 
-…you have failed the quality bar. That output **looks worse than the presentation-quality plan preview** the user already approved, because it strips the theme, the icons, the elevation, and the state coverage the preview shipped. The preview is a promise; this contract is how you keep it.
+…fails the quality bar. It **looks worse than the approved presentation-quality plan preview**, stripping theme, icons, elevation, and state coverage. Preview is a promise; keep it.
 
 ---
 
@@ -62,7 +62,7 @@ If you ever emit JSX like this:
 
 ## Per-library region-token → primitive mapping
 
-Pick the row that matches the plan's `Component Library:` value. Every region token below MUST resolve to a real, themed library primitive — not a bare `<div>`. Compound tokens (`split(a|b)`, `two-column(a+b)`) compose two of these in a CSS Grid.
+Pick plan's `Component Library:` row. Every region token MUST resolve to a real, themed library primitive, not bare `<div>`. Compound tokens (`split(a|b)`, `two-column(a+b)`) compose two in CSS Grid.
 
 ### Fluent UI v9 (`@fluentui/react-components`) — React default
 
@@ -84,9 +84,9 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 | `footer`     | `<Divider>` + horizontal `<Caption1>` row with copyright + links                                                    |
 | unknown      | `<MessageBar intent="info">` saying `Unknown layout token "{token}" — will be rendered with {Component Library} in scaffold` |
 
-**Theming**: Wrap the app shell in `<FluentProvider theme={appTheme}>` where `appTheme = createLightTheme(brandRamp)` and `brandRamp` is a 16-step `BrandVariants` derived from Section 6's `primary` color. Body font comes from Section 6's `Typography`.
+**Theming**: Wrap app shell in `<FluentProvider theme={appTheme}>`, with `appTheme = createLightTheme(brandRamp)` and `brandRamp` a 16-step `BrandVariants` derived from Section 6 `primary`. Body font comes from Section 6 `Typography`.
 
-**Icons**: Use real icons from `@fluentui/react-icons` (Regular variants) — never emoji and never inline SVG hand-drawn placeholders. Reasonable defaults: `HomeRegular`, `SearchRegular`, `SettingsRegular`, `PersonRegular`, `GridRegular`, `DocumentRegular`, `BookmarkRegular`, `MailRegular`, `CalendarRegular`, `ChevronDownRegular`, `AppsRegular`, `TableSimpleRegular`.
+**Icons**: Use real Regular variants from `@fluentui/react-icons`; never emoji or hand-drawn inline SVG placeholders. Defaults: `HomeRegular`, `SearchRegular`, `SettingsRegular`, `PersonRegular`, `GridRegular`, `DocumentRegular`, `BookmarkRegular`, `MailRegular`, `CalendarRegular`, `ChevronDownRegular`, `AppsRegular`, `TableSimpleRegular`.
 
 ### Vuetify 3 — Vue default
 
@@ -107,7 +107,7 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 | `footer`     | `<v-divider />` + `<v-footer>` row                                                               |
 | unknown      | `<v-alert type="info">Unknown layout token "{token}"</v-alert>`                                  |
 
-**Theming**: Configure `vuetify({ theme: { themes: { light: { colors: { primary: '…', surface: '…', … } } } } })` from Section 6's palette.
+**Theming**: Configure `vuetify({ theme: { themes: { light: { colors: { primary: '…', surface: '…', … } } } } })` from Section 6 palette.
 
 ### Angular Material — Angular default
 
@@ -126,7 +126,7 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 | `footer`     | `<mat-divider>` + footer row                                                 |
 | unknown      | `<mat-card>` with warning icon + `Unknown layout token "{token}"`            |
 
-**Theming**: Define a Material 3 theme via `mat.define-theme(...)` using Section 6's primary as the seed color.
+**Theming**: Define Material 3 theme via `mat.define-theme(...)`, using Section 6 primary as seed.
 
 ### Skeleton UI (Svelte default)
 
@@ -146,7 +146,7 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 | `footer`     | `<hr class="hr">` + footer `<div>`                                                               |
 | unknown      | `<aside class="alert variant-ghost-surface">Unknown layout token "{token}"</aside>`             |
 
-**Theming**: Build a Skeleton theme module from Section 6's palette and set `data-theme="…"` on the root.
+**Theming**: Build Skeleton theme module from Section 6 palette; set root `data-theme="…"`.
 
 ### Pico.css / plain HTML
 
@@ -165,7 +165,7 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 | `footer`     | `<footer>` with small text                                                   |
 | unknown      | `<mark>Unknown layout token "{token}"</mark>`                                |
 
-**Theming**: Set CSS custom properties (`--pico-primary`, `--pico-background-color`, `--pico-color`, `--pico-muted-color`) from Section 6's palette on `:root` or `[data-theme=light]`.
+**Theming**: Set CSS custom properties (`--pico-primary`, `--pico-background-color`, `--pico-color`, `--pico-muted-color`) from Section 6 palette on `:root` or `[data-theme=light]`.
 
 ---
 
@@ -182,7 +182,7 @@ Every page that displays data MUST cover all four states with real library primi
 
 ### Mock State Switcher (STANDARD — always scaffold it)
 
-The four states MUST be reachable from the running preview **without code edits or a server restart**. This is not optional and not a per-project judgement call — **every scaffolded frontend with a data-bearing page ships the same dev-only Mock State Switcher**, wired to a single shared override so reviewers (and the preview gate) can flip `data → loading → empty → error` on demand. Build it to this fixed contract so it behaves identically across projects:
+Four states MUST be reachable in running preview **without code edits or server restart**. No project exceptions: **every scaffolded frontend with a data-bearing page ships the same dev-only Mock State Switcher**, using one shared override so reviewers and preview gate can flip `data → loading → empty → error`. Follow this fixed cross-project contract:
 
 | Piece | Standard |
 |-------|----------|
@@ -191,21 +191,21 @@ The four states MUST be reachable from the running preview **without code edits 
 | **The switcher UI** | A small fixed-corner control (segmented buttons or a `<select>`) rendered **only when `import.meta.env.DEV`**, labelled Data / Loading / Empty / Error, that sets the override. It must never ship in a production build and must sit above app chrome (high `z-index`, `position: fixed`). |
 | **Gating** | The entire switcher + override is dev-only. In `import.meta.env.PROD` the override is forced to `'data'` and the UI is not rendered. |
 
-> The switcher rides on the **mock layer only**. When `azure-project-integrate` swaps the seam to the live client, it **removes the switcher as part of the mock-layer teardown** — deleting `src/api/previewState.ts`, the corner-switcher component, and every `previewState` import/usage. Integrate still uses these four states to confirm the four-state contract against live data, but the dev-only switcher MUST NOT survive into the wired-up app.
+> Switcher exists in **mock layer only**. When `azure-project-integrate` swaps to live client, it **removes switcher during mock-layer teardown**: delete `src/api/previewState.ts`, corner-switcher component, and every `previewState` import/usage. Integrate still verifies four states against live data, but dev-only switcher MUST NOT remain in wired app.
 
 ---
 
 ## Theming contract
 
-1. **Build a brand ramp from Section 6's `primary`** and pass it to the library's theme provider — do **not** ship the library's default brand color.
+1. **Build a brand ramp from Section 6 `primary`** and pass it to library theme provider; do **not** ship library default brand color.
    - Fluent UI v9: `createLightTheme(brandRamp)` where `brandRamp: BrandVariants` is a 16-step ramp from HSL lightening/darkening of `primary`.
    - Vuetify: `theme.themes.light.colors.primary`.
    - Angular Material: `mat.define-theme({ color: { primary: $palette } })`.
    - Skeleton: custom theme module with `--color-primary-*` CSS variables.
    - Pico: `--pico-primary` CSS variable.
-2. **Map `surface` / `text` / `muted` / `border`** onto the library's neutral tokens — do not hard-code colors in component JSX. Semantic states (success / warning / error) come from the library's built-in semantic tokens, not from the plan palette.
-3. **Apply `Typography`** at the app shell level (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
-4. The plan-preview webview renders a sandboxed **HTML/CSS** preview — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **presentation-quality visual spec** — approved regions, themed palette, real icons, populated content, and all four states. Reproduce that look with real library primitives and **add the production-only capabilities the static files could not include**: real webfont, motion, dark mode, and real imagery. Do not import, embed, or `<iframe>` the preview. `.azure/.preview-temp/` is deleted in Step 13.
+2. **Map `surface` / `text` / `muted` / `border`** to library neutral tokens; never hard-code component JSX colors. Semantic states (success / warning / error) use built-in library semantic tokens, not plan palette.
+3. **Apply `Typography`** at app shell (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
+4. Plan-preview webview renders sandboxed, presentational **HTML/CSS** without JavaScript or real component library. Each page at `.azure/.preview-temp/<slug>.html` shares `.azure/.preview-temp/theme.css`. Treat files as **presentation-quality visual spec**: approved regions, themed palette, real icons, populated content, four states. Reproduce with real library primitives and **add static-file gaps**: real webfont, motion, dark mode, imagery. Never import, embed, or `<iframe>` preview. Delete `.azure/.preview-temp/` in Step 13.
 
 ---
 
@@ -224,17 +224,17 @@ The four states MUST be reachable from the running preview **without code edits 
 
 ## Polish floor — every scaffolded app, regardless of library
 
-These eight requirements are **non-negotiable**. They are the gap between "the sketch with components swapped in" and "an app the user wants to ship". A page that misses any of them fails the bar.
+These eight requirements are **non-negotiable**. Missing any yields component-swapped sketch, not shippable app, and fails the bar.
 
 ### 1. Hero treatment (every landing / dashboard / list-index page)
 
-A flat colored panel is **not** a hero. Every hero region MUST have:
+A flat colored panel is **not** a hero. Every hero MUST have:
 
-- A **brand-gradient card** (linear or radial) using two stops from Section 6's palette (typically `primary` → `accent`, or `primary` → a 12-step-lighter `primary`).
-- An **eyebrow line** above the headline: uppercased, letter-spaced ~0.12em, ~11–12px, with a 6px dot prefix — distinct from the headline.
-- A **headline** at the library's `display`/`Title1`/`h1` token, max-width ~24ch, line-height ~1.1, sub-tight letter-spacing.
+- A **brand-gradient card** (linear or radial) using two Section 6 palette stops (typically `primary` → `accent`, or `primary` → a 12-step-lighter `primary`).
+- An **eyebrow line** above headline: uppercased, ~0.12em letter spacing, ~11–12px, 6px dot prefix, visually distinct.
+- A **headline** using library `display`/`Title1`/`h1` token, max-width ~24ch, line-height ~1.1, sub-tight letter-spacing.
 - A **subtitle** at the body token, max-width ~60ch, opacity 0.85–0.95.
-- **Two CTAs**: a primary library button (named action, see microcopy below) + a secondary/ghost variant.
+- **Two CTAs**: primary library button (named action; see microcopy) + secondary/ghost variant.
 - An **ambient SVG mesh backdrop** layered behind the gradient. Concrete pattern:
 
 ```tsx
@@ -258,7 +258,7 @@ Position the SVG `position: absolute; inset: 0; pointer-events: none; opacity: 0
 
 ### 2. Real icons — everywhere (no exceptions)
 
-Every navigation item, sidebar item, KPI tile, empty state, primary CTA, and section title row MUST carry a real, named icon from the library's official icon set:
+Every navigation and sidebar item, KPI tile, empty state, primary CTA, and section title row MUST use a real named icon from official library icon set:
 
 | Library          | Icon source                       | Concrete sample imports                                                                          |
 |------------------|-----------------------------------|--------------------------------------------------------------------------------------------------|
@@ -272,7 +272,7 @@ Every navigation item, sidebar item, KPI tile, empty state, primary CTA, and sec
 
 ### 3. Motion (lightweight, library-aligned)
 
-Every app MUST add motion in three places, with `prefers-reduced-motion` respected:
+Every app MUST add motion in three places and respect `prefers-reduced-motion`:
 
 | Library          | Motion tool                           | Where it must appear                                                          |
 |------------------|---------------------------------------|-------------------------------------------------------------------------------|
@@ -285,7 +285,7 @@ Duration: 150–300ms. Easing: `cubic-bezier(0.4, 0, 0.2, 1)` or library default
 
 ### 4. All four states — visibly, with library illustrations
 
-The state contract in the table above is the **minimum**. Every empty state MUST also include a real visual element (library illustration component, Lucide/Tabler icon at 64–96px, or a domain-specific SVG), not just text:
+State table above is **minimum**. Every empty state MUST add a real visual—not text alone: library illustration, Lucide/Tabler icon at 64–96px, or domain-specific SVG.
 
 - Fluent: empty card with a 64px `*Regular` icon centered above the `<Title3>` + body + primary CTA.
 - Vuetify: `<v-empty-state>` (built-in, has illustration slot) or `<v-card>` with `<v-icon size="64">`.
@@ -294,7 +294,7 @@ The state contract in the table above is the **minimum**. Every empty state MUST
 
 ### 5. Density + radius derived from Style Direction
 
-Translate the `Style Direction:` literal from Section 6 into concrete library tokens:
+Translate Section 6 `Style Direction:` literally into library tokens:
 
 | Style Direction keyword         | Density / radius / weight choices                                              |
 |---------------------------------|--------------------------------------------------------------------------------|
@@ -317,7 +317,7 @@ Every app ships with light + dark themes from day one:
 
 ### 7. Real webfont, mapped from Style Direction
 
-Apply a webfont via the `<head>` (CSS `@import` or `<link>`) and wire it through the library's font token. Choose by Style Direction:
+Apply webfont via `<head>` (CSS `@import` or `<link>`) and library font token. Choose by Style Direction:
 
 | Style Direction keyword         | Webfont                            |
 |---------------------------------|------------------------------------|
@@ -326,11 +326,11 @@ Apply a webfont via the `<head>` (CSS `@import` or `<link>`) and wire it through
 | `editorial`, `magazine`         | `Source Sans 3` body + `Source Serif 4` headings |
 | `minimal`, `calm`, `data-dense` | `Geist Sans` or `IBM Plex Sans`    |
 
-Load via `<link rel="preconnect">` + `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=…">` or self-host. Fall back to `system-ui, -apple-system, "Segoe UI", sans-serif`.
+Load via `<link rel="preconnect">` + `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=…">` or self-host. Fallback: `system-ui, -apple-system, "Segoe UI", sans-serif`.
 
 ### 8. Microcopy — primary CTAs name the action
 
-Primary buttons MUST name the action being committed. **Hard fail**: generic verbs.
+Primary buttons MUST name committed action. Generic verbs **hard fail**.
 
 | ❌ Generic (fails)    | ✅ Named (passes)                                                |
 |----------------------|-------------------------------------------------------------------|
@@ -343,17 +343,17 @@ Secondary/ghost buttons may be generic (`Cancel`, `Back`). Modal confirm buttons
 
 ### 9. Imagery & art direction (domain fit beats stock chrome)
 
-A page can pass items 1–8 and still look templated if it renders empty media surfaces and identical generic cards for every app. Every app MUST:
+Passing items 1–8 can still look templated through empty media and identical generic cards. Every app MUST:
 
-- **Render real images for every media-bearing entity.** Bind the mock data's image URL (see Sub-step F2) into a real `<img>` / Fluent `<CardPreview image>` / Vuetify `<v-img>` / Angular `mat-card-image` / Skeleton-Pico `<img>` — **never** an empty tinted `<CardPreview>` or a solid-color `<div>` standing in for a photo. A media card with no visible photo is a hard fail.
-- **Match the domain's visual idiom.** A photo-sharing app reads as a gallery (edge-to-edge imagery, scrapbook/polaroid framing, captions), a finance app as data-dense tables, an editorial app as a magazine, a chat app as message bubbles. Do not flatten every app into the same generic SaaS card grid.
-- **Use bespoke, domain-specific component treatments** — tilted polaroid frames, ticket stubs, chat bubbles, kanban cards, gallery tiles, etc. — **layered on top of** the library primitives from the region-token mapping. This is encouraged, not forbidden (see self-review item 12). The ban is only on empty placeholder `<div>`s that re-skin the wireframe, never on art direction that fits the domain.
+- **Render real images for every media-bearing entity.** Bind mock data image URL (see Sub-step F2) to real `<img>` / Fluent `<CardPreview image>` / Vuetify `<v-img>` / Angular `mat-card-image` / Skeleton-Pico `<img>`; **never** empty tinted `<CardPreview>` or solid-color photo substitute `<div>`. No visible photo hard fails.
+- **Match domain's visual idiom.** Photo-sharing app reads as gallery (edge-to-edge imagery, scrapbook/polaroid framing, captions), finance as data-dense tables, editorial as magazine, chat as message bubbles. Never flatten all apps into generic SaaS card grids.
+- **Use bespoke, domain-specific component treatments**—tilted polaroid frames, ticket stubs, chat bubbles, kanban cards, gallery tiles, etc.—**layered on** mapped library primitives. Encouraged, not forbidden (see self-review item 12). Ban only empty placeholder `<div>`s re-skinning wireframes, not domain-fit art direction.
 
 ---
 
 ## Polish self-review checklist (per page, before marking complete)
 
-Run through this 12-item yes/no list for **each page** generated. A "no" on any item means the page is not done. Do not move on.
+Run this yes/no list for **each generated page**. Any "no" means unfinished; do not continue.
 
 1. Does the hero use a brand gradient (not flat color) with eyebrow + headline + subtitle + 2 CTAs + ambient SVG mesh backdrop?
 2. Does every nav/sidebar item carry a real named icon from the library's icon set (not emoji, not glyph)?

@@ -1,6 +1,6 @@
 # Deploy Phase — MCP Tools
 
-Phase-exclusive tool parameters for the deploy phase. For shared tools (`subscription_list`, `group_list`, `extension_cli_install`, `get_azure_bestpractices`), see [mcp-tool-reference.md](../../references/mcp-tool-reference.md).
+Deploy-only tool parameters. For shared tools (`subscription_list`, `group_list`, `extension_cli_install`, `get_azure_bestpractices`), see [mcp-tool-reference.md](../../references/mcp-tool-reference.md).
 
 > **Troubleshooting:** If a tool call fails with unknown parameter or missing command errors, consult the official docs: <https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/tools/>
 
@@ -8,29 +8,29 @@ Phase-exclusive tool parameters for the deploy phase. For shared tools (`subscri
 
 ## `capture_deployment_inventory` (Copilot on Rails extension tool)
 
-Deterministic resource-inventory capture provided by the Azure Resources extension (in-proc MCP, `copilot-azure-resources-extension-tools/*`). Snapshots the subscription's resources via ARM and diffs before/after to record exactly what this session created. Holds the baseline in memory (no workspace files). **Report-only — never deletes.**
+Deterministic resource inventory from Azure Resources extension (in-proc MCP, `copilot-azure-resources-extension-tools/*`). ARM snapshots subscription resources; before/after diff records session-created resources. Baseline stays in memory, without workspace files. **Report-only—never deletes.**
 
 | Param | Required | Description |
 |-------|----------|-------------|
 | `sessionId` | ✅ | App Onboard session id; locates `.copilot-azure/sessions/{id}/`. |
 | `subscriptionId` | ✅ | Target subscription. |
 | `phase` | ✅ | `"baseline"` (before first deployment) or `"capture"` (after each attempt / on failure / at finalize). |
-| `expectedResourceGroup` | — | Final target RG; created resources outside it are flagged `orphaned`. |
+| `expectedResourceGroup` | — | Final RG; created resources outside it become `orphaned`. |
 | `deploymentNames` | — | All ARM deployment names (initial + healing) used to classify created resources. |
-| `resourceGroups` | — | RGs touched (incl. abandoned healing RGs) so RG-scoped deployment operations are read. |
+| `resourceGroups` | — | Touched RGs (incl. abandoned healing RGs), enabling RG-scoped operation reads. |
 
-Holds the baseline snapshot in memory (no files written). On `phase: "capture"` returns the created resources classified `expected`/`failed`/`orphaned`/`unverified` plus orphaned resource groups; write those into `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]`.
+Baseline stays in memory (no files). `phase: "capture"` returns created resources classified `expected`/`failed`/`orphaned`/`unverified` plus orphaned RGs; write to `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]`.
 
 ⛔ **Classification confidence differs, and your wording to the user MUST reflect it:**
 
 | Classification | Meaning | How to present it |
 |---|---|---|
-| `expected` | Tracked deployment reported it as `Succeeded` in the target RG. | Part of the working deployment. Never suggest deleting it. |
-| `failed` | Tracked deployment reported it with a non-succeeded state. | Confirmed to belong to this deployment. Safe to offer a delete command. |
+| `expected` | Tracked deployment reported `Succeeded` in target RG. | Working deployment part. Never suggest deletion. |
+| `failed` | Tracked deployment reported non-succeeded state. | Confirmed deployment-owned. May offer delete command. |
 | `orphaned` | Appeared during the deploy window but **no tracked deployment reported it**. | It *may* be a healing/imperative stray — or another person's resource on a shared subscription. Present as "review before deleting", never as "safe to delete" or "created by this deployment". |
-| `unverified` | Deployment operations could not be read at all, so nothing could be attributed. | Say the inventory could not be verified and point the user at the portal. Do **not** produce any cleanup list or delete command. |
+| `unverified` | Deployment operations unreadable; nothing attributable. | Say inventory unverified; point to portal. Do **not** produce cleanup list or delete command. |
 
-When the tool returns `inventoryUnverified: true`, record it in `deploy-result.json` as `inventoryUnverified` + `inventoryUnverifiedReason` and skip the cleanup section entirely.
+When tool returns `inventoryUnverified: true`, record in `deploy-result.json` as `inventoryUnverified` + `inventoryUnverifiedReason`; omit cleanup section.
 
 See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](../instructions.md) Steps 5b/6/8/9.
 
@@ -85,8 +85,8 @@ See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](.
 
 | Tool | Sub-command | AppOnboard Step | Purpose |
 |------|-----------|----------|---------|
-| `capture_deployment_inventory` | *(baseline)* | Step 5b | Snapshot pre-existing resources before the first deployment |
-| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list() to record created/orphaned/failed resources; build cleanup commands from `failed` entries only |
+| `capture_deployment_inventory` | *(baseline)* | Step 5b | Snapshot pre-existing resources before first deployment |
+| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list(); record created/orphaned/failed resources; cleanup only `failed` entries |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_availability-status_get` | Step 7 | Post-deploy health. Call with `resourceId` from `deploy-result.json.resourceIds[]` |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_health-events_list` | Step 3 | Pre-deploy outage check. `event-type: "ServiceIssue"`, `status: "Active"` |
 | `mcp_azure_mcp_monitor` | `monitor_activitylog_list` | Step 7+ | Failed deployment analysis. `resource-name` from deploy output, `event-level: "Error"`, `hours: 1` |

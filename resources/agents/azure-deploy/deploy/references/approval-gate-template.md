@@ -1,6 +1,6 @@
 # Approval Gate Template
 
-Display template for the deploy approval gate. Present after preflight validation, before execution.
+Deploy approval gate template. Present after preflight validation, before execution.
 
 ## Display Format
 
@@ -49,8 +49,8 @@ Display template for the deploy approval gate. Present after preflight validatio
 
 ## Rules
 
-- ⛔ Gate is the LAST content in the response — no continued execution until user replies
-- ⛔ SKU column must show exact Azure SKU code + tier name (e.g., "B1 Linux (Basic)", "P1v3 (Premium)") — not generic labels like "cheapest tier". F1/D1/Free are never selected.
-- Always show the monthly cost estimate — there is no $0 tier (B1 floor ~$13/mo)
-- Surface ALL `FLAGGED` self-review findings — user must see risks before approving
-- If validation failed, show failures and block Yes option until resolved
+- ⛔ Gate is response's LAST content — stop until user replies
+- ⛔ SKU column MUST show exact Azure SKU code + tier name (e.g., "B1 Linux (Basic)", "P1v3 (Premium)"), not generic labels like "cheapest tier". Never select F1/D1/Free.
+- Always show monthly cost estimate — no $0 tier (B1 floor ~$13/mo)
+- Surface ALL `FLAGGED` self-review findings so user sees risks before approval
+- Validation failure: show failures; block Yes until resolved

@@ -1,23 +1,23 @@
 # Health Check Patterns
 
-Post-deployment health verification for AppOnboard-deployed resources.
+Health verification for AppOnboard-deployed resources.
 
 ## HTTP Endpoints
 
-For each endpoint: HTTPS GET, 30s timeout, 3 retries (10s/20s/40s backoff).
+Per endpoint: HTTPS GET, 30s timeout, 3 retries (10s/20s/40s backoff).
 
 | Status | Health | Note |
 |--------|--------|------|
-| 2xx | `healthy` | **Verify not a placeholder page (see below)** |
+| 2xx | `healthy` | **Verify not placeholder (below)** |
 | 401/403 | `healthy` | Auth working, app running |
 | 5xx ×3 | `degraded` | |
 | Timeout/DNS ×3 | `unreachable` | |
 
-> ⛔ **DB-backed apps: a 200 on `/` is NOT healthy.** When `prepare-plan.json.services[]` includes a database, probing only `/` (or any non-DB route) just proves the web server booted. Probe at least one **data-backed route** (derive from the app's detected routes, e.g. a REST resource path) and inspect the body for DB errors (`insecure transport`, `Access denied`, `connection refused`, `Unknown database`, `doesn't exist`) → mark `degraded`, not `healthy`.
+> ⛔ **DB-backed apps: 200 on `/` is NOT healthy.** When `prepare-plan.json.services[]` includes a database, `/` or another non-DB route proves only web server startup. Probe at least one **data-backed route** derived from detected app routes (e.g. REST resource path); inspect body for DB errors (`insecure transport`, `Access denied`, `connection refused`, `Unknown database`, `doesn't exist`) → `degraded`, not `healthy`.
 
 ### HTTP Redirect Handling (Container Apps)
 
-> ⛔ **ACA health probes do NOT follow HTTP redirects.** A 301/302 response from the probe path causes `ActivationFailed` — the probe treats it as a failure, not a redirect.
+> ⛔ **ACA health probes do NOT follow HTTP redirects.** Probe-path 301/302 causes `ActivationFailed`; treated as failure, not redirect.
 
 If the first health check returns **301 or 302**:
 1. Read the `Location` header: `curl -sI "https://{fqdn}{probePath}" | Select-String "^location:" -CaseSensitive:$false`
@@ -25,20 +25,20 @@ If the first health check returns **301 or 302**:
 3. Redeploy: `az deployment sub create` with updated Bicep
 4. Re-check health after new revision activates
 
-Common redirect patterns: Express trailing-slash normalization (`/app/` → `/app`), framework-level path canonicalization, HTTPS redirects on mixed-content paths.
+Common redirects: Express trailing-slash normalization (`/app/` → `/app`), framework path canonicalization, HTTPS redirects on mixed-content paths.
 
 ### App Service Default Page Detection
 
-> ⛔ **HTTP 200 ≠ app started.** Azure serves its own default page with 200 when the app fails to start — false positive.
+> ⛔ **HTTP 200 ≠ app started.** Azure serves its default page with 200 after app startup failure—a false positive.
 
-After HTTP 200 from App Service, check first 2KB of body:
+After App Service HTTP 200, check body's first 2KB:
 
 | Body contains | Meaning |
 |---------------|--------|
-| `"Your app service is up and running"` | Default page — app didn't start |
-| `"Time to take the next step and deploy your code"` | Default page — no code or app failed |
-| `"Hey, Python developers!"` / `"Hey, Node.js developers!"` | Runtime default — app didn't start |
-| `"Error 503"` / `"Application Error"` | App crashed on startup |
+| `"Your app service is up and running"` | Default page—app didn't start |
+| `"Time to take the next step and deploy your code"` | Default page—no code or failed app |
+| `"Hey, Python developers!"` / `"Hey, Node.js developers!"` | Runtime default—app didn't start |
+| `"Error 503"` / `"Application Error"` | Startup crash |
 
 If detected → `healthStatus: "degraded"` + warning: `"App Service default page detected — check logs: az webapp log tail -g {rg} -n {app}"`.
 
@@ -60,7 +60,7 @@ az resource show --ids {resourceId} --query "properties.provisioningState" -o ts
 | Storage | `provisioningState` + `statusOfPrimary` |
 | Functions | HTTP trigger URL + HTTP check |
 
-> ⛔ **Container Apps — run an explicit live HTTP probe (the pipeline status is NOT sufficient).** After `latestReadyRevisionName` is set, run an observable request against the ingress FQDN and capture the result into `deploy-result.json.endpoints[].healthStatus`:
+> ⛔ **Container Apps—run explicit live HTTP probe; pipeline status is insufficient.** After `latestReadyRevisionName` is set, request ingress FQDN and capture result in `deploy-result.json.endpoints[].healthStatus`:
 > ```powershell
 > iwr "https://{ingressFqdn}/{probePath}" -UseBasicParsing   # PowerShell
 > curl -sSfL "https://{ingressFqdn}/{probePath}"             # bash

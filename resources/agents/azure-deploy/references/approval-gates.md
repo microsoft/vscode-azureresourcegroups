@@ -1,12 +1,12 @@
 # Approval Gates — Steps 6 & 8
 
-> **Gate summary:** AppOnboard has **2 approval gates**: (1) **Scaffold Gate** (orchestrator Step 6) — approve architecture plan before generating IaC, (2) **Deploy Gate** (orchestrator Step 8 / deploy/instructions.md Step 4) — approve cost + resource summary before `az deployment`. Both are mandatory and SEPARATE — scaffold approval does NOT imply deploy approval.
+> **Gate summary:** AppOnboard requires **2 separate approval gates**: (1) **Scaffold Gate** (orchestrator Step 6)—approve architecture before IaC generation; (2) **Deploy Gate** (orchestrator Step 8 / deploy/instructions.md Step 4)—approve cost + resources before `az deployment`. Both mandatory; scaffold approval never implies deploy approval.
 
 ## Scaffold Approval Gate (Step 6)
 
-Display the architecture plan for user approval BEFORE generating any files:
+Show architecture plan for approval BEFORE generating files:
 
-> ⛔ **Open the plan view FIRST.** Call `open_deploy_plan_view` before displaying the gate text — it renders the `prepare-plan.json` you just wrote (services, SKUs, region, cost) in a side-by-side view. Call it once per gate; it is a display action only and never replaces the chat approval prompt below.
+> ⛔ **Open plan view FIRST.** Before gate text, call `open_deploy_plan_view`; it renders new `prepare-plan.json` (services, SKUs, region, cost) side-by-side. Call once per gate. Display-only; never replaces chat approval below.
 
 > ⛔ **Record the CLI prerequisites through the MCP tool — not in chat.** The plan view has a prerequisites section for the two CLIs this stage depends on, and it is populated **only** by `record_deploy_prerequisites`. Before (or right alongside) `open_deploy_plan_view`:
 >

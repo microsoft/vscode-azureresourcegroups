@@ -2,17 +2,17 @@
 
 ## Scope Triage (Step 2 — before prereq)
 
-> ⛔ **Scope triage — BEFORE prereq.** Check for azd template markers (`azure.yaml` + IaC in `infra/`).
+> ⛔ **Scope triage BEFORE prereq.** Check azd template markers (`azure.yaml` + IaC in `infra/`).
 >
 > **Skip triage when:**
-> - User explicitly asks for cost estimates, service recommendations, or code analysis
+> - User explicitly requests cost estimates, service recommendations, or code analysis
 > - Empty workspace (prereq’s zero-code-path handles it)
-> - Code exists but no infra files (no `.bicep`, `.tf`, `azure.yaml`, or `infra/` dir) — full pipeline is the only sensible path
+> - Code exists without infra files (no `.bicep`, `.tf`, `azure.yaml`, or `infra/` dir)—full pipeline only sensible path
 > - Intentionally vulnerable app signals (🛑 detection) — proceed to prereq directly
 >
 > ### If azd template detected
 >
-> ⛔ **You MUST read [`azd-template-routing.md`](azd-template-routing.md)** for detection criteria, gate presentation, and routing protocol.
+> ⛔ **MUST read [`azd-template-routing.md`](azd-template-routing.md)** for detection criteria, gate, routing protocol.
 >
 > ### If NO azd template BUT infra files present
 >
@@ -22,28 +22,25 @@
 > 3. **Just deploy it** (I have IaC ready)
 > 4. **Other**
 >
-> Option 1 / vague → full pipeline (Step 3). Any other → hand off to the `azure-prepare` agent.
+> Option 1 / vague → full pipeline (Step 3). Others → hand off to `azure-prepare`.
 
 ## After Prereq Returns (Step 4 — scan-informed intent gathering)
 
-Prereq has written `prereq-output.json` and `context.json.components[]` — this is the authoritative source for all downstream phases (prepare and scaffold consume `context.json`, not `prereq-output.json`). 
+Prereq wrote `prereq-output.json` + `context.json.components[]`; authoritative downstream source (prepare/scaffold consume `context.json`, not `prereq-output.json`).
 
-Present the detected component boundaries before asking questions. Include each deployable component's path,
-framework, and intended Azure compute model. For a SPA plus Azure Functions project, state both mappings
-explicitly: the frontend remains its own hosting service and the backend remains a separate Function App.
-Do not infer an SWA-managed API merely because the frontend uses `/api` routes.
+Before questions, present detected component boundaries: each deployable component's path, framework, and intended Azure compute model. For SPA + Azure Functions, state both mappings: frontend retains separate hosting; backend remains separate Function App. Never infer SWA-managed API solely from frontend `/api` routes.
 
-Confirm the Azure target ("☁️ **Azure target**: {subscriptionName} ({subscriptionId})"). If the user wants a different subscription, write to `context.json.overrides[]`.
+Confirm Azure target ("☁️ **Azure target**: {subscriptionName} ({subscriptionId})"). Different subscription → write `context.json.overrides[]`.
 
-**Present scan results first, then ask only what prereq didn't answer** (≤2 if mostly covered, ≤4 if gaps):
+**Present scan results first; ask only unanswered items** (≤2 mostly covered, ≤4 with gaps):
 
 | # | Topic | Ask if... |
 |---|-------|----------|
-| 1 | App purpose | Not obvious from `detectedStack` + `components[]` |
-| 3 | Data/storage | Prereq didn't detect DB/compose |
-| 4 | Auth approach | No MSAL/passport/auth library detected |
+| 1 | App purpose | Unclear from `detectedStack` + `components[]` |
+| 3 | Data/storage | Prereq found no DB/compose |
+| 4 | Auth approach | No detected MSAL/passport/auth library |
 | 5 | Scale | Always — prereq doesn't know traffic expectations |
 
-⛔ Do NOT ask about stack/language (always answered by prereq) or budget (only if user mentioned cost). User corrections → `context.json.overrides[]`. Stop when covered or user says "just go."
+⛔ Do NOT ask stack/language (prereq always answers), or budget unless user mentioned cost. Corrections → `context.json.overrides[]`. Stop when covered or user says "just go."
 
-**Update intent:** Merge scan results into `context.json.intent`. Set `refinedFromScan: true` and populate `scanDiscoveredFacts[]`.
+**Update intent:** Merge scan results into `context.json.intent`; set `refinedFromScan: true`; populate `scanDiscoveredFacts[]`.

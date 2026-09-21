@@ -1,17 +1,17 @@
 # Project Architecture
 
-> Best practices for structuring an Azure-centric project with built-in testability.
+> Testable Azure-centric project structure.
 
 ---
 
 ## Core Principles
 
-1. **Service boundary isolation** — Every Azure service behind dedicated module with interface. Never scatter SDK calls across handlers.
-2. **Dependency injection** — Services injectable. Handlers receive deps, not import singletons. Swap real for mocks in tests.
-3. **Environment-driven config** — Same code for mocks, emulators, Azure — switched by env vars.
+1. **Service boundary isolation** — Put every Azure service behind dedicated module + interface. Never scatter SDK calls across handlers.
+2. **Dependency injection** — Inject services. Handlers receive deps, never import singletons. Swap real services for mocks in tests.
+3. **Environment-driven config** — Use same code for mocks, emulators, Azure; switch via env vars.
 4. **Monorepo by default** — Frontend, backend, shared types in one repo with clear boundaries.
-5. **Contracts first** — Shared types/schemas in `shared/` dir. API contracts defined before implementation.
-6. **One function per file** — File name matches function name. Each independently testable.
+5. **Contracts first** — Put shared types/schemas in `shared/`; define API contracts before implementation.
+6. **One function per file** — Match file and function names; test each independently.
 7. **Tests next to source** — Test directory mirrors source structure.
 
 ---
@@ -24,7 +24,7 @@
 > - **Frontend** → `<project>-<type>`, where `<type>` fits the app — `-portal`, `-app`, or `-web` (e.g. `office-compliance-portal`)
 > - **Shared package** → keep the generic `shared/` (it is internal, never a deployed app)
 >
-> This is a **SHOULD**, not a mandate: fall back to the generic `functions`/`web` only when there is no clear project name (e.g. generic internal tooling), or when the workspace already has a structure to follow. Whatever names you pick, apply them **consistently everywhere** — npm `workspaces`, `cd` commands, tsconfig `rootDir`, and the computed `main` field (e.g. with `rootDir: ".."`, `<project>-api` handlers compile to `dist/<project>-api/src/functions/*.js`). Imports of the shared package stay `../shared/...`. The plan's Project Structure section is the source of truth; the trees below use generic names purely as illustration.
+> This is a **SHOULD**, not a mandate. Use generic `functions`/`web` only without a clear project name (e.g. generic internal tooling) or when following existing workspace structure. Apply names **consistently everywhere**: npm `workspaces`, `cd` commands, tsconfig `rootDir`, computed `main` field (e.g. with `rootDir: ".."`, `<project>-api` handlers compile to `dist/<project>-api/src/functions/*.js`). Shared package imports stay `../shared/...`. Plan's Project Structure is source of truth; trees below use generic names only as examples.
 
 > **📁 Naming the service folders.** The folder names in the trees below (`functions`, `web`) are **role placeholders**. When the project has a clear product name, **prefer domain-specific names for the deployable apps** — derive a kebab-case slug from the product name and add a role suffix:
 >
@@ -32,7 +32,7 @@
 > - **Frontend** → `<project>-<type>`, where `<type>` fits the app — `-portal`, `-app`, or `-web` (e.g. `office-compliance-portal`)
 > - **Shared package** → keep the generic `shared/` (it is internal, never a deployed app)
 >
-> This is a **SHOULD**, not a mandate: fall back to the generic `functions`/`web` only when there is no clear project name (e.g. generic internal tooling), or when the workspace already has a structure to follow. Whatever names you pick, apply them **consistently everywhere** — npm `workspaces`, `cd` commands, tsconfig `rootDir`, and the computed `main` field (e.g. with `rootDir: ".."`, `<project>-api` handlers compile to `dist/<project>-api/src/functions/*.js`). Imports of the shared package stay `../shared/...`. The plan's Project Structure section is the source of truth; the trees below use generic names purely as illustration.
+> This is a **SHOULD**, not a mandate. Use generic `functions`/`web` only without a clear project name (e.g. generic internal tooling) or when following existing workspace structure. Apply names **consistently everywhere**: npm `workspaces`, `cd` commands, tsconfig `rootDir`, computed `main` field (e.g. with `rootDir: ".."`, `<project>-api` handlers compile to `dist/<project>-api/src/functions/*.js`). Shared package imports stay `../shared/...`. Plan's Project Structure is source of truth; trees below use generic names only as examples.
 
 ### TypeScript — SPA + Azure Functions
 
@@ -139,7 +139,7 @@ project-root/
 > | `schemas/validation.ts` | Zod schemas + `z.infer` request types | Response types |
 > | `index.ts` | `export * from` all three files | — |
 >
-> This ensures `export * from './types/api.js'` and `export * from './schemas/validation.js'` never export the same name.
+> Thus `export * from './types/api.js'` and `export * from './schemas/validation.js'` never export the same name.
 
 ### TypeScript — API Only
 
@@ -304,7 +304,7 @@ project-root/
 
 ## Service Abstraction Layer
 
-The `services/` directory is the **critical architectural component** for testability. Each file wraps one Azure service behind interface. Handlers receive services via DI — never import SDKs directly.
+The `services/` directory is **critical** for testability. Each file wraps one Azure service behind an interface. Handlers receive services via DI; never import SDKs directly.
 
 > Full service abstraction architecture: see [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 
@@ -325,7 +325,7 @@ services/functions/src/functions/
 └── openapi.ts          ← HTTP GET /api/openapi.json
 ```
 
-Each function receives deps via service registry:
+Each function receives deps through service registry:
 
 ```typescript
 // Example: clean handler with injected services
@@ -346,7 +346,7 @@ app.http("getItems", {
 
 ### Shared Handler Utilities (Required — DRY Enforcement)
 
-When same helper needed in 3+ handlers, extract to `services/functions/src/utils/` — do NOT duplicate inline.
+When 3+ handlers need same helper, extract it to `services/functions/src/utils/`; do NOT duplicate inline.
 
 **Common examples:**
 
@@ -370,7 +370,7 @@ export function toPublicUser(user: User): PublicUser {
 import { toPublicUser } from '../utils/toPublicUser.js';
 ```
 
-**Detection**: After Step 6, grep for repeated helper names across handlers. If 3+ files, extract.
+**Detection**: After Step 6, grep handlers for repeated helper names. Extract when found in 3+ files.
 
 **Enforcement**: Step 12 MUST check for duplicated helpers and extract before finalization.
 
@@ -378,7 +378,7 @@ import { toPublicUser } from '../utils/toPublicUser.js';
 
 ## Frontend Dev Server Configuration (proxy + preview compatibility)
 
-When a frontend is included, its dev server must (a) proxy `/api` to the Functions host **and** (b) be embeddable in the scaffold's **Approve UI** preview, which starts this dev server and renders it inside a **VS Code webview iframe** (forwarding the port in remote / Codespaces / Dev Container / SSH sessions). Miss (b) and the preview hangs on "Starting…" or renders blank even though the app opens fine in a normal browser — the user is then **stuck at the approval gate**.
+Frontend dev server must (a) proxy `/api` to Functions host and (b) embed in scaffold's **Approve UI** preview, which starts it inside a **VS Code webview iframe** (forwarding port in remote / Codespaces / Dev Container / SSH sessions). Missing (b) hangs preview on "Starting…" or renders blank despite working in a normal browser, **blocking the approval gate**.
 
 ### Vite (React, Vue, Svelte)
 
@@ -413,9 +413,9 @@ export default defineConfig({
 }
 ```
 
-> For Angular, also serve with host binding + host-check disabled so the preview iframe can load it (`ng serve --host 0.0.0.0 --disable-host-check`, or the equivalent `serve` options in `angular.json`). For Next.js, bind all interfaces (`next dev -H 0.0.0.0`). The goal is identical to Vite's `host: true` + `allowedHosts: true`.
+> For Angular, serve with host binding + host-check disabled so preview iframe loads (`ng serve --host 0.0.0.0 --disable-host-check`, or equivalent `serve` options in `angular.json`). For Next.js, bind all interfaces (`next dev -H 0.0.0.0`). Goal matches Vite's `host: true` + `allowedHosts: true`.
 
-> **Do NOT frame-bust the dev server.** Never send `X-Frame-Options` from the dev server and never add a `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` to `index.html`. Those let a normal browser tab load the app but block it from being embedded in the preview's webview iframe — the exact "works in my browser, blank in the preview" trap.
+> **Do NOT frame-bust the dev server.** Never send `X-Frame-Options` from dev server or add a `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` to `index.html`. These allow normal browser loading but block preview webview iframe embedding: "works in my browser, blank in the preview."
 
 ---
 
@@ -438,7 +438,7 @@ export default defineConfig({
 
 ### TypeScript Cross-Workspace Import Configuration
 
-When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to reach outside workspace:
+When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` outside workspace:
 
 ```jsonc
 // services/functions/tsconfig.json

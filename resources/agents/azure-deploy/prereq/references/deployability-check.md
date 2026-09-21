@@ -2,17 +2,17 @@
 
 > ⛔ **No build/install/test commands — `npm install`, `npm test`, `dotnet build`, `dotnet restore`, `dotnet test`, `pip install`, `pytest`, `go mod download`, `cargo build`. Use static analysis only during this check.**
 
-Assess whether the repository can feasibly be deployed to Azure and whether a preparation plan can be created.
+Assess Azure deployability and preparation-plan feasibility.
 
-> ⛔ **You MUST read the following in order. Skip items marked conditional if the condition is not met:**
+> ⛔ **MUST read these in order. Skip conditional items when their condition is unmet:**
 >
-> 1. [component-mapping.md](component-mapping.md) — Steps 1–2: Component→Azure mapping, existing infrastructure detection, Terraform provider classification, compose service extraction. **Conditional: monorepo only (>1 project manifest found).** For single-component repos, skip to Step 3.
+> 1. [component-mapping.md](component-mapping.md) — Steps 1–2: Component→Azure mapping, existing infrastructure detection, Terraform provider classification, compose service extraction. **Conditional: monorepo only (>1 project manifest found).** Single-component repos skip to Step 3.
 > 2. [dependency-compatibility.md](dependency-compatibility.md) — Step 3: EOL runtimes/frameworks, archived repos, vulnerable apps, platform deps, Dockerfile analysis, native module detection
 > 3. Steps 4–5 below
 
 ## Step 4: Recipe Feasibility
 
-Assess whether at least one deployment recipe is viable.
+Find at least one viable deployment recipe.
 
 | Check | Question |
 |-------|----------|
@@ -31,9 +31,9 @@ Assess whether at least one deployment recipe is viable.
 
 ## Step 5: Specialized Deployment Detection
 
-Check if the repo's stack requires a specialized deployment agent. If a match is found, set `context.json.routeToSkill` and `routeReason` so Step 8 routes directly.
+Check whether the stack needs a specialized deployment agent. On match, set `context.json.routeToSkill` and `routeReason` for direct Step 8 routing.
 
-> **Non-Azure cloud SDK deps** (AWS/GCP SDKs, Firebase, etc.) — evaluated and carried as 🔶 blockers (no `routeToSkill`); prereq stops at Step 8. See [dependency-compatibility.md § Non-Azure Cloud SDK Dependencies](dependency-compatibility.md).
+> **Non-Azure cloud SDK deps** (AWS/GCP SDKs, Firebase, etc.) — carry as evaluated 🔶 blockers (no `routeToSkill`); prereq stops at Step 8. See [dependency-compatibility.md § Non-Azure Cloud SDK Dependencies](dependency-compatibility.md).
 
 | Dependency / Pattern | `routeToSkill` | `routeReason` |
 |---------------------|----------------|---------------|
@@ -42,4 +42,4 @@ Check if the repo's stack requires a specialized deployment agent. If a match is
 
 ## f1Viable Aggregation (deprecated signal)
 
-F1/D1/Free are never selected (floor is B1), so `f1Viable` is effectively always `false`. Still populate `f1BlockReason` when a blocker is found during [dependency-compatibility.md § Native Module Detection](dependency-compatibility.md) or [§ SKU Sizing Signals](dependency-compatibility.md) — it drives sizing **up** from B1 (B2/S1), never a drop to free.
+F1/D1/Free are never selected (B1 floor); `f1Viable` is effectively always `false`. Still populate `f1BlockReason` for blockers found in [dependency-compatibility.md § Native Module Detection](dependency-compatibility.md) or [§ SKU Sizing Signals](dependency-compatibility.md)—it drives sizing **up** from B1 (B2/S1), never down to free.

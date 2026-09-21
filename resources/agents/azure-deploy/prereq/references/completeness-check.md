@@ -2,11 +2,11 @@
 
 > ⛔ **No build/install/test commands during this check.** Use static analysis only.
 
-Verify repository has required components for a deployable app.
+Verify components required for deployment.
 
 ### 1. Entry Point
 
-Verify main/index file exists for each component.
+Verify each component's main/index file.
 
 | Stack | Expected Entry Point |
 |-------|---------------------|
@@ -32,7 +32,7 @@ Verify main/index file exists for each component.
 | Manifest exists but empty deps | ⚠️ WARN |
 | No manifest found | ❌ FAIL (unless static site) |
 
-> ⛔ **Oryx reads manifests ONLY at repo root.** Subdirectory manifests → ⚠️ WARN (🔧 Fix): create root wrapper (Python: `-r {subdir}/requirements.txt`, Node: workspaces). Add to batch-then-approve.
+> ⛔ **Oryx reads manifests ONLY at repo root.** Subdirectory manifests → ⚠️ WARN (🔧 Fix): create root wrapper (Python: `-r {subdir}/requirements.txt`, Node: workspaces). Include in batch-then-approve.
 
 ### 3. Configuration
 
@@ -52,7 +52,7 @@ README with build/run instructions → ✅ PASS. Sparse/no README → ⚠️ WAR
 
 ### 5. Listening Port
 
-Web apps must bind a port. Detect via `app.listen`, `PORT` env var, framework port config, `WebApplication.CreateBuilder()` (implicit 5000/5001 .NET 6+).
+Web apps must bind a port. Detect `app.listen`, `PORT` env var, framework port config, or `WebApplication.CreateBuilder()` (implicit 5000/5001 .NET 6+).
 
 | Outcome | Verdict |
 |---------|---------|
@@ -62,7 +62,7 @@ Web apps must bind a port. Detect via `app.listen`, `PORT` env var, framework po
 
 ### 6. Static Asset Integrity
 
-Parse `href`/`src` from HTML tags. Check relative to HTML file directory. Ignore external URLs.
+Parse HTML-tag `href`/`src`. Check relative to HTML file directory; ignore external URLs.
 
 | Outcome | Verdict |
 |---------|---------|
@@ -82,15 +82,15 @@ Parse `href`/`src` from HTML tags. Check relative to HTML file directory. Ignore
 
 ### Stack-Specific Checks
 
-Verify these patterns. Assess severity with tier definitions from [readiness-gate.md](readiness-gate.md) — only ❌ FAIL if causes deploy failure or startup crash.
+Verify these patterns. Apply [readiness-gate.md](readiness-gate.md) tiers; ❌ FAIL only for deploy failure or startup crash.
 
 - **Node.js:** `engines` field, session store type (MemoryStore = ephemeral), health endpoint
 - **Express:** trust proxy when secure cookies are used behind reverse proxy
 - **Any web app:** health endpoint (`/health`, `/healthz`), README documentation
 - **Static sites:** health endpoint is N/A (responds 200 on `/`)
 
-> ⛔ Default these to **⚠️ WARN / `fixPhase: "postdeploy"`** — an app that deploys and runs (missing trust proxy, README, in-memory sessions) is **not** `blocked`. Escalate to ❌ FAIL / `prereq` only when the case actually breaks THIS deploy: `engines` when the app needs a runtime the platform default won't provide, or a health endpoint when a probe is wired to a route the app lacks.
+> ⛔ Default to **⚠️ WARN / `fixPhase: "postdeploy"`** — a running deployed app (missing trust proxy, README, in-memory sessions) is **not** `blocked`. Escalate to ❌ FAIL / `prereq` only if THIS deploy breaks: `engines` when required runtime differs from platform default, or health endpoint when a wired probe route is absent.
 
-> **Do not short-circuit.** Iterate ALL sub-checks (1–7 + stack-specific) per component.
+> **Do not short-circuit.** Run ALL sub-checks (1–7 + stack-specific) for every component.
 
-Severity tiers are defined in [readiness-gate.md](readiness-gate.md). Use the verdict tables in checks 1–7 above for deterministic outcomes. For judgment calls, assess based on deployment impact to this specific app.
+Severity tiers: [readiness-gate.md](readiness-gate.md). Use checks 1–7 verdict tables for deterministic outcomes; judge others by impact on this app's deployment.

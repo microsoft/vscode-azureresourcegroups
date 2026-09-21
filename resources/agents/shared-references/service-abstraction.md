@@ -1,21 +1,21 @@
 # Service Abstraction Layer
 
-> Patterns for testable code that works against local mocks and live Azure services with zero code changes.
+> Testable code for local mocks and live Azure services with zero code changes.
 
 ---
 
 ## Core Principle
 
-Keep two concerns separate:
+Keep concerns separate:
 
-- **Application user authentication** exists only when the plan says `API Login: Yes`. It authenticates people using the application.
-- **Azure client authentication** is never a product choice. Backend-to-Azure communication uses emulator clients in explicit development and managed identity everywhere else.
+- **Application user authentication** exists only when plan says `API Login: Yes`. It authenticates application users.
+- **Azure client authentication** is never product choice. Backend-to-Azure uses emulator clients in explicit development and managed identity elsewhere.
 
-Both concerns use small application-facing interfaces. Function handlers NEVER import Azure SDKs directly, construct credentials, or parse login tokens themselves. They receive auth services and Azure clients through dependency injection.
+Both use small application-facing interfaces. Function handlers NEVER import Azure SDKs, construct credentials, or parse login tokens. Inject auth services and Azure clients.
 
-> ⚠️ **Auto-initialization requirement**: Service registry's `getServices()` MUST auto-initialize with concrete implementations at runtime. User runs `func start` after `npm run build` — no manual `registerServices()` call, no startup script. Tests override via `registerServices()` with mocks before each test.
+> ⚠️ **Auto-initialization requirement**: Service registry's `getServices()` MUST auto-initialize concrete implementations at runtime. User runs `func start` after `npm run build` without manual `registerServices()` or startup script. Tests override through `registerServices()` with mocks before each test.
 
-> ⚠️ **camelCase↔snake_case conversion requirement**: TypeScript entities use camelCase (`displayName`, `coupleId`) but PostgreSQL columns use snake_case (`display_name`, `couple_id`). Concrete database service MUST handle conversion automatically — snake_case for outbound SQL, camelCase for inbound results. **Mock database does NOT enforce this** (uses plain Maps), so mismatch only surfaces at runtime against real database. Conversion must be built into concrete implementation.
+> ⚠️ **camelCase↔snake_case conversion requirement**: TypeScript entities use camelCase (`displayName`, `coupleId`); PostgreSQL columns use snake_case (`display_name`, `couple_id`). Concrete database service MUST automatically convert outbound SQL to snake_case and inbound results to camelCase. **Mock database does NOT enforce this** because it uses plain Maps, so mismatches surface only against real database. Build conversion into concrete implementation.
 
 ---
 
@@ -153,9 +153,9 @@ export interface ICacheService {
 
 ### Config Module with Environment Validation
 
-> ⚠️ **Use flat config structure** (not nested objects). Canonical shape — tests and implementation must agree. Flat fields are simpler (`config.databaseUrl` not `config.database.url`), avoid ambiguity when multiple agents scaffold independently.
+> ⚠️ **Use flat config structure** (not nested objects). Tests and implementation must share this canonical shape. Flat fields (`config.databaseUrl` not `config.database.url`) avoid ambiguity when multiple agents scaffold independently.
 >
-> Only list env vars the project uses. Provider factories validate the settings needed by the selected implementation. **Enhancement service vars** (e.g., `AZURE_OPENAI_ENDPOINT`) are NOT required — accessed via `process.env` directly, may be `undefined`.
+> List only project-used env vars. Provider factories validate settings required by selected implementation. **Enhancement service vars** (e.g., `AZURE_OPENAI_ENDPOINT`) are NOT required; access through `process.env` directly, possibly `undefined`.
 
 ```typescript
 // services/config.ts
@@ -184,42 +184,42 @@ Provider constructors or factories call `requireSetting` for the selected implem
 
 ### Concrete Implementation (PostgreSQL Example)
 
-> **Important**: Includes camelCase↔snake_case key conversion and `collectionToTable()` mapping. See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete implementation.
+> **Important**: Includes camelCase↔snake_case key conversion and `collectionToTable()` mapping. See complete implementation in [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md).
 
 **Key requirements for concrete implementation**:
 - `toSnake()`/`toCamel()`/`keysToSnake()`/`keysToCamel()` conversion utilities
-- `collectionToTable()` mapping singular collection names to plural SQL table names (e.g., `user` → `users`)
-- `create()` and `update()` strip auto-managed fields (`createdAt`, `updatedAt`, `id`) before building SQL
+- `collectionToTable()` maps singular collection names to plural SQL table names (e.g., `user` → `users`)
+- `create()` and `update()` strip auto-managed fields (`createdAt`, `updatedAt`, `id`) before SQL construction
 - `transaction()` uses `BEGIN`/`COMMIT`/`ROLLBACK` with pooled client
-- `healthCheck()` executes `SELECT 1` wrapped in try/catch
+- `healthCheck()` runs `SELECT 1` inside try-catch
 
 ### Mock Implementation (For Tests)
 
-> See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete `MockDatabaseService`.
+> See complete `MockDatabaseService` in [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md).
 
 **Key requirements for mock**:
 - In-memory `Map<string, Map<string, unknown>>` storage (collection → id → item)
-- Constructor accepts optional `Record<string, unknown[]>` for initial test data
-- `findOne()` iterates store values and matches all filter key-value pairs
-- `update()` auto-sets `updatedAt` timestamp
-- `transaction()` executes callback directly (no real transaction for unit tests)
-- Must replicate same implicit behaviors as concrete (field stripping, timestamp handling)
+- Constructor accepts optional `Record<string, unknown[]>` initial test data
+- `findOne()` iterates stored values, matching every filter key-value pair
+- `update()` automatically sets `updatedAt` timestamp
+- `transaction()` runs callback directly, without real unit-test transactions
+- Replicates concrete implicit behaviors: field stripping and timestamp handling
 
 ### Service Registry (DI)
 
-> **Critical**: Registry MUST auto-initialize with concrete implementations at runtime. `func start` must work without manual `registerServices()` call. Tests pre-register mocks via `setup.ts`, overriding auto-initialization.
+> **Critical**: Registry MUST auto-initialize concrete implementations at runtime. `func start` must work without manual `registerServices()`. Tests pre-register mocks through `setup.ts`, overriding auto-initialization.
 >
-> ⚠️ **`getServices()` MUST lazily call `initializeServices()` when `services === null`.** Registry that throws "Services not initialized" when none pre-registered is BROKEN — `func start` will crash on every request. Correct behavior: if `services` is null, construct concrete implementations from config and cache them.
+> ⚠️ **`getServices()` MUST lazily call `initializeServices()` when `services === null`.** Throwing "Services not initialized" without pre-registration is BROKEN; `func start` then crashes every request. If `services` is null, construct and cache concrete implementations from config.
 >
-> ⚠️ **Enhancement service safety**: Enhancement services MUST be wrapped in try/catch during construction. If constructor throws, registry must substitute no-op fallback — NOT crash all handlers.
+> ⚠️ **Enhancement service safety**: Wrap Enhancement service construction in try/catch; on constructor throw, registry MUST substitute no-op fallback, NOT crash all handlers.
 >
-> See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete registry pattern.
+> See complete registry pattern in [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md).
 
 **Key requirements for the registry**:
-- `registerServices(registry)` — stores provided services (used by tests)
-- `getServices()` — returns services; auto-initializes if none registered
-- `clearServices()` — resets to null (used in test teardown)
-- `initializeServices()` — selects local or production providers once, validates them, and creates concrete instances; Essential services can throw, Enhancement services use an explicit no-op fallback rather than a local implementation
+- `registerServices(registry)` — stores provided test services
+- `getServices()` — returns services; auto-initializes when none registered
+- `clearServices()` — resets to null for test teardown
+- `initializeServices()` — once selects local/production providers, validates, and creates concrete instances; Essential services may throw, Enhancement services use explicit no-op fallback, never local implementation
 
 ### Usage in Function Handlers
 
@@ -253,13 +253,13 @@ app.http('getItems', {
 
 ## Python and C# Patterns
 
-For Python service abstraction patterns (Protocol interfaces, config, mock implementations, registry), see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C# (.NET) patterns (interfaces, DI registration, mock implementations), see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+For Python service abstraction (Protocol interfaces, config, mock implementations, registry), see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C# (.NET) patterns (interfaces, DI registration, mock implementations), see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
 ## Testing Service Abstractions
 
-Every service implementation (real and mock) should be tested:
+Test every real and mock service implementation:
 
 ```typescript
 // tests/services/registry.test.ts

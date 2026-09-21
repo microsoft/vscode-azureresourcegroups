@@ -1,12 +1,12 @@
 # Handoff Protocol — Step 9
 
-Offer next steps: CI/CD setup, monitoring, domain config, **🗑️ resource cleanup**, agent-based suggestions. Session artifacts remain for deferred pickup.
+Offer CI/CD, monitoring, domain config, **🗑️ resource cleanup**, agent suggestions. Keep session artifacts for deferred pickup.
 
-> ⛔ **Handoff MUST include ALL FOUR sections: (1) Deployment Identity, (2) Cleanup Commands, (3) Redeploy Command, (4) Post-Deploy Recommendations.** Missing any section = incomplete handoff. Do NOT skip cleanup even if deployment failed. Do NOT skip identity even if no resources were created. Do NOT skip recommendations even if the list is empty (print "No post-deploy recommendations.").
+> ⛔ **Handoff MUST include ALL FOUR: (1) Deployment Identity, (2) Cleanup Commands, (3) Redeploy Command, (4) Post-Deploy Recommendations.** Missing any = incomplete. Never skip cleanup after failure, identity with no resources, or empty recommendations (print "No post-deploy recommendations.").
 
 ## Deployment Identity
 
-> ⛔ **Start handoff with deployment identity.** First lines of the handoff response MUST be:
+> ⛔ **Start with deployment identity.** Handoff's first lines MUST be:
 > ```
 > 🏢 Subscription: {context.json.azure.subscriptionName} ({context.json.azure.subscriptionId})
 > 📁 Resource Group: {context.json.azure.resourceGroup}

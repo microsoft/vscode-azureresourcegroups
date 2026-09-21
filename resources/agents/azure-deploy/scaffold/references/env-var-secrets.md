@@ -1,11 +1,11 @@
 # Environment Variables & Secrets — Cross-Cutting Rules
 
-Applies to ALL compute targets (App Service, Container Apps, Functions). For Container Apps-specific Bicep patterns (secretRef, identity), see [bicep-container-apps.md](bicep-container-apps.md).
+Applies to ALL compute targets: App Service, Container Apps, Functions. Container Apps secretRef and identity patterns: [bicep-container-apps.md](bicep-container-apps.md).
 
 ## Environment Variable Value Derivation
 
-> ⛔ **Never invent env var values — derive from the app's config class.** Cross-reference `.env.example`, `.env.sample`, `docker-compose.yml`, and the app's config module. Verify each value:
-> 1. **Type validation:** URL-typed fields need valid URLs — not `*` or placeholders
+> ⛔ **Never invent env var values; derive from app config class.** Cross-reference `.env.example`, `.env.sample`, `docker-compose.yml`, and app config module. Verify:
+> 1. **Type validation:** URL fields need valid URLs, not `*` or placeholders
 > 2. **Defaults:** Use app defaults unless overriding with deployed URL
 > 3. **Required:** Fields without defaults must be provided
 >

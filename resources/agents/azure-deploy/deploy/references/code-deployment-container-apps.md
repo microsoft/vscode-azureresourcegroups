@@ -1,22 +1,22 @@
 # Code Deployment — Container Apps
 
-After IaC deployment creates the Container App with a placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`), deploy the actual application code. This is **Phase 2** of the two-phase Container Apps deployment pattern.
+After IaC creates the Container App with placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`), deploy application code. This is **Phase 2** of two-phase Container Apps deployment.
 
-> ⛔ **`--subscription {subscriptionId}` on EVERY `az` command** (from `context.json.azure.subscriptionId`). Without it, the CLI uses whatever subscription is currently active — which may have changed since the prepare phase. This applies to ALL commands below.
+> ⛔ **`--subscription {subscriptionId}` on EVERY `az` command** (from `context.json.azure.subscriptionId`). Otherwise CLI uses the active subscription, which may have changed since prepare. Applies to ALL commands below.
 
-> ⛔ **Phase 2 is NOT optional.** If IaC deployed a Container App with a placeholder image, you MUST execute Phase 2 before health checks. Do NOT leave a placeholder image and tell the user to deploy code manually.
+> ⛔ **Phase 2 is NOT optional.** If IaC used a placeholder image, you MUST execute Phase 2 before health checks. Do NOT leave it for manual user deployment.
 
-**Determine the code deploy path:**
+**Choose code deploy path:**
 
 | Condition | Path | Steps |
 |-----------|------|-------|
 | ACR exists in IaC (`services[]` has Container Registry) | ACR build + image update | Steps 1–4 below |
-| No ACR in IaC, simple app (single Dockerfile or source) | Add ACR to IaC + redeploy, then ACR build | Step 0 + Steps 1–4 |
+| No ACR, simple app (single Dockerfile or source) | Add ACR to IaC + redeploy, then ACR build | Step 0 + Steps 1–4 |
 | No ACR in IaC, no Dockerfile, Oryx-compatible (Node/Python/Go/.NET) | `az containerapp update --source .` | Step 5 (Oryx shortcut) |
 
 ## Step 0 — Add ACR to IaC (if not already present)
 
-Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + AcrPull role assignment for CA's managed identity (role GUID: `7f951dda-4ed3-4680-a7ca-43fe172d538d`). Redeploy IaC, wait ~60s for AcrPull role propagation. Log as healing attempt.
+Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + AcrPull role assignment for CA managed identity (role GUID: `7f951dda-4ed3-4680-a7ca-43fe172d538d`). Redeploy IaC; wait ~60s for AcrPull propagation. Log healing attempt.
 
 ⛔ Update `prepare-plan.json` (add ACR to `services[]`), `scaffold-manifest.json.files[]`, and `costEstimate`.
 
@@ -29,9 +29,9 @@ Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + A
 | 3. Redeploy | `az deployment sub create --subscription {subscriptionId} --location {location} --template-file infra/main.bicep --parameters @infra/main.parameters.json --parameters containerImage='{acrLoginServer}/{appName}:latest' --name app-onboard-code-deploy-{timestamp} --query properties.provisioningState -o tsv` | Emit new portal link. ⛔ No DB password param — databases are managed-identity only (see [Parameter Pass-Through](#parameter-pass-through-bicep-redeploy-safety)). |
 | 4. Verify revision | `az containerapp show --subscription {subscriptionId} -g {rg} -n {ca} --query "{revision:properties.latestReadyRevisionName, image:properties.template.containers[0].image}" -o json` | Confirm image is not the placeholder |
 
-> ⛔ **`az acr build` failures count toward the `deploy-result.json.healingAttempts[]` counter.** After 3 failed builds (even with different root causes), pause and present a diagnosis to the user: "Web image build failed 3 times: [root causes]. Continue healing? (Yes / Cancel)." Each build fix attempt = 1 healing entry. Cross-reference deploy instructions.md healing loop rule.
+> ⛔ **`az acr build` failures count toward the `deploy-result.json.healingAttempts[]` counter.** After 3 failed builds, regardless of root cause, pause and diagnose: "Web image build failed 3 times: [root causes]. Continue healing? (Yes / Cancel)." Each build fix = 1 healing entry. Follow deploy instructions.md healing loop.
 
-> ⛔ **Windows: `az acr build` may fail with `UnicodeEncodeError`.** Azure CLI log streaming crashes on non-ASCII characters (✓, ✗) using Windows `charmap` codec. Append `--no-logs` to the build command. Build success/failure is still reported via exit code.
+> ⛔ **Windows: `az acr build` may fail with `UnicodeEncodeError`.** Azure CLI log streaming crashes on non-ASCII characters (✓, ✗) under Windows `charmap`. Append `--no-logs`; exit code still reports success/failure.
 
 ## Step 5 — Oryx Shortcut (no ACR needed, no Dockerfile)
 
@@ -39,50 +39,50 @@ Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + A
 az containerapp update --subscription {subscriptionId} -g {rg} -n {ca} --source . --set-env-vars NODE_ENV=production
 ```
 
-> ⛔ **`az containerapp update --source` is allowed for code deploy ONLY.** This is different from `az containerapp up --source` (which is ⛔ BLOCKED because it creates resources imperatively). `update --source` updates an EXISTING Container App — no state drift.
+> ⛔ **`az containerapp update --source` is allowed ONLY for code deploy.** Unlike blocked `az containerapp up --source`, which creates resources imperatively, `update --source` updates an EXISTING Container App without state drift.
 
 ## App-Internal Secrets (native CA secrets — No Key Vault, no seeding step)
 
-App-internal secrets are set as **native Container Apps secrets** directly in the Bicep, with the value supplied as an `@secure()` param on the deployment command. ⛔ **No Key Vault, no `az keyvault secret set` step.** Generate each secret ONCE and pass it on every `az deployment sub create`:
+Set app-internal secrets directly as **native Container Apps secrets** in Bicep; supply values as `@secure()` deployment params. ⛔ **No Key Vault or `az keyvault secret set` step.** Generate each secret ONCE; pass on every `az deployment sub create`:
 
 ```powershell
 $secretKey = (openssl rand -base64 32) -replace '[/+=]',''   # generate ONCE, persist to deploy-secrets.env
 az deployment sub create ... --parameters secretKey=$secretKey --query properties.provisioningState -o tsv
 ```
 
-> ⛔ Reload the SAME value from `deploy-secrets.env` on every retry/redeploy (shell variables don't persist between tool calls). Pass it to EVERY deployment so the desired-state apply keeps the CA secret stable.
+> ⛔ Every retry/redeploy reloads the SAME value from `deploy-secrets.env` (shell variables don't persist between tool calls). Pass to EVERY deployment so desired-state apply keeps CA secret stable.
 
 ## After Code Deploy (all paths)
 
-- Wait 30–60s for the new revision to become ready
+- Wait 30–60s for new revision readiness
 - Proceed to Step 7 (Health-Check Endpoints)
-- If health check returns placeholder content → image update didn't take effect. Check `az containerapp revision list`
+- Placeholder health content → image update failed. Check `az containerapp revision list`
 
-> ⛔ **`az containerapp revision restart` does NOT pick up a changed secret.** Container Apps bind secret values at revision *creation* time. To pick up an updated native secret, create a NEW revision by redeploying Bicep (preferred) or `az containerapp update --revision-suffix rev{timestamp}`.
+> ⛔ **`az containerapp revision restart` does NOT load changed secrets.** Container Apps bind secrets at revision *creation*. Load updated native secret by creating a NEW revision: redeploy Bicep (preferred) or `az containerapp update --revision-suffix rev{timestamp}`.
 
-> ⛔ **ACR registries require the CA managed identity + AcrPull to exist first.** Phase 1 of the two-phase deploy creates the Container App with a placeholder image and `registries: []` (native secrets MAY be set in Phase 1 — they have no RBAC dependency). ACR `registries` with `identity: 'system'` fails in Phase 1 because the CA's managed identity doesn't exist yet (no principalId → AcrPull fails → "Operation expired"). After Phase 1 completes and RBAC propagates (~60s), Phase 2 redeploys with ACR registries + real image + correct `targetPort`.
+> ⛔ **ACR registries require existing CA managed identity + AcrPull.** Phase 1 of two-phase deploy creates Container App with placeholder image and `registries: []` (native secrets MAY be set in Phase 1; no RBAC dependency). ACR `registries` with `identity: 'system'` fails in Phase 1 because CA managed identity lacks principalId → AcrPull fails → "Operation expired". After Phase 1 + RBAC propagation (~60s), Phase 2 redeploys ACR registries + real image + correct `targetPort`.
 
 ## Config-File Apps (Go/Viper, Spring Boot, etc.)
 
-Creating Azure-specific config (e.g., `config-azure.yml`) is fine for non-secret values.
+Azure-specific config (e.g., `config-azure.yml`) may contain non-secret values.
 
 > ⛔ **NEVER bake secrets into config files COPY'd into Docker images.**
 
-**Secret injection:** Config uses placeholders → `az containerapp secret set` → `az containerapp update --set-env-vars KEY=secretref:name` → framework env var override.
+**Secret injection:** Config placeholders → `az containerapp secret set` → `az containerapp update --set-env-vars KEY=secretref:name` → framework env override.
 
-> **Go/Viper:** `AutomaticEnv()` maps `POSTGRES_PASSWORD` → `postgres_password` (underscores), NOT `postgres.password`. Without `SetEnvKeyReplacer(strings.NewReplacer(".", "_"))`, env vars can't override nested keys.
+> **Go/Viper:** `AutomaticEnv()` maps `POSTGRES_PASSWORD` → `postgres_password` (underscores), NOT `postgres.password`. Without `SetEnvKeyReplacer(strings.NewReplacer(".", "_"))`, env vars cannot override nested keys.
 
 ## BuildKit Dockerfile Handling
 
-ACR's `az acr build` uses the classic Docker builder — it does NOT support BuildKit. When `buildRequirements.hasBuildKitSyntax == true`: build using the ACR-compatible copy instead: `az acr build -f Dockerfile.azure .`. The user's original Dockerfile stays untouched. If `Dockerfile.azure` doesn't exist yet, create it by stripping BuildKit syntax from the original Dockerfile per [`dockerfile-generation.md § ACR Build Compatibility`](../../scaffold/references/dockerfile-generation.md).
+ACR's `az acr build` uses classic Docker builder without BuildKit. When `buildRequirements.hasBuildKitSyntax == true`, use ACR-compatible copy: `az acr build -f Dockerfile.azure .`. Keep user's original Dockerfile untouched. If `Dockerfile.azure` is absent, create it by stripping BuildKit syntax per [`dockerfile-generation.md § ACR Build Compatibility`](../../scaffold/references/dockerfile-generation.md).
 
 ## Parameter Pass-Through (Bicep Redeploy Safety)
 
-⛔ **On every redeploy, pass the SAME values you originally used** — a full desired-state apply, not a patch, so an omitted param reverts to its default. The one param that bites:
+⛔ **Every redeploy passes the SAME original values.** Full desired-state apply, not patch; omitted params revert to defaults. Critical param:
 
-- **`containerImage`** — omitting it reverts the Container App to the placeholder image.
+- **`containerImage`** — omission restores Container App placeholder image.
 
-> ⛔ **No `administratorLoginPassword` (or any DB password/key) param exists** — databases are Entra/managed-identity only. There is nothing to re-pass and no `deploy-secrets.env` DB password. App-internal secrets (e.g. `SECRET_KEY`) live in Key Vault and are read via the app's MI — they are not passed as deploy params.
+> ⛔ **No `administratorLoginPassword` (or DB password/key) param exists**—databases use Entra/managed identity only. Nothing to re-pass; no `deploy-secrets.env` DB password. App-internal secrets (e.g. `SECRET_KEY`) live in Key Vault, read via app MI; they are not passed as deploy params.
 
 ```powershell
 az deployment sub create ... `
@@ -92,4 +92,4 @@ az deployment sub create ... `
 
 ## Database Post-Deploy Verification
 
-> ⛔ **You MUST read [`database-post-deploy.md`](database-post-deploy.md)** for migration discovery, execution via Container Apps exec, error handling, and PostgreSQL-specific checks.
+> ⛔ **You MUST read [`database-post-deploy.md`](database-post-deploy.md)** for migration discovery, Container Apps exec, error handling, and PostgreSQL checks.

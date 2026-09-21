@@ -1,6 +1,6 @@
 # Dockerfile Generation
 
-Generate Dockerfiles for components targeting Container Apps (or B1+ App Service) that have no existing Dockerfile. Read this when `iac-generation-rules.md` Step 6b applies.
+Generate Dockerfiles for Container Apps or B1+ App Service components lacking one. Read when `iac-generation-rules.md` Step 6b applies.
 
 ## When to Generate
 
@@ -13,7 +13,7 @@ Generate Dockerfiles for components targeting Container Apps (or B1+ App Service
 
 ### Layer ordering
 
-Copy dependency manifests and install BEFORE copying source (preserves layer cache):
+Copy dependency manifests and install BEFORE source to preserve layer cache:
 
 ```
 COPY {manifest files} ./
@@ -32,7 +32,7 @@ COPY . .
 
 ### Port alignment
 
-`EXPOSE` port, app's listening port, and Container App `targetPort` must all match. Mismatch = silent health probe failure. Read app config for listening port, set `EXPOSE {port}`, add `ENV PORT={port}` if app reads `PORT` from env.
+`EXPOSE`, app listening port, and Container App `targetPort` must match. Mismatch silently fails health probe. Read app config, set `EXPOSE {port}`, add `ENV PORT={port}` if app reads `PORT`.
 
 ### Security defaults
 
@@ -42,7 +42,7 @@ COPY . .
 
 ### .dockerignore
 
-Always generate alongside Dockerfile. Exclude: `.git`, `node_modules`, `__pycache__`, `*.pyc`, `.env`, `.env.*`, `.azure`, `.copilot-azure`, `infra`, `*.md`.
+Always generate beside Dockerfile. Exclude: `.git`, `node_modules`, `__pycache__`, `*.pyc`, `.env`, `.env.*`, `.azure`, `.copilot-azure`, `infra`, `*.md`.
 
 ### Common pitfalls
 
@@ -54,21 +54,21 @@ Always generate alongside Dockerfile. Exclude: `.git`, `node_modules`, `__pycach
 
 ### Next.js multi-container build args
 
-`NEXT_PUBLIC_*` env vars are embedded in the client JS bundle at `npm run build` time — runtime Container App env vars have zero effect on client-side code. For multi-container deploys where a Next.js frontend references another component's API:
+`NEXT_PUBLIC_*` vars enter client JS bundle at `npm run build`; runtime Container App vars cannot affect client code. For multi-container Next.js frontends calling another component API:
 
 1. Dockerfile MUST include `ARG NEXT_PUBLIC_API_URL` before the `RUN npm run build` step
 2. Deploy phase passes `--build-arg NEXT_PUBLIC_API_URL=https://{api-fqdn}` to `az acr build`
 
-Detect from `.env*` files containing `NEXT_PUBLIC_*` pointing to another service (e.g., `NEXT_PUBLIC_API_URL=http://localhost:3001`).
+Detect `.env*` files containing `NEXT_PUBLIC_*` targeting another service (e.g., `NEXT_PUBLIC_API_URL=http://localhost:3001`).
 
 ### ACR Build Compatibility — `Dockerfile.azure` Generation
 
-⛔ ACR `az acr build` uses the **classic Docker builder — NOT BuildKit**. Do NOT assume ACR supports BuildKit.
+⛔ ACR `az acr build` uses **classic Docker builder, NOT BuildKit**. Do NOT assume BuildKit support.
 
-**When to generate `Dockerfile.azure`:** If `buildRequirements.hasBuildKitSyntax == true` OR the existing Dockerfile contains any BuildKit-only syntax, create `{component}/Dockerfile.azure` with all BuildKit syntax removed.
+**Generate `Dockerfile.azure` when:** `buildRequirements.hasBuildKitSyntax == true` OR existing Dockerfile contains BuildKit-only syntax. Create `{component}/Dockerfile.azure` without any BuildKit syntax.
 
-**BuildKit-only syntax** (strip all): `# syntax=` directives, `RUN --mount=...` (all types: cache, secret, bind, tmpfs), `RUN --network=...`, `RUN --security=...`, `COPY --link`, `COPY --chmod=...`, heredoc syntax (`RUN <<EOF`).
+**Strip all BuildKit-only syntax:** `# syntax=` directives, `RUN --mount=...` (cache, secret, bind, tmpfs), `RUN --network=...`, `RUN --security=...`, `COPY --link`, `COPY --chmod=...`, heredoc (`RUN <<EOF`).
 
-⛔ **Package manager pinning applies here too.** When stripping BuildKit from an existing Dockerfile, also replace `npm install -g {pm}@latest` with the exact version from the project's `packageManager` field in `package.json` (e.g., `pnpm@9.4.0`). The upstream Dockerfile's `@latest` may pull a version incompatible with the base image's Node.js version.
+⛔ **Also pin package manager.** When stripping BuildKit, replace `npm install -g {pm}@latest` with exact project `packageManager` version from `package.json` (e.g., `pnpm@9.4.0`). Upstream `@latest` may conflict with base image Node.js version.
 
-⛔ Handle multi-line continuations (`\`) — remove the BuildKit flag but preserve the actual command across all continuation lines. Never leave a bare `RUN` with no command.
+⛔ For multi-line continuations (`\`), remove BuildKit flag but preserve command across all lines. Never leave bare `RUN`.

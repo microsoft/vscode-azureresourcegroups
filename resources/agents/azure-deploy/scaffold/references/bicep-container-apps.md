@@ -1,17 +1,17 @@
 # Bicep — Container Apps Patterns
 
-Container Apps-specific Bicep patterns. For shared patterns (skeleton, naming, tags, security defaults, data modules), see [bicep-patterns.md](bicep-patterns.md).
+Container Apps Bicep patterns. For shared skeleton, naming, tags, security defaults, and data modules, see [bicep-patterns.md](bicep-patterns.md).
 
 ## Two-Phase Wiring
 
-Container Apps + ACR requires two-phase deployment (circular dependency: CA needs ACR image, ACR needs CA identity for AcrPull):
+Container Apps + ACR requires two-phase deploy: CA needs ACR image; ACR needs CA identity for AcrPull.
 
-1. **Phase 1:** Deploy Container App with placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`). ⛔ **No `registries` block.** The placeholder image is pulled from MCR (public). Use `registries: []`. Native `secrets` (literal values) MAY be set in Phase 1 — they have no RBAC dependency. **The AcrPull role assignment IS created in Phase 1** — it doesn't affect the placeholder deployment and needs 1–2 minutes to propagate before Phase 2.
+1. **Phase 1:** Deploy Container App with public MCR placeholder image (`mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`). ⛔ **No `registries` block.** Use `registries: []`. Native `secrets` (literal values) MAY be set in Phase 1; no RBAC dependency. **Create AcrPull role assignment in Phase 1**; it doesn't affect placeholder deployment and needs 1–2 minutes to propagate before Phase 2.
 2. **Phase 2:** Build + push app image to ACR, redeploy with real image + `registries`. AcrPull RBAC is already propagated from Phase 1.
 
-> ⛔ **Placeholder image listens on port 80, not your app's port.** Set `targetPort` conditionally: `var effectivePort = containerImage == 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' ? 80 : appPort`. Mismatched ports cause "Operation expired" (health probe can't reach container).
+> ⛔ **Placeholder image listens on port 80, not app port.** Set `targetPort` conditionally: `var effectivePort = containerImage == 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' ? 80 : appPort`. Mismatch causes "Operation expired" because health probe can't reach container.
 
-> ⛔ **`containerImage` param must exist in BOTH `main.bicep` AND the container app module.** Phase 2 passes `--parameters containerImage='...'` via CLI — if `main.bicep` lacks the param, the override is silently ignored and the placeholder persists.
+> ⛔ **`containerImage` param must exist in BOTH `main.bicep` AND container app module.** Phase 2 passes `--parameters containerImage='...'`; without `main.bicep` param, CLI silently ignores override and placeholder persists.
 
 ```bicep
 // In main.bicep: thread containerImage to module
@@ -46,7 +46,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
 }
 ```
 
-> ⛔ **Do NOT set `revisionSuffix`.** Omit it entirely — ARM auto-generates unique revision names. Hardcoding `revisionSuffix: 'v1'` causes Phase 2 redeploy to fail with "revision with suffix v1 already exists."
+> ⛔ **Do NOT set `revisionSuffix`.** Omit entirely; ARM auto-generates unique revision names. Hardcoding `revisionSuffix: 'v1'` makes Phase 2 fail: "revision with suffix v1 already exists."
 
 ### AcrPull Role Assignment
 
@@ -66,7 +66,7 @@ resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 ## Log Analytics Workspace Key
 
-> ⛔ **Use `resource.listKeys()`, NOT `reference()`.** `reference()` does not expose `primarySharedKey`.
+> ⛔ **Use `resource.listKeys()`, NOT `reference()`.** `reference()` lacks `primarySharedKey`.
 
 ```bicep
 // ✅ Correct
@@ -78,7 +78,7 @@ var laKey = reference(logAnalyticsWorkspace.id, '2023-09-01').primarySharedKey
 
 ### Log Analytics customerId vs resource ID
 
-> ⛔ **Output BOTH `id` and `customerId` from the log-analytics module.** Container Apps Environment needs the GUID `customerId`. App Insights needs the ARM resource ID. Do NOT use `split(workspaceId, '/')[8]` — that extracts the workspace name, not the GUID.
+> ⛔ **Output BOTH `id` and `customerId` from log-analytics module.** Container Apps Environment needs GUID `customerId`; App Insights needs ARM resource ID. Do NOT use `split(workspaceId, '/')[8]`; it returns workspace name, not GUID.
 
 ```bicep
 // log-analytics.bicep outputs:
@@ -103,7 +103,7 @@ properties: {
 
 ## Ingress & Port Mapping
 
-> ⛔ **Container resource limits:** Use decimal format for memory: `'0.5Gi'`, `'1Gi'`, `'2Gi'` — NOT Kubernetes-style `'512Mi'`. CPU must be type `string`: `'0.25'`, `'0.5'`, `'1'`. Valid combos: `0.25/0.5Gi`, `0.5/1Gi`, `0.75/1.5Gi`, `1/2Gi`, `1.25/2.5Gi`, `1.5/3Gi`, `1.75/3.5Gi`, `2/4Gi`.
+> ⛔ **Container resource limits:** Memory uses decimal `'0.5Gi'`, `'1Gi'`, `'2Gi'`, NOT Kubernetes `'512Mi'`. CPU type must be `string`: `'0.25'`, `'0.5'`, `'1'`. Valid combos: `0.25/0.5Gi`, `0.5/1Gi`, `0.75/1.5Gi`, `1/2Gi`, `1.25/2.5Gi`, `1.5/3Gi`, `1.75/3.5Gi`, `2/4Gi`.
 
 > ⛔ **ACR module:** `retentionPolicy` is **Premium-only**. For Basic/Standard ACR, omit `retentionPolicy` entirely — ARM rejects it.
 

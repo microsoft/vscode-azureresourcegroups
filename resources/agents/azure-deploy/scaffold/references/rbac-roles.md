@@ -1,12 +1,12 @@
 # RBAC — Common Roles Reference
 
-Shared reference for role assignment GUIDs used in both Bicep and Terraform. Loaded by both pattern files.
+Role assignment GUID reference for Bicep and Terraform. Both pattern files load it.
 
 ## Deterministic Role Assignments
 
-Use `guid()` (Bicep) or deterministic naming (Terraform) for reproducible assignment names. Always set `principalType` to `'ServicePrincipal'` — prevents AAD graph lookup delays.
+Use `guid()` (Bicep) or deterministic naming (Terraform) for reproducible assignment names. Always set `principalType` to `'ServicePrincipal'` to prevent AAD graph lookup delays.
 
-If the required role is NOT in the table below, call `azure__documentation` with the target resource type to look up the correct built-in role definition ID before generating the role assignment.
+If required role is absent below, call `azure__documentation` with target resource type for correct built-in role definition ID before generating assignment.
 
 | Role | ID | Use |
 |------|-----|-----|
@@ -28,7 +28,7 @@ If the required role is NOT in the table below, call `azure__documentation` with
 
 ## Cosmos DB — Data Plane RBAC (NOT ARM RBAC)
 
-⛔ **Cosmos DB uses its OWN role system** — do NOT use `Microsoft.Authorization/roleAssignments` for Cosmos DB data access. ARM RBAC roles (Contributor, Reader) grant control-plane access only. For data access (read/write documents), use `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments`.
+⛔ **Cosmos DB uses its OWN role system** — do NOT use `Microsoft.Authorization/roleAssignments` for Cosmos DB data access. ARM RBAC roles (Contributor, Reader) grant only control-plane access. For document read/write, use `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments`.
 
 | System | Resource type | Use for |
 |--------|--------------|--------|
@@ -41,7 +41,7 @@ Built-in Cosmos DB data roles:
 
 ## Delegation
 
-For complex RBAC scenarios (custom roles, cross-subscription, conditional access), AppOnboard does not generate custom role definitions inline. Instead, append an entry to `prepare-plan.json → postDeployRecommendations[]` (schema: `PostDeployRecommendation` in [`prepare-schemas.ts`](../../prepare/references/prepare-schemas.ts)):
+For complex RBAC (custom roles, cross-subscription, conditional access), AppOnboard does not generate inline custom role definitions. Append to `prepare-plan.json → postDeployRecommendations[]` (schema: `PostDeployRecommendation` in [`prepare-schemas.ts`](../../prepare/references/prepare-schemas.ts)):
 
 ```json
 {
@@ -52,4 +52,4 @@ For complex RBAC scenarios (custom roles, cross-subscription, conditional access
 }
 ```
 
-At handoff, the agent will detect this recommendation and offer to call `mcp_azure_mcp_role` to list existing role assignments and create custom roles for the deployed resource group. See `handoff-protocol.md` Agent-Based Next Steps — the RBAC condition row triggers this automatically.
+At handoff, agent detects recommendation and offers `mcp_azure_mcp_role` to list existing assignments and create custom roles for deployed resource group. `handoff-protocol.md` Agent-Based Next Steps RBAC row triggers this automatically.

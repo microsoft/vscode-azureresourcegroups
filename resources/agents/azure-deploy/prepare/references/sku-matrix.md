@@ -1,6 +1,6 @@
 # SKU Selection Matrix
 
-Select SKU based on `context.json.intent.budget`. Cross-reference with `intent.scale` for right-sizing.
+Select SKU from `context.json.intent.budget`; right-size with `intent.scale`.
 
 ## Budget Tiers
 
@@ -19,7 +19,7 @@ Select SKU based on `context.json.intent.budget`. Cross-reference with `intent.s
 | Functions | Flex Consumption | Flex Consumption | Premium EP1 |
 | Log Analytics | PerGB2018 | PerGB2018 | PerGB2018 (dedicated cluster) |
 
-> ⚠️ **Log Analytics `Free` SKU is deprecated.** ARM rejects it with some API versions and retention settings. Always use `PerGB2018` — first 5 GB/month is free anyway.
+> ⚠️ **Log Analytics `Free` SKU is deprecated.** Some API versions/retention settings reject it. Always use `PerGB2018`; first 5 GB/month remains free.
 
 > ⛔ **Functions floor is Flex Consumption — NOT Consumption or Elastic Premium.** The Consumption and Elastic Premium plans back `AzureWebJobsStorage` with Azure Files, which does **not** support managed-identity connections and therefore **requires `allowSharedKeyAccess` on the storage account** — banned by the managed-identity-only rule (and the KV workaround for the Files connection string is also banned). **Flex Consumption** supports identity-based `AzureWebJobsStorage` (`AzureWebJobsStorage__accountName` + `AzureWebJobsStorage__credential=managedidentity`), so it is the only Functions plan compatible with `allowSharedKeyAccess: false`. Never select Consumption/Elastic Premium — this is the same floor-raise as App Service F1→B1.
 
@@ -38,6 +38,6 @@ Select SKU based on `context.json.intent.budget`. Cross-reference with `intent.s
 
 ## Auto-Cheapest for Fast-Track
 
-⛔ **If `prereq-output.json.fastTrackEligible == true` AND `context.json.intent.budget` is unset, treat as `cost-optimized`.** Fast-track means single-component + no DB + no auth + no Dockerfile. Pick **App Service B1 (Basic)** for dynamic apps that need a runtime (Node.js/Python starter templates), or **Static Web Apps Standard** for pure static HTML/JS/CSS with no server-side runtime. The user still sees the SKU + monthly cost in the scaffold approval gate — they can override via "Edit plan". Do NOT ask the user about budget unless they mention cost first (per [intent-gathering.md](../../references/intent-gathering.md)).
+⛔ **If `prereq-output.json.fastTrackEligible == true` AND `context.json.intent.budget` is unset, use `cost-optimized`.** Fast-track means single component, no DB/auth/Dockerfile. Use **App Service B1 (Basic)** for dynamic runtime apps (Node.js/Python starters), or **Static Web Apps Standard** for pure static HTML/JS/CSS without server runtime. Scaffold gate still shows SKU + monthly cost; user may override through "Edit plan". Do NOT ask budget unless user mentions cost first, per [intent-gathering.md](../../references/intent-gathering.md).
 
 ⛔ **There is no free promise — fast-track starts at the B1 / SWA Standard floor.** If the chosen floor SKU is unavailable during deploy prep (no B1 quota — see [sku-quota-validation.md](sku-quota-validation.md) § After Checking), fall back to the **cheapest AVAILABLE** tier at or above the floor. Record an `assumptions[]` note stating WHY the SKU differs, so the approval gate presents the resulting cost.
