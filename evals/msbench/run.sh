@@ -41,10 +41,12 @@ set -euo pipefail
 
 SKIP_BUILD=0
 BUILD_ONLY=0
+SELF_TEST_RESULTS_ARCHIVE=0
 STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
 MODEL=""
+BACKEND="ces-dev1"
 PASSTHRU=()
 # The benchmark dataset naming the container image to run in. Empty means "use
 # whatever MSBench's published data says for $BENCHMARK", which is the stock
@@ -68,6 +70,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --skip-build) SKIP_BUILD=1 ;;
         --build-only) BUILD_ONLY=1 ;;
+        --self-test-results-archive) SELF_TEST_RESULTS_ARCHIVE=1 ;;
         --stimulus) shift; [ $# -gt 0 ] || { echo "--stimulus needs a value" >&2; exit 1; }; STIMULUS="$1" ;;
         --stimulus=*) STIMULUS="${1#*=}" ;;
         # Intercepted, NOT passed through. `msbench-cli run` is already invoked
@@ -91,6 +94,11 @@ while [ $# -gt 0 ]; do
             [ $# -gt 0 ] || { echo "--data_dir needs a value" >&2; exit 1; }
             DATA_DIR="$1"; PASSTHRU+=("$1") ;;
         --data_dir=*|--data-dir=*) DATA_DIR="${1#*=}"; PASSTHRU+=("$1") ;;
+        --backend)
+            PASSTHRU+=("$1"); shift
+            [ $# -gt 0 ] || { echo "--backend needs a value" >&2; exit 1; }
+            BACKEND="$1"; PASSTHRU+=("$1") ;;
+        --backend=*) BACKEND="${1#*=}"; PASSTHRU+=("$1") ;;
         *) PASSTHRU+=("$1") ;;
     esac
     shift
@@ -169,6 +177,36 @@ MSBENCH_VSCODE_SPEC="msbench-agent-vscode>=0.0.22"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+archive_has_instance_output() {
+    local archive="${1:-}"
+    [ -n "$archive" ] && [ -f "$archive" ] || return 1
+    local listing
+    listing="$(unzip -Z1 "$archive" 2>/dev/null)" || return 1
+    case "$listing" in
+        *-output.zip*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+if [ "$SELF_TEST_RESULTS_ARCHIVE" -eq 1 ]; then
+    TEST_PYTHON=""
+    for candidate in python3.12 python3.11 python3.10 python3 python; do
+        if command -v "$candidate" >/dev/null 2>&1 && \
+           "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)' 2>/dev/null; then
+            TEST_PYTHON="$candidate"; break
+        fi
+    done
+    [ -n "$TEST_PYTHON" ] || die "Result-archive self-test needs Python."
+    TEST_ROOT="$(mktemp -d)"
+    trap 'rm -rf "$TEST_ROOT"' EXIT
+    "$TEST_PYTHON" -c 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w"); z.writestr("run_metadata.json","{}"); z.close()' "${TEST_ROOT}/metadata.zip"
+    "$TEST_PYTHON" -c 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w"); z.writestr("vscbench.eval.x86_64.case-output.zip","x"); z.close()' "${TEST_ROOT}/output.zip"
+    archive_has_instance_output "${TEST_ROOT}/metadata.zip" && die "Metadata-only archive was accepted as a result."
+    archive_has_instance_output "${TEST_ROOT}/output.zip" || die "Archive containing instance output was rejected."
+    log "Result archive readiness self-test passed."
+    exit 0
+fi
 
 # --- resolve the dataset ------------------------------------------------------
 #
@@ -542,11 +580,63 @@ if [ -n "$RUN_ID" ]; then
         if [ -f "$candidate" ]; then RESULTS_ZIP="$candidate"; break; fi
     done
 
-    if [ -z "$RESULTS_ZIP" ]; then
+    # CES marks execution complete before its instance artifact has necessarily
+    # finished ingesting. In that window msbench-cli writes a valid ZIP containing
+    # only run_metadata.json and exits 0. Runs 2026091876284982 and
+    # 2026091876907797 both did exactly that; both instance outputs appeared later
+    # and were green. Treat archive shape, not CLI completion, as readiness.
+    #
+    # Each refresh uses a fresh data directory. msbench-cli considers any readable
+    # cached ZIP complete, including the metadata-only one, so retrying against the
+    # original cache never contacts CES and can wait forever on bytes already present.
+    RESULTS_WAIT_SECONDS="${MSBENCH_RESULTS_WAIT_SECONDS:-900}"
+    RESULTS_POLL_SECONDS="${MSBENCH_RESULTS_POLL_SECONDS:-30}"
+    case "$RESULTS_WAIT_SECONDS" in ''|*[!0-9]*) die "MSBENCH_RESULTS_WAIT_SECONDS must be a positive integer." ;; esac
+    case "$RESULTS_POLL_SECONDS" in ''|*[!0-9]*) die "MSBENCH_RESULTS_POLL_SECONDS must be a positive integer." ;; esac
+    [ "$RESULTS_WAIT_SECONDS" -gt 0 ] && [ "$RESULTS_POLL_SECONDS" -gt 0 ] \
+        || die "MSBENCH_RESULTS_WAIT_SECONDS and MSBENCH_RESULTS_POLL_SECONDS must be positive integers."
+
+    if ! archive_has_instance_output "$RESULTS_ZIP"; then
+        [ -n "$RESULTS_ZIP" ] \
+            && log "Run ${RUN_ID} is complete but its archive is metadata-only; waiting for instance ingestion." \
+            || log "Run ${RUN_ID} is complete but has no result archive yet; waiting for instance ingestion."
+
+        RESULTS_TARGET="${RESULTS_ZIP:-${RESULTS_CANDIDATES[0]}}"
+        WAITED=0
+        while [ "$WAITED" -lt "$RESULTS_WAIT_SECONDS" ]; do
+            REFRESH_ROOT="$(mktemp -d)"
+            set +e
+            MSBENCH_DOWNLOAD_STRATEGY=archive \
+                "${VENV}/${VENV_BIN}/msbench-cli${VENV_EXE}" extract \
+                    --backend "$BACKEND" \
+                    --data_dir "${REFRESH_ROOT}/data" \
+                    --output "${REFRESH_ROOT}/out" \
+                    --run_id "$RUN_ID" >/dev/null 2>&1
+            REFRESH_STATUS=$?
+            set -e
+
+            REFRESH_ZIP="${REFRESH_ROOT}/data/${RUN_ID}/results.zip"
+            if [ "$REFRESH_STATUS" -eq 0 ] && archive_has_instance_output "$REFRESH_ZIP"; then
+                mkdir -p "$(dirname "$RESULTS_TARGET")"
+                cp "$REFRESH_ZIP" "$RESULTS_TARGET"
+                RESULTS_ZIP="$RESULTS_TARGET"
+                rm -rf "$REFRESH_ROOT"
+                log "Instance output became available after ${WAITED} second(s)."
+                break
+            fi
+            rm -rf "$REFRESH_ROOT"
+
+            sleep "$RESULTS_POLL_SECONDS"
+            WAITED=$((WAITED + RESULTS_POLL_SECONDS))
+            log "Still waiting for instance ingestion (${WAITED}/${RESULTS_WAIT_SECONDS}s)."
+        done
+    fi
+
+    if ! archive_has_instance_output "$RESULTS_ZIP"; then
         # Loud AND fatal. verify-run.ts is what distinguishes a genuine result from
         # a throttled one or one answered by the wrong model, and check-assertions.ts
-        # is what says whether the assertions held. Neither can run without the
-        # results, so at this point the run's verdict is simply unknown.
+        # is what says whether the assertions held. Neither can run without an
+        # instance output, so at this point the run's verdict is simply unknown.
         #
         # Unknown is reported as failure, not as success. "We could not tell" and
         # "it passed" are the same thing to anyone reading an exit code, and the
@@ -554,10 +644,9 @@ if [ -n "$RUN_ID" ]; then
         # unrecoverable — nobody investigates green. Exit 70 (EX_SOFTWARE) rather
         # than 1, so an unverifiable run is distinguishable from a genuinely red
         # one; a harness problem and a product regression need different people.
-        echo "ERROR: run ${RUN_ID} completed but results.zip was not found, so neither" >&2
-        echo "verify-run.ts nor check-assertions.ts could run. This run is UNVERIFIED:" >&2
-        echo "a throttled run, a wrong-model run, and a run whose assertions failed all" >&2
-        echo "look identical from here. Reported as a failure rather than a pass." >&2
+        echo "ERROR: run ${RUN_ID} completed, but no instance output was available after" >&2
+        echo "${RESULTS_WAIT_SECONDS} seconds. Neither verify-run.ts nor check-assertions.ts" >&2
+        echo "could run, so this result is UNVERIFIED and is reported as a failure." >&2
         printf '  looked in: %s\n' "${RESULTS_CANDIDATES[@]}" >&2
         exit 70
     else

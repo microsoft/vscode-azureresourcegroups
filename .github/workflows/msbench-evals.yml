@@ -12,8 +12,8 @@ name: MSBench Evals
 #           resources/agents/ passes every other check in the repo and then shows
 #           up as an agent that mysteriously ignores its instructions. Needs no
 #           credentials, so it catches that on a PR instead of in an MSBench run.
-#   eval  - submits to MSBench. Needs Azure auth, so it is manual-only; see
-#           evals/msbench/README.md ("Running in CI") for the one-time setup.
+#   eval  - submits to MSBench manually, or nightly after the repository variable
+#           MSBENCH_SCHEDULE_ENABLED is set to true. See evals/msbench/README.md.
 #
 # Unlike the credential-free gates in agent-contracts.yml, this cannot ride on
 # GITHUB_TOKEN: MSBench runs on CES, which authenticates callers by Entra client id.
@@ -41,6 +41,10 @@ on:
         description: 'Repo-relative dataset naming a custom container image. Leave empty for the stock image. Use evals/msbench/container/dataset.jsonl together with benchmark=corbench.cor_functions_host to get one with func.'
         required: false
         default: ''
+  # GitHub schedules are UTC. 09:00 UTC is 02:00 Pacific during daylight time
+  # and 01:00 during standard time.
+  schedule:
+    - cron: '0 9 * * *'
 
 env:
   NODE_VERSION: '22'
@@ -49,6 +53,7 @@ env:
 jobs:
   # Everything that can be verified without credentials.
   build:
+    if: github.event_name != 'schedule' || vars.MSBENCH_SCHEDULE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -80,11 +85,15 @@ jobs:
           retention-days: 7
 
   eval:
-    # Manual only: the Azure identity has to be allowlisted by the MSBench team
-    # before this can pass, so running it on PRs would only ever be red.
-    if: github.event_name == 'workflow_dispatch'
+    # Keep the checked-in schedule inert until a manual main-branch canary proves
+    # OIDC, submission, ingestion and verification. PR execution remains excluded
+    # because every eval submits a paid run.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.MSBENCH_SCHEDULE_ENABLED == 'true')
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: msbench-paid-eval
+      cancel-in-progress: false
     # A cold run is ~15 min; the timeout is generous so a slow queue does not
     # look like a product failure.
     timeout-minutes: 60
@@ -138,14 +147,14 @@ jobs:
       - name: Run the MSBench eval
         run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
         env:
-          BENCHMARK: ${{ inputs.benchmark }}
-          STIMULUS: ${{ inputs.stimulus }}
+          BENCHMARK: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark || 'vscbench.say_hello' }}
+          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'scaffold-unapproved-plan' }}
           # Empty means the stock image, which is the default for every run that
           # is not specifically exercising the custom one. Note the CI identity
           # needs no registry permission either way: CES pulls the image with its
           # own service principal, so the AcrPull grant is on that principal and
           # nothing about it is caller- or machine-specific.
-          DATASET: ${{ inputs.dataset }}
+          DATASET: ${{ github.event_name == 'workflow_dispatch' && inputs.dataset || '' }}
 
       # Keep the report and per-instance data so a failure can be diagnosed from
       # the transcript and patch rather than by re-running.

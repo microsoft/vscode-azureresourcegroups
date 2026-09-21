@@ -7,7 +7,7 @@
 # through to `azure-debug-generate`, which must emit `.vscode/launch.json`,
 # `.vscode/tasks.json` and friends that conform to the plan the user approved.
 #
-# This is the longest chain in the folder — four turns, two agents, a real
+# This is the longest chain in the folder — five turns, two agents, a real
 # scaffold and a real generate. Everything about the setup is shared with
 # config/stimuli/debug-plan-approval-gate.yaml: why the scaffold is chained rather
 # than seeded, why `promptSteps[].chatMode` is used, why the `handoff` step type
@@ -44,7 +44,7 @@
 
 # Same seed and same precondition as debug-plan-approval-gate.yaml. A seed that
 # silently failed to copy would take out the scaffold turn, then the plan turn,
-# then the generate turns, and report four turns of red for a failed `cp`.
+# then the generate turns, and report five turns of red for a failed `cp`.
 preConditions:
   - comment: The approved plan seed must be present before the agent starts
     exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
@@ -59,14 +59,14 @@ promptSteps:
       `.azure/project-plan.md` and scaffold the project.
     assertions:
       # Liveness sentinel, turn 0. One per turn — see README.md, "Multi-turn
-      # stimuli". With four turns this file is the strongest case for the rule:
+      # stimuli". With five turns this file is the strongest case for the rule:
       # a run that dies at turn 1 would otherwise report the turn-3 negatives as
       # passes.
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # vally: constraints.reject_tools [vscode_askQuestions] — turn 0 copy.
-      # Four copies, one per turn, for the same reason as in the paired file: the
+      # Five copies, one per turn, for the same reason as in the paired file: the
       # implied stepIndex filter means each copy sees exactly one turn.
       - comment: Agent should not fall back to the chat question tool (turn 0)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
@@ -188,3 +188,22 @@ promptSteps:
       - comment: Environment fingerprint for triage
         exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'
         assertZeroExitCode: false
+
+  # ─── Turn 4: approve the deployment hand-off ─────────────────────────────
+  #
+  # Turn 3 proves the agent does not deploy merely because generation completed.
+  # This turn uses the exact option its instructions present and requires the
+  # opposite result, so an agent that always or never hands off fails one half of
+  # the pair. The MCP tool is a stub in MSBench: it records the hand-off without
+  # opening a deployment chat or provisioning resources.
+  - chatMode: azure-debug-generate
+    text: "Deploy to Azure"
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should start deployment after the user selects Deploy to Azure
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 4)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

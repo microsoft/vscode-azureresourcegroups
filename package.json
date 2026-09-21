@@ -1022,7 +1022,7 @@
         "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
         "build:check": "tsc --noEmit",
         "package": "vsce package --githubBranch main",
-        "lint": "eslint --max-warnings 0",
+        "lint": "eslint --max-warnings 0 && npm run eval:drift",
         "test": "vscode-test",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor",

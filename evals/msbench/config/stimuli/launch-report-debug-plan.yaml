@@ -1,0 +1,17 @@
+# Launch-only coverage for `azure-debug-plan`.
+#
+# phase: agent-launch
+#
+# The functional local-dev stimulus first scaffolds in the same chat. This probe
+# makes debug-plan the first active mode so its startup-report instruction is
+# tested at the boundary where it applies.
+
+promptSteps:
+  - chatMode: azure-debug-plan
+    text: "Briefly state whether you can begin the local debugging plan, then stop without reading or modifying workspace files."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
