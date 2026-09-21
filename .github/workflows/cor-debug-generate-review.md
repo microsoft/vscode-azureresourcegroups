@@ -2,6 +2,9 @@
 name: CoR Azure Debug Generate Review
 description: Review `azure-debug-generate` custom agent instructions against a rubric.
 on:
+  # pull_request_target pulls from the base repository's default branch (main).
+  # This keeps the inlined reviewer and rubric trusted so a PR submission isn't able to redefine its own rubric.
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target
   pull_request_target:
     types: [opened, ready_for_review]
     paths:
