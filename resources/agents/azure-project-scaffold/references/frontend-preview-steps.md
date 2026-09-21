@@ -50,7 +50,7 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 
 ## Sub-step F2: Create the Mock Data Layer Behind the `src/api/` Seam
 
-> **Load-bearing seam rule.** **No file outside `services/web/src/api/` imports the mock** — not pages, not hooks, not shared components, not the auth provider. They all import a single `api` object from `services/web/src/api/` (the seam). At scaffold time that `api` is backed by the mock implementation; at integrate time the integrate agent swaps **one file** (`src/api/index.ts`) to point at the live client and deletes the mock impl — **with no edits anywhere outside `src/api/`**. Anything that imported `src/mocks/` directly stops compiling the moment the mock is deleted, which is exactly what turns the one-file swap into a rewrite.
+> **Load-bearing seam rule.** **No file outside `services/web/src/api/` imports the mock** — not pages, not hooks, not shared components, not the auth provider. They all import a single `api` object from `services/web/src/api/` (the seam). At scaffold time that `api` is backed by the mock implementation; at integrate time the integrate agent swaps **one file** (`src/api/index.ts`) to point at the live client and deletes the mock impl — **with no data-access call-site rewrites outside `src/api/`**. Form validation/error handling is a separate contract that integration may repair after the backend schema exists. Anything that imported `src/mocks/` directly stops compiling the moment the mock is deleted, which is exactly what turns the one-file swap into a rewrite.
 >
 > **If a file needs data the `ApiClient` interface does not expose — including reference data the plan has no route for — add a method to the interface (F1) and back it with the mock. Never import the fixture.** This case is not an exemption from the rule and it is not a judgement call: extend the seam. Wire the seam exactly as below so the swap stays a single-file edit.
 
@@ -72,6 +72,8 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 | Create pages | One page per major feature, wired to the `api` object from the seam — `import { api } from '@/api'` (or the relative `../api`). **Never import from `src/mocks/` or `src/api/mockClient.ts` in ANY file outside `src/api/`** — not a page, not a hook, not a shared component, not the auth provider. Need an assignee name, the signed-in user, or any other reference data? Add an `ApiClient` method for it (F1) and call it through the seam. This is what keeps integration a one-file swap. |
 | Create shared components | Reusable UI components (layout, nav, forms, cards) |
 | Error handling in hooks | Every async hook catches errors, handles loading/error states |
+| Keep form validation contract-backed | Until the backend schemas exist, enforce only constraints stated in the approved plan's request contract, plus required/type checks implied by it. **Do not invent stricter frontend-only minimum lengths, maximum lengths, patterns, enums, or cross-field rules.** |
+| Surface every submit failure | Client-side validation maps every issue to a visible field/form message before returning. Every rejected API call shows its standardized error message. On either failure, preserve entered values, clear the submitting state, and allow retry. A silent guard such as `if (!result.success) return` is forbidden. |
 | Destructive action confirmations | Delete and irreversible actions require user confirmation |
 | Auth context auto-login | When `API Login` is `Yes`, AuthProvider/auth context MUST auto-login on mount when no token exists, so preview opens to main authenticated content |
 | Account creation | When `API Login` is `Yes`, the login page MUST show a visible **Create account** button that routes to a dedicated create-account page. The page calls `api.createAccount(...)` through the seam and displays validation, duplicate-account, loading, and success states. This is required even though local auto-login makes the main authenticated content the initial preview. |
@@ -83,9 +85,9 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 
 > ⚠️ **PARALLEL STEP**: Frontend generation + build (F1–F4, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not the frontend — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while the Frontend sub-agent generates and builds `services/web/`.
 >
-> The Frontend sub-agent only needs to **generate and build** `services/web/` with mock data — it does **not** wire to the real backend. The verify agent, in a later session, swaps the seam (`src/api/index.ts`) from the mock client to the live client and replaces the local mock types with shared imports — a one-file swap at the seam, no page or hook edits.
+> The Frontend sub-agent only needs to **generate and build** `services/web/` with mock data — it does **not** wire to the real backend. The verify agent, in a later session, swaps the seam (`src/api/index.ts`) from the mock client to the live client and replaces the local mock types with shared imports — a one-file data-source swap at the seam. It edits pages/hooks only to remove preview-state wiring or reconcile forms with the finished backend contract.
 >
-> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend uses standalone mock types (`services/web/src/types/`) independent of `services/shared/`, behind the `ApiClient` seam (`src/api/`). Frontend UI changes (layout, styling, components) don't affect backend contracts. The verify agent merges both streams later by repointing the seam at the live client and replacing mock types with shared imports.
+> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend uses standalone mock types (`services/web/src/types/`) independent of `services/shared/`, behind the `ApiClient` seam (`src/api/`). The verify agent merges both streams later by repointing the seam at the live client, replacing mock types with shared imports, and checking every form against the finished backend validation schema.
 
 > ⚠️ ️ **WORKING DIRECTORY** (see also the top of this file): every `npx vite build`, `npm run build`, `npm install`, etc. **MUST run against the frontend folder** (e.g. `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** (e.g. `npm --prefix services/web run build`) — it loads the frontend's `package.json` regardless of where the shell starts. When invoking a binary directly (`npx vite build`), pass `cwd: services/web` on the same terminal call; do **not** assume a previous `cd` carried over.
 
@@ -96,7 +98,8 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 1. **Frontend builds with zero errors.** Build with a **working-directory-independent** command so it can't accidentally run from the workspace root: `npm --prefix <frontend-folder> run build` (e.g. `npm --prefix services/web run build`). `--prefix` resolves the frontend's `package.json` regardless of where the shell starts, so it's immune to the root-launch bug. Only fall back to `npx vite build` with `cwd: <frontend-folder>` if there is no `build` script. **Never run a bare `npx vite build` from the project root.**
 2. No `any` types in `.ts`/`.tsx` files.
 3. When `API Login` is `Yes`, local identity state is seeded so the app lands on main content, not a login page, on first load. Logging out exposes a login page with a visible **Create account** button and a working dedicated create-account page. When it is `No`, the frontend contains no auth UI or state.
-4. **Briefly note** that the frontend was generated and builds cleanly, and that backend work continues in parallel — one short sentence. **Then keep working** — no approval question, no waiting loop.
+4. Inspect every submit handler: no frontend-only constraint exceeds the approved request contract; every client validation failure and rejected API call renders a visible message; failed submissions preserve the entered values and allow retry.
+5. **Briefly note** that the frontend was generated and builds cleanly, and that backend work continues in parallel — one short sentence. **Then keep working** — no approval question, no waiting loop.
 
 > **CRITICAL**: Do NOT prompt "Would you like to preview?" or "Do you approve this UI?" during scaffolding — design approval already happened during planning via the HTML mock-up.
 
@@ -118,6 +121,7 @@ Even before it's wired to the backend, the frontend MUST meet these standards. T
 
 - No `any` types (use local type definitions in `services/web/src/types/`)
 - Hooks catch errors and handle loading/error states
+- Forms do not invent constraints beyond the approved request contract; validation and API failures are visible, preserve input, and allow retry
 - Destructive actions (delete, etc.) require `window.confirm()` before executing
 - `.tsx` for files containing JSX, `.ts` for pure TypeScript
 - All 4 data states handled: loading, error, empty, data (see quality-bar's State Coverage Contract for per-library primitives — `<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data), and all four reachable live via the **Mock State Switcher** (dev-only `?previewState=` override — see quality-bar's Mock State Switcher standard)

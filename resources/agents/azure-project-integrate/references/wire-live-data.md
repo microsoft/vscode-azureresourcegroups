@@ -1,6 +1,8 @@
 # Wire Frontend to Live Data
 
-> Read at **Step 3**. The scaffold built the frontend behind a stable `ApiClient` seam (`src/api/`), so wiring to live data is a **one-file swap** at the seam plus a types switch — not a call-site rewrite.
+> Read at **Step 3**. The scaffold built the frontend behind a stable `ApiClient` seam (`src/api/`), so normal
+> live-data wiring is a **one-file swap** at the seam plus a types switch. Form validation is the deliberate
+> exception: integration must compare each form with the finished backend contract and fix any mismatch.
 
 ---
 
@@ -12,7 +14,10 @@ The scaffold wired the frontend so **no page or hook imports the mock directly**
 - `src/api/mockClient.ts` — the mock implementation of `ApiClient` (reads `src/mocks/data.ts`).
 - `src/api/index.ts` — the **single swap point**: `export const api: ApiClient = mockClient;`
 
-Your job is to add the live implementation and repoint that one file. Because pages/hooks import only `api` from the seam, **you do not touch them**.
+Your job is to add the live implementation and repoint that one file. Pages/hooks normally remain unchanged because
+they import only `api` from the seam. **Do inspect and edit a form or its hook when its constraints or failure handling
+do not match the finished backend schema/OpenAPI contract.** The seam removes data-source rewrites; it does not excuse
+a broken user-facing contract.
 
 ---
 
@@ -62,10 +67,16 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
    export const api: ApiClient = liveClient;
    export type { ApiClient } from './types';
    ```
-   That single line (`mockClient` → `liveClient`) is the entire wire-up for the call sites. **No page or hook edits.**
+   That single line (`mockClient` → `liveClient`) is the entire data-source wire-up for the call sites. Page/hook
+   edits are unnecessary unless the form reconciliation below finds a validation or error-display mismatch.
 4. **Remove the mock layer.** Delete `src/api/mockClient.ts` and `src/mocks/*` (and any local duplicated types now sourced from shared). A lingering `import … from './mockClient'` or `from '../mocks'` means the step is not done.
 5. **Remove the Mock State Switcher.** The scaffold always adds a dev-only state switcher (`src/api/previewState.ts` + a fixed-corner Data/Loading/Empty/Error component) that forces the mock client into `loading` / `empty` / `error`. Delete `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — a lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher means the step is not done.
-6. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix any `.ts`/`.tsx` extension mismatch (JSX must be `.tsx`).
+6. **Reconcile every form with the backend contract.** Compare frontend validators, HTML attributes, and submit guards
+   with the finished backend validation schema or OpenAPI contract. Remove frontend-only constraints the backend does
+   not declare. Ensure client-side validation maps every issue to a visible field/form message; ensure `ApiError`
+   messages from non-2xx responses are displayed; preserve entered values, clear the submitting state, and allow
+   retry. A silent guard such as `if (!result.success) return` is a bug.
+7. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix any `.ts`/`.tsx` extension mismatch (JSX must be `.tsx`).
 
 > **If the scaffold did NOT leave a `src/api/` seam** (older scaffold, or a hand-written frontend): fall back to the call-site approach — find every `import … from '.../mocks'`, replace with a real `api.*` call, preserve the four data states. But first establish the seam (`src/api/index.ts`) so any future change stays a one-file swap.
 
