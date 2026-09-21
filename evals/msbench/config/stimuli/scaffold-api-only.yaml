@@ -81,8 +81,11 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      - comment: The API-only scaffold must not invent a frontend
-        exec: 'test ! -d /workspace/services/web && test ! -d /workspace/frontend && ! find /workspace -maxdepth 4 -type f \( -name "vite.config.*" -o -name "index.html" \) -print -quit | grep -q .'
+      # Uses the same service and frontend discovery as the stack-derived
+      # scaffold gate. It catches an invented Next/React/Vue app regardless of
+      # directory name rather than assuming services/web or Vite.
+      - comment: Scaffolded services match the ones the plan declared
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-service-fidelity.ts
 
       - comment: integration-plan.md satisfies the hand-off contract
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-integration-plan.ts

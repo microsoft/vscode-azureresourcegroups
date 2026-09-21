@@ -14,9 +14,6 @@ name: Agent Contracts
 # have been deleted rather than left unreferenced in the tree.
 on:
   pull_request:
-    branches:
-      - main
-      - 'rel/*'
   workflow_dispatch:
 
 env:
