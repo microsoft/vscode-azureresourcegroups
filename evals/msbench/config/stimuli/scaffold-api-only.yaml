@@ -67,7 +67,7 @@ promptSteps:
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       - comment: The approved project plan still satisfies its contract
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Approved
+        exec: 'node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Approved && grep -Eqi "App Type[^[:alnum:]]*:?[^[:alnum:]]*API[ -]?only" /workspace/.azure/project-plan.md && ! grep -Eqi "^## [0-9]+\\..*Frontend" /workspace/.azure/project-plan.md'
 
       - comment: Agent should hand off to the scaffold agent after approval
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
