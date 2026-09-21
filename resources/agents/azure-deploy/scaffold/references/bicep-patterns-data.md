@@ -21,6 +21,9 @@ param entraAdminType string = 'User'
 
 param allowedExtensions string = 'uuid-ossp,pgcrypto,pg_trgm'
 
+// App database from compose (e.g. POSTGRES_DB) — emit so it exists before migrations run.
+param appDbName string
+
 resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: pgName
   location: location
@@ -38,6 +41,14 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
+// ⛔ Child resources are SERIALIZED — see the ordering note below. Do not drop these dependsOn.
+// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Scaffold Gate.
+resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
+  parent: pg
+  name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
+  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
+}
+
 // Entra administrator (deploying principal) — required for token-based admin + migrations.
 resource pgAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
   parent: pg
@@ -47,13 +58,7 @@ resource pgAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-
     principalName: entraAdminName
     tenantId: subscription().tenantId
   }
-}
-
-// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Scaffold Gate.
-resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
-  parent: pg
-  name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
-  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
+  dependsOn: [ pgFirewall ]
 }
 
 // Allow PG extensions (uuid-ossp, pgcrypto, pg_trgm)
@@ -61,8 +66,32 @@ resource pgExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
   parent: pg
   name: 'azure.extensions'
   properties: { value: allowedExtensions, source: 'user-override' }
+  dependsOn: [ pgAdmin ]
+}
+
+// App database — emit so it exists before migrations run.
+resource pgDb 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
+  parent: pg
+  name: appDbName
+  properties: { charset: 'UTF8', collation: 'en_US.utf8' }
+  dependsOn: [ pgExtensions ]
 }
 ```
+
+> ⛔ **Serialize the child resources. `parent:` is not enough.**
+>
+> `parent:` only orders each child after the *server*, so ARM starts every child in parallel the moment the
+> server reports created. A Flexible Server is not yet accepting management operations at that instant, and the
+> administrator write is the one that notices:
+>
+> ```text
+> AadAuthOperationCannotBePerformedWhenServerIsNotAccessible
+> ```
+>
+> It is a race, so it does not reproduce reliably and it survives `az bicep build` and `what-if` — both validate
+> shape, neither executes ordering. A measured deployment hit it on two consecutive attempts before the chain
+> above fixed it. Chaining firewall → administrator → configurations → database costs nothing (these are fast
+> control-plane writes) and removes the whole failure mode. Keep the chain even when a child looks independent.
 
 Wire connection **parameters** (host, db name, MI username, `sslmode=require`) as plain app settings — NOT a Key Vault secret. The driver fetches an Entra access token at runtime as the password. The app's managed identity is granted a DB role post-deploy via `pgaadauth_create_principal` (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md) § Grant the app managed identity a DB role).
 

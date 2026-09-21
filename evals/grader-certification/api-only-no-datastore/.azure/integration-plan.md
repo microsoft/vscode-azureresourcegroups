@@ -50,6 +50,11 @@ The Node.js service in `src/server.js` exposes health, list, and create routes. 
 | `OE-ERROR-01` | Operational Excellence | Structured HTTP errors and health output | `src/server.js` | `npm test` |
 | `PE-BOUNDS-01` | Performance Efficiency | Project list and names have explicit bounds | Request validation in `src/server.js` | `npm test` |
 
+### Dependency Access
+
+None — this fixture reaches no Azure dependency. The item repository is a local file and the static
+file server is in-process, so no deployed identity or role is involved.
+
 ### Deferred Risks
 
 - Production recovery, identity, alerting, and load testing are outside this Development / Demo fixture.

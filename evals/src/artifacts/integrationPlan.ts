@@ -83,6 +83,7 @@ export function validateIntegrationPlanArtifact(
         findSection(sections, /\bworkload quality contract\b/i),
         findSection(sections, /\bapplication controls\b/i),
         findSection(sections, /\bdeferred risks?\b/i),
+        findSection(sections, /\bdependency access\b/i),
         issues,
     );
 
@@ -110,6 +111,7 @@ function validateQualityContract(
     contract: Section | undefined,
     controls: Section | undefined,
     deferredRisks: Section | undefined,
+    dependencyAccess: Section | undefined,
     issues: ArtifactValidationIssue[],
 ): void {
     if (!contract) {
@@ -125,6 +127,8 @@ function validateQualityContract(
             issues.push(issue('invalidQualityProfileField', `$.quality.${field}`, `${field} must be one of: ${allowed.join(', ')}.`));
         }
     }
+
+    validateDependencyAccess(dependencyAccess, issues);
 
     const body = controls?.body ?? '';
     if (!controls || !/\|\s*ID\s*\|\s*Pillar\s*\|\s*Control\s*\|\s*Evidence\s*\|\s*Integration Validation\s*\|/i.test(body)) {
@@ -150,6 +154,74 @@ function validateQualityContract(
 
     if (!deferredRisks || !deferredRisks.body.trim()) {
         issues.push(issue('missingDeferredRisks', '$.quality', 'Workload Quality Contract must preserve Deferred Risks, including an explicit "None" when there are none.'));
+    }
+}
+
+/**
+ * The row deployment reads to decide which role to assign and which probe to re-run.
+ *
+ * ## Why this is a hand-off field and not a deployment inference
+ *
+ * A local emulator authenticates with a connection string, which carries every permission, so an
+ * operation the deployed managed identity cannot call still passes every local test. The mismatch
+ * is invisible until after provisioning, where it surfaces as a degraded health endpoint on an
+ * otherwise correct deployment — measured twice: a `BlobServiceClient.getProperties()` probe 403s
+ * under `Storage Blob Data Contributor`, because *Get Blob Service Properties* is an ARM `action`
+ * and the data roles grant `dataActions` only.
+ *
+ * Naming the operation alongside the permission is what lets the two be compared before they are
+ * deployed. `shared-references/workload-quality.md` § Dependency access contract is the authoring
+ * side of this check.
+ *
+ * ## Why "None" is accepted
+ *
+ * A frontend-only or datastore-free project has no dependency to describe, and a gate that cannot
+ * be satisfied honestly is one agents learn to write around. `Deferred Risks` already takes the
+ * same shape, so an explicit `None` stays a statement rather than an omission — the distinction
+ * this validator actually cares about.
+ */
+function validateDependencyAccess(section: Section | undefined, issues: ArtifactValidationIssue[]): void {
+    if (!section || !section.body.trim()) {
+        issues.push(issue(
+            'missingDependencyAccess',
+            '$.quality.dependencyAccess',
+            'Workload Quality Contract must carry a Dependency Access table naming each dependency\'s operation, deployed identity, required permission, and local equivalent — or an explicit "None" when the project reaches no Azure dependency.',
+        ));
+        return;
+    }
+
+    const body = section.body;
+    if (/^\s*(?:[-*]\s*)?none\b/im.test(body) && !/^\s*\|/m.test(body)) {
+        return;
+    }
+
+    if (!/\|\s*Dependency\s*\|\s*Operation\s*\|\s*Deployed identity\s*\|\s*Required permission\s*\|\s*Local equivalent\s*\|/i.test(body)) {
+        issues.push(issue(
+            'missingDependencyAccess',
+            '$.quality.dependencyAccess',
+            'Dependency Access must use the Dependency | Operation | Deployed identity | Required permission | Local equivalent table.',
+        ));
+        return;
+    }
+
+    const rows = body.split(/\r?\n/)
+        .filter(line => /^\s*\|/.test(line) && !/^\s*\|[\s:-]+\|/.test(line))
+        .map(line => line.split('|').slice(1, -1).map(cell => cell.trim()))
+        .filter(row => row[0]?.toLowerCase() !== 'dependency');
+
+    if (rows.length === 0) {
+        issues.push(issue('missingDependencyAccess', '$.quality.dependencyAccess', 'Dependency Access table must name at least one dependency, or say "None".'));
+        return;
+    }
+
+    for (const row of rows) {
+        if (row.slice(0, 5).some(value => !value || /^(?:[-–—]|todo|tbd|n\/?a|implemented|done|managed identity)$/i.test(value))) {
+            issues.push(issue(
+                'incompleteDependencyAccess',
+                '$.quality.dependencyAccess',
+                `Dependency Access row "${row[0] || '(unnamed)'}" must name the operation the code calls, the deployed identity, the permission that authorizes it, and the local equivalent.`,
+            ));
+        }
     }
 }
 

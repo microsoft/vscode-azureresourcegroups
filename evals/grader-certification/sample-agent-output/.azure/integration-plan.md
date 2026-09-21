@@ -88,6 +88,11 @@ Production migration would replace the file store with managed storage. **NO see
 | `OE-ERROR-01` | Operational Excellence | Structured HTTP errors and health output | `src/server.js` | `npm test` |
 | `PE-BOUNDS-01` | Performance Efficiency | Project list and names have explicit bounds | Request validation in `src/server.js` | `npm test` |
 
+### Dependency Access
+
+None — this fixture stores projects in-process and reaches no Azure dependency, so no deployed
+identity or role is involved.
+
 ### Deferred Risks
 
 - Production recovery, identity, alerting, and load testing are outside this Development / Demo fixture.

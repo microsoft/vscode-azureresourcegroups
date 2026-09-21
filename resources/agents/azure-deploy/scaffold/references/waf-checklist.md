@@ -11,6 +11,9 @@ Per-pillar Well-Architected Framework alignment for AppOnboard-generated infrast
 - GRS storage for production data (Standard_GRS or RA-GRS)
 - Retry policies in application code for transient failures
 - Min replicas ≥ 1 for production Container Apps (no cold-start)
+- Data-service child resources are serialized, not left to `parent:` alone — a Flexible Server admits
+  management writes only after it becomes accessible, so parallel children race (see
+  [bicep-patterns-data.md](bicep-patterns-data.md) § ordering)
 
 ## Security
 
@@ -21,6 +24,9 @@ Per-pillar Well-Architected Framework alignment for AppOnboard-generated infrast
 - Private endpoints where budget allows (balanced/performance tiers)
 - No `administratorLogin`/password or access key on ANY data service (SQL, PostgreSQL, MySQL, Redis, Storage, Cosmos) — Entra / managed-identity-only auth
 - Compute floor B1 / SWA Standard — no F1/D1/Free (managed identity is mandatory)
+- Each assigned role authorizes the operations the app actually calls, **including its health probes** —
+  a data-plane role grants `dataActions` only, so a probe that calls an ARM `action` 403s on a
+  correctly-provisioned deployment (see `shared-references/workload-quality.md` § Dependency access contract)
 
 ## Cost Optimization
 

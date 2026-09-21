@@ -194,13 +194,20 @@ approved.
    - Authorization/validation match API Login and Data Classification.
    - Representative sensitive values do not appear in captured logs.
    - Correlation ID, pagination/payload bounds, and traffic-profile controls survive the live client.
-5. Fix failures within application/integration scope and re-run. Preserve architecture, compliance, RTO/RPO,
+5. Verify the `### Dependency Access` rows against the live client you just wired. For each dependency, the
+   operation named in the row must be the operation the code now calls — including its health probe — and it
+   must be one the named permission authorizes. Locally every client holds a connection string, which carries
+   every permission, so this is the one control a passing local run cannot confirm on its own: a probe that
+   calls an ARM `action` while the deployed identity holds only a data role passes here and 403s after
+   provisioning. Correct the row or the call so they agree, and leave the permission unchanged.
+6. Fix failures within application/integration scope and re-run. Preserve architecture, compliance, RTO/RPO,
    and other deployment-owned gaps under `Deferred Risks`; do not fabricate evidence.
-6. Append `### Integration Results` with one `PASS | FAIL | DEFERRED` row per control ID, the command/probe
+7. Append `### Integration Results` with one `PASS | FAIL | DEFERRED` row per control ID, the command/probe
    run, and concise evidence. Never write `WAF compliant`, `WAF certified`, or `100% WAF aligned`.
 
-> **✅ Checkpoint**: Every listed control has real evidence and a result. No failed application control is
-> silently carried forward; deployment-owned risks remain explicit.
+> **✅ Checkpoint**: Every listed control has real evidence and a result. Every dependency's operation and
+> permission agree. No failed application control is silently carried forward; deployment-owned risks remain
+> explicit.
 
 ---
 

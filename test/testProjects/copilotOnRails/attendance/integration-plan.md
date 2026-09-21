@@ -91,6 +91,13 @@ API Login is an application feature, not an Azure service. Its production signin
 | `OE-CORRELATION-01` | Operational Excellence | Requests and structured logs carry correlation IDs | request logging middleware | `npm test --workspace=api` |
 | `PE-BOUNDS-01` | Performance Efficiency | Calendar/compliance queries have bounded date ranges | shared validation schemas | `npm test --workspace=api` |
 
+### Dependency Access
+
+| Dependency | Operation | Deployed identity | Required permission | Local equivalent |
+|---|---|---|---|---|
+| PostgreSQL | `SELECT 1` health probe and attendance CRUD through `PostgresDatabaseService` | API app system-assigned managed identity | Database principal created with `pgaadauth_create_principal`, granted table/sequence privileges | `DATABASE_URL` against the Compose PostgreSQL container |
+| Blob Storage | List containers, one page, as the health probe | API app system-assigned managed identity | Storage Blob Data Contributor (`containers/read` is a `dataAction`) | Azurite client selected in explicit Development |
+
 ### Deferred Risks
 
 - Recovery targets, alert routing, and private networking are resolved during deployment planning.

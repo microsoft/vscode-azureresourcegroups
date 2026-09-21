@@ -274,6 +274,23 @@ app.http('health', {
 });
 ```
 
+> ⛔ **Each `healthCheck()` must call an operation the *deployed* identity is authorized to call.** Locally these
+> clients hold a connection string, which carries every permission, so a probe the managed identity cannot use
+> still passes every local test and only fails after provisioning.
+>
+> ```typescript
+> // ❌ 403 under Storage Blob Data Contributor — Get Blob Service Properties is an ARM `action`,
+> //    and the data roles grant `dataActions` only.
+> await blobServiceClient.getProperties({ abortSignal });
+>
+> // ✅ List Containers maps to `containers/read`, which the data role does grant.
+> await blobServiceClient.listContainers({ abortSignal }).byPage({ maxPageSize: 1 }).next();
+> ```
+>
+> Record the operation, the identity, and the role that authorizes it in the Dependency Access table
+> (`shared-references/workload-quality.md` § Dependency access contract) so deployment assigns that exact role
+> and re-runs that exact probe.
+
 ---
 
 ## Test Runner Configurations

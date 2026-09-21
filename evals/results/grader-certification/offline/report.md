@@ -3,12 +3,14 @@
 - Mode: `offline`
 - Fixtures: `stage-local-dev`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `reference-iac-deployed`, `safety-boundaries-clean`, `reference-frontend-integrated`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 178/178 passed
+- Cases: 180/180 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
 | `golden-stage-local-dev-frontend-scaffold` | `stage-local-dev` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `golden-stage-local-dev-integration-plan` | `stage-local-dev` | `integration-plan` | `passed` | `passed` | PASS |
+| `integration-plan-dependency-access-required` | `stage-local-dev` | `integration-plan` | `missingDependencyAccess` | `missingDependencyAccess` | PASS |
+| `integration-plan-dependency-access-permission-required` | `stage-local-dev` | `integration-plan` | `incompleteDependencyAccess` | `incompleteDependencyAccess` | PASS |
 | `golden-sample-agent-output-requirements` | `sample-agent-output` | `requirements` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-requirements-workload` | `sample-agent-output` | `requirements-workload` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-project-plan` | `sample-agent-output` | `project-plan` | `passed` | `passed` | PASS |

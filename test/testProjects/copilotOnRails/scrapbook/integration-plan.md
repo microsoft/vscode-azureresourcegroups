@@ -100,6 +100,13 @@
 | `OE-CORRELATION-01` | Operational Excellence | Upload and cleanup logs carry correlation IDs | request/job logging middleware | `npm test --workspace=scrapbook-api` |
 | `PE-BOUNDS-01` | Performance Efficiency | Upload size, list pagination, and cleanup batches are bounded | shared validation and cleanup configuration | `npm test --workspace=scrapbook-api` |
 
+### Dependency Access
+
+| Dependency | Operation | Deployed identity | Required permission | Local equivalent |
+|---|---|---|---|---|
+| PostgreSQL (database) | `SELECT 1` health probe and scrapbook CRUD | API app system-assigned managed identity | Database principal created with `pgaadauth_create_principal`, granted table/sequence privileges | `DATABASE_URL` against the Compose PostgreSQL container |
+| Azure Blob Storage | List containers, one page, as the health probe; upload/read page images | API app system-assigned managed identity | Storage Blob Data Contributor (`containers/read` and `containers/blobs/*` are `dataActions`) | `STORAGE_CONNECTION_STRING` against Azurite |
+
 ### Deferred Risks
 
 - Recovery targets, alert routing, private networking, and numeric burst throughput are resolved during deployment planning.

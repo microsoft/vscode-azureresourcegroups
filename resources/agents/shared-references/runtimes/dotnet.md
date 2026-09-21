@@ -528,12 +528,14 @@ public class Health(AppDbContext db, BlobServiceClient blobs, IConnectionMultipl
 >
 > | Service | ✅ Service-level probe | ❌ Resource-level probe (lazy-created) |
 > |---------|-----------------------|----------------------------------------|
-> | Blob Storage | `BlobServiceClient.GetPropertiesAsync` / `GetBlobContainersAsync().Take(1)` | `BlobContainerClient.GetPropertiesAsync` |
+> | Blob Storage | `GetBlobContainersAsync().Take(1)` | `BlobContainerClient.GetPropertiesAsync` |
 > | Service Bus | `ServiceBusAdministrationClient.QueueExistsAsync(knownQueue)` | sending to a topic the app creates on first publish |
 > | Cosmos DB | `CosmosClient.ReadAccountAsync` | `Container.ReadContainerAsync` |
 > | Event Hubs | `EventHubProducerClient.GetEventHubPropertiesAsync` (only if hub is pre-provisioned) | reading from an instance the app creates lazily |
 >
 > Probe the namespace/account; never the per-resource child unless the resource is provisioned out-of-band by IaC and is guaranteed to exist before the app starts.
+>
+> ⛔ **Service-level is necessary but not sufficient — the probe must also be authorized by the role you assign.** `BlobServiceClient.GetPropertiesAsync` is service-level and still wrong here: *Get Blob Service Properties* needs `Microsoft.Storage/storageAccounts/blobServices/read`, an ARM `action`, while `Storage Blob Data Contributor`/`Reader` grant `dataActions` only. Against a connection string it passes; against the managed identity it returns 403 and the health endpoint reports the dependency down on a correctly-provisioned deployment. Enumerating containers maps to `containers/read`, which the data role does carry. See `shared-references/workload-quality.md` § Dependency access contract.
 
 ---
 

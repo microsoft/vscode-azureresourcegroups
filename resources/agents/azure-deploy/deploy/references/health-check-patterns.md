@@ -93,3 +93,24 @@ Health checks only confirm the web server is responding. Exercise a route that d
 | `FIRST_SUPERUSER` env var or `prestart.sh`/`init_db()` | After health passes, attempt login endpoint. If 401/500 → startup scripts may have failed. Trigger `az containerapp revision restart` to re-run startup. |
 | Migration frameworks (Alembic, Django, Prisma, EF) | After health passes, check `prereq-output.json` for migration signals. If found, run migrations per [database-post-deploy.md](database-post-deploy.md). |
 | Two-phase Container Apps (managed identity) | Wait 60s after Phase 2 for AcrPull RBAC propagation. If the DB fails with auth/token errors, the app MI may not yet have its DB role — grant it (see [database-post-deploy.md](database-post-deploy.md)) and create a new revision. |
+
+### Re-run the Dependency Access probes
+
+`.azure/integration-plan.md` § Workload Quality Contract → **Dependency Access** names, per dependency, the
+operation the app calls, the identity it calls with, and the permission that authorizes it. That table is the
+deploy-time checklist, not background reading:
+
+1. Assign exactly the permission the row names to the identity the row names.
+2. **Wait for role propagation**, then run the row's operation against the *deployed* identity.
+3. Record the result per control ID in `deploy-result.json`.
+
+A control verified only against a local emulator is not verified. Emulator connection strings carry every
+permission, so the failure this catches — an operation the granted role does not authorize — cannot appear
+before deployment. `BlobServiceClient.getProperties()` under `Storage Blob Data Contributor` is the measured
+case: *Get Blob Service Properties* is an ARM `action`, the data roles grant `dataActions` only, and the
+result is a degraded health endpoint on infrastructure that deployed correctly.
+
+> ⛔ **Fix the role or the probe, not the application.** If an operation and its permission disagree, the
+> deployment either assigns the permission the contract names or reports the mismatch. Editing application
+> source mid-deploy to make a probe pass changes the thing under test and invalidates every control result
+> the integration phase recorded. Log it as a healing attempt either way.

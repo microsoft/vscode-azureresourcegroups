@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-17T20:13:27.868Z",
+  "generatedAt": "2026-09-21T18:31:45.990Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -38,6 +38,30 @@
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-dependency-access-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "expected": "missingDependencyAccess",
+      "actual": [
+        "missingDependencyAccess"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-dependency-access-permission-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "expected": "incompleteDependencyAccess",
+      "actual": [
+        "incompleteDependencyAccess"
+      ],
       "passed": true,
       "durationMs": 0
     },

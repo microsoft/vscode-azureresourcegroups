@@ -405,6 +405,28 @@
       "expectedCode": "incompleteQualityControl"
     },
     {
+      "id": "integration-plan-dependency-access-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "### Dependency Access",
+      "replacement": "### Implementation Notes",
+      "expectedCode": "missingDependencyAccess"
+    },
+    {
+      "id": "integration-plan-dependency-access-permission-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "Storage Blob Data Contributor (`containers/read` is a `dataAction`)",
+      "replacement": "TBD",
+      "expectedCode": "incompleteDependencyAccess"
+    },
+    {
       "id": "integration-plan-rejects-false-waf-claim",
       "tier": "offline",
       "fixture": "sample-agent-output",
