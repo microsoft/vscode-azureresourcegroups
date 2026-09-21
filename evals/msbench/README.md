@@ -2506,11 +2506,10 @@ on CES, which identifies callers by Entra client id, so CI needs a real Azure id
 then completed `Azure login`, submitted an MSBench run, verified the result, and uploaded
 the artifacts from `feat/CoR`.
 
-That success proves the identity, secrets and CES allowlist work together for the ref
-covered by that federated credential. It does **not** prove that another branch — including
-`main`, which a scheduled workflow uses — has a matching credential.
+That success proved the identity, secrets and CES allowlist together. The scheduled ref
+was then verified separately.
 
-### Remaining identity work: authorize `main`
+### The `main` identity is verified
 
 GitHub presents an **ID-based and ref-specific** subject. The original credential used a
 path-based subject, which never matched:
@@ -2521,16 +2520,24 @@ credential:  repo:microsoft/vscode-azureresourcegroups:ref:refs/heads/feat/CoR
 ```
 
 An ID-based credential for `feat/CoR` fixed that ref, but credentials remain ref-specific.
-The latest manual dispatch, workflow run
+A later branch dispatch, workflow run
 [`34435506147`](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/34435506147),
 used `nturinski-mermaid-label-quoting-490` and failed at `Azure login` with
 `AADSTS700213: No matching federated identity record found`. `run.sh` was never reached,
 so no MSBench run or token spend occurred.
 
-Before scheduling the workflow, add or verify an ID-based federated credential whose
-subject ends in `ref:refs/heads/main`, then dispatch the known-green canary from `main`.
-The subscription had a `ReadOnly` lock when the first credential was added; if creation
-is still rejected, an owner must lift that lock for the change.
+The exact ID-based `main` credential was added on 2026-09-21:
+
+```
+repository_owner_id:6154722:repository_id:238360694:ref:refs/heads/main
+```
+
+Workflow run
+[`35631933675`](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/35631933675)
+then passed `Azure login`, submitted run
+[`2026092162936642`](https://msbenchapp.azurewebsites.net/run-analysis/2026092162936642),
+verified the requested model, passed all six assertions, and uploaded its artifacts.
+The subscription's `ReadOnly` lock was restored immediately after adding the credential.
 
 **It also means a red `eval` job is not evidence about the eval.** Read which *step*
 failed before concluding anything: `Azure login` red is setup, `Run the MSBench eval` red
@@ -2833,9 +2840,9 @@ with a clear message:
   `capture_deployment_inventory`, `open_deploy_result_view`,
   `open_database_migration_access`, or `close_database_migration_access`. The current
   suite stops before provisioning and explicitly waives only the migration-access pair.
-- Add the `main` federated credential, run the known-green canary manually from
-  `main`, then set `MSBENCH_SCHEDULE_ENABLED=true`. The CES allowlist, repository
-  secrets, schedule, ingestion wait and paid workload are already in place.
+- Keep the known-green scheduled canary healthy. The `main` federated credential,
+  successful manual canary, CES allowlist, repository secrets, schedule switch,
+  ingestion wait and paid workload are all in place.
 - Expand gates and graders, including browser assertions for the preview canvas.
 
 
