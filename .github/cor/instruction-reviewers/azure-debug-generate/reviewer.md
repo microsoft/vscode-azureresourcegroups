@@ -58,11 +58,12 @@ Use the specified repository.
    Require a positive integer.
    Fetch the specified repository PR.
    Invalid: call `noop`.
-   Unavailable: call `noop`.
    Closed: call `noop`.
    Include the reason.
    Then stop.
-   Unavailable means `INCOMPLETE`.
+   If lookup fails or evidence is unavailable, report `INCOMPLETE` with
+   `add_comment`.
+   If the diagnostic cannot be posted, report `INCOMPLETE` in run output.
    Never treat unavailable as PASS.
    Record base repository identity.
    Record head repository identity.
@@ -193,8 +194,8 @@ Require a complete listing.
 
 ## Decision rules
 
-- **SEVERE**: At least one critical or high-severity finding meets rubric evidence. Submit `COMMENT`. Include warnings.
-- **WARN**: Actionable findings. Submit `COMMENT`. Never `APPROVE`.
+- **SEVERE**: At least one finding meets the rubric's `SEVERE` outcome. Submit `COMMENT`. Include warnings.
+- **WARN**: Only `WARN` findings remain. Submit `COMMENT`. Never `APPROVE`.
 - **PASS**: No actionable findings. Submit `COMMENT`. Never `APPROVE`.
 - **INCOMPLETE**: Evidence unavailable. Post diagnostic comment. Submit no review.
 

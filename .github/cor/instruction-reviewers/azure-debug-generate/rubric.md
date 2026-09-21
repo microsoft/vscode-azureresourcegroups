@@ -36,15 +36,20 @@ This rubric calls it main internal `instructions.md`.
 
 | Outcome | Meaning |
 | --- | --- |
-| Pass | Important behavior has one clear owner. Ownership follows established patterns. References compose explicitly. Changes remain local. |
-| Request changes | Ownership is ambiguous. Key behavior competes. Subcomponent behavior leaks upward. Combined workflows require unstated knowledge. |
+| PASS | Important behavior has one clear owner. Ownership follows established patterns. References compose explicitly. Changes remain local. |
+| WARN | A useful improvement that does not establish a criterion failure, or a possible criterion failure whose correction is not yet clear. |
+| SEVERE | A concrete criterion failure makes ownership ambiguous, creates competing definitions, leaks responsibility, or leaves workflow composition incomplete. |
 
 Repeated concepts alone pass.
-Require changes for:
+A `SEVERE` outcome requires:
 
 - Competing key definitions
 - Missing primary ownership
 - Independently maintained duplication
+
+Use `WARN` when the evidence supports a recommendation but does not establish
+one of those failures, or when a possible failure has no clear correction yet.
+An established failure remains `SEVERE` even when the correction is difficult.
 
 ## Ownership model
 
@@ -83,7 +88,7 @@ Pass:
 - Keep changes local to the references that own the behavior.
 - Change shared files only when shared behavior changes.
 
-Request changes:
+Severe:
 
 - One file owns unrelated workflow concerns.
 - New rules differ from comparable placement without reason.
@@ -108,7 +113,7 @@ Pass:
 - Never create synchronized independent definitions.
 - Maintainers can identify one primary change location.
 
-Request changes:
+Severe:
 
 - Multiple files independently maintain one key rule/value.
 - Copied examples can conflict.
@@ -129,7 +134,7 @@ Pass:
 - Main flow gains only necessary selection/routing.
 - Subcomponent behavior stays owned as support expands.
 
-Request changes:
+Severe:
 
 - Main file gains concrete subcomponent recipes.
 - Includes project-type recipes.
@@ -148,7 +153,7 @@ Pass:
 - Define ownership and precedence for shared artifacts.
 - Selected references form a complete workflow.
 
-Request changes:
+Severe:
 
 - Assembly order or precedence requires inference.
 - No selected reference owns required artifact knowledge.
@@ -163,7 +168,7 @@ Pass:
 - Keep implementation-specific behavior with selected implementation references.
 - Similar instructions may represent genuinely different implementations.
 
-Request changes:
+Severe:
 
 - Copy unchanged facts into every implementation.
 - Require separate maintenance.
@@ -178,7 +183,7 @@ Pass:
 - Removing them duplicates rules across callers.
 - Internal changes avoid caller retraining.
 
-Request changes:
+Severe:
 
 - Shared files only forward or rename concepts.
 - Abstractions expose nearly every detail.
@@ -199,7 +204,7 @@ Pass:
 - Preserve validation behavior.
 - Preserve teardown behavior.
 
-Request changes:
+Severe:
 
 - One orchestrator change can alter another's generated artifacts or lifecycle.
 - Shared instructions assume behavior invalid for another supported orchestrator.
@@ -213,7 +218,7 @@ Separate orchestrator-specific behavior.
 Still apply rubric criteria in spirit.
 
 > **TODO for applicable PR owner:** A new orchestrator or orchestration pattern may require rubric updates.
-> Request changes when needed.
+> Report `SEVERE` findings when needed.
 > Reflect updated ownership and composition.
 > Once general orchestration pattern exists, remove this provisional section.
 > Update remaining rubric.

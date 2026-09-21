@@ -28,7 +28,8 @@ if: >-
   (github.event_name == 'pull_request_target' && github.event.pull_request.draft == false &&
   github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) ||
   (github.event_name == 'issue_comment' && github.event.action == 'created') ||
-  github.event_name == 'workflow_dispatch'
+  (github.event_name == 'workflow_dispatch' &&
+  github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
 permissions:
   contents: read
   pull-requests: read
@@ -73,7 +74,7 @@ concurrency:
   # With cancel-in-progress: true, a new run cancels an active run only when
   # both runs resolve to the same key.
   #
-  # Runs that represent review requests share one key per PR so that only one run is every happening at a given time.
+  # Runs that represent review requests share one key per PR so that only one run is ever happening at a given time.
   #
   #   Example:
   #   - Eligible opening of PR 123
