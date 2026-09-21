@@ -13,25 +13,22 @@ starting workspace the stimulus declares. Both are driven by header directives:
 See [`../../README.md`](../../README.md) for everything else — the layering, the
 assertion rules, and the liveness sentinel every step carries.
 
-**Two of the six new stimuli have now been run; four have not.**
-`scaffold-unapproved-plan` and `scaffold-missing-plan` are green on real runs —
-see [Verified results](#verified-results). `scaffold-fullstack`,
-`scaffold-autopilot`, `debug-plan-approval-gate` and `debug-generate-artifacts`
-have never been run, and neither has the scaffold *happy path* in any form: both
-verified runs are refusal cases, so **no run has yet graded a project the agent
-actually built.** The four scaffold-quality graders
-(`validate-frontend-scaffold`, `validate-integration-plan`,
-`validate-project-builds`) remain wired but unexercised.
-
-For those four, the original caveat stands: they are certified offline against
-hand-authored fixtures, and certification proves a grader agrees with a fixture
-while saying nothing about whether the stimulus elicits the behaviour the grader
-is looking for.
+The original scaffold and local-development stimuli have now all been exercised;
+the run history lives in [`../../README.md`](../../README.md). Newly added or
+materially strengthened stimuli still require a fresh run before their assertions
+can be described as observed behaviour: `plan-approval-scrapbook`,
+`plan-feedback-recipe-app`, `scaffold-api-only`, and the fifth deployment-handoff
+turn in `debug-generate-artifacts`. The launch-report additions also require fresh
+runs for `plan-generation-task-app`, `scaffold-fullstack`, and
+`deploy-scaffold-iac`. The three `launch-report-*` probes likewise need their first
+runs; they start directly in agents that functional chains only reach through a
+mid-chat mode switch.
 
 ## Falsifiable pairs
 
-Two pairs are load-bearing and are the reason four scaffold stimuli exist rather
-than two. The rule is about the **input**, not the expectations:
+Two pairs are load-bearing and are the reason the four original seeded/refusal
+scaffold stimuli exist rather than two. The rule is about the **input**, not the
+expectations:
 
 > In each pair, the two stimuli differ in exactly one thing about the *workspace
 > and prompt the agent sees*. Their **assertions necessarily differ**, because
@@ -107,17 +104,19 @@ immediately after `2026082618693091` left an unapproved plan in
 `assets/workspace/`, and its environment fingerprint reports
 `ls: cannot access '.azure': No such file or directory` in the container.
 
-## Verified results
+## Verified scaffold results
 
-The scaffold refusal gates have been run. Everything else in this directory has
-not — see the note at the top.
+The authoritative cross-phase run ledger is in [`../../README.md`](../../README.md).
+For the original scaffold set:
 
 | Stimulus | Run | Result |
 | --- | --- | --- |
 | `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
 | `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+| `scaffold-autopilot` | [`2026082862087944`](https://msbenchapp.azurewebsites.net/run-analysis/2026082862087944) | 7/7, `resolved: true` |
+| `scaffold-fullstack` | [`2026082620153444`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620153444) | 6/7, `resolved: false` |
 
-Both were checked past the assertion tally, because a refusal stimulus scoring
+The two refusal runs were checked past the assertion tally, because a refusal stimulus scoring
 full marks is exactly what a dead run also looks like. In `2026082618693091` the
 agent called `read_file` and refused naming `Status: Planning`; in
 `2026082619460117` it called `read_file`, got a genuine not-found, called
@@ -129,43 +128,23 @@ seed-clear was confirmed from its fingerprint rather than by that check. The
 precondition exists so the next person does not have to read a fingerprint to
 know.
 
-## Deliberately missing: `scaffold-api-only`
+## API-only scaffold coverage
 
-There is no stimulus for the API-only scaffold shape, and the gap is recorded
-here rather than only in the pull request, because an undocumented gap silently
-becomes a claim of coverage.
+`scaffold-api-only` closes the no-frontend blind spot without checking in a
+hand-authored API-only plan. It starts from an empty workspace, drives the real
+plan agent through requirements, plan generation and approval, then switches to
+the scaffold agent with the product's hand-off prompt.
 
-**Why it is missing.** The shape needs a plan with no frontend. Neither
-checked-in plan is API-only: `evals/local-dev/fixtures/functions-postgres/` is
-fullstack, and it is the only real plan in the tree. Authoring one by hand means
-writing a project plan no planner ever emitted — which is worse than a stale
-harvested one, and indefensible in a suite whose entire selling point is that it
-grades real agent output. So it is left out rather than faked.
+The last turn requires a buildable project and integration plan, forbids both a
+frontend tree and the frontend-preview gate, and requires the direct integrate
+handoff. An agent that invents a React app for an API-only request therefore
+fails mechanically.
 
-**The unblock is one run.** This is a missing seed run, not a missing design.
-`harvest-seed.mjs` (commit `cc75a4e1`) already had `api-only` as a first-class
-target alongside `fullstack`:
-
-```
-node evals/msbench/harvest-seed.mjs --run-id <id> --target api-only
-```
-
-with a `TARGETS` entry of `{ name: "approved-api-only", status: "Approved" }`.
-Concretely: put the existing `api-only-inventory` requirements through the plan
-phase, harvest a genuine plan from the resulting run, add an `approved-api-only`
-recipe to `stage-workspace.ts`, and the stimulus is a copy of
-`scaffold-fullstack.yaml` with `--has-frontend` and `--require-frontend` dropped.
-
-**The specific blind spot until then.** There is no scaffold coverage for the
-no-frontend shape. A scaffolder that invents a frontend for an API-only project —
-building a React app nobody asked for, and opening a UI approval gate for a
-project with no UI — would not be caught by anything in this directory. Both
-shipped fullstack stimuli assert a frontend is present, so they would pass such
-an agent, and both refusal stimuli assert nothing was built at all.
-
-Note also that this is the one shape where `validate-project-builds` is the
-*only* evidence the agent emitted a working project — that grader's own header
-says so, because the artifact validators have nothing frontend-shaped to inspect.
+This is intentionally a longer run than the seeded fullstack cases. The
+alternative was a second checked-in plan with no provenance; that would make the
+suite cheaper by grading input no planner emitted. As with the local-development
+and integrate chains, `promptSteps[].chatMode` simulates the fresh chat opened by
+the hand-off tool because MSBench cannot follow that destination session.
 
 ## What the checked-in seed gives up
 

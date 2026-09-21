@@ -1,0 +1,17 @@
+# Launch-only coverage for `azure-project-integrate`.
+#
+# phase: agent-launch
+#
+# A functional integrate run enters this mode after a scaffold turn in the same
+# MSBench chat. That is not the "start of a chat session" where the launch report
+# is contracted to fire, so this one-turn probe starts directly in the mode.
+
+promptSteps:
+  - chatMode: azure-project-integrate
+    text: "Briefly state whether you can begin the integration phase, then stop without reading or modifying workspace files."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'

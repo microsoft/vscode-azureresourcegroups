@@ -3,11 +3,13 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -15,9 +17,12 @@ import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
+export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
+export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
+export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
 
-export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    if (!(await ensureFreshWorkspace())) {
+export async function createProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
+    if (!(await ensureFreshWorkspace(context))) {
         return;
     }
 
@@ -89,37 +94,63 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
 /**
  * Ensures the flow starts from a suitable blank slate.
  * If no folder is open, or the open folder already contains project content, we offer the
- * native folder picker and reopen VS Code on the chosen folder.
+ * choice to create a subfolder or select an empty folder, then open the target as the
+ * project workspace.
  *
  * Returns true when the flow can continue in the current window, false when
- * we're reopening on a different folder (in which case the flow resumes
+ * we're opening a different folder (in which case the flow resumes
  * automatically via the pending-create marker). Throws if the user cancels or
  * picks a folder that isn't empty.
  */
-async function ensureFreshWorkspace(): Promise<boolean> {
+async function ensureFreshWorkspace(context: CopilotOnRailsContext): Promise<boolean> {
     const currentFolder = vscode.workspace.workspaceFolders?.[0];
 
     if (await isWorkspaceEmpty()) {
         return true;
     }
 
-    const browse = vscode.l10n.t('Browse...');
-    const choice = await vscode.window.showWarningMessage(
-        vscode.l10n.t('Creating a project with Copilot requires an empty folder.'),
+    const createSubfolder: vscode.MessageItem = { title: vscode.l10n.t('Create in New Subfolder...') };
+    const chooseEmptyFolder: vscode.MessageItem = { title: vscode.l10n.t('Choose Empty Folder...') };
+    const actions = currentFolder ? [createSubfolder, chooseEmptyFolder] : [chooseEmptyFolder];
+    const choice = await context.ui.showWarningMessage(
+        vscode.l10n.t('Choose where to create your project.'),
         {
             modal: true,
             detail: currentFolder
-                ? vscode.l10n.t('"{0}" already contains files. Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.', folderName(currentFolder.uri))
-                : vscode.l10n.t('Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.'),
+                ? vscode.l10n.t('"{0}" contains files. Create a subfolder or choose an empty folder. The project opens in a new window.', folderName(currentFolder.uri))
+                : vscode.l10n.t('Choose an empty folder. The project opens in a new window.'),
         },
-        browse,
+        ...actions,
     );
 
-    if (choice !== browse) {
+    let target: vscode.Uri;
+    let selection: ProjectFolderSelection;
+    if (choice === createSubfolder && currentFolder) {
+        target = await createProjectSubfolder(context, currentFolder.uri);
+        selection = 'newSubfolder';
+    } else if (choice === chooseEmptyFolder) {
+        target = await pickEmptyProjectFolder(context, currentFolder?.uri);
+        selection = 'selectedEmptyFolder';
+    } else {
         throw new UserCancelledError('selectProjectFolder');
     }
 
-    const picked = await vscode.window.showOpenDialog({
+    if (!(await isFolderEmpty(target))) {
+        throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty project folder.', folderName(target)));
+    }
+
+    recordProjectFolderSelection(context, selection);
+    await writePendingCreateMarker(target);
+    await vscode.commands.executeCommand('vscode.openFolder', target, OPEN_PROJECT_FOLDER_OPTIONS);
+    return false;
+}
+
+export function recordProjectFolderSelection(context: CopilotOnRailsContext, selection: ProjectFolderSelection): void {
+    setCorProp(context, PROJECT_FOLDER_SELECTION_TELEMETRY_KEY, selection);
+}
+
+async function pickEmptyProjectFolder(context: CopilotOnRailsContext, currentFolder: vscode.Uri | undefined): Promise<vscode.Uri> {
+    const picked = await context.ui.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
@@ -127,7 +158,7 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         title: vscode.l10n.t('Select an empty folder for your new project'),
         // Start one level up from the current folder, since the whole point is
         // to land somewhere other than where we are.
-        defaultUri: currentFolder ? vscode.Uri.joinPath(currentFolder.uri, '..') : undefined,
+        defaultUri: currentFolder ? vscode.Uri.joinPath(currentFolder, '..') : undefined,
     });
 
     const target = picked?.[0];
@@ -135,13 +166,53 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         throw new UserCancelledError('selectProjectFolder');
     }
 
-    if (!(await isFolderEmpty(target))) {
-        throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty folder.', folderName(target)));
+    return target;
+}
+
+async function createProjectSubfolder(context: CopilotOnRailsContext, parent: vscode.Uri): Promise<vscode.Uri> {
+    const input = await context.ui.showInputBox({
+        title: vscode.l10n.t('Create a Project Subfolder'),
+        prompt: vscode.l10n.t('Enter a name for the new project folder inside "{0}".', folderName(parent)),
+        placeHolder: vscode.l10n.t('my-project'),
+        validateInput: validateProjectSubfolderName,
+        asyncValidationTask: async (value) => {
+            if (validateProjectSubfolderName(value)) {
+                return undefined;
+            }
+
+            const target = vscode.Uri.joinPath(parent, value.trim());
+            return (await AzExtFsExtra.pathExists(target))
+                ? vscode.l10n.t('A file or folder with this name already exists.')
+                : undefined;
+        },
+    });
+
+    const validationMessage = validateProjectSubfolderName(input);
+    if (validationMessage) {
+        throw new Error(validationMessage);
     }
 
-    await writePendingCreateMarker(target);
-    await vscode.commands.executeCommand('vscode.openFolder', target);
-    return false;
+    const target = vscode.Uri.joinPath(parent, input.trim());
+    if (await AzExtFsExtra.pathExists(target)) {
+        throw new Error(vscode.l10n.t('"{0}" already exists. Choose a different project folder name.', folderName(target)));
+    }
+
+    await AzExtFsExtra.ensureDir(target);
+    return target;
+}
+
+/** Returns a user-facing validation message when `value` is not a safe direct child folder name. */
+export function validateProjectSubfolderName(value: string): string | undefined {
+    const name = value.trim();
+    if (!name) {
+        return vscode.l10n.t('Enter a folder name.');
+    }
+
+    if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
+        return vscode.l10n.t('Enter a single folder name without path separators.');
+    }
+
+    return undefined;
 }
 
 async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {
@@ -150,7 +221,7 @@ async function hasCompletedPhase(filePath: string, expectedStatus: string): Prom
         return false;
     }
 
-    const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
+    const content = await AzExtFsExtra.readFile(files[0]);
     // [*_~]* allows markdown formatting (bold, italic, strikethrough) around "status"
     return new RegExp(`status[*_~]*\\s*:\\s*${expectedStatus}`, 'i').test(content);
 }
@@ -176,8 +247,8 @@ const EXTENSION_OWNED_ENTRIES: Record<string, ReadonlySet<string>> = {
 
 async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
     try {
-        const entries = await vscode.workspace.fs.readDirectory(folder);
-        for (const [name] of entries) {
+        const entries = await AzExtFsExtra.readDirectory(folder);
+        for (const { name } of entries) {
             if (IGNORED_ENTRIES.has(name)) {
                 continue;
             }
@@ -198,8 +269,8 @@ async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
 /** True when every entry in `folder` is either allowed or otherwise ignorable. */
 async function containsOnly(folder: vscode.Uri, allowed: ReadonlySet<string>): Promise<boolean> {
     try {
-        const entries = await vscode.workspace.fs.readDirectory(folder);
-        return entries.every(([name]) => allowed.has(name) || IGNORED_ENTRIES.has(name));
+        const entries = await AzExtFsExtra.readDirectory(folder);
+        return entries.every(({ name }) => allowed.has(name) || IGNORED_ENTRIES.has(name));
     } catch {
         return false;
     }
