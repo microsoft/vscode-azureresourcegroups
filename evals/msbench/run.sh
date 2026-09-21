@@ -591,9 +591,8 @@ if [ -n "$RUN_ID" ]; then
     # original cache never contacts CES and can wait forever on bytes already present.
     RESULTS_WAIT_SECONDS="${MSBENCH_RESULTS_WAIT_SECONDS:-900}"
     RESULTS_POLL_SECONDS="${MSBENCH_RESULTS_POLL_SECONDS:-30}"
-    case "$RESULTS_WAIT_SECONDS:$RESULTS_POLL_SECONDS" in
-        *[!0-9:]*|:*|*:) die "MSBENCH_RESULTS_WAIT_SECONDS and MSBENCH_RESULTS_POLL_SECONDS must be positive integers." ;;
-    esac
+    case "$RESULTS_WAIT_SECONDS" in ''|*[!0-9]*) die "MSBENCH_RESULTS_WAIT_SECONDS must be a positive integer." ;; esac
+    case "$RESULTS_POLL_SECONDS" in ''|*[!0-9]*) die "MSBENCH_RESULTS_POLL_SECONDS must be a positive integer." ;; esac
     [ "$RESULTS_WAIT_SECONDS" -gt 0 ] && [ "$RESULTS_POLL_SECONDS" -gt 0 ] \
         || die "MSBENCH_RESULTS_WAIT_SECONDS and MSBENCH_RESULTS_POLL_SECONDS must be positive integers."
 
