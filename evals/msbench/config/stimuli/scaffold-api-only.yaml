@@ -1,0 +1,105 @@
+# Stimulus `scaffold-api-only` — the no-frontend scaffold shape.
+#
+# phase: scaffold
+# seed: none
+#
+# A hand-authored API-only plan would make this test grade input no planner
+# emitted. Instead, turns 0–2 run the real plan agent from an empty workspace;
+# turn 3 switches to the scaffold agent with the exact hand-off prompt. The MCP
+# hand-off is still asserted on turn 2, but MSBench cannot follow the fresh chat
+# it opens, so promptSteps.chatMode performs the same documented simulation used
+# by the local-development and integration chains.
+
+preConditions:
+  - comment: The API-only chain must start without a seeded project plan
+    exec: 'if [ -e /workspace/.azure/project-plan.md ]; then echo "unexpected seeded plan"; exit 1; fi'
+
+promptSteps:
+  - chatMode: azure-project-plan
+    text: |
+      I need a backend API for tracking warehouse inventory — products,
+      quantities, locations. Just the API, no UI needed. I want to use CosmosDB
+      since the data structure might change a lot and I want it on Azure Functions.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: requirements.json describes an API-only Cosmos + Blob project
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-no-frontend --assert-blob-storage --assert-cosmosdb
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not have generated a plan before requirements were confirmed
+        exec: 'test ! -e /workspace/.azure/project-plan.md'
+
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - chatMode: azure-project-plan
+    text: "Requirements submitted at .azure/requirements.json. All answers confirmed."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: project-plan.md satisfies the plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Planning
+
+      - comment: The project plan preserves the API-only shape
+        exec: 'grep -Eqi "App Type[^[:alnum:]]*:?[^[:alnum:]]*API[ -]?only" /workspace/.azure/project-plan.md && ! grep -Eqi "^## [0-9]+\\..*Frontend" /workspace/.azure/project-plan.md'
+
+      - comment: project-plan.md renders in the plan webview
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-webview-parseable.ts
+
+      - comment: Agent should have opened the plan webview after confirmation
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      - comment: Agent should not hand off to the scaffold agent before the plan is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - chatMode: azure-project-plan
+    text: "Looks good, approved."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: The approved project plan still satisfies its contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Approved
+
+      - comment: Agent should hand off to the scaffold agent after approval
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 2)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - chatMode: azure-project-scaffold
+    text: "The project plan has been approved. Execute the approved `.azure/project-plan.md` and scaffold the project."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: The API-only scaffold must not invent a frontend
+        exec: 'test ! -d /workspace/services/web && test ! -d /workspace/frontend && ! find /workspace -maxdepth 4 -type f \( -name "vite.config.*" -o -name "index.html" \) -print -quit | grep -q .'
+
+      - comment: integration-plan.md satisfies the hand-off contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-integration-plan.ts
+
+      - comment: scaffolded project installs and builds
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-builds.ts
+        timeoutMs: 600000
+
+      - comment: Agent should not have opened the frontend preview gate
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      - comment: Agent should hand off directly to integrate
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 3)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; find /workspace -maxdepth 3 -type f | sort | head -80'
+        assertZeroExitCode: false

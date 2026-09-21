@@ -1,0 +1,17 @@
+# Launch-only coverage for `azure-debug-generate`.
+#
+# phase: agent-launch
+#
+# The functional generate stimulus reaches this mode through a mid-chat override.
+# This probe starts directly in the mode so the once-per-chat startup report is
+# not confused with a phase hand-off.
+
+promptSteps:
+  - chatMode: azure-debug-generate
+    text: "Briefly state whether you can begin debug artifact generation, then stop without reading or modifying workspace files."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'

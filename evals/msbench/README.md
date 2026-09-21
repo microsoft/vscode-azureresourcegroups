@@ -14,12 +14,13 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-**Eleven** stimuli are ported here, covering three product phases, with one config per
-stimulus in [`config/stimuli/`](config/stimuli). The Vally specs stay the source of
-truth — [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) for the plan phase
-and [`evals/local-dev/eval.yaml`](../local-dev/eval.yaml) for local development — so
-changes there need mirroring here. The scaffold stimuli have no Vally spec to mirror;
-they are wired directly against the graders merged in #1707.
+**Fifty-five** stimuli cover all six custom agents plus infrastructure probes, with one
+config per stimulus in [`config/stimuli/`](config/stimuli). The Vally specs stay the
+source of truth for the scenarios they define —
+[`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) and
+[`evals/local-dev/eval.yaml`](../local-dev/eval.yaml) — so changes there need mirroring
+here. Scaffold, integrate, deploy, red-team and harness-specific stimuli are wired
+directly against the same graders and shipped agent contracts.
 
 | Stimulus | Phase | Turns | Assertions | Seed | Validator flags |
 | --- | --- | --- | --- | --- | --- |
@@ -27,19 +28,25 @@ they are wired directly against the graders merged in #1707.
 | `api-only-inventory` | plan | 1 | 6 | — | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
 | `multi-service-order-processing` | plan | 1 | 5 | — | `--assert-service-count=3` |
 | `no-datastore-converter` | plan | 1 | 5 | — | `--assert-no-datastore` |
-| `plan-generation-task-app` | plan | 2 | 9 | — | — |
+| `plan-generation-task-app` | plan | 2 | 11 | — | — |
+| `plan-approval-scrapbook` | plan | 3 | 14 | — | — |
+| `plan-feedback-recipe-app` | plan | 3 | 14 | — | — |
 | `scaffold-missing-plan` | scaffold | 1 | 7 | `none` | — |
-| `scaffold-fullstack` | scaffold | 1 | 7 | `approved-fullstack` | `--has-frontend` `--require-frontend` |
+| `scaffold-fullstack` | scaffold | 1 | 8 | `approved-fullstack` | `--has-frontend` `--require-frontend` |
 | `scaffold-autopilot` | scaffold | 1 | 7 | `approved-fullstack` | `--has-frontend` `--require-frontend` |
 | `scaffold-unapproved-plan` | scaffold | 1 | 6 | `unapproved-plan` | — |
-| `debug-plan-approval-gate` | local-dev | 2 | 8 | `approved-fullstack` | — |
-| `debug-generate-artifacts` | local-dev | 4 | 12 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `scaffold-api-only` | plan → scaffold | 4 | 23 | `none` | `--assert-no-frontend` |
+| `integrate-seam` | scaffold → integrate | 3 | 8 | `approved-fullstack` | `--has-frontend` |
+| `debug-plan-approval-gate` | scaffold → local-dev | 2 | 8 | `approved-fullstack` | — |
+| `debug-generate-artifacts` | scaffold → local-dev → generate | 5 | 17 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `deploy-scaffold-iac` | deploy-scaffold | 2 | 14 | `approved-fullstack` | `--require-artifacts` |
+| `launch-report-*` (3 probes) | direct custom-agent launch | 1 each | 2 each | `none` | — |
 | `debug-probe-smoke` | probe-smoke | 1 | 2 | — | — (infrastructure only, see below) |
 | `debug-breakpoint-node` | debug-breakpoint | 1 | 3 | — | — (infrastructure only, see below) |
 
-The six scaffold and local-dev stimuli also each carry a `preConditions` `exec:`
-(except `scaffold-missing-plan`, which seeds nothing), which is not counted above
-because it runs before the prompts rather than grading them.
+Seeded and chained stimuli also carry `preConditions` checks where a failed setup could
+otherwise masquerade as an agent regression. Preconditions are not included in the
+assertion counts above because they run before the prompts rather than grading them.
 
 Assertion counts differ because they mirror each stimulus's graders one-for-one rather
 than being levelled up — only `photo-app-requirements` specifies
@@ -60,20 +67,10 @@ All four single-turn plan stimuli are verified by a real green run; ids are unde
 [Verified result](#verified-result). Those runs predate the sentinel, so they report
 one assertion fewer than the table above.
 
-> **Two of the six scaffold/local-dev stimuli have now been run; four have not.**
-> `scaffold-unapproved-plan` ([`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091), 6/6)
-> and `scaffold-missing-plan` ([`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117), 7/7)
-> are green, `resolved: true`. Both are **refusal** cases, so no run has yet graded
-> a project the agent actually built — `validate-frontend-scaffold`,
-> `validate-integration-plan` and `validate-project-builds` are still wired but
-> unexercised, as are both local-dev stimuli. For those, everything below is a
-> claim about the *configuration*, not a measurement: they are certified offline
-> against hand-authored fixtures, which proves a grader agrees with a fixture and
-> says nothing about whether the stimulus elicits the behaviour it looks for.
-
-A twelfth stimulus, `scaffold-api-only`, is **deliberately not authored**, and the
-coverage that costs is written down in
-[`config/stimuli/README.md`](config/stimuli/README.md) rather than left implicit.
+Historical results below establish the original plan, scaffold, integrate, local-dev and
+deploy paths. They predate the launch-report assertions and the new plan, API-only
+scaffold and deployment-handoff coverage. Those revisions are structurally validated
+locally but require fresh MSBench runs before they count as observed agent behaviour.
 
 
 ## Quick start
@@ -2486,8 +2483,10 @@ on disk for the other.
 ## Running in CI
 
 [`.github/workflows/msbench-evals.yml`](../../.github/workflows/msbench-evals.yml) runs
-this on `ubuntu-latest`. It is **`workflow_dispatch` only**, and stays that way even now
-that the identity work is done — see below for what actually still gates it.
+this on `ubuntu-latest`. Manual dispatch remains available. A daily `09:00 UTC`
+schedule is checked in but stays inert until the repository variable
+`MSBENCH_SCHEDULE_ENABLED` is set to `true`; this lets the same merged workflow prove
+its `main` OIDC path before the first automatic paid run.
 
 The Vally CI path needed no secrets — `copilot-requests: write` lets the built-in
 `GITHUB_TOKEN` authenticate the Copilot CLI. That trick does not transfer. MSBench runs
@@ -2501,33 +2500,37 @@ on CES, which identifies callers by Entra client id, so CI needs a real Azure id
    [Submitting MSBench runs from GitHub Actions](https://dev.azure.com/devdiv/OnlineServices/_git/msbench?path=/wiki/Submitting-MSBench-runs-from-GitHub-Actions.md).
    This step is not self-service.
 
-**Step 3 is done — the Entra-side permissions have been granted.** Step 2 is not: the
-three repository secrets still have to be set before a dispatch can authenticate, and
-until they are, the `Azure login` step fails before `run.sh` is reached. That is a
-different failure from the one this section used to describe, and it fails in a
-different place, so read the failing *step* rather than assuming the allowlist.
+**All three repository-level steps are done.** The three repository secrets were set on
+2026-08-26, and the client id is allowlisted for CES submission. Workflow run
+[`33002906424`](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/33002906424)
+then completed `Azure login`, submitted an MSBench run, verified the result, and uploaded
+the artifacts from `feat/CoR`.
 
-### Known issue: the federated credential subject must be ID-based
+That success proves the identity, secrets and CES allowlist work together for the ref
+covered by that federated credential. It does **not** prove that another branch — including
+`main`, which a scheduled workflow uses — has a matching credential.
 
-**This is unresolved at the time of writing, and recorded before its fix on purpose** —
-the next repository onboarded to MSBench hits it identically, and a known issue written
-while the error text is still to hand is worth more than one reconstructed later.
+### Remaining identity work: authorize `main`
 
-A dispatch fails at `azure/login` with a subject mismatch. GitHub presents an **ID-based**
-subject; the federated credential was written in the **path-based** form:
+GitHub presents an **ID-based and ref-specific** subject. The original credential used a
+path-based subject, which never matched:
 
 ```
 presented:   repository_owner_id:6154722:repository_id:238360694:ref:refs/heads/feat/CoR
 credential:  repo:microsoft/vscode-azureresourcegroups:ref:refs/heads/feat/CoR
 ```
 
-Two things make this cheap to act on. The failure costs **nothing** — it happens before
-`run.sh` is reached, so no run is submitted and no tokens are spent. And the fix is
-**known-good rather than speculative**: the same identity already carries an ID-based
-credential for `vscode-azure`, so someone has hit and solved this before.
+An ID-based credential for `feat/CoR` fixed that ref, but credentials remain ref-specific.
+The latest manual dispatch, workflow run
+[`34435506147`](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/34435506147),
+used `nturinski-mermaid-label-quoting-490` and failed at `Azure login` with
+`AADSTS700213: No matching federated identity record found`. `run.sh` was never reached,
+so no MSBench run or token spend occurred.
 
-The blocker is not our configuration. The subscription carries a `ReadOnly` lock, so the
-credential cannot be added without an owner lifting it.
+Before scheduling the workflow, add or verify an ID-based federated credential whose
+subject ends in `ref:refs/heads/main`, then dispatch the known-green canary from `main`.
+The subscription had a `ReadOnly` lock when the first credential was added; if creation
+is still rejected, an owner must lift that lock for the change.
 
 **It also means a red `eval` job is not evidence about the eval.** Read which *step*
 failed before concluding anything: `Azure login` red is setup, `Run the MSBench eval` red
@@ -2563,23 +2566,30 @@ separates a real result from a throttled run or one answered by the wrong model 
 never have run in CI, while the job still reported the CLI's exit code as its verdict.
 
 That is worse than the `mktemp` failure, which at least stopped the job. `run.sh` now
-honours `--data_dir` when locating results, and **warns loudly when it cannot find
-them** rather than quietly skipping verification:
+honours `--data_dir` when locating results and refuses to verify an archive until it
+contains an instance `*-output.zip`.
 
 ```
-WARNING: run <id> completed but results.zip was not found, so
-verify-run.ts did NOT run. This result is UNVERIFIED: ...
+ERROR: run <id> completed, but no instance output was available after
+900 seconds. Neither verify-run.ts nor check-assertions.ts could run...
 ```
 
-An unverified run that reads exactly like a verified one is the vacuous-check failure
-this suite exists to catch, pointed at the verifier itself.
+That second condition is necessary because CES execution completion and artifact
+ingestion are separate. Runs `2026091876284982` and `2026091876907797` both initially
+downloaded a valid ZIP containing only `run_metadata.json`; both instance outputs
+appeared later, and both were green. The runner now refreshes through a fresh MSBench
+cache every 30 seconds for up to 15 minutes. A fresh cache is load-bearing:
+`msbench-cli` treats any readable cached ZIP as complete, including a metadata-only one.
+`MSBENCH_RESULTS_WAIT_SECONDS` and `MSBENCH_RESULTS_POLL_SECONDS` tune the wait.
 
-**It stays manual, and not only because of setup.** Every dispatch submits a real run and
-spends real tokens, so a schedule or a PR trigger would spend on every push. Local runs
-need none of the above — `az login` plus the `MSBench User` role is enough, which is why
-that path landed first.
+**The scheduled workload is the known-green `scaffold-unapproved-plan` canary on the
+default model, daily at 09:00 UTC** (02:00 Pacific during daylight time, 01:00 during
+standard time). Paid jobs share a non-cancelling concurrency group so a manual run and
+the schedule cannot overlap. PR execution remains intentionally excluded. Local runs
+need none of the GitHub OIDC setup — `az login` plus the MSBench runner entitlement is
+enough, which is why that path landed first.
 
-### The first CI run should be one whose answer we already know
+### The first `main` CI run should be one whose answer we already know
 
 `workflow_dispatch` takes a `stimulus` input, defaulting to **`scaffold-unapproved-plan`**
 rather than to `run.sh`'s own default of `photo-app-requirements`.
@@ -2592,8 +2602,9 @@ answer is already established locally at 6/6 green. So a red is unambiguous: CI 
 broken. Against an unknown-answer stimulus a red cannot distinguish "CI is misconfigured"
 from "the product changed", which is the one distinction the exercise exists to make.
 
-Pass any other stimulus once the pipeline is proven. `STIMULUS` is read from the
-environment by `run.sh` exactly as `BENCHMARK` is, so `--stimulus` still wins locally.
+Pass any other stimulus once the pipeline is proven on `main`. `STIMULUS` is read from
+the environment by `run.sh` exactly as `BENCHMARK` is, so `--stimulus` still wins
+locally.
 
 ## Troubleshooting
 
@@ -2814,14 +2825,17 @@ with a clear message:
 
 ## Next steps
 
-- The remaining two multi-turn stimuli (`plan-approval-scrapbook`,
-  `plan-feedback-recipe-app`), following `plan-generation-task-app` — see
-  [Multi-turn stimuli](#multi-turn-stimuli). Both reach the scaffold handoff, so both
-  cost more of the chain than 1.5 does.
+- Fresh MSBench runs for `plan-approval-scrapbook`, `plan-feedback-recipe-app`,
+  `scaffold-api-only`, the three `launch-report-*` probes, and the fifth turn of
+  `debug-generate-artifacts`.
 - LLM-as-judge assertions for the qualitative parts of a generated plan.
-- Nightly CI once the CES identity is allowlisted; keep
-  [`agent-contracts.yml`](../../.github/workflows/agent-contracts.yml) as the fast PR
-  gate.
+- A separately budgeted deployment fixture before positively exercising
+  `capture_deployment_inventory`, `open_deploy_result_view`,
+  `open_database_migration_access`, or `close_database_migration_access`. The current
+  suite stops before provisioning and explicitly waives only the migration-access pair.
+- Add the `main` federated credential, run the known-green canary manually from
+  `main`, then set `MSBENCH_SCHEDULE_ENABLED=true`. The CES allowlist, repository
+  secrets, schedule, ingestion wait and paid workload are already in place.
 - Expand gates and graders, including browser assertions for the preview canvas.
 
 

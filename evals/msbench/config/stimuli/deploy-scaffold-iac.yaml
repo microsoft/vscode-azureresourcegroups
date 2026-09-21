@@ -90,6 +90,9 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+
       # The approval gate itself, graded. `approval-gates.md` requires the agent to
       # stop before generating infrastructure, so a template existing at this point
       # means it scaffolded without consent. Written as `exec:` rather than a query

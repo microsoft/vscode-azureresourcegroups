@@ -65,10 +65,7 @@ const REGISTRATION = join(REPO, 'src', 'chat', 'tools', 'copilotOnRails', 'regis
 /**
  * Tools whose absence from the corpus is a property of the harness rather than a gap to close.
  *
- * This list is deliberately EMPTY, and the reason is worth recording because the obvious entry
- * was wrong.
- *
- * The four `start_*` hand-off tools look unobservable: `launchAgentChat` opens a FRESH chat
+ * The four `start_*` hand-off tools once looked unobservable: `launchAgentChat` opens a FRESH chat
  * session (`workbench.action.chat.newChat`) because agents coordinate through `.azure/*` files
  * rather than chat history, and `promptSteps` drives one session — so the work moves somewhere the
  * harness is not watching. All true, and all about the hand-off's *destination*.
@@ -81,8 +78,19 @@ const REGISTRATION = join(REPO, 'src', 'chat', 'tools', 'copilotOnRails', 'regis
  * "The harness cannot follow where this leads" and "the harness cannot see this happen" are
  * different claims, and only the first one is true. Waiving on the second would have excused
  * exactly the coverage this check exists to demand.
+ *
+ * The database migration access pair is different. Those tools may only be called after a real
+ * deployment when migration tiers 1 and 2 both fail and a provisioned database permits a
+ * temporary single-IP firewall rule. The only deploy stimulus deliberately stops after IaC
+ * generation; forcing either call there would violate the product contract and mutate Azure.
+ * Keep these waivers until a metered, isolated deployment fixture with cleanup ownership exists.
  */
-const STRUCTURALLY_UNREACHABLE: Record<string, string> = {};
+const STRUCTURALLY_UNREACHABLE: Record<string, string> = {
+    mcp_copilot_azure_open_database_migration_access:
+        'requires a provisioned database and a tier-3 migration fallback; non-provisioning coverage cannot call it safely',
+    mcp_copilot_azure_close_database_migration_access:
+        'pairs with the tier-3 firewall lease above and is unreachable until a real deployment fixture owns cleanup',
+};
 
 /**
  * A tool has two names and they are not interchangeable, which is worth stating because getting
@@ -253,6 +261,7 @@ function main(): void {
         } else if (STRUCTURALLY_UNREACHABLE[tool]) {
             waived.push(tool);
             console.log(`  WAIVED      ${tool}`);
+            console.log(`              ${STRUCTURALLY_UNREACHABLE[tool]}`);
         } else {
             const owner = [...underTest.keys()].find(agent => agentReferencesTool(agent, instructionName));
             uncovered.push({
@@ -267,23 +276,36 @@ function main(): void {
         }
     }
 
+    const staleWaivers = Object.keys(STRUCTURALLY_UNREACHABLE)
+        .filter(tool => !waived.includes(tool));
     console.log(`\nasserted ${reachable.length} · waived ${waived.length} · unasserted ${uncovered.length}\n`);
 
-    if (uncovered.length === 0) {
-        console.log('Every registered tool has a stimulus asserting on its invocation.');
+    if (uncovered.length === 0 && staleWaivers.length === 0) {
+        console.log(waived.length === 0
+            ? 'Every registered tool has a stimulus asserting on its invocation.'
+            : 'Every non-waived registered tool has a stimulus asserting on its invocation.');
         return;
     }
 
-    console.log('UNASSERTED — a registered product surface no stimulus checks the invocation of.');
-    console.log('A regression in any of these is invisible: artifact assertions still pass, because');
-    console.log('they grade the files an agent wrote and never ask how it was entered.\n');
-    for (const { tool, detail } of uncovered) {
-        console.log(`  * ${tool}\n      ${detail}`);
+    if (uncovered.length > 0) {
+        console.log('UNASSERTED — a registered product surface no stimulus checks the invocation of.');
+        console.log('A regression in any of these is invisible: artifact assertions still pass, because');
+        console.log('they grade the files an agent wrote and never ask how it was entered.\n');
+        for (const { tool, detail } of uncovered) {
+            console.log(`  * ${tool}\n      ${detail}`);
+        }
+        console.log('\nClose it by asserting on the call — `SELECT COUNT(*) > 0 FROM toolCalls WHERE tool');
+        console.log("LIKE '%<tool>%'` — in a stimulus that reaches the agent. Six tools already do this,");
+        console.log('and four of them in both directions, which is the pattern worth copying: a positive');
+        console.log('in one stimulus and a negative in its pair proves the assertion discriminates.');
     }
-    console.log('\nClose it by asserting on the call — `SELECT COUNT(*) > 0 FROM toolCalls WHERE tool');
-    console.log("LIKE '%<tool>%'` — in a stimulus that reaches the agent. Six tools already do this,");
-    console.log('and four of them in both directions, which is the pattern worth copying: a positive');
-    console.log('in one stimulus and a negative in its pair proves the assertion discriminates.');
+    if (staleWaivers.length > 0) {
+        console.log('\nSTALE WAIVER — the tool is now asserted or no longer registered:');
+        for (const tool of staleWaivers) {
+            console.log(`  * ${tool}`);
+        }
+        console.log('Remove its STRUCTURALLY_UNREACHABLE entry in the same change that added coverage.');
+    }
     process.exitCode = 1;
 }
 

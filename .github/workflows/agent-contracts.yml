@@ -14,11 +14,9 @@ name: Agent Contracts
 # have been deleted rather than left unreferenced in the tree.
 on:
   pull_request:
-    paths:
-      - 'evals/**'
-      - 'resources/agents/**'
-      - '.vally.yaml'
-      - '.github/workflows/agent-contracts.yml'
+    branches:
+      - main
+      - 'rel/*'
   workflow_dispatch:
 
 env:
@@ -94,6 +92,18 @@ jobs:
       - name: Check every assertion can fire in its phase
         run: npm run phases:check
         working-directory: evals
+
+      # Adding an MCP tool without a stimulus leaves a product entry point invisible
+      # while every artifact assertion can still pass. The only waivers are the two
+      # migration-firewall tools, which require a separately budgeted real deployment.
+      - name: Check custom-agent MCP tool coverage
+        run: npm run eval:tool-coverage
+
+      # CES can finish execution before its instance artifact finishes ingesting.
+      # Prove the runner rejects a metadata-only ZIP and accepts one carrying an
+      # instance output before trusting its post-run verification loop.
+      - name: Check result archive readiness detection
+        run: ./evals/msbench/run.sh --self-test-results-archive
 
       # The seed four scaffold/local-dev stimuli start from stands in for the planner's
       # output. It drifted until it failed `validate-project-plan` outright, and nothing
