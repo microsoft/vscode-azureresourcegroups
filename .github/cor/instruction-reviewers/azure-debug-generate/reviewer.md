@@ -91,22 +91,27 @@ Use the specified repository.
    Include wrapper-path renames.
 
 3. Establish scoped changes.
-   Read PR diff.
-   Read full affected text files.
+   Treat the PR diff as the change record.
+   Read full affected text files for context.
    Use `get_file_contents`.
    Always pass `sha`.
-   Read old content from base repository and base SHA.
    Read proposed content from head repository and head SHA.
+   Base SHA is the current base tip, not necessarily the PR merge base.
+   Read base-tip content only as current context.
+   Never use base-tip-only differences as PR changes.
    Reject different-path fallbacks.
    Reject different-ref fallbacks.
-   For renames, read old base path and new head path.
+   For renames, use `previous_filename` and the diff for old-side evidence.
+   Read the new path at head SHA.
    For additions, read head only.
-   For deletions, read base only.
+   For deletions, use the diff for old-side evidence.
    Expected absence is not failure.
    Detect omitted patches.
    Detect truncated patches.
    Detect truncated content.
-   Recover using full-file reads.
+   Full head reads may recover new-side evidence.
+   Base-tip reads cannot recover missing merge-base evidence.
+   Missing old-side evidence means `INCOMPLETE`.
    Unestablished changes mean `INCOMPLETE`.
    Never fetch moving branches.
    Never review partial files silently.
@@ -150,7 +155,7 @@ Use the specified repository.
    Group duplicate symptoms sharing one cause.
    Link reviewed SHA content.
    Never link moving branches.
-   Link deletions to base SHA.
+   Link deletions to the PR diff.
 
 7. Re-read PR metadata.
    Do this immediately before publishing.
@@ -163,6 +168,9 @@ Use the specified repository.
    Use `submit_pull_request_review`.
    Follow decision rules.
    Never add a separate comment.
+   Safe-output publication happens after this check.
+   A newer head can race publication.
+   The review's recorded head is the only commit it covers.
 
 Missing context means `INCOMPLETE`.
 Incomplete pagination means `INCOMPLETE`.
