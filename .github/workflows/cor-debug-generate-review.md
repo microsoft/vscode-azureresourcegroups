@@ -73,12 +73,17 @@ permissions:
   contents: read
   pull-requests: read
   copilot-requests: write
-# gh-aw v0.89.17+ pins a gateway that works with Copilot CLI's MCP discovery.
-# Copilot CLI 1.0.83+ fails before inference; keep 1.0.80 until https://github.com/github/gh-aw/issues/60820 is fixed.
+# CLI 1.0.85 generated tokens with AWF v0.28.14, but its /responses request
+# received GitHub's HTML 400 with v0.28.20. Pin only AWF, not the fixed gateway.
+# https://github.com/github/gh-aw/blob/v0.89.17/docs/adr/27626-sandbox-agent-version-and-network-firewall-migration.md
 engine:
   id: copilot
   version: '1.0.80'
 model: gpt-5.6-sol
+sandbox:
+  agent:
+    id: awf
+    version: 'v0.28.14'
 network: defaults
 checkout: false
 inlined-imports: true
