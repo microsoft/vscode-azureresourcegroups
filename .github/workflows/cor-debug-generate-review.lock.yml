@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"928dfa7e66d840194f7e43355b8e23e9593303213253c34bf0cbf76037437aa3","body_hash":"f2f83ada1b0b569884fe770c1eb904a1fd9781ab4bc61626f41dcd7fd65aecde","compiler_version":"v0.88.7","strict":true,"agent_id":"copilot","agent_model":"gpt-5.4","engine_versions":{"copilot":"1.0.80"}}
-# gh-aw-manifest: {"version":1,"secrets":["GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"5e508589e03a7757a7e05b26e834292f5445bfb6","version":"5e508589e03a7757a7e05b26e834292f5445bfb6"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.14","digest":"sha256:f7df036c86575527b61f3f7df91c4412349a12b2a74988d929eafa2999230c98","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.14@sha256:f7df036c86575527b61f3f7df91c4412349a12b2a74988d929eafa2999230c98"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.14","digest":"sha256:6f95e2234dd9bd6333a8ff28ccea7ecf0204acd4a09108723844dbd2bf6268c5","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.14@sha256:6f95e2234dd9bd6333a8ff28ccea7ecf0204acd4a09108723844dbd2bf6268c5"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.14","digest":"sha256:2ce8df3abf3e9b76e9c0cf5863da41f1ab3f89b20ad14b988806ab89e7bf2cd5","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.14@sha256:2ce8df3abf3e9b76e9c0cf5863da41f1ab3f89b20ad14b988806ab89e7bf2cd5"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.18","digest":"sha256:85b940556a8faa4e1fdbef124bfd75f2c4ebd855a10b88a1c3b6f3e97f6f1a53","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.18@sha256:85b940556a8faa4e1fdbef124bfd75f2c4ebd855a10b88a1c3b6f3e97f6f1a53"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:0daa8971fa4732b647150cb6524a6b0804b68d5d24f6f58b5dd1af23bd63fb23","pinned_image":"ghcr.io/github/gh-aw-node@sha256:0daa8971fa4732b647150cb6524a6b0804b68d5d24f6f58b5dd1af23bd63fb23"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"has_pull_request_target":true,"mcp_servers":[{"name":"github","tools":["get_file_contents","pull_request_read"]},{"name":"safeoutputs","tools":["add_comment","noop","submit_pull_request_review"]}]}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"8acf95efbb1686a1e0b9e3e06a87b1b46d02e8eec3ee793b530341ccd3636ee2","body_hash":"f2f83ada1b0b569884fe770c1eb904a1fd9781ab4bc61626f41dcd7fd65aecde","compiler_version":"v0.88.7","strict":true,"agent_id":"copilot","agent_model":"gpt-5.4","engine_versions":{"copilot":"1.0.80"}}
+# gh-aw-manifest: {"version":1,"secrets":["GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"820762786026740c76f36085b0efc47a31fe5020","version":"v7.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"5e508589e03a7757a7e05b26e834292f5445bfb6","version":"v0.88.7"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.14","digest":"sha256:f7df036c86575527b61f3f7df91c4412349a12b2a74988d929eafa2999230c98","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.14@sha256:f7df036c86575527b61f3f7df91c4412349a12b2a74988d929eafa2999230c98"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.14","digest":"sha256:6f95e2234dd9bd6333a8ff28ccea7ecf0204acd4a09108723844dbd2bf6268c5","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.14@sha256:6f95e2234dd9bd6333a8ff28ccea7ecf0204acd4a09108723844dbd2bf6268c5"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.14","digest":"sha256:2ce8df3abf3e9b76e9c0cf5863da41f1ab3f89b20ad14b988806ab89e7bf2cd5","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.14@sha256:2ce8df3abf3e9b76e9c0cf5863da41f1ab3f89b20ad14b988806ab89e7bf2cd5"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.18","digest":"sha256:85b940556a8faa4e1fdbef124bfd75f2c4ebd855a10b88a1c3b6f3e97f6f1a53","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.18@sha256:85b940556a8faa4e1fdbef124bfd75f2c4ebd855a10b88a1c3b6f3e97f6f1a53"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:0daa8971fa4732b647150cb6524a6b0804b68d5d24f6f58b5dd1af23bd63fb23","pinned_image":"ghcr.io/github/gh-aw-node@sha256:0daa8971fa4732b647150cb6524a6b0804b68d5d24f6f58b5dd1af23bd63fb23"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"has_pull_request_target":true,"mcp_servers":[{"name":"github","tools":["get_file_contents","pull_request_read"]},{"name":"safeoutputs","tools":["add_comment","noop","submit_pull_request_review"]}]}
 # This file was automatically generated by gh-aw (v0.88.7). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -47,7 +47,7 @@
 #   - actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
 #   - actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
 #   - actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-#   - github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+#   - github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
 #
 # Container images used:
 #   - ghcr.io/github/gh-aw-firewall/agent:0.28.14@sha256:f7df036c86575527b61f3f7df91c4412349a12b2a74988d929eafa2999230c98
@@ -63,6 +63,8 @@ on:
     types:
       - created
       - edited
+  # permissions: # Permissions applied to pre-activation job
+  # pull-requests: read
   pull_request_target:
     paths:
       - resources/agents/azure-debug-generate/**
@@ -74,6 +76,15 @@ on:
   # - admin # Roles processed as role check in pre-activation job
   # - maintain # Roles processed as role check in pre-activation job
   # - write # Roles processed as role check in pre-activation job
+  # steps: # Steps injected into pre-activation job
+  # - env:
+  # PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+  # id: same_repository_pr
+  # if: steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true'
+  # name: Require same-repository pull request
+  # uses: actions/github-script@v9
+  # with:
+  # script: "core.setOutput('eligible', 'false');\nconst pullNumber = Number(process.env.PULL_REQUEST_NUMBER);\n\nif (!Number.isSafeInteger(pullNumber) || pullNumber <= 0) {\n  return;\n}\n\nconst { data: pullRequest } = await github.rest.pulls.get({\n  owner: context.repo.owner,\n  repo: context.repo.repo,\n  pull_number: pullNumber,\n});\n\nif (!pullRequest.head.repo || pullRequest.head.repo.id !== pullRequest.base.repo.id) {\n  return;\n}\n\ncore.setOutput('eligible', 'true');\n"
   workflow_dispatch:
     inputs:
       aw_context:
@@ -105,7 +116,7 @@ env:
 jobs:
   activation:
     needs: pre_activation
-    if: "needs.pre_activation.outputs.activated == 'true' && (((github.event_name == 'pull_request_target' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) || (github.event_name == 'issue_comment' && github.event.action == 'created') || (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))) && ((github.event_name == 'issue_comment') && (github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/cor-debug-generate-review ') || startsWith(github.event.comment.body, '/cor-debug-generate-review\n') || github.event.comment.body == '/cor-debug-generate-review') && github.event.issue.pull_request != null) || !(github.event_name == 'issue_comment')))"
+    if: "needs.pre_activation.outputs.activated == 'true' && ((needs.pre_activation.outputs.same_repository_pr == 'true' && ((github.event_name == 'pull_request_target' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) || (github.event_name == 'issue_comment' && github.event.action == 'created') || (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))) && ((github.event_name == 'issue_comment') && (github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/cor-debug-generate-review ') || startsWith(github.event.comment.body, '/cor-debug-generate-review\n') || github.event.comment.body == '/cor-debug-generate-review') && github.event.issue.pull_request != null) || !(github.event_name == 'issue_comment')))"
     runs-on: ubuntu-slim
     permissions:
       actions: read
@@ -137,7 +148,7 @@ jobs:
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -491,7 +502,7 @@ jobs:
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1173,7 +1184,7 @@ jobs:
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1433,7 +1444,7 @@ jobs:
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1678,20 +1689,23 @@ jobs:
           bash "${RUNNER_TEMP}/gh-aw/actions/conclude_threat_detection.sh" /tmp/gh-aw/threat-detection/detection_result.json
 
   pre_activation:
-    if: "(github.event_name != 'issue_comment' || contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)) && (((github.event_name == 'pull_request_target' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) || (github.event_name == 'issue_comment' && github.event.action == 'created') || (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))) && ((github.event_name == 'issue_comment') && (github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/cor-debug-generate-review ') || startsWith(github.event.comment.body, '/cor-debug-generate-review\n') || github.event.comment.body == '/cor-debug-generate-review') && github.event.issue.pull_request != null) || !(github.event_name == 'issue_comment')))"
     runs-on: ubuntu-slim
+    permissions:
+      pull-requests: read
     env:
       GH_AW_RUNTIME_FEATURES: ${{ vars.GH_AW_RUNTIME_FEATURES }}
     outputs:
       activated: ${{ steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true' }}
       matched_command: ${{ steps.check_command_position.outputs.matched_command }}
+      same_repository_pr: ${{ steps.same_repository_pr.outputs.eligible }}
+      same_repository_pr_result: ${{ steps.same_repository_pr.outcome }}
       setup-parent-span-id: ${{ steps.setup.outputs.parent-span-id || steps.setup.outputs.span-id }}
       setup-span-id: ${{ steps.setup.outputs.span-id }}
       setup-trace-id: ${{ steps.setup.outputs.trace-id }}
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1729,6 +1743,32 @@ jobs:
             setupGlobals(core, github, context, exec, io, getOctokit);
             const { main } = require(path.join(actionsDir, 'check_membership.cjs'));
             await main();
+      - name: Require same-repository pull request
+        id: same_repository_pr
+        if: steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0 (source v9)
+        env:
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+        with:
+          script: |
+            core.setOutput('eligible', 'false');
+            const pullNumber = Number(process.env.PULL_REQUEST_NUMBER);
+
+            if (!Number.isSafeInteger(pullNumber) || pullNumber <= 0) {
+              return;
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullNumber,
+            });
+
+            if (!pullRequest.head.repo || pullRequest.head.repo.id !== pullRequest.base.repo.id) {
+              return;
+            }
+
+            core.setOutput('eligible', 'true');
 
   safe_outputs:
     needs:
@@ -1778,7 +1818,7 @@ jobs:
     steps:
       - name: Setup Scripts
         id: setup
-        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # 5e508589e03a7757a7e05b26e834292f5445bfb6
+        uses: github/gh-aw-actions/setup@5e508589e03a7757a7e05b26e834292f5445bfb6 # v0.88.7
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}

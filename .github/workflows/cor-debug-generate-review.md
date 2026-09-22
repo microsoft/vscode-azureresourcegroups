@@ -22,17 +22,53 @@ on:
         type: string
   # Can only be initialized by repository members with the correct roles
   roles: [admin, maintain, write]
+  # Skip fork PRs before agent execution to reduce prompt-injection exposure.
+  # Forks return eligible=false and skip cleanly, so they do not block merging.
+  permissions:
+    pull-requests: read
+  steps:
+    - name: Require same-repository pull request
+      id: same_repository_pr
+      if: steps.check_membership.outputs.is_team_member == 'true' && steps.check_command_position.outputs.command_position_ok == 'true'
+      uses: actions/github-script@v9
+      env:
+        PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+      with:
+        script: |
+          core.setOutput('eligible', 'false');
+          const pullNumber = Number(process.env.PULL_REQUEST_NUMBER);
+
+          if (!Number.isSafeInteger(pullNumber) || pullNumber <= 0) {
+            return;
+          }
+
+          const { data: pullRequest } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: pullNumber,
+          });
+
+          if (!pullRequest.head.repo || pullRequest.head.repo.id !== pullRequest.base.repo.id) {
+            return;
+          }
+
+          core.setOutput('eligible', 'true');
   github-token: ${{ secrets.GITHUB_TOKEN }}
   reaction: eyes
   status-comment: false
 # The workflow's activation condition.  It identifies the event categories that may request a review.
 # Permissions are not yet checked at this stage.
 if: >-
-  (github.event_name == 'pull_request_target' && github.event.pull_request.draft == false &&
+  needs.pre_activation.outputs.same_repository_pr == 'true' &&
+  ((github.event_name == 'pull_request_target' && github.event.pull_request.draft == false &&
   github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) ||
   (github.event_name == 'issue_comment' && github.event.action == 'created') ||
   (github.event_name == 'workflow_dispatch' &&
-  github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+  github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
+jobs:
+  pre-activation:
+    outputs:
+      same_repository_pr: ${{ steps.same_repository_pr.outputs.eligible }}
 permissions:
   contents: read
   pull-requests: read
