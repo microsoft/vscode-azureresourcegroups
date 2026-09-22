@@ -35,7 +35,7 @@ Verify the plan and environment before generating any files.
 | # | Action | Reference |
 |---|--------|-----------|
 | 1 | **Verify plan** — Confirm `.azure/vscode-debug-plan.md` exists with status `Approved`. Set status to `Executing` and update **Last Updated**. | `.azure/vscode-debug-plan.md` |
-| 2 | **Load references** — For each service in the plan's Services table (where Generate is checked), load the corresponding project-type and runtime reference files. If no reference file exists, emit a limited-support warning. | [limited-support.md](references/limited-support.md) |
+| 2 | **Load references** — For each service with Generate checked in the plan's Services table, load the corresponding project-type and runtime reference files. If no reference file exists, emit a limited-support warning. | [limited-support.md](references/limited-support.md) |
 | 3 | **Run pre-flight checks** — Stale data directories and port conflicts. | [preflight.md](references/preflight.md) |
 
 ---
