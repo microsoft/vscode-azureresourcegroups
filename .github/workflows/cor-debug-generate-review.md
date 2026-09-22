@@ -73,6 +73,7 @@ permissions:
   contents: read
   pull-requests: read
   copilot-requests: write
+# gh-aw v0.89.17+ pins a gateway that works with Copilot CLI's MCP discovery.
 engine: copilot
 model: gpt-5.6-sol
 network: defaults
@@ -102,6 +103,17 @@ safe-outputs:
   add-comment:
     target: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
     max: 1
+post-steps:
+  - name: Require agent reviewer outcome
+    if: steps.agentic_execution.outcome == 'success'
+    env:
+      REVIEW_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
+    run: |
+      # A stale or closed PR can legitimately end with noop.
+      if ! jq -se 'any(.[]; .type == "submit_pull_request_review" or .type == "add_comment" or .type == "noop")' "$REVIEW_OUTPUTS" >/dev/null; then
+        echo "::error::The agent reviewer finished without requesting a review, diagnostic comment, or noop."
+        exit 1
+      fi
 imports:
   - .github/cor/instruction-reviewers/azure-debug-generate/reviewer.md
   - .github/cor/instruction-reviewers/azure-debug-generate/rubric.md
