@@ -35,6 +35,53 @@ add_fail() { # id detail file
 }
 iac_has() { printf '%s' "$iac" | grep -qE "$1"; }
 
+scan_pg_admin_file() {
+  awk '
+    function close_block() {
+      if (in_admin && !valid_name) invalid=1
+    }
+    /^[[:space:]]*(resource|module|param|var|output)[[:space:]]+/ {
+      close_block()
+      in_admin=($0 ~ /Microsoft[.]DBforPostgreSQL\/flexibleServers\/administrators@/)
+      if (in_admin) {
+        found=1
+        valid_name=0
+      }
+      next
+    }
+    in_admin && /^[[:space:]]*name[[:space:]]*:[[:space:]]*entraAdminObjectId[[:space:]]*(\/\/.*)?$/ {
+      valid_name=1
+    }
+    END {
+      close_block()
+      if (!found) exit 2
+      if (invalid) exit 1
+      exit 0
+    }
+  ' "$1"
+}
+
+scan_pg_existing_server_file() {
+  awk '
+    function close_block() {
+      if (in_server && valid_name) valid_target=1
+    }
+    /^[[:space:]]*(resource|module|param|var|output)[[:space:]]+/ {
+      close_block()
+      in_server=($0 ~ /Microsoft[.]DBforPostgreSQL\/flexibleServers@.*[[:space:]]+existing[[:space:]]*=/)
+      valid_name=0
+      next
+    }
+    in_server && /^[[:space:]]*name[[:space:]]*:[[:space:]]*pgName[[:space:]]*(\/\/.*)?$/ {
+      valid_name=1
+    }
+    END {
+      close_block()
+      exit(valid_target ? 0 : 1)
+    }
+  ' "$1"
+}
+
 # 1. TAGS-NO-CAMEL
 if printf '%s' "$main_bicep" | grep -qE 'appOnboard(Skill|SessionId)|createdAt:|deployedBy:'; then
   add_fail "TAGS-NO-CAMEL" "camelCase tag keys found — use hyphenated ('app-onboard-skill' ...)" "infra/main.bicep"
@@ -168,6 +215,51 @@ if [ "$has_mysql" = 1 ] || [ "$has_pg" = 1 ]; then
   # 11b. DB-ENTRA-ADMIN — PG/MySQL must set an Entra administrator for token-based migrations.
   if ! iac_has 'flexibleServers/administrators'; then
     add_fail "DB-ENTRA-ADMIN" "PostgreSQL/MySQL module missing an administrators (Entra admin) child resource — required for Entra-only auth + token-based migrations" "infra/modules"
+  fi
+  # 11b2. PG-ENTRA-ADMIN-ID — API 2025-08-01 uses the child resource name as the
+  # administrator object ID. A display label compiles and passes what-if, then ARM
+  # rejects the non-GUID URL segment. Require the canonical parameter directly.
+  pg_admin_found=0
+  pg_admin_invalid=0
+  if [ "$has_pg" = 1 ]; then
+    while IFS= read -r -d '' file; do
+      scan_pg_admin_file "$file"
+      scan_status=$?
+      if [ "$scan_status" = 0 ]; then
+        pg_admin_found=1
+        if ! grep -qE '^[[:space:]]*param[[:space:]]+entraAdminObjectId[[:space:]]+string([[:space:]]|$)' "$file"; then
+          pg_admin_invalid=1
+        fi
+      elif [ "$scan_status" = 1 ]; then
+        pg_admin_found=1
+        pg_admin_invalid=1
+      fi
+    done < <(find "$INFRA_PATH" -name '*.bicep' -type f -print0 2>/dev/null)
+    if [ "$pg_admin_found" = 1 ] && [ "$pg_admin_invalid" = 1 ]; then
+      add_fail "PG-ENTRA-ADMIN-ID" "PostgreSQL administrator child name must be the entraAdminObjectId parameter — the name is the ARM URL object-ID segment, so labels or literals such as 'activeDirectory' fail at runtime" "infra/modules"
+    fi
+
+    # 11b3. PG-ADMIN-READY-BARRIER — parent ordering only waits for the server
+    # PUT. Require the canonical companion-module/output boundary before admin PUT.
+    if [ "$pg_admin_found" = 1 ]; then
+      server_and_admin_together=0
+      existing_server_target=0
+      while IFS= read -r -d '' file; do
+        if grep -qE "^[[:space:]]*resource[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+'Microsoft[.]DBforPostgreSQL/flexibleServers@[^']+'[[:space:]]*=" "$file" &&
+           grep -qE 'Microsoft[.]DBforPostgreSQL/flexibleServers/administrators@' "$file"; then
+          server_and_admin_together=1
+        fi
+        if scan_pg_existing_server_file "$file"; then
+          existing_server_target=1
+        fi
+      done < <(find "$INFRA_PATH" -name '*.bicep' -type f -print0 2>/dev/null)
+      if [ "$server_and_admin_together" = 1 ] ||
+         ! printf '%s' "$iac" | grep -qE '^[[:space:]]*output[[:space:]]+serverName[[:space:]]+string[[:space:]]*=[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[.]name[[:space:]]*(//.*)?$' ||
+         ! printf '%s' "$main_bicep" | grep -qE '^[[:space:]]*pgName[[:space:]]*:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[.]outputs[.]serverName[[:space:]]*(//.*)?$' ||
+         [ "$existing_server_target" != 1 ]; then
+        add_fail "PG-ADMIN-READY-BARRIER" "PostgreSQL administrator must be in a companion module that targets an existing pgName supplied from the server module outputs.serverName — parent/dependsOn ordering alone does not wait for management readiness" "infra/main.bicep + infra/modules"
+      fi
+    fi
   fi
   # 11c. PG-ENTRA-ONLY — PostgreSQL must explicitly disable password auth.
   if [ "$has_pg" = 1 ] && ! iac_has "passwordAuth[[:space:]]*:[[:space:]]*'Disabled'"; then

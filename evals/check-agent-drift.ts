@@ -183,6 +183,18 @@ const contracts: Contract[] = [
         pattern: /"dependsOrder":\s*"sequence",\s*\n\s*"runOptions":\s*\{\s*"instanceLimit":\s*1,\s*"instancePolicy":\s*"silent"\s*\}/,
         grader: "debug-config-structurally-sound (invalidTaskRunOptions)",
     },
+    {
+        file: "azure-deploy/scaffold/references/subagent-iac-gen.md",
+        name: "postgres-admin-id-and-readiness-barrier",
+        pattern: /(?=[\s\S]*name: entraAdminObjectId)(?=[\s\S]*pgName: pg\.outputs\.serverName)/,
+        grader: "scaffold-conformance PG-ENTRA-ADMIN-ID / PG-ADMIN-READY-BARRIER",
+    },
+    {
+        file: "azure-deploy/cor-references/migration-access.md",
+        name: "tier2-migration-state-aware-retry",
+        pattern: /(?=[\s\S]*BackoffLimitExceeded)(?=[\s\S]*pgmigrations)(?=[\s\S]*principal\/OID)(?=[\s\S]*one unchanged retry)/,
+        grader: "Tier-2 deployment recovery evidence contract",
+    },
 ];
 
 /**

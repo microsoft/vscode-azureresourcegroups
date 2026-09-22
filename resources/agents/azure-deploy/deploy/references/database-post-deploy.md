@@ -102,11 +102,22 @@ az containerapp exec -n {ca} -g {rg} --subscription {sub} --command 'sh -lc "exp
 
 ## Error Handling
 
-If the migration command fails, classify as `IAC_ERROR` and check based on the database type:
+If the migration command fails, preserve its application output and inspect state before classifying it.
+For a tier-2 job, follow
+[`migration-access.md` § Tier-2 execution evidence and retry gate](../../cor-references/migration-access.md):
+capture stdout/stderr and process exit separately from the job-controller reason, then query migration
+history, expected tables, and principal/OID state. `BackoffLimitExceeded` is not a root-cause classification,
+and missing application logs means the cause is `UNKNOWN`, not automatically `IAC_ERROR`.
+
+Classify only after that evidence, then check based on the database type:
 - **AAD token / auth failure** (`password authentication failed`, `Login failed for token-identified principal`) → the app MI was not granted a DB role (§2), or Entra-admin/RBAC propagation hasn't completed. Verify the app MI principal exists, wait 60s, retry.
 - DB unreachable → check firewall rules (PostgreSQL: `AllowAllAzureServicesAndResourcesWithinAzureIps`, SQL: server firewall, MySQL: similar)
 - Extension/feature missing → check DB-specific config (PostgreSQL: `azure.extensions`, SQL: compatibility level, MySQL: `require_secure_transport`)
 - Module not found → verify the runtime includes the migration tool
+
+Do not retry while the migration-history or expected-table state is unknown. An unchanged tier-2 retry is
+limited to one and requires a logged transient cause plus proof that no applied-but-untracked migration
+remains. Code/package/configuration failures require a repaired and revalidated image/spec.
 
 > ⛔ **Never weaken auth to unblock.** Do NOT set `passwordAuth: 'Enabled'`, add an `administratorLoginPassword`, or re-enable access keys to make a failing migration pass. Fix the grant (§2) or the client token config.
 

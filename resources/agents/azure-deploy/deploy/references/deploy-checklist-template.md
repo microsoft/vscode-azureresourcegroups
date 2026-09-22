@@ -78,6 +78,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - ⛔ IaC-only: NEVER use `az containerapp update --image`, `az webapp update`, `az appservice plan delete`, or `az group create` — fix the Bicep and redeploy via `az deployment sub create`
 - ⛔ IaC-only for app-managed roles: NEVER `az role assignment create` for AcrPull or KV Secrets User — Bicep-managed (deterministic GUID), so an imperative grant collides on redeploy (`RoleAssignmentExists`). Missing app role = fix the Bicep module and redeploy. (Deployer/subscription-scope 403s are the ONLY exception — see [`error-classification.md`](error-classification.md).)
 - ⛔ **On error: read [`error-classification.md`](error-classification.md)** to classify the failure and follow the prescribed remediation. Do NOT ad-hoc heal without reading the classification.
+- ⛔ **Tier-2 migration failure:** preserve stdout/stderr before the replica disappears; record application exit separately from controller reason; query migration history, expected tables, and principal/OID state before classification or retry. `BackoffLimitExceeded` alone is not a cause. No blind restart.
 - ⛔ **Never weaken a security control to unblock** — do NOT flip `require_secure_transport`/TLS, HTTPS-only, KV purge protection, or auth OFF to make a failing deploy pass. A DB TLS handshake failure = fix the client SSL config (prereq `W-MYSQL-SSL`) or ask the user; never downgrade the server.
 - Count ALL attempts in deploy-result.json.healingAttempts[]
   After 3: STOP and ask user ("Yes / I have a suggestion / Stop")

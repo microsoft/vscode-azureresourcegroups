@@ -33,10 +33,11 @@ $mainPath   = Join-Path $InfraPath 'main.bicep'
 $paramsPath = Join-Path $InfraPath 'main.parameters.json'
 $mainBicep  = if (Test-Path $mainPath)   { Get-Content $mainPath -Raw }   else { '' }
 $paramsRaw  = if (Test-Path $paramsPath) { Get-Content $paramsPath -Raw } else { '' }
+$bicepFiles = @()
 $iac = ''
 if (Test-Path $InfraPath) {
-  $iac = (Get-ChildItem $InfraPath -Recurse -Filter *.bicep -ErrorAction SilentlyContinue |
-          ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+  $bicepFiles = @(Get-ChildItem $InfraPath -Recurse -Filter *.bicep -ErrorAction SilentlyContinue)
+  $iac = ($bicepFiles | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
 }
 
 $svcNames = @()
@@ -151,6 +152,63 @@ if (($hasMysql -or $hasPg) -and $iac) {
   # 11b. DB-ENTRA-ADMIN — PG/MySQL must set an Entra administrator so migrations run token-based.
   if (($hasPg -or $hasMysql) -and ($iac -notmatch 'flexibleServers/administrators')) {
     Add-Fail 'DB-ENTRA-ADMIN' 'PostgreSQL/MySQL module missing an administrators (Entra admin) child resource — required for Entra-only auth + token-based migrations' 'infra/modules'
+  }
+  # 11b2. PG-ENTRA-ADMIN-ID — API 2025-08-01 uses the child resource name as the
+  # administrator object ID. A display label such as 'activeDirectory' compiles and
+  # passes what-if, then ARM rejects the PUT because the URL segment is not a GUID.
+  # Enforce the canonical parameter directly so a literal or alias cannot drift from it.
+  $pgAdminBlocks = New-Object System.Collections.Generic.List[object]
+  foreach ($file in $bicepFiles) {
+    $content = Get-Content $file.FullName -Raw
+    $blocks = [regex]::Matches(
+      $content,
+      "(?ims)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers/administrators@[^']+'\s*=\s*\{(?<body>.*?)(?=^\s*(?:resource|module|param|var|output)\s+|\z)"
+    )
+    foreach ($block in $blocks) {
+      $pgAdminBlocks.Add([ordered]@{ file = $file; content = $content; body = $block.Groups['body'].Value })
+    }
+  }
+  if ($hasPg -and $pgAdminBlocks.Count -gt 0) {
+    $adminIdInvalid = $false
+    foreach ($block in $pgAdminBlocks) {
+      if (($block.content -notmatch '(?im)^\s*param\s+entraAdminObjectId\s+string(?:\s|$)') -or
+          ($block.body -notmatch '(?im)^\s*name\s*:\s*entraAdminObjectId\s*(?://.*)?$')) {
+        $adminIdInvalid = $true
+      }
+    }
+    if ($adminIdInvalid) {
+      Add-Fail 'PG-ENTRA-ADMIN-ID' "PostgreSQL administrator child name must be the entraAdminObjectId parameter — the name is the ARM URL object-ID segment, so labels or literals such as 'activeDirectory' fail at runtime" 'infra/modules'
+    }
+
+    # 11b3. PG-ADMIN-READY-BARRIER — parent ordering and dependsOn only wait for
+    # the server PUT. A second nested deployment, linked through the server module
+    # output, supplies the management-readiness barrier the administrator PUT needs.
+    $serverAndAdminTogether = $false
+    foreach ($file in $bicepFiles) {
+      $content = Get-Content $file.FullName -Raw
+      if (($content -match "(?im)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers@[^']+'\s*=") -and
+          ($content -match "Microsoft\.DBforPostgreSQL/flexibleServers/administrators@")) {
+        $serverAndAdminTogether = $true
+      }
+    }
+    $hasServerOutput = $iac -match '(?im)^\s*output\s+serverName\s+string\s*=\s*\w+\.name\s*(?://.*)?$'
+    $hasOutputBarrier = $mainBicep -match '(?im)^\s*pgName\s*:\s*\w+\.outputs\.serverName\s*(?://.*)?$'
+    $hasExistingServerTarget = $false
+    foreach ($file in $bicepFiles) {
+      $content = Get-Content $file.FullName -Raw
+      $existingBlocks = [regex]::Matches(
+        $content,
+        "(?ims)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers@[^']+'\s+existing\s*=\s*\{(?<body>.*?)(?=^\s*(?:resource|module|param|var|output)\s+|\z)"
+      )
+      foreach ($block in $existingBlocks) {
+        if ($block.Groups['body'].Value -match '(?im)^\s*name\s*:\s*pgName\s*(?://.*)?$') {
+          $hasExistingServerTarget = $true
+        }
+      }
+    }
+    if ($serverAndAdminTogether -or -not $hasServerOutput -or -not $hasOutputBarrier -or -not $hasExistingServerTarget) {
+      Add-Fail 'PG-ADMIN-READY-BARRIER' 'PostgreSQL administrator must be in a companion module that targets an existing pgName supplied from the server module outputs.serverName — parent/dependsOn ordering alone does not wait for management readiness' 'infra/main.bicep + infra/modules'
+    }
   }
   # 11c. PG-ENTRA-ONLY — PostgreSQL must explicitly disable password auth.
   if ($hasPg -and ($iac -notmatch "passwordAuth\s*:\s*'Disabled'")) {

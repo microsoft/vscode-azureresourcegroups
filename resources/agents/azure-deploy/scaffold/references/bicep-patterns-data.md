@@ -4,25 +4,22 @@ Bicep module templates for database and cache services. Read when the prepare pl
 
 For core patterns (file structure, skeleton, naming, tagging), see [bicep-patterns.md](bicep-patterns.md). For security defaults, see [bicep-patterns-security.md](bicep-patterns-security.md).
 
-## PostgreSQL Flexible Server Module — Entra-Only
+## PostgreSQL Flexible Server Modules — Entra-Only
 
 > ⛔ **Password authentication is disabled.** No `administratorLogin` / `administratorLoginPassword`. The deploying principal is set as the Entra admin so migrations/seeding run token-based; the app's managed identity is granted a DB role as a post-deploy data-plane step (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md)).
+
+Use two modules. The first deployment creates the server and firewall rule; the second deployment creates the
+administrator and remaining children. The `serverName` output consumed by the second module is deliberate:
+it creates a nested-deployment completion barrier before the administrator PUT. A `parent:` relationship or
+resource-level `dependsOn` only waits for the server resource PUT and can still race PostgreSQL management
+readiness with `AadAuthOperationCannotBePerformedWhenServerIsNotAccessible`.
+
+**`infra/modules/postgres.bicep` — server deployment:**
 
 ```bicep
 param pgName string
 param location string
 param tags object
-
-// Entra admin = the deploying principal (so migrations can run token-based). No password params.
-param entraAdminObjectId string
-param entraAdminName string
-@allowed(['User', 'Group', 'ServicePrincipal'])
-param entraAdminType string = 'User'
-
-param allowedExtensions string = 'uuid-ossp,pgcrypto,pg_trgm'
-
-// App database from compose (e.g. POSTGRES_DB) — emit so it exists before migrations run.
-param appDbName string
 
 resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: pgName
@@ -31,7 +28,6 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   sku: { name: 'Standard_B1ms', tier: 'Burstable' }
   properties: {
     version: '16' // ⛔ use prepare-plan.json.services[].version (capabilities-verified) — do not guess
-    // ⛔ Entra-only: no password auth, no administratorLogin/Password.
     authConfig: {
       activeDirectoryAuth: 'Enabled'
       passwordAuth: 'Disabled'
@@ -41,7 +37,6 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-// ⛔ Child resources are SERIALIZED — see the ordering note below. Do not drop these dependsOn.
 // 0.0.0.0 = all Azure services (intentional) — broad access consented at the Scaffold Gate.
 resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
   parent: pg
@@ -49,19 +44,37 @@ resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@202
   properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
 }
 
-// Entra administrator (deploying principal) — required for token-based admin + migrations.
+// Consuming this output from a second module creates the deployment boundary.
+output serverName string = pg.name
+```
+
+**`infra/modules/postgres-children.bicep` — management-ready children:**
+
+```bicep
+param pgName string
+param entraAdminObjectId string
+param entraAdminName string
+@allowed(['User', 'Group', 'ServicePrincipal'])
+param entraAdminType string = 'User'
+param allowedExtensions string = 'uuid-ossp,pgcrypto,pg_trgm'
+param appDbName string
+
+resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' existing = {
+  name: pgName
+}
+
 resource pgAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
   parent: pg
+  // ⛔ This child name is the administrator object-ID segment in the ARM URL.
+  // It MUST be the GUID-backed input — never 'activeDirectory', a display label, or another literal.
   name: entraAdminObjectId
   properties: {
     principalType: entraAdminType
     principalName: entraAdminName
     tenantId: subscription().tenantId
   }
-  dependsOn: [ pgFirewall ]
 }
 
-// Allow PG extensions (uuid-ossp, pgcrypto, pg_trgm)
 resource pgExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024-08-01' = {
   parent: pg
   name: 'azure.extensions'
@@ -69,7 +82,6 @@ resource pgExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
   dependsOn: [ pgAdmin ]
 }
 
-// App database — emit so it exists before migrations run.
 resource pgDb 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
   parent: pg
   name: appDbName
@@ -78,20 +90,44 @@ resource pgDb 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' =
 }
 ```
 
-> ⛔ **Serialize the child resources. `parent:` is not enough.**
+**Wire both deployments from subscription-scope `infra/main.bicep`:**
+
+```bicep
+module pg 'modules/postgres.bicep' = {
+  name: 'postgres-server'
+  scope: rg
+  params: {
+    pgName: pgName
+    location: location
+    tags: tags
+  }
+}
+
+module pgChildren 'modules/postgres-children.bicep' = {
+  name: 'postgres-children'
+  scope: rg
+  params: {
+    // ⛔ Do not replace with the original pgName variable. This output reference is the readiness barrier.
+    pgName: pg.outputs.serverName
+    entraAdminObjectId: entraAdminObjectId
+    entraAdminName: entraAdminName
+    entraAdminType: entraAdminType
+    appDbName: appDbName
+  }
+}
+```
+
+> ⛔ **Both levels of ordering are required.**
 >
-> `parent:` only orders each child after the *server*, so ARM starts every child in parallel the moment the
-> server reports created. A Flexible Server is not yet accepting management operations at that instant, and the
-> administrator write is the one that notices:
+> 1. The separate `pgChildren` nested deployment, linked through `pg.outputs.serverName`, keeps the
+>    administrator PUT out of the server deployment that can finish before the management plane is accessible.
+> 2. Inside the companion module, `pgAdmin → pgExtensions → pgDb` remains serialized so ARM does not start the
+>    children in parallel.
 >
-> ```text
-> AadAuthOperationCannotBePerformedWhenServerIsNotAccessible
-> ```
->
-> It is a race, so it does not reproduce reliably and it survives `az bicep build` and `what-if` — both validate
-> shape, neither executes ordering. A measured deployment hit it on two consecutive attempts before the chain
-> above fixed it. Chaining firewall → administrator → configurations → database costs nothing (these are fast
-> control-plane writes) and removes the whole failure mode. Keep the chain even when a child looks independent.
+> `az bicep build` and `what-if` validate shape but do not exercise either runtime constraint. The scaffold
+> conformance gate therefore blocks a PostgreSQL administrator whose `name` is not `entraAdminObjectId`
+> (`PG-ENTRA-ADMIN-ID`) and blocks a same-deployment administrator without this output barrier
+> (`PG-ADMIN-READY-BARRIER`).
 
 Wire connection **parameters** (host, db name, MI username, `sslmode=require`) as plain app settings — NOT a Key Vault secret. The driver fetches an Entra access token at runtime as the password. The app's managed identity is granted a DB role post-deploy via `pgaadauth_create_principal` (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md) § Grant the app managed identity a DB role).
 

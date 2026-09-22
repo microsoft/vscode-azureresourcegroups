@@ -72,6 +72,39 @@ token it presents is one the database already trusts. Delete the job once it com
 creation in `deploy-result.json` so it is not mistaken for an orphaned resource by
 `capture_deployment_inventory`.
 
+### Tier-2 execution evidence and retry gate
+
+Before starting the job, configure a durable log destination or a session-artifact capture for both stdout
+and stderr. Record the immutable image digest, command, effective non-secret environment, identity resource
+ID, retry limit, timeout, and intended migration-history table. Start the job with a deterministic execution
+name and persist the start response immediately. Do not rely on retrieving ephemeral console logs after the
+replica exits.
+
+On completion, persist these as separate facts:
+
+1. Application process exit code plus stdout/stderr, keyed by execution name.
+2. Job-controller status/reason, replica timestamps, and retry count.
+3. Migration-history state (`pgmigrations`, `_prisma_migrations`, `alembic_version`, or the framework
+   equivalent) and the expected application tables.
+4. Database principal name/object ID and a token-authenticated connectivity probe for the migration identity.
+
+`BackoffLimitExceeded` says only that the controller exhausted the configured retry budget. With
+`replicaRetryLimit: 0`, it follows any single nonzero process exit and is **not** the application root cause.
+If stdout/stderr is missing, report the cause as `UNKNOWN`; do not relabel it `IAC_ERROR`,
+`APPLICATION_ERROR`, authorization, network, or readiness based on the controller reason alone.
+
+⛔ **No blind job restart.** A retry is allowed only after all four evidence groups above are captured:
+
+- If history, expected tables, or principal/OID state is unknown or inconsistent, do not retry. Preserve the
+  job and fail the deploy until the state is read and reconciled.
+- If logs identify a transient failure and history/schema state proves no applied-but-untracked migration,
+  allow at most **one unchanged retry** of that image/spec.
+- If logs identify code, package, command, identity, or configuration failure, repair it, revalidate the
+  image/spec, and count the next execution as a healing attempt rather than an unchanged retry.
+
+After any successful execution, query migration history and expected tables again before deleting the job.
+The health check is the final application-level proof, not a substitute for those database reads.
+
 ⛔ **Do not invent a migration surface inside the application to get around this.** Adding a
 migration HTTP endpoint, an admin route, or a bootstrap function to the deployed app — even
 temporarily — puts a schema-mutating entry point on a public service, changes the application under
@@ -152,7 +185,8 @@ Confirm the detected IP with the user before creating the rule.
 ## Verification (all tiers)
 
 A green HTTP status is not proof. Confirm the migration tool reports up to date **and** that the
-expected tables exist, then re-run the health check so the app exercises the migrated schema.
+expected tables exist, then re-run the health check so the app exercises the migrated schema. For a
+failed tier-2 job, complete the evidence and retry gate above before another execution.
 
 If migrations cannot be completed, write the failure into `deploy-result.json` and treat the deploy
 as failed rather than reporting success over an un-migrated database.

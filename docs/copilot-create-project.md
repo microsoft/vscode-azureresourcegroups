@@ -467,7 +467,12 @@ calls from later turns in the same chat are ignored.
 After a successful deploy, `azure-deploy` also **runs the project's outstanding database migrations**
 rather than leaving them as a manual next step. It reaches the database in tier order — inside the
 deployed app first, then a one‑shot job in the same environment, and only as a last resort through a
-temporary single‑IP firewall rule.
+temporary single‑IP firewall rule. PostgreSQL scaffolds put the Entra administrator in a second,
+output-linked Bicep module: this keeps its runtime PUT behind a server-readiness deployment barrier, and
+the conformance gate rejects a child name that is not the administrator object-ID parameter. For a failed
+one-shot migration job, the agent preserves application logs and reads migration history, expected tables,
+and principal identity state before it classifies or retries the execution; a controller
+`BackoffLimitExceeded` reason alone is not treated as the root cause.
 
 Agent instructions are **version‑stamped**. A `.version` file next to the copied folders records the
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
