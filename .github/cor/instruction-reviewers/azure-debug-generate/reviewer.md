@@ -61,11 +61,11 @@ Stay on the specified PR and repository.
    evidence. If the scoped change cannot be established, return `INCOMPLETE`.
    Never fetch moving branches or review a partial file silently.
 
-4. **Gather context.** Read the wrapper, `instructions.md`, and references for
-   changed rules. Moved out-of-scope rules are context only. Verify findings
-   against related plan instructions, extension consumers, tests, or docs when
-   useful. Ignore unrelated base-only changes. A PR description can explain
-   intent but does not prove correctness.
+4. **Gather context.** Read the custom agent instructions, internal instructions,
+   and references for changed rules. Moved out-of-scope rules are context only.
+   Verify findings against related plan instructions, extension consumers,
+   tests, or docs when useful. Ignore unrelated base-only changes. A PR
+   description can explain intent but does not prove correctness.
 
 5. **Apply every rubric criterion.** Review only new or worsened problems in the
    scoped changes. Account for moved rules, deliberate changes, and documented
