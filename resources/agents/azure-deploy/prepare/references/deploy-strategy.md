@@ -1,24 +1,24 @@
 # Deploy Strategy
 
-Choose Azure code deployment from prereq scan. Prepare writes `deployStrategy` to `prepare-plan.json`; scaffold encodes Bicep; deploy executes.
+Determine how application code will be deployed to Azure based on prereq scan results. The prepare phase writes `deployStrategy` to `prepare-plan.json`; scaffold encodes it in Bicep; deploy executes it.
 
 ## Deployment Patterns
 
-Select one of three patterns from `prereq-output.json.components[].buildRequirements`:
+Three patterns — select based on `prereq-output.json.components[].buildRequirements`:
 
-> ⛔ **Dockerfile ≠ Container Apps.** A Dockerfile serving only static files (nginx, httpd, `COPY . /usr/share/nginx/html`) is NOT backend. Route it as static site per `service-mapping.md § Static Dockerfile sites`, not Pattern C.
+> ⛔ **Dockerfile ≠ Container Apps.** A Dockerfile that only serves static files (nginx, httpd, `COPY . /usr/share/nginx/html`) is NOT a backend app. Route static-only Dockerfiles as static sites per `service-mapping.md § Static Dockerfile sites`, not Pattern C.
 
 | Pattern | When | `deployStrategy` needed? |
 |---------|------|--------------------------|
-| **A: Oryx auto-build** | No native modules or Dockerfile | Yes—startup command + app settings enter Bicep during scaffold |
-| **B: Startup-install** | Native modules (`hasNativeModules: true`) | Yes—startup command + fallback install + app settings in Bicep |
-| **C: Container-only** | Dockerfile runs server process (Express, Flask, uvicorn, etc.) | No—route to Container Apps; Dockerfile IS strategy |
+| **A: Oryx auto-build** | No native modules, no Dockerfile | Yes — startup command + app settings go in Bicep at scaffold time |
+| **B: Startup-install** | Native modules detected (`hasNativeModules: true`) | Yes — startup command + fallback install + app settings in Bicep |
+| **C: Container-only** | Has Dockerfile that runs a server process (Express, Flask, uvicorn, etc.) | No — route to Container Apps (Dockerfile IS the deploy strategy) |
 
 **Additional routing:**
 
 | Condition | Action |
 |-----------|--------|
-| Jib plugin (Java + `com.google.cloud.tools.jib`) | Container-only via Jib push to ACR; no Dockerfile |
+| Jib build plugin (Java + `com.google.cloud.tools.jib`) | Container-only via Jib push to ACR — no Dockerfile needed |
 
 ---
 
@@ -26,9 +26,9 @@ Select one of three patterns from `prereq-output.json.components[].buildRequirem
 
 **Languages:** Node.js, Python, .NET, Go, Java, PHP, Ruby
 
-Oryx detects stack, installs dependencies, and builds during zip deploy.
+Oryx detects the stack from project manifests, installs dependencies, and builds automatically during zip deploy.
 
-**Still write `deployStrategy` to `prepare-plan.json`**. Despite auto-detection, startup command and app settings MUST enter Bicep at scaffold, not deploy; no imperative deploy CLI.
+**Still write `deployStrategy` to `prepare-plan.json`** — even though Oryx auto-detects, the startup command and app settings MUST be in Bicep at scaffold time (not generated at deploy time). This eliminates imperative CLI commands during deploy.
 
 ```json
 "deployStrategy": {
@@ -42,35 +42,35 @@ Oryx detects stack, installs dependencies, and builds during zip deploy.
 }
 ```
 
- Read app start file from `prereq-output.json.entryPoint`; do NOT re-read manifests. Build startup command from `package.json` `start` script (Node.js) or framework convention (Python gunicorn, .NET/Go/Java Oryx-native).
+ Read `prereq-output.json.entryPoint` for the app's start file — do NOT re-read manifests. Build the startup command from `package.json` `start` script (Node.js) or framework convention (Python gunicorn, .NET/Go/Java Oryx-native).
 
-> ⛔ **Do NOT set custom `appCommandLine` for Pattern A.** Let Oryx use `package.json` `start` or framework defaults. Custom `appCommandLine` (`cd /home/site/wwwroot && node {entryPoint}`) replaces its launcher, bypassing `node_modules.tar.gz` decompression and causing `MODULE_NOT_FOUND`. Only set `appCommandLine` when `initCommands[]` contains `required: true` migrations.
+> ⛔ **Do NOT set a custom `appCommandLine` for Pattern A.** Let Oryx use `package.json` `start` script or framework defaults natively. A custom `appCommandLine` (`cd /home/site/wwwroot && node {entryPoint}`) replaces the Oryx launcher entirely — the launcher handles `node_modules.tar.gz` decompression, and bypassing it causes `MODULE_NOT_FOUND` crashes. Only set `appCommandLine` when `initCommands[]` has `required: true` entries (migrations).
 >
-> ⛔ **TypeScript projects:** Keep `typescript` + `@types/*` in `dependencies`, not `devDependencies`; Oryx production skips devDeps, causing `tsc` failure.
+> ⛔ **TypeScript projects:** Verify `typescript` + `@types/*` are in `dependencies` (not `devDependencies`) — Oryx production mode skips devDeps, causing `tsc` build failures.
 >
-> ⛔ **When `initCommands[]` has `required: true` entries:** Set `startupCommand` to prepend migrations: `"cd /home/site/wwwroot && {initCommand} && {framework-default-start}"`. Idempotent migrations are cold-start safe. Otherwise omit `startupCommand`; let Oryx handle it.
+> ⛔ **When `initCommands[]` has `required: true` entries:** Set `startupCommand` to prepend migrations: `"cd /home/site/wwwroot && {initCommand} && {framework-default-start}"`. Migrations are idempotent — safe on every cold start. Otherwise, omit `startupCommand` entirely (let Oryx handle it).
 
-Scaffold maps `startupCommand` → Bicep `appCommandLine` and `requiredAppSettings` → Bicep `siteConfig.appSettings`. Deploy only waits → zips → health-checks.
+Scaffold encodes `startupCommand` → Bicep `appCommandLine`, and `requiredAppSettings` → Bicep `siteConfig.appSettings`. Deploy only does: wait → zip → health check.
 
 ---
 
 ## Pattern B: Startup-Install (Native Modules)
 
-Native modules may fail Oryx compilation. Startup-install provides two layers.
+When native modules are detected, Oryx may fail to compile them. The startup-install pattern provides a two-layer safety net.
 
 ### Two-Layer Strategy
 
-1. **Primary — Oryx zip build:** `SCM_DO_BUILD_DURING_DEPLOYMENT=true` + `ENABLE_ORYX_BUILD=true` installs dependencies during Kudu zip deploy. App Service Linux Kudu has `gcc`, `make`, and build tools, enabling native compilation.
+1. **Primary — Oryx zip build:** `SCM_DO_BUILD_DURING_DEPLOYMENT=true` + `ENABLE_ORYX_BUILD=true` tells Oryx to run dependency installation during the Kudu-side zip deploy. The Kudu build environment on App Service Linux has `gcc`, `make`, and build tools available, so native compilation CAN succeed here.
 
-2. **Fallback — startup-install command:** `appCommandLine` installs dependencies on first boot IF dependency directory is absent. Guard skips later runs because `/home` persists.
+2. **Fallback — startup-install command:** `appCommandLine` runs dependency installation on first container boot IF the dependency directory doesn't exist. The existence guard ensures it only runs when needed — subsequent restarts skip it because `/home` is persistent storage.
 
-Set both in Bicep during scaffold. Startup command is fallback, not primary.
+Both layers are set in Bicep at scaffold time. The startup command is insurance — not the primary mechanism.
 
-> **Why two layers?** `az webapp deploy --type zip` uses OneDeploy, which may skip Oryx despite `SCM_DO_BUILD_DURING_DEPLOYMENT=true`. Startup catches this; guard skips install after successful Oryx build.
+> **Why two layers?** `az webapp deploy --type zip` uses the OneDeploy API, which may not trigger Oryx even with `SCM_DO_BUILD_DURING_DEPLOYMENT=true`. The startup command catches this case. If Oryx DID build successfully, the guard skips the redundant install.
 
 ### Deploy Strategy Schema
 
-Write `prepare-plan.json.deployStrategy`:
+Write to `prepare-plan.json.deployStrategy`:
 
 ```json
 "deployStrategy": {
@@ -86,36 +86,36 @@ Write `prepare-plan.json.deployStrategy`:
 }
 ```
 
-Replace `startupCommand` and `reason` with language-specific entry-point values below.
+Replace `startupCommand` and `reason` with language-specific values from the entry point table below.
 
 ### Entry Point & Startup Commands
 
-Same as Pattern A; Node.js prepends dependency guard `if [ ! -d node_modules ]; then npm install --production; fi`.
+Same as Pattern A, but Node.js adds a dependency guard: `if [ ! -d node_modules ]; then npm install --production; fi` before the start command.
 
-> ⛔ **Inline commands only.** Never generate `.sh` startup script; CRLF causes `bash` exit code 2.
+> ⛔ **Inline commands only.** Never generate a `.sh` startup script file — CRLF causes `bash` exit code 2.
 > ⛔ **Python: do NOT use `venv` in startup commands.**
 
 ### SKU Implications
 
-Compute floor: **B1 (Basic, ~$13/mo)**. Never select F1/D1/Free: managed identity is mandatory; free-tier MI sidecar OOMs. If native modules, TypeScript build, large deps, or WSGI/ASGI server need more resources, size up from B1 (B2/S1) and show at approval gate: "⚠️ {reason}. {sku} required." Never size below B1.
+The compute floor is **B1 (Basic, ~$13/mo)** — F1/D1/Free are never selected (managed identity is mandatory and the free-tier MI sidecar OOMs). When native modules, TypeScript build, large deps, or a WSGI/ASGI server push resource needs higher, size up from B1 (B2/S1) and surface the reason at the approval gate: "⚠️ {reason}. {sku} required." Never size below B1.
 
 ### Container Timeout
 
-`WEBSITES_CONTAINER_START_TIME_LIMIT` controls Azure container response wait.
+`WEBSITES_CONTAINER_START_TIME_LIMIT` controls how long Azure waits for the container to start responding.
 
 | Value | Use case |
 |-------|----------|
-| 230 (default) | Standard apps; no native compilation |
-| 1800 (max) | Startup-install; native compilation takes 2-5 min, longer with Python scipy/scikit-learn |
+| 230 (default) | Standard apps, no native compilation |
+| 1800 (max) | Startup-install — native compilation takes 2-5 min. Python with scipy/scikit-learn can take longer |
 
-Set `1800` whenever `codeDeployPattern == "startup-install"`.
+Always set to `1800` when `codeDeployPattern == "startup-install"`.
 
 ---
 
 ## Pattern C: Container-Only
 
-For Dockerfile backend logic, route to **Container Apps**. Dockerfile IS strategy; omit `deployStrategy` from `prepare-plan.json`.
+When the component has a Dockerfile with backend logic, route to **Container Apps**. The Dockerfile IS the deploy strategy — no `deployStrategy` needed in `prepare-plan.json`.
 
-Deploy handles ACR build → image push → Bicep redeploy with real image. See [code-deployment-container-apps.md](../../deploy/references/code-deployment-container-apps.md).
+The deploy phase handles: ACR build → image push → Bicep redeploy with real image. See [code-deployment-container-apps.md](../../deploy/references/code-deployment-container-apps.md).
 
-For Java Jib (`build.gradle` + `com.google.cloud.tools.jib`), build container image without Dockerfile; push to ACR via `jib` task.
+For Java apps using Jib (`build.gradle` + `com.google.cloud.tools.jib`), the build produces a container image without a Dockerfile — push to ACR via `jib` task.

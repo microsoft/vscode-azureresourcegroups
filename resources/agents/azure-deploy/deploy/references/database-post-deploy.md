@@ -1,12 +1,12 @@
 # Database Post-Deploy Verification (Managed-Identity / Entra-Only)
 
-Run schema migrations on AppOnboard-created databases (listed in `prepare-plan.json.services[]`) before health checks. App must run first; fix crashes before migrations.
+Run schema migrations on AppOnboard-created databases (listed in `prepare-plan.json.services[]`) before health checks. The app must be running first — if it's crashing, fix that before attempting migrations.
 
-> ⛔ **No passwords anywhere.** Databases use Entra-only provisioning (no `administratorLogin`/`administratorLoginPassword` or access keys). Admin operations (create DB, grant app managed-identity role, run migrations) use an **Entra access token** for deploying principal, set by Bicep as server Entra administrator. No `deploy-secrets.env` DB password or `pgAdminPassword` parameter.
+> ⛔ **No passwords anywhere.** Databases are provisioned Entra-only (no `administratorLogin`/`administratorLoginPassword`, no access keys). Admin operations (create DB, grant the app's managed identity a role, run migrations) authenticate with an **Entra access token** minted for the deploying principal, which the Bicep set as the server's Entra administrator. There is no `deploy-secrets.env` DB password and no `pgAdminPassword` parameter.
 
 ## 0. Mint an Entra token for the deploying principal
 
-Deployer is server Entra admin (set by DB module's `administrators` child). Mint short-lived token; use as CLI connection "password". `{entraAdminName}` = deployer UPN / app display name (`login` in server `administrators` block).
+The deployer is the Entra admin on the server (set by the DB module's `administrators` child resource). Mint a short-lived token and use it as the "password" for CLI connections. `{entraAdminName}` = the deployer's UPN / app display name (the `login` set in the server's `administrators` block).
 
 ```powershell
 # PostgreSQL / MySQL Flexible Server (OSS RDBMS audience)
@@ -17,7 +17,7 @@ $sqlToken = az account get-access-token --resource https://database.windows.net/
 
 ## 1. Create the app database (if needed)
 
-> ⛔ **Azure PostgreSQL/MySQL Flexible Server creates only system `postgres`/`mysql` by default.** If app config references a named database (e.g., `car_sale_db`, `myapp_production`), create it BEFORE container start—token auth only, never password:
+> ⛔ **Azure PostgreSQL/MySQL Flexible Server only creates the system `postgres`/`mysql` database by default.** If the app's config references a named database (e.g., `car_sale_db`, `myapp_production`), create it BEFORE the container starts — using token auth, never a password:
 >
 > ```powershell
 > az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken `
@@ -52,7 +52,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "{appMiName}";
 
 **Azure SQL:** `CREATE USER [{appMiName}] FROM EXTERNAL PROVIDER;` then add to `db_datareader`, `db_datawriter`, and (if the app runs migrations) `db_ddladmin`.
 
-**Discover migration command** from codebase, in order:
+**Discover the migration command** from the codebase (check in order):
 
 | Signal | Command | Working directory |
 |--------|---------|-------------------|
@@ -65,19 +65,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "{appMiName}";
 
 ## Execute via the Deployed Environment
 
-Run migrations where managed identity lives—inside app, not workstation.
+Migrations run where the managed identity lives — inside the app, not from your workstation.
 
-> ⛔ **Use token authentication, never password; PREFER app's own credential.**
-> - **(1) Preferred — `DefaultAzureCredential`:** with DB config using `DefaultAzureCredential` / `Authentication=Active Directory Default`, migration command works **unchanged** as app MI. No token handling or `curl`/`jq`; works on slim/distroless. Use whenever possible.
-> - **(2) Fallback — inject an MI token:** only when app cannot self-authenticate. Fetch token from container IMDS endpoint; pass as driver password env var (below). ⛔ Requires `curl` + `jq` (or `wget`) **in image**—absent on `slim`/`distroless`. If absent, do NOT hand-roll: surface `FLAGGED` finding + `postDeployRecommendation` to add `DefaultAzureCredential` to app DB config.
-> - ⛔ NEVER re-enable password auth to unblock.
+> ⛔ **Authenticate with a token, never a password — and PREFER the app's own credential.**
+> - **(1) Preferred — `DefaultAzureCredential`:** if the app's DB config uses `DefaultAzureCredential` / `Authentication=Active Directory Default`, the migration command works **unchanged** and authenticates as the app MI. No token handling, no `curl`/`jq`, works on slim/distroless images. Use this whenever possible.
+> - **(2) Fallback — inject an MI token:** only if the app cannot self-authenticate. Fetch a token from the container's IMDS endpoint and pass it as the driver password env var (see below). ⛔ This requires `curl` + `jq` (or `wget`) **in the image** — absent on `slim`/`distroless` builds. If the tools aren't present, do NOT hand-roll it: surface a `FLAGGED` finding + `postDeployRecommendation` to add `DefaultAzureCredential` to the app's DB config.
+> - ⛔ Never re-enable password auth to unblock.
 
 ### App Service (Linux only)
 
 ```powershell
 az webapp ssh -n {app} -g {rg} --subscription {sub}
 ```
-Then **inside SSH session** (container shell—no PowerShell layer), token-injection fallback requires image `curl`+`jq`:
+Then, **inside the SSH session** (the container's own shell — no PowerShell layer), for the token-injection fallback (requires `curl`+`jq` in the image):
 ```bash
 export PGPASSWORD="$(curl -s "$IDENTITY_ENDPOINT?resource=https://ossrdbms-aad.database.windows.net&api-version=2019-08-01" -H "X-IDENTITY-HEADER: $IDENTITY_HEADER" | jq -r .access_token)"
 export PGUSER={appMiName} PGSSLMODE=require
@@ -86,48 +86,48 @@ export PGUSER={appMiName} PGSSLMODE=require
 
 ### Container Apps
 
-**Preferred (DefaultAzureCredential—no injection; works on distroless):**
+**Preferred (DefaultAzureCredential — nothing to inject, works on distroless):**
 ```powershell
 az containerapp exec -n {ca} -g {rg} --subscription {sub} --command '{migration_command}'
 ```
 
-**Fallback (token injection; image requires `curl`+`jq`):**
+**Fallback (token injection; image must have `curl`+`jq`):**
 ```powershell
 # ⛔ SINGLE-QUOTE the whole --command so $(...) and $IDENTITY_* evaluate IN THE CONTAINER, not on the deployer.
 #    (A double-quoted PowerShell string would run curl locally and expand $IDENTITY_* to empty → empty PGPASSWORD.)
 az containerapp exec -n {ca} -g {rg} --subscription {sub} --command 'sh -lc "export PGPASSWORD=$(curl -s \"$IDENTITY_ENDPOINT?resource=https://ossrdbms-aad.database.windows.net&api-version=2019-08-01\" -H \"X-IDENTITY-HEADER: $IDENTITY_HEADER\" | jq -r .access_token); export PGUSER={appMiName} PGSSLMODE=require; {migration_command}"'
 ```
 
-> Prefer startup migration (`initCommands[]` → `appCommandLine`) with app `DefaultAzureCredential`: token-based, idempotent every cold start, no exec or `curl`/`jq`.
+> Preferred over both: bake the migration into the app's startup (`initCommands[]` → `appCommandLine`) using the app's own `DefaultAzureCredential` config, so migrations run token-based on every cold start (idempotent) with no exec step and no `curl`/`jq` dependency.
 
 ## Error Handling
 
-Migration failure → `IAC_ERROR`; check by DB type:
-- **AAD token / auth failure** (`password authentication failed`, `Login failed for token-identified principal`) → missing app-MI DB role (§2) or incomplete Entra-admin/RBAC propagation. Verify app MI principal, wait 60s, retry.
-- DB unreachable → check firewall (PostgreSQL: `AllowAllAzureServicesAndResourcesWithinAzureIps`; SQL: server firewall; MySQL: similar)
-- Missing extension/feature → check DB config (PostgreSQL: `azure.extensions`; SQL: compatibility level; MySQL: `require_secure_transport`)
-- Module missing → verify runtime includes migration tool
+If the migration command fails, classify as `IAC_ERROR` and check based on the database type:
+- **AAD token / auth failure** (`password authentication failed`, `Login failed for token-identified principal`) → the app MI was not granted a DB role (§2), or Entra-admin/RBAC propagation hasn't completed. Verify the app MI principal exists, wait 60s, retry.
+- DB unreachable → check firewall rules (PostgreSQL: `AllowAllAzureServicesAndResourcesWithinAzureIps`, SQL: server firewall, MySQL: similar)
+- Extension/feature missing → check DB-specific config (PostgreSQL: `azure.extensions`, SQL: compatibility level, MySQL: `require_secure_transport`)
+- Module not found → verify the runtime includes the migration tool
 
-> ⛔ **NEVER weaken auth to unblock.** Do NOT set `passwordAuth: 'Enabled'`, add `administratorLoginPassword`, or re-enable access keys. Fix grant (§2) or client token config.
+> ⛔ **Never weaken auth to unblock.** Do NOT set `passwordAuth: 'Enabled'`, add an `administratorLoginPassword`, or re-enable access keys to make a failing migration pass. Fix the grant (§2) or the client token config.
 
 ## PostgreSQL-Specific Checks
 
 Run BEFORE migrations when `services[]` includes PostgreSQL Flexible Server:
 
-1. **Token connectivity:** `az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext "SELECT 1"` — failure means missing firewall rule, deployer not Entra admin, or incomplete AAD propagation. Verify `AllowAllAzureServicesAndResourcesWithinAzureIps` + deployed `administrators` child; wait 60s, retry
-2. **Extension availability:** `az postgres flexible-server parameter show -g {rg} -n {pg} --name azure.extensions --query value -o tsv` — verify required extensions (e.g., `uuid-ossp` for Alembic/Django UUID fields) in allow-list. If missing, Bicep module should set them—check `infra/modules/postgresql.bicep`
+1. **Token connectivity:** `az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext "SELECT 1"` — if this fails, the firewall rule is missing, the deployer is not the Entra admin, or AAD propagation hasn't completed. Check `AllowAllAzureServicesAndResourcesWithinAzureIps` exists and the `administrators` child deployed, wait 60s, retry
+2. **Extension availability:** `az postgres flexible-server parameter show -g {rg} -n {pg} --name azure.extensions --query value -o tsv` — verify the extensions the app needs (e.g., `uuid-ossp` for Alembic/Django UUID fields) are in the allow-list. If missing, the Bicep module should have set them — check `infra/modules/postgresql.bicep`
 
 ## MySQL Flexible Server Checks
 
 Run BEFORE migrations when `services[]` includes MySQL Flexible Server:
 
-1. **Token connectivity:** `az mysql flexible-server execute -n {mysql} -u "{entraAdminName}" -p $dbToken -d mysql -q "SELECT 1"` — on failure, check firewall, Entra admin, AAD propagation. `execute` resolves by server name (no `-g`)
-2. **SSL enforcement:** `az mysql flexible-server parameter show -g {rg} -n {mysql} --name require_secure_transport --query value -o tsv` — verify app connection SSL mode matches
+1. **Token connectivity:** `az mysql flexible-server execute -n {mysql} -u "{entraAdminName}" -p $dbToken -d mysql -q "SELECT 1"` — if this fails, check the firewall rule, that the Entra admin is set, and AAD propagation. Note: `execute` resolves by server name (no `-g` needed)
+2. **SSL enforcement:** `az mysql flexible-server parameter show -g {rg} -n {mysql} --name require_secure_transport --query value -o tsv` — verify matches the app's connection SSL mode
 
 ## Azure SQL Checks
 
 Run BEFORE migrations when `services[]` includes Azure SQL:
 
-1. **Database online:** `az sql db show -g {rg} -s {sqlServer} -n {dbName} --query status -o tsv` — verify `Online`
-2. **Server firewall:** `az sql server firewall-rule list -g {rg} -s {sqlServer} -o table` — verify `AllowAllWindowsAzureIps` (0.0.0.0 → 0.0.0.0) for Azure-internal access
-3. **Entra-only auth:** verify `azureADOnlyAuthentication` is `true`; app MI has contained user (§2)
+1. **Database online:** `az sql db show -g {rg} -s {sqlServer} -n {dbName} --query status -o tsv` — verify the database is `Online`
+2. **Server firewall:** `az sql server firewall-rule list -g {rg} -s {sqlServer} -o table` — verify `AllowAllWindowsAzureIps` (0.0.0.0 → 0.0.0.0) exists for Azure-internal access
+3. **Entra-only auth:** verify `azureADOnlyAuthentication` is `true` and the app MI has a contained user (§2)

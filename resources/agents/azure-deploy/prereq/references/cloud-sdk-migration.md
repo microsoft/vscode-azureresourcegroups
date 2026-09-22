@@ -1,8 +1,8 @@
 # Non-Azure Cloud Service Dependencies
 
-> Step 2 manifest scan detects these. instructions.md Step 2 handles the `ask_user` redirect gate; this file defines classification.
+> Detected during Step 2 manifest scan. The `ask_user` redirect gate is handled in instructions.md Step 2 — this file defines the classification rules.
 
-Functional cloud SDK deps are 🔶 `CLOUD_SDK_MIGRATION`. Fill `prereq-output.json.cloudSdkFindings[]`.
+Functional cloud SDK deps are 🔶 `CLOUD_SDK_MIGRATION`. Populate `prereq-output.json.cloudSdkFindings[]`.
 
 | Found Dependency | Azure Equivalent |
 |-----------------|-----------------|
@@ -14,16 +14,16 @@ Functional cloud SDK deps are 🔶 `CLOUD_SDK_MIGRATION`. Fill `prereq-output.js
 | AWS SNS (`@aws-sdk/client-sns`, `AWSSDK.SimpleNotificationService`), GCP Pub/Sub (`google-cloud-pubsub`) | Service Bus / Event Grid |
 | Firebase (`firebase`, `firebase-admin`) full stack | Entra ID + Cosmos DB + Functions |
 
-> **Observability carve-out:** Observability deps are ⚠️ WARN (app runs without them), NOT 🔶. Classify by this table:
+> **Observability carve-out:** Observability deps are ⚠️ WARN (app runs without them), NOT 🔶. Use this table to distinguish:
 >
 > | Package | Classification | Why |
 > |---------|---------------|-----|
-> | `@google-cloud/opentelemetry-*` | ⚠️ WARN | Telemetry — app runs without it |
-> | `@google-cloud/logging` | ⚠️ WARN | Logging — app runs without it |
-> | `@google-cloud/monitoring` | ⚠️ WARN | Monitoring — app runs without it |
-> | `aws-xray-sdk`, `aws-rum-web` | ⚠️ WARN | Tracing/RUM — app runs without it |
-> | `google-cloud-tasks` | 🔶 CLOUD_SDK_MIGRATION | Functional — required to run |
-> | `google-cloud-pubsub` | 🔶 CLOUD_SDK_MIGRATION | Functional — required to run |
-> | `google-cloud-storage` | 🔶 CLOUD_SDK_MIGRATION | Functional — required to run |
-> | `@aws-sdk/client-dynamodb`, `boto3` (DynamoDB) | 🔶 CLOUD_SDK_MIGRATION | Functional — required to run |
-> | `@aws-sdk/client-sqs`, `@aws-sdk/client-sns` | 🔶 CLOUD_SDK_MIGRATION | Functional — required to run |
+> | `@google-cloud/opentelemetry-*` | ⚠️ WARN | Telemetry — app works without it |
+> | `@google-cloud/logging` | ⚠️ WARN | Logging — app works without it |
+> | `@google-cloud/monitoring` | ⚠️ WARN | Monitoring — app works without it |
+> | `aws-xray-sdk`, `aws-rum-web` | ⚠️ WARN | Tracing/RUM — app works without it |
+> | `google-cloud-tasks` | 🔶 CLOUD_SDK_MIGRATION | Functional — app breaks without it |
+> | `google-cloud-pubsub` | 🔶 CLOUD_SDK_MIGRATION | Functional — app breaks without it |
+> | `google-cloud-storage` | 🔶 CLOUD_SDK_MIGRATION | Functional — app breaks without it |
+> | `@aws-sdk/client-dynamodb`, `boto3` (DynamoDB) | 🔶 CLOUD_SDK_MIGRATION | Functional — app breaks without it |
+> | `@aws-sdk/client-sqs`, `@aws-sdk/client-sns` | 🔶 CLOUD_SDK_MIGRATION | Functional — app breaks without it |

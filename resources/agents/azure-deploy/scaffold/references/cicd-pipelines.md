@@ -1,5 +1,5 @@
 # CI/CD Pipeline Patterns
 
-CI/CD deferred to v2. Do NOT auto-generate workflows.
+CI/CD is deferred to v2. Do NOT auto-generate workflow files.
 
-For requested CI/CD guidance, call `mcp_azure_mcp_deploy` → `deploy_pipeline_guidance_get` with `is-azd-project: false`, `pipeline-platform: 'github-actions'`, `deploy-option: 'provision-and-deploy'`; present result.
+If the user requests CI/CD guidance, call `mcp_azure_mcp_deploy` → `deploy_pipeline_guidance_get` with `is-azd-project: false`, `pipeline-platform: 'github-actions'`, `deploy-option: 'provision-and-deploy'` and present the guidance.

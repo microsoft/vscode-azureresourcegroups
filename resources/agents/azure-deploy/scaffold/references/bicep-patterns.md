@@ -1,12 +1,12 @@
 # Bicep Patterns
 
-Default AppOnboard scaffold Bicep patterns; primary IaC format. Terraform path (existing `.tf` or user override) uses `mcp_azure_mcp_azureterraformbestpractices` output patterns.
+Bicep default-path patterns for AppOnboard scaffold. Used as the primary IaC format. For the alternative Terraform path (existing `.tf` files or user override), scaffold uses `mcp_azure_mcp_azureterraformbestpractices` output patterns.
 
-> **Source:** Adapted from Azure [Bicep best practices](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/best-practices).
+> **Source:** Adapted from Azure Bicep best practices. See [Bicep best practices](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/best-practices) for updates.
 
 ## File Structure
 
-> ⛔ **Always use `targetScope = 'subscription'`.** Subscription-scope Bicep creates resource group with all 5 AppOnboard tags, including `created-at`. Resource-group scope needs `az group create`, which misses `created-at` because CLI groups lack IaC-managed tags. AppOnboard gains nothing from resource-group scope.
+> ⛔ **Always use `targetScope = 'subscription'`.** Subscription-scope Bicep creates the resource group in IaC with all 5 AppOnboard tags (including `created-at`). Resource-group scope requires `az group create` via CLI, which consistently misses `created-at` because CLI-created resource groups don't receive IaC-managed tags. There are zero benefits to resource-group scope for AppOnboard.
 
 ```
 infra/
@@ -21,7 +21,7 @@ infra/
     └── ...
 ```
 
-Give each service a module. `main.bicep` orchestrates resource group creation + modules.
+Each service gets its own module. `main.bicep` orchestrates resource group creation + module calls.
 
 ## main.bicep Skeleton
 
@@ -70,7 +70,7 @@ module resources './modules/resources.bicep' = {
 
 ## main.parameters.json
 
-> ⛔ **ARM JSON only.** Do NOT use `.bicepparam` syntax (`using`, `param`, `readEnvironmentVariable()`). AppOnboard uses `az deployment sub create`, not `azd`; `.bicepparam` needs azd or newer tooling. Without subscription permissions, deploy automatically falls back to `az deployment group create`.
+> ⛔ **ARM JSON only.** Do NOT use `.bicepparam` syntax (`using`, `param`, `readEnvironmentVariable()`). AppOnboard deploys via `az deployment sub create` (subscription-scope default) — not `azd` — and `.bicepparam` requires azd or newer tooling. If the user lacks subscription-level permissions, the deploy phase falls back to `az deployment group create` automatically.
 
 ```json
 {
@@ -87,7 +87,7 @@ module resources './modules/resources.bicep' = {
 
 ## Naming Convention (Bicep)
 
-Prepare generates logical prefix in `prepare-plan.json.naming.resourcePrefix` (e.g., `myapp-dev`). Scaffold MUST add globally unique Bicep `uniqueString()` suffix to prevent cross-deployment collisions for App Service, Storage Account, ACR.
+The prepare phase generates a logical resource prefix in `prepare-plan.json.naming.resourcePrefix` (e.g., `myapp-dev`). Scaffold MUST add a globally unique suffix using Bicep's `uniqueString()` function to prevent cross-deployment name collisions on globally unique Azure resources (App Service, Storage Account, ACR).
 
 ```bicep
 // main.bicep — derive unique suffix from resource group
@@ -99,13 +99,13 @@ param storName string = 'st${replace(resourcePrefix, '-', '')}${take(nameSuffix,
 param acrName string = 'cr${replace(resourcePrefix, '-', '')}${take(nameSuffix, 4)}'
 ```
 
-> ⛔ **Do NOT use `uniqueString()` for secrets**; deterministic and predictable. See [bicep-patterns-security.md](bicep-patterns-security.md) § Secrets.
+> ⛔ **Do NOT use `uniqueString()` for secrets** — it is deterministic and predictable. See [bicep-patterns-security.md](bicep-patterns-security.md) § Secrets for correct secret patterns.
 
-Prefer pre-computed suffixed names from `prepare-plan.json.naming.resources[]`, but ALWAYS ensure global names include `uniqueString()` or equivalent hash in main.bicep.
+If `prepare-plan.json.naming.resources[]` provides pre-computed names with suffixes, prefer those — but ALWAYS ensure globally unique resources include a `uniqueString()` or equivalent hash in main.bicep as a safety net.
 
 ## Log Analytics Module Output
 
-> ⛔ **Output resource ID (`.id`), NOT `.properties.customerId`.** Container Apps Environment requires full ARM `workspaceResourceId`; `.properties.customerId` is query GUID. Passing GUID as `workspaceResourceId` causes ARM `BadRequest`. Separate outputs:
+> ⛔ **Output the resource ID (`.id`), NOT `.properties.customerId`.** Container Apps Environment requires `workspaceResourceId` (the full ARM resource ID). `.properties.customerId` is the GUID used for queries — passing it as `workspaceResourceId` causes an ARM deploy failure (`BadRequest`). Separate the two outputs:
 > ```bicep
 > output workspaceId string = logAnalyticsWorkspace.id                          // ARM resource ID — for CAE, App Insights
 > output workspaceCustomerId string = logAnalyticsWorkspace.properties.customerId // GUID — for Log Analytics queries only

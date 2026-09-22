@@ -1,8 +1,8 @@
-Component-to-Azure mapping and existing-infrastructure detection. Part of [deployability check](deployability-check.md).
+Component-to-Azure mapping and existing infrastructure detection. Part of the [deployability check](deployability-check.md).
 
 ## Step 1: Component Mapping Feasibility
 
-Map each detected component to a known Azure service.
+Determine if each detected component maps to a known Azure service.
 
 | Component Type | Mappable Azure Services |
 |----------------|------------------------|
@@ -40,7 +40,7 @@ existing component whose framework already selects a compute model.
 
 ## Step 2: Existing Infrastructure Check
 
-Detect existing Azure infrastructure or deployment config.
+Check if the repo already has Azure infrastructure or deployment config.
 
 | Found | Implication |
 |-------|-------------|
@@ -53,11 +53,11 @@ Detect existing Azure infrastructure or deployment config.
 | `docker-compose.yml` | Multi-container setup — parse for service dependencies |
 | None of the above | Greenfield — full prep needed |
 
-Record findings for azure-prepare recipe selection.
+Record what exists; this feeds into recipe selection during azure-prepare.
 
 ### Terraform Provider Classification
 
-When `.tf` files exist, read `versions.tf`, `provider.tf`, or `main.tf` for `required_providers`. Classify into `context.json.detectedInfraProvider.terraform`:
+When `.tf` files are detected, read `versions.tf`, `provider.tf`, or `main.tf` to identify `required_providers`. Classify and write to `context.json.detectedInfraProvider.terraform`:
 
 | `required_providers` contains | Classification | Scaffold behavior |
 |-------------------------------|---------------|-------------------|
@@ -68,11 +68,11 @@ When `.tf` files exist, read `versions.tf`, `provider.tf`, or `main.tf` for `req
 | Multiple cloud providers without `azurerm` | `"multi"` | Generate Azure TF alongside |
 | No provider block found or only non-cloud providers | `"unknown"` | Halt — ask user to clarify |
 
-Also check `azure.yaml` coexistence: BOTH `azure.yaml` AND non-Azure `.tf` → `azure.yaml` wins → route to `azure-deploy`, not AppOnboard scaffold.
+Also check for `azure.yaml` coexistence: if BOTH `azure.yaml` AND non-Azure `.tf` exist → `azure.yaml` takes priority → route to `azure-deploy`, not AppOnboard scaffold.
 
 ### Compose Service Dependency Extraction
 
-When `docker-compose.yml` or `compose.yml` exists, parse `services:` infrastructure dependencies. Map known images to `detectedServices[]` (`DetectedService` in `session-schemas.ts`):
+When `docker-compose.yml` or `compose.yml` is found, parse `services:` for infrastructure dependencies. Map known images to `detectedServices[]` entries (`DetectedService` in `session-schemas.ts`):
 
 | Image pattern | `type` | Version source |
 |--------------|--------|----------------|
@@ -86,12 +86,12 @@ When `docker-compose.yml` or `compose.yml` exists, parse `services:` infrastruct
 | `minio/*` | `minio` | Image tag |
 | `mysql:*` | `mysql` | Image tag |
 
-Set `source: "compose"` on each. Omit `version` for no tag or `latest`. Skip app-owned services (`build:` context points to repo).
+Set `source: "compose"` on each. If no tag or `latest`, omit `version`. Skip the app's own service entries (services with `build:` context pointing to the repo).
 
 ### Compose Hostname Detection
 
-After extracting compose services, grep source and config for service names used as hostnames. Compose DNS names (e.g., `postgres`, `redis`, `api`) resolve inside Docker networks, NOT on Azure PaaS.
+After extracting compose services, grep app source code and config files for compose service names used as hostnames. Compose DNS names (e.g., `postgres`, `redis`, `api`) resolve inside Docker networks but NOT on Azure PaaS.
 
-**Detection:** For each service name, search config (`.env`, `config.*`, `application.*`, `settings.*`) and source for hostname patterns: `host=<service_name>`, `<service_name>:<port>`, `://<service_name>:`, or `<service_name>.`. Examples: `host=postgres`, `redis://redis:6379`, `PGHOST=db`.
+**Detection:** For each extracted service name, search app config files (`.env`, `config.*`, `application.*`, `settings.*`) and source code for patterns like `host=<service_name>`, `<service_name>:<port>`, `://<service_name>:`, or `<service_name>.` used as a hostname. Common examples: `host=postgres`, `redis://redis:6379`, `PGHOST=db`.
 
-**Verdict:** ⚠️ WARN — `id: W-COMPOSE-HOSTNAME`. "App references Docker Compose service name `{name}` as a hostname. On Azure, use the managed service endpoint (set via environment variable) instead." Add to `postDeployRecommendations[]`: `{ "title": "Replace compose hostnames with Azure endpoints", "reason": "Compose DNS names don't resolve on Azure PaaS", "effort": "low", "services": ["{mapped Azure service}"] }`.
+**Verdict:** ⚠️ WARN — `id: W-COMPOSE-HOSTNAME`. "App references Docker Compose service name `{name}` as a hostname. On Azure, use the managed service endpoint (set via environment variable) instead." Include in `postDeployRecommendations[]`: `{ "title": "Replace compose hostnames with Azure endpoints", "reason": "Compose DNS names don't resolve on Azure PaaS", "effort": "low", "services": ["{mapped Azure service}"] }`.

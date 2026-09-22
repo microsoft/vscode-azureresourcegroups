@@ -1,12 +1,12 @@
 # Bicep Patterns — Security Defaults
 
-Mandatory security for all AppOnboard-generated Bicep. Read before IaC resource definitions. Apply during scaffold; never defer to deploy.
+Mandatory security configuration for all AppOnboard-generated Bicep. Read during IaC generation before writing resource definitions. Apply during scaffold — never defer to deploy.
 
-See [bicep-patterns.md](bicep-patterns.md) for file structure, skeleton, naming, tagging; [subagent-iac-gen.md](subagent-iac-gen.md) Step 6 for PostgreSQL and Redis modules.
+For core patterns (file structure, skeleton, naming, tagging), see [bicep-patterns.md](bicep-patterns.md). For data module templates (PostgreSQL, Redis), see [subagent-iac-gen.md](subagent-iac-gen.md) Step 6.
 
 ## No Key Vault — App-Internal Secret Storage
 
-> ⛔ **Do NOT create a Key Vault.** AppOnboard IaC MUST NOT emit `Microsoft.KeyVault/vaults` or any KV secret/KV RBAC resource. Azure resource auth (database, cache, storage, Cosmos, queues) uses managed identity + token; nothing to store. App-internal secrets that are NOT Azure resource credentials (e.g. `SECRET_KEY`, JWT signing key, third-party API keys) live **directly on the compute resource**, never Key Vault:
+> ⛔ **Do NOT create a Key Vault.** AppOnboard-generated IaC MUST NOT emit `Microsoft.KeyVault/vaults` (or any KV secret / KV RBAC resource). Azure resource auth (database, cache, storage, Cosmos, queues) is managed-identity + token — there is nothing to store. App-internal secrets that are NOT an Azure resource credential (e.g. `SECRET_KEY`, JWT signing key, third-party API keys) are stored **directly on the compute resource**, never in Key Vault:
 
 - **App Service / Functions:** pass each secret as an `@secure()` Bicep param → `siteConfig.appSettings`. The platform encrypts app settings at rest. The value is generated at deploy time and passed via CLI (never committed); it does not appear in ARM deployment history because it's `@secure()`.
 - **Container Apps:** pass each secret as an `@secure()` param → the Container App's **native** `secrets: [{ name, value }]` array → referenced by `secretRef`. This is the Container Apps secret store, NOT Key Vault (`keyVaultUrl` is never used).
@@ -15,7 +15,7 @@ See [bicep-patterns.md](bicep-patterns.md) for file structure, skeleton, naming,
 
 ## Security Defaults
 
-> **Source:** Adapted from [Azure security baseline](https://learn.microsoft.com/en-us/security/benchmark/azure/overview).
+> **Source:** Adapted from Azure security best practices. See [Azure security baseline](https://learn.microsoft.com/en-us/security/benchmark/azure/overview) for updates.
 
 ### Identity — Managed Identity Everywhere (MANDATORY, NO EXCEPTIONS)
 
@@ -80,7 +80,7 @@ resource sqlServer 'Microsoft.Sql/servers@2024-05-01-preview' = {
 }
 ```
 
-> ⚠️ CI/CD service principal: set `principalType` to `'Application'`. Default `'User'` works only interactively.
+> ⚠️ If deploying from CI/CD with a service principal, set `principalType` to `'Application'`. The default `'User'` only works for interactive deployments.
 
 ### Secrets — App-Internal, Stored On-Compute (No Key Vault)
 
@@ -162,15 +162,15 @@ resource ftpAuth 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12
 }
 ```
 
-> **Deploy lifecycle:** Scaffold sets `scm.allow: true` for `az webapp deploy`. After upload + health check, deploy runs `az rest --method put .../basicPublishingCredentialsPolicies/scm` with `allow: false`. If resources are absent, Step 7 SCM re-disable silently fails.
+> **Deploy lifecycle:** Scaffold sets `scm.allow: true` so `az webapp deploy` works. After code upload + health check, deploy phase runs `az rest --method put .../basicPublishingCredentialsPolicies/scm` with `allow: false` to re-harden. If scaffold omits these resources, deploy's Step 7 SCM re-disable REST API call fails silently.
 
 ### Cosmos DB — Data Plane RBAC
 
-⛔ Cosmos DB has its own roles — see [rbac-roles.md](rbac-roles.md) § Cosmos DB for IDs and rules. Do NOT use `Microsoft.Authorization/roleAssignments` for Cosmos data access.
+⛔ Cosmos DB uses its own role system — see [rbac-roles.md](rbac-roles.md) § Cosmos DB for role IDs and behavioral rules. Do NOT use `Microsoft.Authorization/roleAssignments` for Cosmos data access.
 
 ### RBAC — Deterministic Role Assignments
 
-Common role GUIDs: [rbac-roles.md](rbac-roles.md).
+For the common roles GUID table, see [rbac-roles.md](rbac-roles.md).
 
 ```bicep
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {

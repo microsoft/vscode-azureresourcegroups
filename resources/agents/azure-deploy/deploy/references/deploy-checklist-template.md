@@ -1,13 +1,13 @@
 # Deploy Checklist Template (compaction-safe — generated at Step 5b)
 
-Conversation compaction drops long-running deploy rules. At Step 5b, write a deployment-specific checklist to disk; it survives compaction and costs ~100 tokens to re-read.
+Long-running deploy sessions lose rules when the conversation compacts. At Step 5b, generate a checklist file tailored to this deployment. Write it to disk so it survives compaction — re-reading costs ~100 tokens.
 
-**Write** `.copilot-azure/sessions/{id}/deploy-checklist.md` with `create` at Step 5b.
-**Re-read** with `view` after every long-running command (`az deployment`, `az webapp deploy`, `az acr build`), failed health check, or conversation compaction.
+**Write** to `.copilot-azure/sessions/{id}/deploy-checklist.md` using the `create` tool at Step 5b.
+**Re-read** via `view` after every long-running command (`az deployment`, `az webapp deploy`, `az acr build`), after each failed health check, and after any conversation compaction.
 
 ## How to generate
 
-Read `prepare-plan.json` for service types, then build from this template. **Replace `{placeholders}` with real values** and **delete inapplicable sections** (e.g., App Service for a Container Apps deploy).
+Read `prepare-plan.json` to determine the service types, then build the checklist from the template below. **Replace `{placeholders}` with real values** and **delete sections that don't apply** (e.g., remove the App Service section for a Container Apps deploy).
 
 ```markdown
 # Deploy Checklist for {appName}

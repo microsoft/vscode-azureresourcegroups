@@ -9,11 +9,11 @@ metadata:
 
 # Azure App Onboard Prereq — Repository Evaluation
 
-Evaluate repository build health, app completeness, and Azure deployability before infrastructure planning. Produce downstream per-component verdicts (PASS/WARN/FAIL).
+Evaluate a user's repository for build health, app completeness, and Azure deployment feasibility — before infrastructure planning. Produces per-component verdicts (PASS/WARN/FAIL) consumed by downstream phases.
 
-> **Orchestrator relationship:** Deploy agent's [`instructions.md`](../instructions.md) calls this at Step 3. After artifacts, return to `instructions.md` Step 4; do NOT invoke downstream phases directly.
+> **Orchestrator relationship:** Called by the deploy agent's [`instructions.md`](../instructions.md) at Step 3. Return control to `instructions.md` (continue at Step 4) after writing artifacts — do NOT invoke downstream phases directly.
 
-AppOnboard phase 1 of 4. Session: `.copilot-azure/sessions/{session-id}/`. Read `context.json`; write `components[]`, `repo{}`, `detectedInfra[]`; produce `prereq-output.json`. Schema: [`prereq-schemas.ts`](references/prereq-schemas.ts) — `PrereqOutput`, `BuildRequirements`. Supports direct entry.
+Phase 1 of 4 in AppOnboard pipeline. Session: `.copilot-azure/sessions/{session-id}/`. Reads `context.json`. Writes `components[]`, `repo{}`, `detectedInfra[]`. Produces `prereq-output.json`. Schema: [`prereq-schemas.ts`](references/prereq-schemas.ts) — `PrereqOutput`, `BuildRequirements`. Direct entry supported.
 
 ## When NOT to Use
 
@@ -27,11 +27,11 @@ AppOnboard phase 1 of 4. Session: `.copilot-azure/sessions/{session-id}/`. Read 
 ## Rules
 
 > ⛔ **ABSOLUTE PROHIBITION — `npm install`, `npm test`, `npx jest`, `pytest`, and ALL install/build/test commands are NEVER allowed.**
-> During prereq, NEVER run `npm install`, `npm test`, `npx jest`, `pip install`, `pytest`, `dotnet build`, `dotnet restore`, `dotnet test`, `go mod download`, `cargo build`, or ANY package-manager install, build, or test operation. Do NOT run tests; check test config statically. Prereq is read-only evaluation + static verification.
-> **ONLY exception — two consent-gated contexts:** (a) agent code **modified** during migration/remediation ([remediation-protocol.md](references/remediation-protocol.md) step 6), or (b) agent code **wrote** from scratch on zero-code path ([zero-code-path.md](references/zero-code-path.md)). Installation, build, and test runs ONLY through user-confirmed build-validation gate ([build-check.md](references/build-check.md) Step 3), after specific per-command consent. General consent never counts.
+> Under NO circumstances may you run `npm install`, `npm test`, `npx jest`, `pip install`, `pytest`, `dotnet build`, `dotnet restore`, `dotnet test`, `go mod download`, `cargo build`, or ANY package-manager install, build, or test command during the prereq phase. Do NOT run test suites to verify code — check for test config files statically instead. The prereq phase is read-only evaluation + static-only verification.
+> **ONLY exception — two sanctioned contexts, both consent-gated:** (a) code the agent **modified** during migration/remediation (see [remediation-protocol.md](references/remediation-protocol.md) step 6), or (b) code the agent **wrote** from scratch on the zero-code path (see [zero-code-path.md](references/zero-code-path.md)). In either case, install/build/test runs ONLY via the user-confirmed build-validation gate ([build-check.md](references/build-check.md) Step 3), after the user answers that specific per-command consent prompt. General prior consent never counts.
 
-1. ⛔ **Full pipeline (Steps 1–8), no exceptions.** Every prompt → Step 1. Answer specific questions within findings (Step 5), never before.
-2. ⛔ **No evaluation sub-agents.** Run 3-axis evaluation inline. **Exception**: zero-code-path scaffolding (Step 2).
+1. ⛔ **Full pipeline (Steps 1–8), no exceptions.** All prompts → Step 1 directly. Answer specific questions AS PART OF findings (Step 5), not before.
+2. ⛔ **No sub-agents for evaluation.** 3-axis evaluation is inline. **Exception**: zero-code-path scaffolding (Step 2).
 3. Code/destructive modifications require `ask_user`. Max 3 questions before results. Direct entry: don't repeat orchestrator's intent questions.
 
 ## MCP Tools
@@ -45,23 +45,28 @@ AppOnboard phase 1 of 4. Session: `.copilot-azure/sessions/{session-id}/`. Read 
 
 ### Step 1: Session Check
 
-**Orchestrator entry:** Read existing session `context.json`; proceed to Step 2.
+**Orchestrator entry:** Session exists — read `context.json`, proceed to Step 2.
 
 **Direct entry:** Check `.copilot-azure/sessions/active-session.json`:
 - **Exists** → ⛔ read [session-protocol.md](references/session-protocol.md) for resume/fresh gate. Do NOT proceed until user answers.
-- **Missing** → create session: generate UUID, `New-Item -ItemType Directory -Path ".copilot-azure/sessions/{uuid}" -Force`; write `context.json` + `active-session.json` via `create`.
+- **Missing** → create session: generate UUID, `New-Item -ItemType Directory -Path ".copilot-azure/sessions/{uuid}" -Force`, write `context.json` + `active-session.json` via `create` tool.
 
-Then `az account show` → merge `{id, name, tenantId}` into `context.json.azure`. ⛔ Session MUST exist on disk before scanning.
+Then: `az account show` → merge `{id, name, tenantId}` into `context.json.azure`. ⛔ Session MUST exist on disk before any scanning.
 
 ### Step 2: Scan Workspace
 
-Scan project files. Detect components, `repo{}`, `detectedInfra[]`, `detectedServices[]`; classify Terraform providers; check CLI. Stack conflicts: explicit user statement wins (write `context.json`, mark scan override); scan-only → confirm with user; multiple stacks → show all and ask (see [component-mapping.md](references/component-mapping.md)); no code → [zero-code-path.md](references/zero-code-path.md).
+Scan for project files. Detect components, `repo{}`, `detectedInfra[]`, `detectedServices[]`. Classify Terraform providers. Check CLI availability. Stack detection conflicts: user explicit statement wins (write to `context.json`, mark scan as override); scan-only → confirm with user; multiple stacks → show all and ask (see [component-mapping.md](references/component-mapping.md)); no code → [zero-code-path.md](references/zero-code-path.md).
 
-> ⛔ **Preserve Azure Functions service roots.** Directory with `host.json` + Azure Functions SDK or worker signal (`@azure/functions`, `Microsoft.NET.Sdk.Functions`, Functions Python decorators, or `FUNCTIONS_WORKER_RUNTIME`) is Azure Functions component. Record exact path and Azure Functions framework in both `context.json.components[]` and `prereq-output.json.components[]`. Do not classify HTTP-triggered Functions as generic REST API. With SPA + Functions root, record two components even when frontend calls backend through `/api`.
+> ⛔ **Preserve Azure Functions service roots.** A directory with `host.json` plus an Azure Functions SDK or
+> worker signal (`@azure/functions`, `Microsoft.NET.Sdk.Functions`, Functions Python decorators, or a
+> `FUNCTIONS_WORKER_RUNTIME` setting) is an Azure Functions component. Record its exact path and identify its
+> framework as Azure Functions in both `context.json.components[]` and `prereq-output.json.components[]`.
+> Do not classify HTTP-triggered Functions as a generic REST API. When a SPA and Functions root both exist,
+> record two components even if the frontend calls the backend through `/api`.
 
 > If no project files, no Dockerfile, AND no index.html → ⛔ read [zero-code-path.md](references/zero-code-path.md).
 
-> ⛔ **Cloud SDK early gate.** Grep `aws-sdk|@aws-sdk|boto3|google-cloud|@google-cloud|firebase`. On functional deps, read [cloud-sdk-migration.md](references/cloud-sdk-migration.md), then `ask_user`: **"Redirect to Azure Cloud Migrate"** (set `routeToSkill: "azure-cloud-migrate"`) · **"Continue evaluation anyway"** (finish readiness + SDK→Azure mapping, then STOP at Step 8; no plan before swapping deps) · **"Cancel"**.
+> ⛔ **Cloud SDK early gate.** Grep for `aws-sdk|@aws-sdk|boto3|google-cloud|@google-cloud|firebase`. If functional deps found → read [cloud-sdk-migration.md](references/cloud-sdk-migration.md), then `ask_user`: **"Redirect to Azure Cloud Migrate"** (set `routeToSkill: "azure-cloud-migrate"`) · **"Continue evaluation anyway"** (finish readiness eval + SDK→Azure mapping, then STOP at Step 8 — no plan until the deps are swapped) · **"Cancel"**.
 
 ### Step 3: Per-Component Evaluation
 
@@ -72,35 +77,35 @@ Scan project files. Detect components, `repo{}`, `detectedInfra[]`, `detectedSer
 | 3.3 | **Deployability check** | ⛔ **You MUST read [deployability-check.md](references/deployability-check.md)** |
 | 3.3a | **Component mapping** (conditional) | Read [component-mapping.md](references/component-mapping.md) ONLY IF >1 project manifest found (monorepo) |
 
-After evaluation, fill each component's `buildRequirements`. [readiness-gate.md](references/readiness-gate.md) and check references define verdict propagation, tiers, and f1Viable aggregation.
+Populate `buildRequirements` per component after evaluation. Verdict propagation, tier rules, and f1Viable aggregation are in [readiness-gate.md](references/readiness-gate.md) and the individual check references.
 
 ### Step 4: Write Artifacts + Readiness Gate
 
-⛔ Verify on-disk `context.json`. Read [readiness-gate.md](references/readiness-gate.md) (verdicts, tiers, batch-then-approve, fast-track), then [prereq-artifacts.md](references/prereq-artifacts.md) (writes, schemas).
+⛔ Verify `context.json` exists on disk. Read [readiness-gate.md](references/readiness-gate.md) (verdicts, tiers, batch-then-approve, fast-track) then [prereq-artifacts.md](references/prereq-artifacts.md) (write procedures, schemas).
 
 ### Step 5: Present Findings
 
-Per [readiness-gate.md § Present Findings](references/readiness-gate.md), show severity-grouped verdicts before continuing.
+Per [readiness-gate.md § Present Findings](references/readiness-gate.md) — show verdicts grouped by severity before proceeding.
 
 ### Step 6: Remediation (conditional)
 
-⛔ **You MUST read [remediation-protocol.md](references/remediation-protocol.md)** for any ❌ FAIL, 🔧 Recommended Fix, or ⚠️ WARN with `fixPhase: "prereq"`. It defines remediation loop, static verification, required re-evaluation, post-remediation artifact updates, and build-validation consent. If only ✅ PASS or ⚠️ WARN without `fixPhase: "prereq"`, skip to Step 7.
+⛔ **You MUST read [remediation-protocol.md](references/remediation-protocol.md)** IF any ❌ FAIL verdict, 🔧 Recommended Fix, or ⚠️ WARN with `fixPhase: "prereq"` exists. Contains remediation loop, static verification, re-eval mandate, post-remediation artifact updates, and the build-validation consent gate. If all verdicts are ✅ PASS or ⚠️ WARN without `fixPhase: "prereq"`, skip to Step 7.
 
 ### Step 7: Write Final State
 
-Step 4 already set `completedPhases` with `"prereq"` + `currentPhase: null`. Then:
+`completedPhases` already has `"prereq"` + `currentPhase: null` (from Step 4). Then:
 
-> ⛔ **Write `lastScanCommit`.** Run `git rev-parse HEAD`; store full 40-character SHA as `context.json.repo.lastScanCommit`. Required: Step 1 resume staleness guard compares to HEAD to detect changes.
+> ⛔ **Write `lastScanCommit`.** Run `git rev-parse HEAD` and store the full 40-character SHA as `context.json.repo.lastScanCommit`. Required — staleness guard in Step 1 compares to HEAD on resume to detect changes.
 
 ### Step 8: Route
 
 ⛔ **Mandatory — do NOT skip this step.**
 
-> **Routing fields:** Every route writes `routeToSkill` and `routeReason` to `context.json`.
+> **Routing fields:** All routing writes `routeToSkill` and `routeReason` to `context.json`.
 
-> **Post-remediation context:** If Step 6 ran, prefix routing prompt: "Remediation complete — {N} issues fixed, your app is now {overallHealth}."
+> **Post-remediation context:** If Step 6 ran, lead the routing prompt with: "Remediation complete — {N} issues fixed, your app is now {overallHealth}."
 
-> ⛔ **Evaluate rows top-down; first match wins.**
+> ⛔ **Evaluate rows top to bottom — first match wins.**
 
 | # | Condition | Action |
 |---|-----------|--------|
@@ -111,7 +116,7 @@ Step 4 already set `completedPhases` with `"prereq"` + `currentPhase: null`. The
 | 5 | Direct + ready/readyWithCaveats + existing Azure infra | `ask_user`: "Start fresh" → invoke `azure-app-onboard` / "Use existing infra" → invoke `azure-prepare` / "Not now" |
 | 6 | Direct + blocked | Report blocker summary + "Fix and re-run." |
 
-Severity tiers (🛑🔶❌🔧⚠️✅): [readiness-gate.md](references/readiness-gate.md).
+Severity tiers (🛑🔶❌🔧⚠️✅) are defined in [readiness-gate.md](references/readiness-gate.md).
 
 ## Outputs
 

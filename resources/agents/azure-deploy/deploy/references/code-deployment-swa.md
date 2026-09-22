@@ -2,11 +2,11 @@
 
 ## Static Web Apps — Content Deployment (Step 6c)
 
-Deploy content via SWA CLI using deployment token.
+Deploy content using the SWA CLI with deployment token.
 
-**Pre-check:** Verify `swa` CLI: `npx --yes @azure/static-web-apps-cli --version`. If unavailable, install: `npm install -g @azure/static-web-apps-cli`.
+**Pre-check:** Verify `swa` CLI is installed: `npx --yes @azure/static-web-apps-cli --version`. If not available, install: `npm install -g @azure/static-web-apps-cli`.
 
-> ⛔ **Pre-deploy: Build SPA source (not pre-built HTML).** Check whether SWA component has `package.json` (or equivalent manifest) with a `build` script. If yes, choose package manager by lockfile (`package-lock.json` → npm, `yarn.lock` → yarn, `pnpm-lock.yaml` → pnpm, `bun.lock`/`bun.lockb` → bun; default npm without lockfile) and run:
+> ⛔ **Pre-deploy: Build the frontend if SPA source (not pre-built HTML).** Check if the SWA component directory has a `package.json` (or equivalent manifest) with a `build` script. If yes, detect the package manager from the lockfile (`package-lock.json` → npm, `yarn.lock` → yarn, `pnpm-lock.yaml` → pnpm, `bun.lock`/`bun.lockb` → bun; default to npm if no lockfile) and run:
 > ```powershell
 > cd {component-path}   # e.g., web/
 > {pm} install           # npm install, yarn install, pnpm install, etc.

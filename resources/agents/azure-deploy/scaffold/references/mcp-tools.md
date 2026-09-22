@@ -1,8 +1,8 @@
 # Scaffold Phase — MCP Tools
 
-Scaffold-only tool parameters. For shared tools (`get_azure_bestpractices`, `subscription_list`, `group_list`, `extension_cli_install`), see [mcp-tool-reference.md](../../references/mcp-tool-reference.md).
+Phase-exclusive tool parameters for the scaffold phase. For shared tools (`get_azure_bestpractices`, `subscription_list`, `group_list`, `extension_cli_install`), see [mcp-tool-reference.md](../../references/mcp-tool-reference.md).
 
-> **Troubleshooting:** For unknown parameter or missing command errors, see <https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/tools/>
+> **Troubleshooting:** If a tool call fails with unknown parameter or missing command errors, consult the official docs: <https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/tools/>
 
 ---
 
@@ -22,7 +22,7 @@ Scaffold-only tool parameters. For shared tools (`get_azure_bestpractices`, `sub
 |-------------|----------------|-----------------|-----------|
 | `bicepschema_get` | `resource_type` (e.g. Microsoft.Web/sites) | `api_version` | ✅ |
 
-**Usage:** Primary ARM schema tool; returns properties, required fields, constraints. Prefer over `mcp_bicep_get_az_resource_type_schema` for quick lookup without exact API version.
+**Usage:** ARM resource type schemas. Primary tool for scaffold — returns resource properties, required fields, and constraints. Prefer over `mcp_bicep_get_az_resource_type_schema` when you need a quick schema lookup without specifying an exact API version.
 
 ### `mcp_azure_mcp_azureterraformbestpractices` (flat)
 
@@ -30,7 +30,7 @@ Scaffold-only tool parameters. For shared tools (`get_azure_bestpractices`, `sub
 |----------|----------|-----------|
 | *(none)* | `resource_type` (e.g. "azurerm_linux_web_app") | ✅ |
 
-**Usage:** Azure Terraform best practices. Omit `resource_type` for general guidance; provide `resource_type` for resource-specific `azurerm` patterns, properties, security. Step 5 uses this for per-resource HCL (Terraform only).
+**Usage:** Returns Terraform best practices for Azure resources. Omit `resource_type` for general guidance. Provide `resource_type` to get resource-specific `azurerm` configuration patterns, recommended properties, and security settings. Used during scaffold Step 5 for per-resource HCL generation (Terraform path only).
 
 ---
 
@@ -42,7 +42,7 @@ Scaffold-only tool parameters. For shared tools (`get_azure_bestpractices`, `sub
 |----------|----------|-----------|
 | *(none)* | — | ✅ |
 
-Returns: Bicep authoring practices for naming, organization, parameters, security, testing.
+Returns: comprehensive best practices for Bicep authoring (naming, organization, parameters, security, testing).
 
 ### `mcp_bicep_get_az_resource_type_schema`
 
@@ -50,7 +50,7 @@ Returns: Bicep authoring practices for naming, organization, parameters, securit
 |----------|----------|-----------|
 | `azResourceType` (e.g. Microsoft.Web/sites), `apiVersion` (e.g. 2024-11-01) | — | ✅ |
 
-Returns: full resource JSON schema: properties, nested types, constraints.
+Returns: complete JSON schema for the resource type including all properties, nested types, constraints.
 
 ### `mcp_bicep_list_avm_metadata`
 
@@ -58,7 +58,7 @@ Returns: full resource JSON schema: properties, nested types, constraints.
 |----------|----------|-----------|
 | *(none)* | — | ✅ |
 
-Returns: all Azure Verified Modules (AVM) metadata, versions, docs.
+Returns: metadata for all Azure Verified Modules (AVM) including versions and docs.
 
 ### `mcp_bicep_list_az_resource_types_for_provider`
 
@@ -66,7 +66,7 @@ Returns: all Azure Verified Modules (AVM) metadata, versions, docs.
 |----------|----------|-----------|
 | `providerNamespace` (e.g. Microsoft.Compute) | — | ✅ |
 
-Returns: provider resource types and API versions.
+Returns: all resource types and API versions for the provider.
 
 ### `mcp_bicep_build_bicep`
 
@@ -74,7 +74,7 @@ Returns: provider resource types and API versions.
 |----------|----------|-----------|
 | `filePath` (absolute) | — | ✅ |
 
-Returns: compiled ARM JSON + errors, warnings, info for a `.bicep` file.
+Returns: compiled ARM template JSON + compilation errors, warnings, info for a `.bicep` file.
 
 ### `mcp_bicep_format_bicep_file`
 
@@ -82,7 +82,7 @@ Returns: compiled ARM JSON + errors, warnings, info for a `.bicep` file.
 |----------|----------|-----------|
 | `filePath` (absolute) | — | ❌ |
 
-Formats Bicep to official standards; respects `bicepconfig.json`.
+Formats the Bicep file per official standards. Respects `bicepconfig.json`.
 
 ### `mcp_bicep_get_deployment_snapshot`
 
@@ -90,7 +90,7 @@ Formats Bicep to official standards; respects `bicepconfig.json`.
 |----------|----------|-----------|
 | `filePath` (absolute, `.bicepparam`) | — | ✅ |
 
-Returns: deployable snapshot resolving all parameter values and template references. Useful pre-deploy validation.
+Returns: deployment snapshot from a Bicep parameters file — resolves all parameter values and template references into a single deployable payload. Useful for pre-deploy validation.
 
 ### `mcp_bicep_get_file_references`
 
@@ -98,7 +98,7 @@ Returns: deployable snapshot resolving all parameter values and template referen
 |----------|----------|-----------|
 | `filePath` (absolute, `.bicep` or `.bicepparam`) | — | ✅ |
 
-Returns: Bicep file references (modules, parameters, imports) for dependency and completeness checks.
+Returns: all file references (modules, parameters, imports) from a Bicep file. Useful for dependency analysis and verifying scaffold output completeness.
 
 ### `mcp_bicep_decompile_arm_template_file`
 
@@ -106,7 +106,7 @@ Returns: Bicep file references (modules, parameters, imports) for dependency and
 |----------|----------|-----------|
 | `filePath` (absolute, .json/.jsonc/.arm) | — | ❌ |
 
-Converts ARM JSON → Bicep; best-effort, may need review.
+Converts ARM JSON → Bicep. Best-effort; may need manual review.
 
 ### `mcp_bicep_decompile_arm_parameters_file`
 

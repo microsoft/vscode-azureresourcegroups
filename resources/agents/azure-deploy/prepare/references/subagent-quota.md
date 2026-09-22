@@ -1,11 +1,11 @@
 # Subagent Template — Quota Validation (Step 5)
 
-Validate candidate-region SKU quota and offer restrictions before presenting choices.
+Validate SKU quota and offer restrictions across candidate regions before presenting region choices.
 
 ## Critical Rules
 
-- ⛔ **Do NOT invoke or hand off to any other agents**; no external agent calls. Quota checks only.
-- **Read [`sku-quota-validation.md`](sku-quota-validation.md) before ANY quota or offer restriction check.** It defines provider APIs, anti-patterns, database offer checks, region selection, and output schema. Follow exactly.
+- ⛔ **Do NOT invoke any other agents or hand off** — no external agent calls of any kind. You are a quota-check subagent only.
+- **Read [`sku-quota-validation.md`](sku-quota-validation.md) before executing ANY quota or offer restriction check.** It contains the per-provider API patterns, anti-patterns to avoid, offer restriction checks for database services, region selection logic, and output schema. All procedures live there — follow them exactly.
 
 ## Input (provided by caller)
 
@@ -13,8 +13,8 @@ Validate candidate-region SKU quota and offer restrictions before presenting cho
 |-------|---------|
 | `subscriptionId` | YES |
 | SKU list from Step 4 (service type + SKU per service) | YES |
-| Restricted-offer services (PostgreSQL, MySQL) | If planned |
-| **Detected DB version per DB service** (from `context.json.detectedServices[]`, e.g. MySQL `5.7`) | ⛔ REQUIRED for planned DB; [`sku-quota-validation.md`](sku-quota-validation.md) version algorithm needs it. |
+| Restricted-offer services (PostgreSQL, MySQL) | If present in plan |
+| **Detected DB version per DB service** (from `context.json.detectedServices[]`, e.g. MySQL `5.7`) | ⛔ REQUIRED if a DB is in the plan — the version-selection algorithm in [`sku-quota-validation.md`](sku-quota-validation.md) needs it. |
 
 ## Output
 
@@ -42,22 +42,22 @@ Return JSON (≤500 tokens):
 }
 ```
 
-⛔ **Caller:** at plan-write, copy each DB `version` to `prepare-plan.json.services[].version`. Scaffold needs exact patch; ARM rejects major-only `'8.0'`.
+⛔ **Caller:** copy each DB service's returned `version` into `prepare-plan.json.services[].version` at plan-write — scaffold needs the exact patch (ARM rejects major-only `'8.0'`).
 
 ## Workflow
 
 1. Read [`sku-quota-validation.md`](sku-quota-validation.md)
-2. Run provider quota checks for every SKU in every candidate region
-3. For input restricted-offer services, check each database in each region per `sku-quota-validation.md` § Offer Restriction Check
-4. Return Output schema above (≤500 tokens)
+2. Run the per-provider quota checks for every SKU across all candidate regions
+3. If restricted-offer services are in the input, run the offer restriction check for each database service in each candidate region per `sku-quota-validation.md` § Offer Restriction Check
+4. Return results per the Output schema above (≤500 tokens)
 
 ## Anti-Patterns (from sku-quota-validation.md — repeated here as guardrails)
 
-- ⛔ `az vm list-usage` — wrong provider; misleading
-- ⛔ `az appservice list-locations` — locations, NOT quota
+- ⛔ `az vm list-usage` — wrong provider, misleading data
+- ⛔ `az appservice list-locations` — lists locations, NOT quota
 - ⛔ `az appservice list-usages` — wrong scope
 - ⛔ `mcp_azure_mcp_quota` — unreliable for App Service
-- ⛔ `az quota list` — Windows extension loading fails
+- ⛔ `az quota list` — extension loading fails on Windows
 - ⛔ Use `az rest` for ALL quota checks
 
 ## Rules
@@ -68,4 +68,4 @@ Return JSON (≤500 tokens):
 
 ## Token Budget
 
-Quota report ≤500 tokens.
+≤500 tokens for quota results report.

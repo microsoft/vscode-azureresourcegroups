@@ -1,6 +1,6 @@
 # Azure App Onboard Scaffold — IaC Generation + Self-Review
 
-Generate deployment-ready infrastructure code from architecture plan, verify via adversarial self-review, bridge to validation — without deploying.
+Generate deployment-ready infrastructure code from an architecture plan, verify it with adversarial self-review, and bridge to validation — all without deploying.
 
 ## Quick Reference
 
@@ -15,9 +15,9 @@ Generate deployment-ready infrastructure code from architecture plan, verify via
 
 ## When to Use This Agent
 
-At Phase 3, `azure-app-onboard` invokes when `prepare-plan.json` contains `services[]`. Not directly user-routable in v1.
+Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.json` exists with `services[]`. Not directly user-routable in v1.
 
-> **Return to orchestrator:** On completion, return control to `azure-app-onboard`. Do NOT invoke deploy directly; orchestrator manages phase transitions.
+> **Return to orchestrator:** When complete, return control to `azure-app-onboard`. Do NOT directly invoke deploy — the orchestrator manages phase transitions.
 
 ## When NOT to Use
 
@@ -50,31 +50,31 @@ At Phase 3, `azure-app-onboard` invokes when `prepare-plan.json` contains `servi
 
 ### DETECT (Steps 1–4)
 
-1. **Read `prepare-plan.json`** — require `services[]`; read `naming`, especially `naming.resourcePrefix`, `naming.suffix`, `naming.resources[]`. Get resource group name from `context.json.azure.resourceGroup`. ⛔ **Use EXACTLY these names in generated IaC — do NOT invent names, derive them from `environmentName`, or append your own suffixes.** ⛔ **Use EXACTLY the names from `prepare-plan.json.naming.resources[]` as Bicep parameters. Do NOT derive names with `take()`, `substring()`, or string manipulation. Plan is source of truth.** Missing → trigger prepare backfill via `azure-app-onboard` orchestrator.
-2. **Read `context.json`** — check `overrides[]` for `iacFormat`, `detectedInfra[]` for existing `.tf`, `detectedInfraProvider` for cloud provider classification.
+1. **Read `prepare-plan.json`** — verify `services[]` exists, read `naming` config (especially `naming.resourcePrefix`, `naming.suffix`, `naming.resources[]`). Read resource group name from `context.json.azure.resourceGroup`. ⛔ **Use EXACTLY these names in generated IaC — do NOT invent names, derive them from `environmentName`, or append your own suffixes.** ⛔ **Use EXACTLY the names from `prepare-plan.json.naming.resources[]` as Bicep parameters. Do NOT derive names with `take()`, `substring()`, or string manipulation. The plan is the source of truth.** Missing → trigger prepare backfill via `azure-app-onboard` orchestrator.
+2. **Read `context.json`** — check `overrides[]` for `iacFormat` preference, `detectedInfra[]` for existing `.tf`, `detectedInfraProvider` for cloud provider classification.
 3. **Check workspace for existing IaC** — ⛔ **Skip** if `context.json.overrides[]` contains `ignoreExistingInfra: true`. Otherwise:
    - **Azure IaC** (`.bicep`, `azure.yaml`, `.tf` with `azurerm`): `ask_user` → "Start fresh" (rename `infra/` to `infra.bak/`) or "Use existing" (route to `azure-prepare`, stop pipeline).
    - **Non-Azure IaC** (`.tf` with GCP/AWS): respect `context.json.overrides[].iacFormat` from prepare. Default: Bicep alongside existing TF.
    - **Unknown TF** (`detectedInfraProvider.terraform` == `"unknown"`): ask user which provider before routing.
    - **No IaC**: continue.
-4. **Determine compute targets** — Identify planned compute targets (App Service/Functions, Container Apps, or both) and PostgreSQL/Redis presence. Do NOT read reference files; pass this to Step 5 sub-agent.
-4b. **Pre-check API versions (main thread)** — Because MCP access is unreliable in `task` agents, call it before dispatch. Call `mcp_bicep_list_az_resource_types_for_provider` (or `bicep-list_az_resource_types_for_provider`) once per provider namespace in `prepare-plan.json.services[]` (e.g., `Microsoft.Web`, `Microsoft.App`, `Microsoft.DBforPostgreSQL`, `Microsoft.Cache`, `Microsoft.ContainerRegistry`). Extract latest GA API version (no `-preview`) per resource type. Pass resulting `apiVersions` map to Step 5 IaC gen sub-agent. If MCP unavailable, run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` per resource type to select latest GA. Pass `"MCP unavailable"` only if MCP AND CLI fail. Sub-agent still validates Bicep via `az bicep build`.
+4. **Determine compute targets** — Check which compute targets are in the plan (App Service/Functions, Container Apps, or both) and whether PostgreSQL/Redis is present. Do NOT read any reference files — pass this info to the sub-agent at Step 5.
+4b. **Pre-check API versions (main thread)** — MCP tool access is unreliable in `task` agents — call these in the main thread before dispatching. Call `mcp_bicep_list_az_resource_types_for_provider` (or `bicep-list_az_resource_types_for_provider`) once per provider namespace in `prepare-plan.json.services[]` (e.g., `Microsoft.Web`, `Microsoft.App`, `Microsoft.DBforPostgreSQL`, `Microsoft.Cache`, `Microsoft.ContainerRegistry`). Extract the latest GA API version (no `-preview`) for each resource type. Build an `apiVersions` map and pass it to the IaC gen sub-agent at Step 5. Fallback: if MCP unavailable, run `az provider show --namespace {ns} --query "resourceTypes[?resourceType=='{type}'].apiVersions[?!contains(@, 'preview')] | [0][0]" -o tsv` per resource type — this filters to GA-only and picks the latest. Pass `"MCP unavailable"` only if both MCP AND CLI fail. Sub-agent still validates generated Bicep via `az bicep build`.
 
 ### ACTION (Steps 5–12)
 
 > ⛔ **File boundary:** NEVER modify files outside `infra/`, `.copilot-azure/`. Scaffold only writes files — no install/build commands.
 
-> ⛔ **Sub-agent delegation is MANDATORY for Steps 5, 6–9, and 10–12.** For each, read its `subagent-*.md` template, then dispatch a `task`. Do NOT read reference files not explicitly named here.
+> ⛔ **Sub-agent delegation is MANDATORY for Steps 5, 6–9, and 10–12.** Each step reads its `subagent-*.md` template, then dispatches a `task` call. Do NOT read any reference file not explicitly named in these steps.
 >
 > ⛔ **Dispatch type: `task` ONLY — NEVER `general-purpose`.** `general-purpose` leaks sub-agent context into the main thread, accelerating compaction and evicting the orchestrator workflow. `task` isolates sub-agent context.
 >
 > ⛔ **How to dispatch — VERBATIM COPY required:**
 > 1. `view` the `subagent-*.md` template file
 > 2. Your **NEXT action MUST be a `task` tool call** — not `view`, `powershell`, `create`, or ANY other tool
-> 3. Task prompt MUST contain **COMPLETE and UNMODIFIED** template text between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` exactly as below. Do NOT summarize, paraphrase, reword, or omit ANY part; every "Read [file]" and "Do:" instruction is required
+> 3. The task prompt MUST contain the **COMPLETE and UNMODIFIED** template text. Copy the template between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters exactly as shown below. Do NOT summarize, paraphrase, reword, or omit ANY part of it — the sub-agent needs every "Read [file]" and "Do:" instruction to produce correct output
 > 4. AFTER the template block, append the data sections (plan JSON, overrides, etc.)
 >
-> **Anti-pattern (causes regressions):** Writing your OWN workflow or generation prompt. Template contains complete workflow; COPY, do not rewrite.
+> **Anti-pattern (causes regressions):** Writing your OWN prompt that lists workflow steps or describes what to generate. The template already contains the complete workflow — your job is to COPY it, not rewrite it.
 
 5. **IaC generation** — ⛔ **You MUST dispatch [`subagent-iac-gen.md`](references/subagent-iac-gen.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
    ```
@@ -101,7 +101,7 @@ At Phase 3, `azure-app-onboard` invokes when `prepare-plan.json` contains `servi
    - **Expect:** IaC files written to `infra/`, file list returned for `scaffold-manifest.json.files[]`
    - The tag `app-onboard-skill: 'true'` MUST appear verbatim in generated Bicep.
 
-5b. **Deploy checklist (parallel with Step 5)** — Dispatch as `task` **in parallel** with IaC gen subagent. ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
+5b. **Deploy checklist (parallel with Step 5)** — Dispatch as a `task` **in parallel** with the IaC gen subagent above. ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
    ```
    <<<TEMPLATE_START>>>
    You are a deploy-checklist generator. Do NOT invoke any agents.
@@ -141,15 +141,15 @@ At Phase 3, `azure-app-onboard` invokes when `prepare-plan.json` contains `servi
 
 ### VALIDATE → MANIFEST → APPROVE (Steps 10–12.5)
 
-10a. **Format IaC (main thread)** — For every `.bicep` in `infra/` (including `modules/`), call `mcp_bicep_format_bicep_file` (or `bicep-format_bicep_file`) with `{ filePath: "<absolute path>" }`. This enforces LF via generated `bicepconfig.json`. Skip if unavailable.
+10a. **Format IaC (main thread)** — For each `.bicep` file in `infra/` (including `modules/`): call `mcp_bicep_format_bicep_file` (or `bicep-format_bicep_file`) with `{ filePath: "<absolute path>" }`.This enforces LF line endings via the `bicepconfig.json` written during IaC generation. Fallback: skip if unavailable.
 
 10a-conf. **Conformance gate (main thread — MANDATORY for Bicep)** — ⛔ **Skip this entire step when the scaffold emitted Terraform** (`infra/main.bicep` absent) — these checks are Bicep-only (Terraform is syntax-validated via `terraform validate` in the validate subagent). Otherwise run the conformance script from this phase's `scripts/` dir; it deterministically catches ARM-rejected values and policy violations `az bicep build` can't (invalid Bicep values, wrong DB version, any Key Vault → `NO-KEYVAULT`, DB admin login/password → `DB-NO-LOCAL-AUTH`, free/shared SKUs → `NO-FREE-SKU`):
    ```
    {scaffoldDir}/scripts/scaffold-conformance.ps1 -SessionPath ".copilot-azure/sessions/{uuid}" -InfraPath infra   # pwsh (preferred)
    bash {scaffoldDir}/scripts/scaffold-conformance.sh ".copilot-azure/sessions/{uuid}" infra                       # bash (only if pwsh unavailable; needs jq for the plan-dependent checks)
    ```
-   ⛔ **Prefer `.ps1` when `pwsh` exists**; it runs every check. Without `jq`, `.sh` skips plan-dependent checks (`DB-VERSION-MATCH`, `SERVICES-COMPLETE`, `DB-NAME-PRESENT`, `WARN-FIXED`).
-   ⛔ Any BLOCK → fix IaC and re-run (max 3); never present deploy gate with open BLOCK. Run in main thread; do NOT delegate or hand-judge when shell exists. Pass JSON to validate subagent for `scaffold-manifest.json.conformance`.
+   ⛔ **Prefer the `.ps1` when `pwsh` is available** — it runs every check unconditionally. The `.sh` twin skips the plan-dependent checks (`DB-VERSION-MATCH`, `SERVICES-COMPLETE`, `DB-NAME-PRESENT`, `WARN-FIXED`) when `jq` is absent.
+   ⛔ Any BLOCK failure → fix the IaC, re-run (max 3); never present the deploy gate with an open BLOCK. Run it here in the main thread — do NOT delegate to the validate subagent or hand-judge the result when a shell exists. Pass the JSON to the validate subagent for `scaffold-manifest.json.conformance`.
 
 10b–12.5. **Validation + manifest** — ⛔ **You MUST dispatch [`subagent-validate.md`](references/subagent-validate.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
    ```
@@ -174,13 +174,13 @@ At Phase 3, `azure-app-onboard` invokes when `prepare-plan.json` contains `servi
    {.copilot-azure/sessions/{uuid}/}
    ```
    - **Expect:** `scaffold-manifest.json` with `validationResult`, deploy checklist generated
-   - Require `deploy-checklist.md` from Step 5b; if missing, create NOW from [`deploy-checklist-template.md`](../deploy/references/deploy-checklist-template.md). Require `deploy-result.json`; if missing, create from [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts).
-   - ⛔ **Verify `context.json` update (main-thread — do NOT delegate).** Read `.copilot-azure/sessions/{uuid}/context.json`. Unless `completedPhases` includes `"scaffold"` AND `currentPhase` is `"deploy"`, use `edit` / `create`: append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, set `lastModifiedUtc` to current UTC ISO 8601. Required phase-boundary write per [pipeline-rules.md](../references/pipeline-rules.md); do not skip.
+   - Verify `deploy-checklist.md` exists (written at Step 5b) — if missing, create NOW from [`deploy-checklist-template.md`](../deploy/references/deploy-checklist-template.md). Verify `deploy-result.json` exists — if missing, create from [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts).
+   - ⛔ **Verify `context.json` update (main-thread — do NOT delegate).** Read `.copilot-azure/sessions/{uuid}/context.json`. If `completedPhases` does not include `"scaffold"` OR `currentPhase` is not `"deploy"`, write it yourself via `edit` / `create`: append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc` to current UTC ISO 8601. This is a phase-boundary write required by [pipeline-rules.md](../references/pipeline-rules.md) — do not skip it.
    - ⛔ **Return to orchestrator for Step 8 (Deploy Approval Gate).** YOUR NEXT ACTION MUST BE presenting the Deploy Gate per orchestrator instructions.md — do NOT write a "summary of generated files" message, do NOT emit a completion report. The Deploy Gate prompt (`🚀 Ready to deploy? ...`) is the ONLY correct next output.
 
 ## Self-Healing Loop
 
-On validation failure, read [`scaffold-healing-rules.md`](references/scaffold-healing-rules.md) (healing cadence, PLAN_LEVEL_CHANGE, artifact consistency). Do NOT pre-read.
+On validation failure → read [`scaffold-healing-rules.md`](references/scaffold-healing-rules.md) (healing cadence, PLAN_LEVEL_CHANGE, artifact consistency). Do NOT pre-read.
 
 ## Error Handling
 

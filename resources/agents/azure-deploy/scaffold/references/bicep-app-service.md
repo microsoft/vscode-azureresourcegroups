@@ -1,12 +1,12 @@
 # Bicep — App Service Patterns
 
-App Service Bicep patterns. For shared skeleton, naming, tags, security defaults, and data modules, see [bicep-patterns.md](bicep-patterns.md).
+App Service-specific Bicep patterns. For shared patterns (skeleton, naming, tags, security defaults, data modules), see [bicep-patterns.md](bicep-patterns.md).
 
 > ⛔ **Azure Functions on Flex Consumption (the default Functions floor) is NOT an App Service — do NOT use this module for it.** Flex uses a different resource shape (`functionAppConfig`) and a different deploy channel; see [bicep-functions-flex.md](bicep-functions-flex.md). This module applies to App Service web apps and to Functions only on **Premium (EP1)**.
 
 ## Module Template
 
-Base ALL App Service resources on this module with managed identity and SCM/FTP auth disabled.
+Standard App Service module with managed identity and SCM/FTP auth disabled. Use this as the base for ALL App Service resources.
 
 ```bicep
 param location string
@@ -60,11 +60,11 @@ output appServiceId string = appService.id
 output principalId string = appService.identity.principalId
 ```
 
-> ⛔ **Every App Service module MUST include:** (1) `identity: { type: 'SystemAssigned' }`, (2) `scm` basicPublishingCredentialsPolicies with `allow: true` (deploy convenience; deploy phase re-disables via REST API after code upload), (3) `ftp` basicPublishingCredentialsPolicies with `allow: false`. Any missing → self-review L1 `FLAGGED`.
+> ⛔ **Every App Service module MUST include:** (1) `identity: { type: 'SystemAssigned' }`, (2) `scm` basicPublishingCredentialsPolicies with `allow: true` (IaC sets enabled for deploy convenience — deploy phase re-disables via REST API after code upload), (3) `ftp` basicPublishingCredentialsPolicies with `allow: false`. Missing any of these → self-review L1 `FLAGGED`.
 
 ## Native Module Deploy Strategy
 
-When `prepare-plan.json.deployStrategy` has `codeDeployPattern: "startup-install"`, apply these App Service Bicep patterns:
+When `prepare-plan.json.deployStrategy` exists with `codeDeployPattern: "startup-install"`, apply these patterns to the App Service Bicep:
 
 ```bicep
 resource appService 'Microsoft.Web/sites@2023-12-01' = {
@@ -97,14 +97,14 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
 ```
 
 **Rules:**
-- ⛔ **Inline `appCommandLine` only** — never generate `.sh` startup script. Windows CRLF → bash exit code 2 on Linux
-- ⛔ **Entry point from manifest** — read `package.json.scripts.start` or `.main`; never hardcode `index.js`
-- ⛔ **`WEBSITES_CONTAINER_START_TIME_LIMIT` = 1800** (maximum). Native compilation takes 2-5 min; Python with scipy can take longer
+- ⛔ **Inline `appCommandLine` only** — never generate a `.sh` startup script file. Files created on Windows have CRLF line endings → bash exit code 2 on Linux
+- ⛔ **Entry point from manifest** — read `package.json.scripts.start` or `.main`, never hardcode `index.js`
+- ⛔ **`WEBSITES_CONTAINER_START_TIME_LIMIT` = 1800** (the maximum). Native compilation takes 2-5 min; Python with scipy can take longer
 - When `deployStrategy` is absent (no native modules), do NOT set `appCommandLine` — let Oryx use its default startup
-- ⛔ **Never prefix startup with `cd /home/site/wwwroot`** — Oryx extracts to temp and sets working directory. Hardcoding `cd /home/site/wwwroot` causes `MODULE_NOT_FOUND` / `Could not import`; app files aren't there
+- ⛔ **Never prefix startup with `cd /home/site/wwwroot`** — Oryx extracts build output to a temp directory and sets the working directory automatically. Hardcoding `cd /home/site/wwwroot` causes `MODULE_NOT_FOUND` / `Could not import` because the app files aren't there
 
-**Self-review check (L2 Pattern):** If `hasNativeModules == true`, require BOTH `appCommandLine` and `WEBSITES_CONTAINER_START_TIME_LIMIT`. If `prereq-output.json.initCommands[]` contains `required: true`, require those entries in `appCommandLine` before app start. **FLAGGED** on either failure.
+**Self-review check (L2 Pattern):** If `hasNativeModules == true`, verify Bicep has BOTH `appCommandLine` and `WEBSITES_CONTAINER_START_TIME_LIMIT`. If `prereq-output.json.initCommands[]` has `required: true` entries, verify `appCommandLine` includes them before the app start command. **FLAGGED** if either check fails.
 
 ## Identity Output — SystemAssigned vs UserAssigned
 
-> ⛔ **`appService.identity.principalId` exists only for `SystemAssigned`.** For `UserAssigned`, output managed identity MODULE's `principalId`; `identity.principalId` is undefined and causes `DeploymentOutputEvaluationFailed`. Every App Service has mandatory managed identity: compute floor B1 supports MI; F1/D1/Free are never selected.
+> ⛔ **`appService.identity.principalId` only exists for `SystemAssigned` identity.** When using `UserAssigned`, output the managed identity MODULE's `principalId` instead — `identity.principalId` is undefined and causes `DeploymentOutputEvaluationFailed`. Every App Service has a managed identity (mandatory — the compute floor is B1, which supports MI; F1/D1/Free are never selected).
