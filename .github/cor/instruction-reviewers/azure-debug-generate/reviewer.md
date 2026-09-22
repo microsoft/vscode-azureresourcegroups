@@ -123,7 +123,6 @@ submit approval or request-changes events.
 Verdict: PASS | REQUEST CHANGES
 Reviewed head: <full SHA>
 Compared base: <full SHA>
-Rubric version: 1
 
 <One-sentence verdict explanation.>
 
