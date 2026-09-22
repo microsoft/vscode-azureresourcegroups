@@ -15,23 +15,15 @@ Evaluate:
 
 Do not minimize files.
 Allow repeated context.
-Give behavior one owner.
 Follow comparable organization.
-Maintainers change owning references.
-Avoid synchronized independent definitions.
 
 ## Terminology
 
-Registered custom-agent source:
-`resources/agents/azure-debug-generate.agent.md`.
-It starts workflow.
-It points to:
-`resources/agents/azure-debug-generate/instructions.md`.
-That copies to:
-`.github/agents/azure-debug-generate/instructions.md`.
-
-Call that the internal `instructions.md`.
-"Keep details out of the internal `instructions.md`" never means the registered custom-agent source.
+The custom agent instructions are defined in
+`resources/agents/azure-debug-generate.agent.md`. They start the workflow and
+refer to the internal instructions at
+`resources/agents/azure-debug-generate/instructions.md`. The build copies the
+internal instructions to `.github/agents/azure-debug-generate/instructions.md`.
 
 ## Review outcome
 
