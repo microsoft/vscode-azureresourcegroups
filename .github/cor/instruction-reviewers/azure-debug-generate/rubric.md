@@ -32,23 +32,10 @@ internal instructions to `.github/agents/azure-debug-generate/instructions.md`.
 | PASS | Important behavior has one clear owner. Ownership follows established patterns. References compose explicitly. Changes remain local. |
 | REQUEST CHANGES | Concrete criterion failure creates ambiguous ownership, competing definitions, responsibility leakage, incomplete composition, or required-template violations. |
 
-Repeated concepts may pass.
-REQUEST CHANGES requires:
-
-- Competing key definitions
-- Missing primary ownership
-- Independently maintained duplication
-- Concrete template inconsistency
-
-No proven failure means PASS.
-Hard fixes still fail.
-
 ## Ownership model
 
-Classify owned knowledge.
-Compare similar knowledge.
-Alternative layouts may pass.
-Preserve ownership and composition.
+Use this table to identify the reference that owns each kind of instruction.
+Existing files may combine categories when their responsibilities remain clear.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -58,13 +45,6 @@ Preserve ownership and composition.
 | Resource or emulator reference | Defines local dependency setup and generated settings |
 | Generation reference | Combines the selected references into the output files |
 | Validation reference | Defines expected results, commands, checks, and cleanup. Split only when needed. |
-
-These are categories.
-Files need not match.
-Existing conventions choose placement.
-Deliberate ownership improvements may differ.
-Notify maintainers about ownership changes.
-Maintainers update this rubric.
 
 ## Criteria
 
