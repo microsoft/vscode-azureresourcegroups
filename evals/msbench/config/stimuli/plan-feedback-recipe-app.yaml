@@ -1,0 +1,63 @@
+# Stimulus 1.7 `plan-feedback-recipe-app` from evals/project-plan/eval.yaml.
+#
+# The third turn changes a material design choice without approving the plan.
+# The agent must update and reopen the plan while keeping the scaffold handoff
+# closed.
+
+promptSteps:
+  - text: |
+      Build me a recipe sharing app where people can post recipes with photos,
+      rate other people's recipes, and save favorites. I want it on Azure.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - text: "Requirements submitted at .azure/requirements.json. All confirmed."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: project-plan.md satisfies the plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Planning
+
+      - comment: Agent should have opened the plan webview after confirmation
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      - comment: Agent should not hand off to the scaffold agent before the plan is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - text: |
+      Actually, can you switch the database to CosmosDB instead? I think the
+      flexible schema would work better for recipes since they all have
+      different structures.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: project-plan.md satisfies the plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Planning
+
+      - comment: The revised plan records the Cosmos DB feedback
+        exec: 'grep -qi "Cosmos" /workspace/.azure/project-plan.md'
+
+      - comment: Agent should have opened the plan webview after confirmation
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      - comment: Agent should not hand off to the scaffold agent before the plan is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 2)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false

@@ -83,6 +83,9 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+
       # vally: program frontend-scaffold-valid  (validate-frontend-scaffold)
       # Preview embeddability and API-seam integrity. This is the grader that
       # decides whether the frontend the agent produced can actually render in

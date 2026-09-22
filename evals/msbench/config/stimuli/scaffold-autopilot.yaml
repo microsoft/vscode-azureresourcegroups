@@ -94,7 +94,7 @@ promptSteps:
       # The other half, also inverted from the paired file. Autopilot step 3 makes
       # the direct hand-off mandatory, because with the gate skipped nothing else
       # will start the integrate agent — the run simply stops.
-      - comment: Agent should hand off directly to integrate under autopilot
+      - comment: Agent should hand off directly to integrate
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
 
       # vally: constraints.reject_tools [vscode_askQuestions]

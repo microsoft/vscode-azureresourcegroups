@@ -75,6 +75,12 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
+      # Every custom agent must identify itself once when it receives the chat.
+      # This is the first turn owned by azure-project-plan, so the implied
+      # stepIndex filter proves the report happened at launch rather than later.
+      - comment: Agent should report its launch
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+
       # vally: tool-calls turn: 0 required [workflow-tools-open_requirements_view]
       # The one grader the source pins to a turn. `turn: 0` maps onto "declared
       # under promptSteps[0]", where the implied filter binds :stepIndex = 0.
