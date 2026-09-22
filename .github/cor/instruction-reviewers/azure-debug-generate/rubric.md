@@ -30,8 +30,8 @@ It points to:
 That copies to:
 `.github/agents/azure-debug-generate/instructions.md`.
 
-Call that main internal `instructions.md`.
-"Keep details out of main internal `instructions.md`" never means registered custom-agent source.
+Call that the internal `instructions.md`.
+"Keep details out of the internal `instructions.md`" never means the registered custom-agent source.
 
 ## Review outcome
 
@@ -60,12 +60,12 @@ Preserve ownership and composition.
 
 | Owner | Responsibility |
 | --- | --- |
-| Main internal `instructions.md` | Stable phases, global invariants, safety, plan/completion contracts, reference dispatch |
-| Project-type reference | Intrinsic application behavior, execution, readiness, project-specific configuration destinations |
-| Runtime reference | Language, build, debugger, runtime requirements |
-| Resource or emulator reference | Local dependency requirements and generation, following comparable references |
-| Generation and assembly reference | Combining selected project, runtime, resource, and other reference contributions into artifacts |
-| Validation reference | Observable outcomes, commands, lifecycle checks, cleanup. Split further only when existing structure or supported behavior requires it. |
+| Internal `instructions.md` | Defines the workflow, shared rules, safety checks, plan requirements, and which references to use |
+| Project-type reference | Defines how the app runs, how readiness is checked, and where project settings belong |
+| Runtime reference | Defines language, build, debugger, and runtime requirements |
+| Resource or emulator reference | Defines local dependency setup and generated settings |
+| Generation reference | Combines the selected references into the output files |
+| Validation reference | Defines expected results, commands, checks, and cleanup. Split only when needed. |
 
 These are categories.
 Files need not match.
@@ -80,48 +80,28 @@ Maintainers update this rubric.
 
 Pass:
 
-- Place information beside comparable ownership.
-- Keep established responsibilities.
-- Allow deliberate refinements.
-- Avoid competing owners.
-- Keep categories with owners.
-- Change owning references locally.
-- Change shared files only for shared behavior.
+- Put similar rules in the same kind of file. Keep current responsibilities unless the change clearly improves them.
+- Give each rule one clear owner.
+- Change only the owning reference. Change shared files only when the rule applies to all implementations.
 
 Request changes:
 
-- One file owns unrelated concerns.
-- New rules break comparable placement without reason.
-- Project/runtime references dictate unrelated resource management.
-- Generation/lifecycle behavior leaks to unrelated files.
-- One implementation broadly edits unrelated references.
-- One implementation alters another.
-- One combination needs copied reference trees.
-- Structure multiplies project types, runtimes, resources, and implementations instead of composing them.
+- A file covers unrelated work, or a rule is placed differently from similar rules without a reason.
+- Project, runtime, resource, generation, start, stop, or cleanup rules appear in the wrong file.
+- One implementation changes another, requires copied references, or adds separate files for every possible combination.
 
 ### AR-02: One primary behavior owner
 
 Pass:
 
-- Identify every behavior owner.
-- Include commands and fields.
-- Include artifact shapes.
-- Include port rules.
-- Include readiness rules.
-- Include connection requirements.
-- Include lifecycle operations.
-- Match comparable ownership.
-- Allow pointers, consumers, and brief context.
-- Never synchronize independent definitions.
-- Keep one primary change location.
+- Give every command, field, artifact format, port rule, readiness check, connection rule, and start, stop, or cleanup step one primary owner.
+- Put similar rules in the same kind of file and keep one main place to change each rule.
+- Pointers and short reminders may repeat a rule, but must not redefine it.
 
 Request changes:
 
-- Multiple files maintain one key rule/value.
-- Copied examples can conflict.
-- Multiple references own one generated field.
-- Multiple references own one lifecycle operation.
-- Reviewers must choose competing instructions.
+- Multiple files define the same key rule, value, generated field, or start, stop, or cleanup step.
+- Copied examples can conflict, or reviewers must choose between competing instructions.
 
 Repeated context may help.
 It must not compete.
@@ -130,117 +110,79 @@ It must not compete.
 
 Pass:
 
-- Explain stable phase flow.
-- Delegate implementation details.
-- Dispatch applicable references.
-- Put subcomponent details with owners.
-- Add only necessary routing.
-- Keep details owned while support expands.
+- Explain the main phase flow and point to the references needed for each case.
+- Keep project, runtime, resource, and emulator details in their own references. Add only the links needed to bring them together.
 
 Request changes:
 
-- Main file gains subcomponent recipes.
-- Includes project-type recipes.
-- Includes runtime recipes.
-- Includes resource/emulator recipes.
-- Main file restates subcomponent rules.
-- New subcomponents require implementation branches.
-- Detail changes require synchronized files.
+- The main file adds or repeats project, runtime, resource, or emulator instructions.
+- Supporting another project type, runtime, resource, or emulator requires new branches in the main file, or one detail must be changed in several files.
 
-### AR-04: Explicit reference composition
+### AR-04: References work together
 
 Pass:
 
-- Identify selected-reference inputs.
-- Explain artifact combination.
-- Define shared-artifact ownership.
-- Define shared-artifact precedence.
-- Compose a complete workflow.
+- List the references used for a case and explain how their instructions form a complete workflow.
+- State which reference defines shared output and which rule wins if references disagree.
 
 Request changes:
 
-- Assembly order requires inference.
-- Precedence requires inference.
-- Required artifact knowledge lacks owner.
-- Contributors can conflict unresolved.
-- Fragments lack full assembly.
+- Reviewers must guess the order or which rule wins.
+- Required output has no clear owner, conflicts have no answer, or the instructions never explain how to produce the complete output.
 
 ### AR-05: Separate shared/specific behavior
 
 Pass:
 
-- Keep shared behavior with current owners.
-- Includes project behavior.
-- Includes runtime behavior.
-- Includes resource behavior.
-- Includes validation behavior.
-- Keep implementation details with selected references.
-- Allow genuinely different implementations.
+- Keep shared project, runtime, resource, and validation rules in their current references.
+- Keep implementation details in the reference for that implementation. Different implementations may differ when needed.
 
 Request changes:
 
-- Copy unchanged facts across implementations.
-- Require separate maintenance.
-- Present implementation details as universal.
-- Duplicate shared behavior ownership.
+- The same facts are copied across implementations and must be updated separately.
+- Details for one implementation are stated as rules for all implementations, or a shared rule has more than one owner.
 
-### AR-06: Abstractions centralize complexity
+### AR-06: Shared modules simplify callers
 
 Pass:
 
-- Hide meaningful composition/invariants.
-- Expose small, clear interfaces.
-- Removal would duplicate rules.
-- Internal changes avoid caller retraining.
+- Put shared rules behind a small, clear interface.
+- Removing the module would copy those rules into its callers. Internal changes do not require caller changes.
 
 Request changes:
 
-- Shared files only forward/rename.
-- Abstractions expose nearly everything.
-- Layers anticipate variation without reducing duplication or clarifying ownership.
+- A shared file only forwards or renames things, or callers still need to know most internal details.
+- A module adds another layer without removing repeated rules or making ownership clearer.
 
 Apply deletion test.
 Mentally delete module.
-Duplicated caller complexity means useful.
+Repeated rules in callers mean useful.
 Only pass-through loss means unnecessary.
 
 ### AR-07: Preserve other orchestrators
 
 Pass:
 
-- Isolate orchestrator changes.
-- Shared changes preserve all orchestrators.
-- Preserve generation.
-- Preserve validation.
-- Preserve teardown.
+- Keep changes for one orchestrator out of the others.
+- Shared changes preserve file generation, checks, and cleanup for every orchestrator.
 
 Request changes:
 
-- One orchestrator alters another's artifacts/lifecycle.
-- Shared instructions assume incompatible behavior.
+- One orchestrator changes another's files, start steps, stop steps, or cleanup.
+- Shared instructions assume behavior that another orchestrator cannot support.
 
 ### AR-08: Match category templates
 
 Pass:
 
-- New entries follow root `_template.md`.
-- General new sections update template.
-- General new fields update template.
-- New folder categories add root `_template.md`.
-- Keep headings consistent.
-- Keep required sections consistent.
-- Keep placeholders consistent.
-- Keep ownership notes consistent.
+- New entries follow the root `_template.md`; new folder categories add one.
+- Add common sections and fields to the template. Keep headings, required sections, placeholders, and ownership notes consistent.
 - Explain non-obvious exceptions.
 
 Request changes:
 
-- New entry adds shared behavior absent from template.
-- Template and entries conflict structurally.
-- Template and entries conflict on ownership.
-- New category has multiple independent structures.
-- New category lacks root `_template.md`.
-- Drift duplicates maintenance across entries.
+- An entry adds a shared rule that is missing from the template, or conflicts with the template's structure or ownership.
+- A category lacks a root `_template.md`, uses inconsistent structures, or repeats rules across entries.
 
 Cosmetic-only differences pass.
 
