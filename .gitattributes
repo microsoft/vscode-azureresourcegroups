@@ -7,6 +7,14 @@
 evals/** text=auto eol=lf
 resources/agents/** text=auto eol=lf
 
+# .agents/ and agent-overlay/ for the same reason, plus one of their own:
+# agent-overlay/baseline.json is sha256 over the raw bytes of .agents/**, so a CRLF
+# working tree hashes differently from a LF one and drift-overlay.ps1 would report
+# every vendored file as changed on the other platform. The vendored
+# scaffold-conformance.sh must also stay LF or it fails as bad interpreter on Linux.
+.agents/** text=auto eol=lf
+agent-overlay/** text=auto eol=lf
+
 NOTICE.html linguist-vendored=true
 
 .github/workflows/*.lock.yml linguist-generated=true merge=ours
