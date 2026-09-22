@@ -74,7 +74,7 @@ permissions:
   pull-requests: read
   copilot-requests: write
 engine: copilot
-model: gpt-5.4
+model: gpt-5.6-sol
 network: defaults
 checkout: false
 inlined-imports: true
