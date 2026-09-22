@@ -1,0 +1,99 @@
+{
+  "$comment": "Mockup. Maps vendored upstream App Onboard skills onto the azure-deploy custom agent tree. Consumed by agent-overlay/SKILL.md.",
+  "version": "0.1.0-mockup",
+  "lastApply": {
+    "upstreamRef": "84265ac5 (Use the app onboarding pipeline #1665)",
+    "appliedUtc": null,
+    "$comment": "Set by SKILL.md Step 6, only when every required check passes."
+  },
+
+  "upstreamRoots": [
+    ".agents/skills/azure-app-onboard",
+    ".agents/skills/azure-app-onboard-prereq"
+  ],
+  "agentRoot": "resources/agents",
+  "agentName": "azure-deploy",
+
+  "routing": [
+    {
+      "id": "orchestrator",
+      "from": ".agents/skills/azure-app-onboard/SKILL.md",
+      "to": "resources/agents/azure-deploy/instructions.md"
+    },
+    {
+      "id": "phase-prereq",
+      "from": ".agents/skills/azure-app-onboard-prereq/SKILL.md",
+      "to": "resources/agents/azure-deploy/prereq/instructions.md"
+    },
+    {
+      "id": "phase-prepare",
+      "from": ".agents/skills/azure-app-onboard/prepare/SKILL.md",
+      "to": "resources/agents/azure-deploy/prepare/instructions.md"
+    },
+    {
+      "id": "phase-scaffold",
+      "from": ".agents/skills/azure-app-onboard/scaffold/SKILL.md",
+      "to": "resources/agents/azure-deploy/scaffold/instructions.md"
+    },
+    {
+      "id": "phase-deploy",
+      "from": ".agents/skills/azure-app-onboard/deploy/SKILL.md",
+      "to": "resources/agents/azure-deploy/deploy/instructions.md"
+    },
+    {
+      "id": "prereq-tree",
+      "fromGlob": ".agents/skills/azure-app-onboard-prereq/**",
+      "toPrefix": "resources/agents/azure-deploy/prereq/",
+      "$comment": "Prereq is a SEPARATE upstream skill but a SUBFOLDER here. Easy to get wrong on re-vendor."
+    },
+    {
+      "id": "onboard-tree",
+      "fromGlob": ".agents/skills/azure-app-onboard/**",
+      "toPrefix": "resources/agents/azure-deploy/",
+      "$comment": "Lower precedence than the explicit SKILL.md entries above."
+    }
+  ],
+
+  "unmappedUpstream": {
+    "policy": "error",
+    "$comment": "An upstream file with no routing match is a stop condition. Do not guess a destination."
+  },
+
+  "overlayOnly": [
+    {
+      "path": "resources/agents/azure-deploy.agent.md",
+      "owner": "rules/300-mcp-tools.md, rules/600-declarative-iac.md, rules/700-post-deploy-migrations.md",
+      "reason": "Custom agent wrapper. No upstream counterpart — upstream has no agent concept."
+    },
+    {
+      "path": "resources/agents/azure-deploy/.metadata.json",
+      "owner": "extension packaging",
+      "reason": "Download/versioning metadata for the agent asset."
+    },
+    {
+      "path": "resources/agents/azure-deploy/cor-references/",
+      "owner": "rules/700-post-deploy-migrations.md",
+      "reason": "CoR-only guidance. Namespaced under cor-references/ so a re-vendor can never collide."
+    }
+  ],
+
+  "authoredByOverlay": [
+    {
+      "path": "resources/agents/azure-deploy/scaffold/references/bicep-functions-flex.md",
+      "rule": "R-801",
+      "reason": "Flex Consumption IaC. Promote upstream and delete this rule if upstream adds an equivalent."
+    },
+    {
+      "path": "resources/agents/azure-deploy/deploy/references/code-deployment-functions-flex.md",
+      "rule": "R-802",
+      "reason": "Flex deploy channel. Same promotion note as above."
+    }
+  ],
+
+  "baseline": {
+    "$comment": "Baseline hashes live in baseline.json, not here. This file is hand-authored config; the baseline is generated state that changes on every verified apply. Keeping them separate stops routine re-vendors from conflicting with routing edits.",
+    "$ref": "baseline.json",
+    "capturedBy": "scripts/capture-baseline.ps1",
+    "consumedBy": "scripts/drift-overlay.ps1"
+  }
+}

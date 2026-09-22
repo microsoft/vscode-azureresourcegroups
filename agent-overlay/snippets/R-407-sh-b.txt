@@ -1,0 +1,5 @@
+# --- No Key Vault (app-internal secrets live on the compute resource) ---
+if iac_has 'Microsoft\.KeyVault/vaults' || iac_has '@Microsoft\.KeyVault' || iac_has 'keyVaultUrl'; then
+  add_fail "NO-KEYVAULT" "Key Vault detected (Microsoft.KeyVault/vaults, @Microsoft.KeyVault(...), or keyVaultUrl) — no Key Vault is allowed. Store app-internal secrets on the compute resource: @secure() param -> App Service appSettings / Container Apps native secrets[]." "infra/"
+fi
+

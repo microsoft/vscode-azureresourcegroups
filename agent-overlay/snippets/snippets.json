@@ -1,0 +1,203 @@
+{
+  "$comment": "Additive overlay rules: anchor + insert, deterministic and idempotent. Only rules whose content ADDS guidance belong here. Rules that REPLACE upstream prose (R-401, R-604, R-605, the 400-series security rewrite) must stay manual - appending a contradicting section next to the text it contradicts is worse than leaving the rule undone.",
+  "version": "0.1.0-mockup",
+  "snippets": [
+    {
+      "rule": "R-303+R-304",
+      "file": "azure-deploy/references/approval-gates.md",
+      "anchor": "Display the architecture plan for user approval BEFORE generating any files:",
+      "position": "after",
+      "idempotencyKey": "open_deploy_plan_view",
+      "content": "R-303.md"
+    },
+    {
+      "rule": "R-305",
+      "file": "azure-deploy/references/handoff-protocol.md",
+      "anchor": "## Post-Deploy Recommendations",
+      "position": "before",
+      "idempotencyKey": "open_deploy_result_view",
+      "content": "R-305.md"
+    },
+    {
+      "rule": "R-501+R-502",
+      "file": "azure-deploy/deploy/instructions.md",
+      "anchor": "| Parent | [azure-app-onboard](../instructions.md) |",
+      "position": "after",
+      "idempotencyKey": "capture_deployment_inventory",
+      "content": "R-501.md"
+    },
+    {
+      "rule": "R-602",
+      "file": "azure-deploy/deploy/instructions.md",
+      "anchor": "# Deploy — IaC Execution & Health Verification",
+      "position": "after",
+      "idempotencyKey": "before your first resource-creating command",
+      "content": "R-602.md"
+    },
+    {
+      "rule": "R-503",
+      "file": "azure-deploy/references/session-protocol.md",
+      "anchor": "(derive from `completedPhases`). E.g., prereq done → read `prepare/instructions.md`. Then continue from that phase.",
+      "position": "after",
+      "idempotencyKey": "capture_deployment_inventory",
+      "content": "R-503.md"
+    },
+    {
+      "rule": "R-504",
+      "file": "azure-deploy/deploy/references/mcp-tools.md",
+      "position": "append",
+      "idempotencyKey": "capture_deployment_inventory",
+      "content": "R-504.md"
+    },
+    {
+      "rule": "R-505",
+      "file": "azure-deploy/deploy/references/deploy-schemas.ts",
+      "position": "append",
+      "idempotencyKey": "CreatedResourceClassification",
+      "content": "R-505.ts"
+    },
+    {
+      "rule": "R-803",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-security.md",
+      "anchor": "the REST API call targets a resource that doesn't exist in ARM.",
+      "position": "after",
+      "idempotencyKey": "do NOT add these policies",
+      "content": "R-803.md"
+    },
+    {
+      "rule": "R-804",
+      "file": "azure-deploy/prereq/instructions.md",
+      "anchor": "> If no project files, no Dockerfile, AND no index.html → ⛔ read [zero-code-path.md](references/zero-code-path.md).",
+      "position": "after",
+      "idempotencyKey": "Azure Functions component",
+      "content": "R-804.md"
+    },
+
+    {
+      "$comment": "R-407 rewrites the policy section of both conformance scripts. Range-based, so every op carries a `requires` survivor list naming upstream checks that must still exist afterwards.",
+      "rule": "R-407 (ps1: policy checks)",
+      "file": "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+      "anchor": "  # 11. DB-LOGIN-NOT-RESERVED",
+      "anchorEnd": "# --- Key Vault checks ---",
+      "position": "replace-block",
+      "idempotencyKey": "DB-NO-LOCAL-AUTH",
+      "content": "R-407-ps1-a.txt",
+      "requires": ["TAGS-NO-CAMEL", "SERVICES-COMPLETE", "DB-VERSION-MATCH", "CAE-APPLOGS", "ACRPULL-GUID", "WARN-FIXED"]
+    },
+    {
+      "rule": "R-407 (ps1: Key Vault -> NO-KEYVAULT)",
+      "file": "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+      "anchor": "# --- Key Vault checks ---",
+      "anchorEnd": "# --- Container Apps / ACR checks",
+      "position": "replace-block",
+      "idempotencyKey": "NO-KEYVAULT",
+      "content": "R-407-ps1-b.txt",
+      "requires": ["TAGS-NO-CAMEL", "CAE-APPLOGS", "ACRPULL-GUID", "WARN-FIXED", "DB-NO-LOCAL-AUTH"]
+    },
+    {
+      "rule": "R-407 (sh: policy checks)",
+      "file": "azure-deploy/scaffold/scripts/scaffold-conformance.sh",
+      "anchor": "  # 11. DB-LOGIN-NOT-RESERVED (pure-text)",
+      "anchorEnd": "# --- Key Vault checks (pure-text) ---",
+      "position": "replace-block",
+      "idempotencyKey": "DB-NO-LOCAL-AUTH",
+      "content": "R-407-sh-a.txt",
+      "requires": ["TAGS-NO-CAMEL", "SERVICES-COMPLETE", "DB-VERSION-MATCH", "CAE-APPLOGS", "ACRPULL-GUID", "WARN-FIXED"]
+    },
+    {
+      "rule": "R-407 (sh: Key Vault -> NO-KEYVAULT)",
+      "file": "azure-deploy/scaffold/scripts/scaffold-conformance.sh",
+      "anchor": "# --- Key Vault checks (pure-text) ---",
+      "anchorEnd": "# --- Container Apps / ACR checks",
+      "position": "replace-block",
+      "idempotencyKey": "NO-KEYVAULT",
+      "content": "R-407-sh-b.txt",
+      "requires": ["TAGS-NO-CAMEL", "CAE-APPLOGS", "ACRPULL-GUID", "WARN-FIXED", "DB-NO-LOCAL-AUTH"]
+    },
+
+    {
+      "$comment": "Drops upstream's F1/D1 MI carve-out, which contradicts the mandatory-identity policy.",
+      "rule": "R-401",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-security.md",
+      "anchor": "### Identity — Managed Identity Everywhere",
+      "anchorEnd": "- **System-assigned managed identity**",
+      "position": "replace-block",
+      "idempotencyKey": "MANDATORY, NO EXCEPTIONS",
+      "content": "R-401.md",
+      "requires": ["Publishing Credential Lockdown", "System-assigned managed identity"]
+    },
+    {
+      "$comment": "R-604/R-605 replace the pass criteria in place. Appending here would leave 'Pass: exit 0' contradicting the new rule two lines above it.",
+      "rule": "R-604+R-605",
+      "file": "azure-deploy/scaffold/references/validation-and-manifest.md",
+      "anchor": "(Bash: redirect to `/dev/null` instead of `$null`.) Pass: exit 0. Fail: fix errors and retry.",
+      "anchorEnd": "**Terraform path:**",
+      "position": "replace-block",
+      "idempotencyKey": "BCP035",
+      "content": "R-604.md",
+      "requires": ["scaffold-healing-rules.md", "Static RBAC review", "validationResult"]
+    },
+
+    {
+      "$comment": "Guidance rewrites. The conformance gate already rejects these patterns (R-407); without these the docs still TEACH them and the agent fails its own gate.",
+      "rule": "R-402 (PostgreSQL module)",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-data.md",
+      "anchor": "## PostgreSQL Flexible Server Module",
+      "anchorEnd": "## MySQL Flexible Server Module",
+      "position": "replace-block",
+      "idempotencyKey": "PostgreSQL Flexible Server Module — Entra-Only",
+      "content": "R-402-pg.md",
+      "requires": ["Redis Cache Module", "AllowAllAzureServicesAndResourcesWithinAzureIps", "azure.extensions"]
+    },
+    {
+      "rule": "R-402+R-404 (MySQL module)",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-data.md",
+      "anchor": "## MySQL Flexible Server Module",
+      "anchorEnd": "## Redis Cache Module",
+      "position": "replace-block",
+      "idempotencyKey": "MySQL Flexible Server Module — Entra-Only",
+      "content": "R-402-mysql.md",
+      "requires": ["Redis Cache Module", "PostgreSQL Flexible Server Module"]
+    },
+    {
+      "rule": "R-403 (Container Apps secrets)",
+      "file": "azure-deploy/scaffold/references/bicep-container-apps.md",
+      "anchor": "## Key Vault Secret References",
+      "anchorEnd": "## Multi-Container Internal DNS",
+      "position": "replace-block",
+      "idempotencyKey": "Native Container Apps Secrets",
+      "content": "R-403-ca.md",
+      "requires": ["Two-Phase Wiring", "AcrPull Role Assignment", "Ingress & Port Mapping", "Networking"]
+    },
+    {
+      "rule": "R-403 (security secrets section)",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-security.md",
+      "anchor": "### Secrets — Key Vault References",
+      "anchorEnd": "### Transport — HTTPS Only",
+      "position": "replace-block",
+      "idempotencyKey": "Stored On-Compute (No Key Vault)",
+      "content": "R-403-sec.md",
+      "requires": ["MANDATORY, NO EXCEPTIONS", "Publishing Credential Lockdown", "Cosmos DB — Data Plane RBAC"]
+    },
+    {
+      "rule": "R-403 (env-var secret chain)",
+      "file": "azure-deploy/scaffold/references/env-var-secrets.md",
+      "anchor": "## Key Vault Secret Dependency Chain",
+      "anchorEnd": "## Azure Managed Service SSL/TLS Requirements",
+      "position": "replace-block",
+      "idempotencyKey": "App-Internal Secret Dependency Chain",
+      "content": "R-403-env.md",
+      "requires": ["Environment Variable Value Derivation", "Compose → Azure PaaS Credential Mapping"]
+    },
+    {
+      "rule": "R-405 (SKU floors)",
+      "file": "azure-deploy/prepare/references/sku-matrix.md",
+      "anchor": "## Budget Tiers",
+      "anchorEnd": "## Modifier Rules",
+      "position": "replace-block",
+      "idempotencyKey": "Never emit F1, D1, or Free",
+      "content": "R-405.md",
+      "requires": ["Modifier Rules", "Default Behavior", "Auto-Cheapest for Fast-Track"]
+    }
+  ]
+}

@@ -1,0 +1,401 @@
+{
+  "$comment": "Executable assertions for agent-overlay rules. Run via scripts/verify-overlay.ps1. Paths are relative to -AgentRoot. Substrings are deliberately ASCII-safe so the checks survive encoding round-trips.",
+  "version": "0.1.0-mockup",
+  "checks": [
+    {
+      "id": "C-101",
+      "rule": "R-101",
+      "severity": "required",
+      "description": "No skill entry points remain in the agent tree",
+      "assert": { "noFilesMatch": "azure-deploy/**/SKILL.md" }
+    },
+    {
+      "id": "C-102",
+      "rule": "R-102",
+      "severity": "required",
+      "description": "No links or prose still point at SKILL.md",
+      "scope": "azure-deploy/**/*.md",
+      "assert": { "mustNotContain": ["SKILL.md"] }
+    },
+    {
+      "id": "C-103",
+      "rule": "R-103",
+      "severity": "required",
+      "description": "Upstream plugin asset paths rebased to .github/agents",
+      "scope": "azure-deploy/**/*",
+      "assert": { "mustNotContain": ["plugin/skills/"] }
+    },
+    {
+      "id": "C-105",
+      "rule": "R-105",
+      "severity": "required",
+      "description": "Skill vocabulary normalized to agent vocabulary",
+      "scope": "azure-deploy/**/*.md",
+      "assert": { "mustNotContain": ["When to Use This Skill"] }
+    },
+    {
+      "id": "C-106",
+      "rule": "R-106",
+      "severity": "required",
+      "description": "Orchestrator frontmatter identifies the agent",
+      "file": "azure-deploy/instructions.md",
+      "assert": { "mustContain": ["name: azure-deploy"] }
+    },
+    {
+      "id": "C-201",
+      "rule": "R-201+R-203",
+      "severity": "required",
+      "description": "No skill-dispatch objects remain",
+      "scope": "azure-deploy/**/*.md",
+      "assert": { "mustNotContain": ["{\"skill\":"] }
+    },
+    {
+      "id": "C-202",
+      "rule": "R-202",
+      "severity": "required",
+      "$comment": "Must match the bare token. A narrower needle passed against a tree that still had 3 live occurrences in sub-agent briefs.",
+      "description": "Self-referential azure-deploy dispatch removed everywhere",
+      "scope": "azure-deploy/**/*.md",
+      "assert": { "mustNotContain": ["{\"skill\": \"azure-deploy\"}"] }
+    },
+    {
+      "id": "C-205",
+      "rule": "R-205",
+      "severity": "required",
+      "description": "Pipeline artifacts are kept out of .azure/",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["never in `.azure/`"] }
+    },
+    {
+      "id": "C-301",
+      "rule": "R-301",
+      "severity": "required",
+      "description": "Tool-loading contract present",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["## Azure Resources MCP Tools", "tool_search", "activate_tools"] }
+    },
+    {
+      "id": "C-302",
+      "rule": "R-302",
+      "severity": "required",
+      "description": "Launch telemetry wired",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["report_agent_launch"] }
+    },
+    {
+      "id": "C-303",
+      "rule": "R-303",
+      "severity": "required",
+      "description": "Plan view opens at the scaffold gate",
+      "file": "azure-deploy/references/approval-gates.md",
+      "assert": { "mustContain": ["open_deploy_plan_view"] }
+    },
+    {
+      "id": "C-304",
+      "rule": "R-304",
+      "severity": "required",
+      "description": "CLI prerequisites recorded through the MCP tool",
+      "file": "azure-deploy/references/approval-gates.md",
+      "assert": { "mustContain": ["record_deploy_prerequisites", "azd version", "az version"] }
+    },
+    {
+      "id": "C-305",
+      "rule": "R-305",
+      "severity": "required",
+      "description": "Results view opens at handoff",
+      "file": "azure-deploy/references/handoff-protocol.md",
+      "assert": { "mustContain": ["open_deploy_result_view"] }
+    },
+    {
+      "id": "C-305b",
+      "rule": "R-305",
+      "severity": "warn",
+      "description": "Results-view directive is stated once (duplicate = idempotency key was not honored)",
+      "file": "azure-deploy/references/handoff-protocol.md",
+      "assert": { "maxOccurrences": { "text": "After the artifact self-check passes, call", "count": 1 } }
+    },
+    {
+      "id": "C-401",
+      "rule": "R-401",
+      "severity": "required",
+      "description": "Managed identity is mandatory on all compute",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-security.md",
+      "assert": { "mustContain": ["MANDATORY, NO EXCEPTIONS"] }
+    },
+    {
+      "id": "C-402",
+      "rule": "R-402",
+      "severity": "required",
+      "description": "Entra-only data services enforced by conformance",
+      "files": [
+        "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+        "azure-deploy/scaffold/scripts/scaffold-conformance.sh"
+      ],
+      "assert": { "mustContain": ["DB-NO-LOCAL-AUTH"] }
+    },
+    {
+      "id": "C-403",
+      "rule": "R-403",
+      "severity": "required",
+      "description": "Key Vault prohibited and enforced",
+      "files": [
+        "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+        "azure-deploy/scaffold/scripts/scaffold-conformance.sh"
+      ],
+      "assert": { "mustContain": ["NO-KEYVAULT"] }
+    },
+    {
+      "id": "C-404",
+      "rule": "R-404",
+      "severity": "required",
+      "description": "MySQL Entra admin UAMI enforced",
+      "files": [
+        "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+        "azure-deploy/scaffold/scripts/scaffold-conformance.sh"
+      ],
+      "assert": { "mustContain": ["MYSQL-ENTRA-UAMI"] }
+    },
+    {
+      "id": "C-405",
+      "rule": "R-405",
+      "severity": "required",
+      "description": "Free and shared compute tiers blocked",
+      "files": [
+        "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+        "azure-deploy/scaffold/scripts/scaffold-conformance.sh"
+      ],
+      "assert": { "mustContain": ["NO-FREE-SKU"] }
+    },
+    {
+      "id": "C-407",
+      "rule": "R-407",
+      "severity": "required",
+      "description": "All ten policy codes exist in both conformance scripts",
+      "files": [
+        "azure-deploy/scaffold/scripts/scaffold-conformance.ps1",
+        "azure-deploy/scaffold/scripts/scaffold-conformance.sh"
+      ],
+      "assert": {
+        "mustContain": [
+          "NO-KEYVAULT",
+          "DB-NO-LOCAL-AUTH",
+          "DB-ENTRA-ADMIN",
+          "PG-ENTRA-ONLY",
+          "MYSQL-ENTRA-UAMI",
+          "STORAGE-NO-SHARED-KEY",
+          "REDIS-NO-KEYS",
+          "COSMOS-NO-LOCAL-AUTH",
+          "MSG-NO-LOCAL-AUTH",
+          "NO-FREE-SKU"
+        ]
+      }
+    },
+    {
+      "id": "C-501",
+      "rule": "R-501",
+      "severity": "required",
+      "description": "Inventory baseline captured before first deployment",
+      "file": "azure-deploy/deploy/instructions.md",
+      "assert": { "mustContain": ["phase: \"baseline\""] }
+    },
+    {
+      "id": "C-502",
+      "rule": "R-502",
+      "severity": "required",
+      "description": "Inventory captured after deployment attempts",
+      "file": "azure-deploy/deploy/instructions.md",
+      "assert": { "mustContain": ["phase: \"capture\""] }
+    },
+    {
+      "id": "C-503",
+      "rule": "R-503",
+      "severity": "required",
+      "description": "Resume re-baselines before further provisioning",
+      "file": "azure-deploy/references/session-protocol.md",
+      "assert": { "mustContain": ["capture_deployment_inventory"] }
+    },
+    {
+      "id": "C-504",
+      "rule": "R-504",
+      "severity": "required",
+      "description": "Cleanup wording is classification-aware",
+      "file": "azure-deploy/deploy/references/mcp-tools.md",
+      "assert": { "mustContain": ["orphaned", "unverified", "review before deleting"] }
+    },
+    {
+      "id": "C-505",
+      "rule": "R-505",
+      "severity": "required",
+      "description": "Inventory schema present",
+      "file": "azure-deploy/deploy/references/deploy-schemas.ts",
+      "assert": { "mustContain": ["CreatedResourceClassification", "inventoryUnverified"] }
+    },
+    {
+      "id": "C-601",
+      "rule": "R-601",
+      "severity": "required",
+      "description": "Hard rules block present in the wrapper",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["## Hard rules", "Never provision imperatively"] }
+    },
+    {
+      "id": "C-602",
+      "rule": "R-602",
+      "severity": "required",
+      "description": "Blocked-patterns trigger fires on first resource-creating command",
+      "file": "azure-deploy/deploy/instructions.md",
+      "assert": { "mustContain": ["before your first resource-creating command"] }
+    },
+    {
+      "id": "C-603",
+      "rule": "R-603",
+      "severity": "required",
+      "description": "Portal links are never auto-opened",
+      "scope": "azure-deploy/**/*.md",
+      "assert": { "mustNotContain": ["Start-Process $l", "Start-Process $link"] }
+    },
+    {
+      "id": "C-610",
+      "rule": "R-603",
+      "severity": "required",
+      "$comment": "Survivor assertion. A blanket line-delete filter once removed the whole Step 6 row while C-603 still reported PASS - absence checks cannot detect collateral deletion.",
+      "description": "Deploy workflow table retains every step row",
+      "file": "azure-deploy/deploy/instructions.md",
+      "assert": {
+        "mustContain": ["| 5b | **", "| 6 | **", "| 6b | **", "| 7 | **", "| 8 | **", "| 9 | **"]
+      }
+    },
+    {
+      "id": "C-410",
+      "rule": "R-403",
+      "severity": "required",
+      "$comment": "Needles target TEACHING forms only - a bicep property assignment or resource declaration. A blunt 'keyVaultUrl' match also flags the overlay's own prohibitions: same false-positive class as C-605.",
+      "description": "Scaffold guidance does not still teach Key Vault",
+      "scope": "azure-deploy/scaffold/references/**/*.md",
+      "assert": { "mustNotContain": ["keyVaultUrl:", "'Microsoft.KeyVault/vaults@"] }
+    },
+    {
+      "id": "C-411",
+      "rule": "R-402",
+      "severity": "required",
+      "$comment": "Same targeting discipline as C-410: a parameter declaration or property assignment, not a prohibition that mentions the name.",
+      "description": "Scaffold guidance does not still teach administratorLogin",
+      "scope": "azure-deploy/scaffold/references/**/*.md",
+      "assert": { "mustNotContain": ["param administratorLogin", "administratorLogin: administratorLogin"] }
+    },
+    {
+      "id": "C-412",
+      "rule": "R-405",
+      "severity": "required",
+      "$comment": "SKU floor is enforced by NO-FREE-SKU, but the planning docs still present F1/D1 as selectable.",
+      "description": "SKU guidance does not still offer F1/D1",
+      "file": "azure-deploy/prepare/references/sku-matrix.md",
+      "assert": { "mustContain": ["Never emit F1, D1, or Free"] }
+    },
+    {
+      "id": "C-604",
+      "rule": "R-604",
+      "severity": "required",
+      "description": "Bicep warnings fail validation",
+      "file": "azure-deploy/scaffold/references/validation-and-manifest.md",
+      "assert": { "mustContain": ["BCP035", "BCP081"] }
+    },
+    {
+      "id": "C-605",
+      "rule": "R-605",
+      "severity": "required",
+      "$comment": "Cannot assert absence of the wrong shape: the rule text quotes it as a prohibition. Assert the corrective sentence instead.",
+      "description": "Validation evidence uses the boolean checks shape",
+      "file": "azure-deploy/scaffold/references/validation-and-manifest.md",
+      "assert": {
+        "mustContain": ["\"passed\": true", "`passed` is a **boolean**"]
+      }
+    },
+    {
+      "id": "C-701",
+      "rule": "R-701",
+      "severity": "required",
+      "description": "Post-deploy migrations block present inside addendum markers",
+      "file": "azure-deploy.agent.md",
+      "assert": {
+        "mustContain": [
+          "## Post-deploy migrations",
+          "BEGIN copilot-on-rails addendum",
+          "END copilot-on-rails addendum"
+        ]
+      }
+    },
+    {
+      "id": "C-702",
+      "rule": "R-702",
+      "severity": "required",
+      "description": "Migration access tier ladder authored",
+      "file": "azure-deploy/cor-references/migration-access.md",
+      "assert": { "fileExists": true, "mustContain": ["Tier 1", "Tier 2", "Tier 3"] }
+    },
+    {
+      "id": "C-703",
+      "rule": "R-703",
+      "severity": "required",
+      "description": "Network posture is never weakened for a migration",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["Never weaken network posture"] }
+    },
+    {
+      "id": "C-704",
+      "rule": "R-704",
+      "severity": "required",
+      "description": "Tier 3 uses the lease tools",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["open_database_migration_access", "close_database_migration_access"] }
+    },
+    {
+      "id": "C-705",
+      "rule": "R-705",
+      "severity": "required",
+      "description": "Migration tier is recorded in the artifacts",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["state which tier ran the migration"] }
+    },
+    {
+      "id": "C-801",
+      "rule": "R-801",
+      "severity": "required",
+      "description": "Flex Consumption Bicep authored",
+      "file": "azure-deploy/scaffold/references/bicep-functions-flex.md",
+      "assert": { "fileExists": true, "mustContain": ["functionAppConfig", "FlexConsumption"] }
+    },
+    {
+      "id": "C-802",
+      "rule": "R-802",
+      "severity": "required",
+      "description": "Flex deploy channel authored",
+      "file": "azure-deploy/deploy/references/code-deployment-functions-flex.md",
+      "assert": { "fileExists": true, "mustContain": ["az functionapp deployment source config-zip"] }
+    },
+    {
+      "id": "C-803",
+      "rule": "R-803",
+      "severity": "required",
+      "description": "Flex exempted from SCM publishing policies",
+      "file": "azure-deploy/scaffold/references/bicep-patterns-security.md",
+      "assert": { "mustContain": ["do NOT add these policies"] }
+    },
+    {
+      "id": "C-804",
+      "rule": "R-804",
+      "severity": "required",
+      "description": "Functions components are preserved during prereq scan",
+      "file": "azure-deploy/prereq/instructions.md",
+      "assert": { "mustContain": ["host.json", "Azure Functions component"] }
+    },
+    {
+      "id": "C-805",
+      "rule": "R-805",
+      "severity": "required",
+      "description": "Scaffolded service topology is preserved",
+      "file": "azure-deploy.agent.md",
+      "assert": { "mustContain": ["Preserve the scaffolded service topology"] }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# --- No Key Vault (app-internal secrets live on the compute resource) ---
+if (($iac -match 'Microsoft\.KeyVault/vaults') -or ($iac -match '@Microsoft\.KeyVault') -or ($iac -match 'keyVaultUrl')) {
+  Add-Fail 'NO-KEYVAULT' 'Key Vault detected (Microsoft.KeyVault/vaults, @Microsoft.KeyVault(...), or keyVaultUrl) — no Key Vault is allowed. Store app-internal secrets on the compute resource: @secure() param -> App Service appSettings / Container Apps native secrets[].' 'infra/'
+}
+
