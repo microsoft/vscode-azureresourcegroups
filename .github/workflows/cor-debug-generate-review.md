@@ -75,10 +75,11 @@ permissions:
   copilot-requests: write
 # gh-aw v0.89.17+ pins a gateway that works with Copilot CLI's MCP discovery.
 # Copilot CLI 1.0.83+ fails before inference; keep 1.0.80 until https://github.com/github/gh-aw/issues/60820 is fixed.
+# Use a model in the pinned CLI catalog; gpt-5.6-sol reaches inference as invalid Responses API requests on 1.0.80.
 engine:
   id: copilot
   version: '1.0.80'
-model: gpt-5.6-sol
+model: gpt-5.4
 network: defaults
 checkout: false
 inlined-imports: true
