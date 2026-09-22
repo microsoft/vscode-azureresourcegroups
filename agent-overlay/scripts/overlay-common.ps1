@@ -42,7 +42,7 @@ function Get-UpstreamFiles {
             foreach ($p in $script:UpstreamPrefixes) { if ($rel.StartsWith($p, [System.StringComparison]::Ordinal)) { $inScope = $true; break } }
             if (-not $inScope) { continue }
 
-            $hash = [System.BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($f.FullName))).Replace('-', '').ToLowerInvariant()
+            $hash = Get-NormalizedHash -Path $f.FullName -Sha $sha
             [pscustomobject]@{ Rel = $rel; Hash = $hash; Dest = Get-RoutedDestination -Rel $rel }
         }
     }
@@ -64,7 +64,7 @@ function Get-OverlayFingerprint {
         $acc = [System.Text.StringBuilder]::new()
         foreach ($f in $files) {
             $rel = $f.FullName.Substring($OverlayRoot.Length).TrimStart('\', '/').Replace('\', '/')
-            $h = [System.BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($f.FullName))).Replace('-', '')
+            $h = Get-NormalizedHash -Path $f.FullName -Sha $sha
             [void]$acc.Append($rel).Append(':').Append($h).Append("`n")
         }
         $final = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($acc.ToString()))
@@ -76,4 +76,21 @@ function Get-OverlayFingerprint {
 function Get-BaselinePath {
     param([Parameter(Mandatory)][string] $OverlayRoot)
     return (Join-Path $OverlayRoot 'baseline.json')
+}
+
+$script:TextExtensions = @('.md', '.ts', '.json', '.ps1', '.sh', '.txt', '.yml', '.yaml')
+
+# Hashing raw bytes would make the baseline depend on the reader's git config:
+# core.autocrlf=true gives a Windows clone CRLF and Linux/CI LF, so identical content
+# hashes differently and drift reports every file as changed. Normalize first.
+function Get-NormalizedHash {
+    param([Parameter(Mandatory)][string] $Path, [Parameter(Mandatory)] $Sha)
+
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    if ([System.IO.Path]::GetExtension($Path) -in $script:TextExtensions) {
+        $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+        if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($text.Replace("`r`n", "`n"))
+    }
+    return [System.BitConverter]::ToString($Sha.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant()
 }
