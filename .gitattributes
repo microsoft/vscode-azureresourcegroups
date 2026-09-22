@@ -9,4 +9,4 @@ resources/agents/** text=auto eol=lf
 
 NOTICE.html linguist-vendored=true
 
-.github/workflows/*.lock.yml linguist-generated=true merge=ours
+.github/workflows/*.lock.yml linguist-generated=true
