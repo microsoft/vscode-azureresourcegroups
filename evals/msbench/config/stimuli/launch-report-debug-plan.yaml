@@ -13,5 +13,5 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      - comment: Agent should report its launch
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+      - comment: The debug-plan agent should report its launch with the correct name
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%' AND json_extract(args, '$.agentName') = 'azure-debug-plan'

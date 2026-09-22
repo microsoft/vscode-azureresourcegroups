@@ -78,8 +78,8 @@ promptSteps:
       # Every custom agent must identify itself once when it receives the chat.
       # This is the first turn owned by azure-project-plan, so the implied
       # stepIndex filter proves the report happened at launch rather than later.
-      - comment: Agent should report its launch
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+      - comment: The project-plan agent should report its launch with the correct name
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%' AND json_extract(args, '$.agentName') = 'azure-project-plan'
 
       # vally: tool-calls turn: 0 required [workflow-tools-open_requirements_view]
       # The one grader the source pins to a turn. `turn: 0` maps onto "declared

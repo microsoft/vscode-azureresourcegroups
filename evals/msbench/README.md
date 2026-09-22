@@ -2598,8 +2598,10 @@ enough, which is why that path landed first.
 
 ### The first `main` CI run should be one whose answer we already know
 
-`workflow_dispatch` takes a `stimulus` input, defaulting to **`scaffold-unapproved-plan`**
-rather than to `run.sh`'s own default of `photo-app-requirements`.
+`workflow_dispatch` takes `stimulus` and `model` inputs. The stimulus defaults to
+**`scaffold-unapproved-plan`** rather than to `run.sh`'s own default of
+`photo-app-requirements`; the model choices are the two exact ids in `models.ts`,
+`gpt-5.6-sol` and `claude-sonnet-5`.
 
 That is deliberate, and it is about what a red result would *mean*. The first dispatches
 are testing the pipeline — federated auth, the feed token, VSIX staging, grader staging,
