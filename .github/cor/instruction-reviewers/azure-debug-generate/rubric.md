@@ -10,12 +10,13 @@ Evaluate:
 - Clear ownership
 - Decoupling
 - Complete workflow composition
-- No mixing or duplicating of responsibility
+- No responsibility mixing
+- No responsibility duplication
 
-Do not minimize file count.
-Do not prohibit repeated context.
-Give important behavior one owner.
-Follow comparable instruction-set organization.
+Do not minimize files.
+Allow repeated context.
+Give behavior one owner.
+Follow comparable organization.
 Maintainers change owning references.
 Avoid synchronized independent definitions.
 
@@ -24,39 +25,38 @@ Avoid synchronized independent definitions.
 Registered custom-agent source:
 `resources/agents/azure-debug-generate.agent.md`.
 It starts workflow.
-It points to internal generation instructions:
+It points to:
 `resources/agents/azure-debug-generate/instructions.md`.
-That file copies into:
+That copies to:
 `.github/agents/azure-debug-generate/instructions.md`.
 
-This rubric calls it main internal `instructions.md`.
-"Keep details out of main internal `instructions.md`" never refers to registered custom-agent source.
+Call that main internal `instructions.md`.
+"Keep details out of main internal `instructions.md`" never means registered custom-agent source.
 
 ## Review outcome
 
 | Outcome | Meaning |
 | --- | --- |
 | PASS | Important behavior has one clear owner. Ownership follows established patterns. References compose explicitly. Changes remain local. |
-| WARN | A useful improvement that does not establish a criterion failure, or a possible criterion failure whose correction is not yet clear. |
-| SEVERE | A concrete criterion failure makes ownership ambiguous, creates competing definitions, leaks responsibility, or leaves workflow composition incomplete. |
+| REQUEST CHANGES | Concrete criterion failure creates ambiguous ownership, competing definitions, responsibility leakage, incomplete composition, or required-template violations. |
 
-Repeated concepts alone pass.
-A `SEVERE` outcome requires:
+Repeated concepts may pass.
+REQUEST CHANGES requires:
 
 - Competing key definitions
 - Missing primary ownership
 - Independently maintained duplication
+- Concrete template inconsistency
 
-Use `WARN` when the evidence supports a recommendation but does not establish
-one of those failures, or when a possible failure has no clear correction yet.
-An established failure remains `SEVERE` even when the correction is difficult.
+No proven failure means PASS.
+Hard fixes still fail.
 
 ## Ownership model
 
 Classify owned knowledge.
-Compare similar existing knowledge.
+Compare similar knowledge.
 Alternative layouts may pass.
-They must preserve ownership and composition.
+Preserve ownership and composition.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -68,158 +68,194 @@ They must preserve ownership and composition.
 | Validation reference | Observable outcomes, commands, lifecycle checks, cleanup. Split further only when existing structure or supported behavior requires it. |
 
 These are categories.
-They are not required files.
+Files need not match.
 Existing conventions choose placement.
-Exception: deliberate ownership improvements.
-Changed ownership structure requires maintainer notice.
-Maintainers must update this rubric.
+Deliberate ownership improvements may differ.
+Notify maintainers about ownership changes.
+Maintainers update this rubric.
 
 ## Criteria
 
-### AR-01: Files have focused ownership
+### AR-01: Focused file ownership
 
 Pass:
 
-- Place new information with comparable owned information.
-- Keep sections within established responsibility.
-- Deliberate responsibility refinements may pass.
+- Place information beside comparable ownership.
+- Keep established responsibilities.
+- Allow deliberate refinements.
 - Avoid competing owners.
-- Keep each knowledge category with its owner.
-- Keep changes local to the references that own the behavior.
-- Change shared files only when shared behavior changes.
+- Keep categories with owners.
+- Change owning references locally.
+- Change shared files only for shared behavior.
 
-Severe:
+Request changes:
 
-- One file owns unrelated workflow concerns.
-- New rules differ from comparable placement without reason.
-- Project/runtime references dictate unrelated resource representation or management.
-- Generation or lifecycle behavior leaks into files lacking comparable ownership.
+- One file owns unrelated concerns.
+- New rules break comparable placement without reason.
+- Project/runtime references dictate unrelated resource management.
+- Generation/lifecycle behavior leaks to unrelated files.
 - One implementation broadly edits unrelated references.
-- One implementation alters another implementation.
-- One supported combination requires copied reference trees.
-- Structure multiplies project types, runtimes, resources, and implementations instead of composing owned information.
+- One implementation alters another.
+- One combination needs copied reference trees.
+- Structure multiplies project types, runtimes, resources, and implementations instead of composing them.
 
-### AR-02: Behavior has one primary owner
+### AR-02: One primary behavior owner
 
 Pass:
 
-- Identify each behavior owner.
-- Includes commands and generated fields.
-- Includes artifact shapes and port rules.
-- Includes readiness rules and connection requirements.
-- Includes lifecycle operations.
-- Match comparable ownership elsewhere.
-- Other references may point, consume, or briefly contextualize.
-- Never create synchronized independent definitions.
-- Maintainers can identify one primary change location.
+- Identify every behavior owner.
+- Include commands and fields.
+- Include artifact shapes.
+- Include port rules.
+- Include readiness rules.
+- Include connection requirements.
+- Include lifecycle operations.
+- Match comparable ownership.
+- Allow pointers, consumers, and brief context.
+- Never synchronize independent definitions.
+- Keep one primary change location.
 
-Severe:
+Request changes:
 
-- Multiple files independently maintain one key rule/value.
+- Multiple files maintain one key rule/value.
 - Copied examples can conflict.
-- Multiple references own one generated field or lifecycle operation.
-- Reviewers must choose among similar current instructions.
+- Multiple references own one generated field.
+- Multiple references own one lifecycle operation.
+- Reviewers must choose competing instructions.
 
-Repeated context may help usage.
+Repeated context may help.
 It must not compete.
 
-### AR-03: Internal instructions coordinate the workflow
+### AR-03: Internal instructions coordinate
 
 Pass:
 
 - Explain stable phase flow.
 - Delegate implementation details.
-- Dispatch applicable detailed references.
-- New subcomponents add detailed behavior to owning references.
-- Main flow gains only necessary selection/routing.
-- Subcomponent behavior stays owned as support expands.
+- Dispatch applicable references.
+- Put subcomponent details with owners.
+- Add only necessary routing.
+- Keep details owned while support expands.
 
-Severe:
+Request changes:
 
-- Main file gains concrete subcomponent recipes.
+- Main file gains subcomponent recipes.
 - Includes project-type recipes.
 - Includes runtime recipes.
-- Includes resource or emulator recipes.
+- Includes resource/emulator recipes.
 - Main file restates subcomponent rules.
-- Every new subcomponent adds main-file implementation branches.
-- Detail changes require synchronized main/reference edits.
+- New subcomponents require implementation branches.
+- Detail changes require synchronized files.
 
-### AR-04: References compose explicitly
+### AR-04: Explicit reference composition
 
 Pass:
 
-- Identify each selected reference's inputs.
+- Identify selected-reference inputs.
 - Explain artifact combination.
-- Define ownership and precedence for shared artifacts.
-- Selected references form a complete workflow.
+- Define shared-artifact ownership.
+- Define shared-artifact precedence.
+- Compose a complete workflow.
 
-Severe:
+Request changes:
 
-- Assembly order or precedence requires inference.
-- No selected reference owns required artifact knowledge.
-- Contributors can conflict without resolution.
-- Fragments lack whole-workflow assembly.
+- Assembly order requires inference.
+- Precedence requires inference.
+- Required artifact knowledge lacks owner.
+- Contributors can conflict unresolved.
+- Fragments lack full assembly.
 
-### AR-05: Shared and specific behavior stay separate
+### AR-05: Separate shared/specific behavior
 
 Pass:
 
-- Keep unchanged shared project, runtime, resource, and validation behavior with current owners.
-- Keep implementation-specific behavior with selected implementation references.
-- Similar instructions may represent genuinely different implementations.
+- Keep shared behavior with current owners.
+- Includes project behavior.
+- Includes runtime behavior.
+- Includes resource behavior.
+- Includes validation behavior.
+- Keep implementation details with selected references.
+- Allow genuinely different implementations.
 
-Severe:
+Request changes:
 
-- Copy unchanged facts into every implementation.
+- Copy unchanged facts across implementations.
 - Require separate maintenance.
-- Present implementation-specific behavior as universal.
-- Give shared resource/project behavior multiple owners because multiple implementations use it.
+- Present implementation details as universal.
+- Duplicate shared behavior ownership.
 
-### AR-06: Shared abstractions centralize real complexity
+### AR-06: Abstractions centralize complexity
 
 Pass:
 
-- Shared modules hide meaningful composition or invariants behind small, clear interfaces.
-- Removing them duplicates rules across callers.
+- Hide meaningful composition/invariants.
+- Expose small, clear interfaces.
+- Removal would duplicate rules.
 - Internal changes avoid caller retraining.
 
-Severe:
+Request changes:
 
-- Shared files only forward or rename concepts.
-- Abstractions expose nearly every detail.
-- Layers anticipate variation without removing current duplication or clarifying ownership.
+- Shared files only forward/rename.
+- Abstractions expose nearly everything.
+- Layers anticipate variation without reducing duplication or clarifying ownership.
 
 Apply deletion test.
-Delete the module mentally.
-Complexity reappears across callers: useful.
-Only pass-through text disappears: unnecessary.
+Mentally delete module.
+Duplicated caller complexity means useful.
+Only pass-through loss means unnecessary.
 
-### AR-07: Changes to one orchestrator must not negatively affect others
+### AR-07: Preserve other orchestrators
 
 Pass:
 
-- Changes for one orchestrator remain isolated from other orchestrators.
-- Shared changes preserve every supported orchestrator.
-- Preserve generation behavior.
-- Preserve validation behavior.
-- Preserve teardown behavior.
+- Isolate orchestrator changes.
+- Shared changes preserve all orchestrators.
+- Preserve generation.
+- Preserve validation.
+- Preserve teardown.
 
-Severe:
+Request changes:
 
-- One orchestrator change can alter another's generated artifacts or lifecycle.
-- Shared instructions assume behavior invalid for another supported orchestrator.
+- One orchestrator alters another's artifacts/lifecycle.
+- Shared instructions assume incompatible behavior.
 
-## When a PR introduces another orchestrator
+### AR-08: Match category templates
 
-Instruction set currently assumes Docker Compose.
-Another orchestrator may change ownership.
-Separate shared behavior.
-Separate orchestrator-specific behavior.
-Still apply rubric criteria in spirit.
+Pass:
 
-> **TODO for applicable PR owner:** A new orchestrator or orchestration pattern may require rubric updates.
-> Report `SEVERE` findings when needed.
-> Reflect updated ownership and composition.
-> Once general orchestration pattern exists, remove this provisional section.
-> Update remaining rubric.
-> Describe implemented orchestrator seams.
+- New entries follow root `_template.md`.
+- General new sections update template.
+- General new fields update template.
+- New folder categories add root `_template.md`.
+- Keep headings consistent.
+- Keep required sections consistent.
+- Keep placeholders consistent.
+- Keep ownership notes consistent.
+- Explain non-obvious exceptions.
+
+Request changes:
+
+- New entry adds shared behavior absent from template.
+- Template and entries conflict structurally.
+- Template and entries conflict on ownership.
+- New category has multiple independent structures.
+- New category lacks root `_template.md`.
+- Drift duplicates maintenance across entries.
+
+Cosmetic-only differences pass.
+
+## Orchestrator changes
+
+The instruction set currently supports Compose through Docker, native Podman, and Podman's
+Docker-compatible socket. The plan-owned Compose Command selects the implementation.
+
+Changes to an existing implementation must preserve existing orchestrators. A new orchestrator
+or non-Compose orchestration pattern may require a new ownership seam and a rubric
+update. Separate shared behavior from implementation-specific behavior, and apply
+the criteria above to its selection, generation, validation, and teardown.
+
+
+> **TODO for applicable PR author:** First uncovered orchestrator or orchestration
+> pattern requires review feedback. Tell author this rubric should be updated.
+> Update should describe new seams. Update should reflect ownership and composition
+> criteria. Replace this TODO after establishing general orchestration pattern.
