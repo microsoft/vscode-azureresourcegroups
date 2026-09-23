@@ -83,10 +83,7 @@ engine:
 model: gpt-5.6-sol
 # The gh-aw upgrade also selected AWF v0.28.20 instead of v0.28.14.
 # An earlier run with AWF v0.28.14 reached inference, but its gateway
-# v0.4.18 could not list MCP tools. Branch run 35798299342 verified
-# CLI 1.0.80 + AWF v0.28.14 with gateway v0.4.25: inference, MCP reads,
-# and a COMMENT review.
-# Pin only AWF, not the gateway; the isolated cause of the 400 is unknown.
+# v0.4.18 could not list MCP tools.
 sandbox:
   agent:
     id: awf
