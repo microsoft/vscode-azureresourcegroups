@@ -73,12 +73,19 @@ permissions:
   contents: read
   pull-requests: read
   copilot-requests: write
-# CLI 1.0.85 generated tokens with AWF v0.28.14, but its /responses request
-# received GitHub's HTML 400 with v0.28.20. Pin only AWF, not the fixed gateway.
+# CLI 1.0.85 got a zero-token 400 (run 35790339047). gh-aw#60820
+# reported 1.0.80 working elsewhere, but it also failed here with AWF
+# v0.28.20 (run 35792449603). The CLI pin alone did not fix inference.
 engine:
   id: copilot
   version: '1.0.80'
+# Keep gpt-5.6-sol: the branch test completed inference with this model.
 model: gpt-5.6-sol
+# CLI 1.0.85 previously generated tokens with AWF v0.28.14; runs using
+# v0.28.20 returned a 400. Branch run 35798299342 verified v0.28.14 with
+# CLI 1.0.80 and gateway v0.4.25, including MCP reads and a COMMENT review.
+# This verifies the combination, not the isolated cause of the 400.
+# Pin only AWF; gh-aw v0.89.17 retains gateway v0.4.25 for MCP discovery.
 sandbox:
   agent:
     id: awf
