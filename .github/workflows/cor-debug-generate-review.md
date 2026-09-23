@@ -66,13 +66,11 @@ if: >-
   (github.event_name == 'workflow_dispatch' &&
   (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
   (github.ref == 'refs/heads/microfish91-chunked-cor-review-diffs' &&
-  inputs.pull_request_number == '1892'))))
+  inputs.pull_request_number == '1915'))))
 jobs:
   pre-activation:
     outputs:
       same_repository_pr: ${{ steps.same_repository_pr.outputs.eligible }}
-  safe_outputs:
-    if: github.ref != 'refs/heads/microfish91-chunked-cor-review-diffs'
 permissions:
   contents: read
   pull-requests: read
