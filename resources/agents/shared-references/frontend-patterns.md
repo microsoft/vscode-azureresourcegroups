@@ -98,6 +98,46 @@ export const api = {
 
 ---
 
+## Rule: Form Validation Must Match the API Contract
+
+The backend validation schema is the source of truth once it exists. During scaffold, before that schema is
+available, frontend forms may enforce only constraints stated in the approved plan's request contract (plus
+required/type checks implied by that contract). **Never invent a stricter frontend-only minimum length, maximum
+length, pattern, enum, or cross-field rule.** After integration, client validation may mirror the backend or be
+intentionally weaker, but never stronger: a value the API accepts must not be blocked by the browser.
+
+Every rejected submission must explain itself and preserve the user's input:
+
+- Client-side validation maps every issue to a visible field error or form-level error before returning.
+- A submit handler must never use a silent guard such as `if (!result.success) return`.
+- A non-2xx API response displays the standardized API error message in the form; it is not reduced to a console
+  message or swallowed by an empty `catch`.
+- Failure clears the submitting state, keeps all entered values, and leaves the form ready to correct and retry.
+
+```typescript
+// ❌ BAD — invents a constraint and silently discards the submit
+const result = z.object({ description: z.string().min(10) }).safeParse(values);
+if (!result.success) return;
+
+// ✅ GOOD — uses contract-backed constraints and renders every failure
+const result = createCategoryFormSchema.safeParse(values);
+if (!result.success) {
+  setFieldErrors(toFieldErrors(result.error));
+  return;
+}
+
+try {
+  await api.createCategory(result.data);
+} catch (err) {
+  setSubmitError(err instanceof Error ? err.message : 'Failed to create category');
+}
+```
+
+The integrate agent later compares each form validator with the finished backend schema/OpenAPI contract. Any
+mismatch is a required integration fix, even though normal live-data wiring stays behind the `ApiClient` seam.
+
+---
+
 ## Rule: Error Handling in Custom Hooks
 
 Every async op in custom hook MUST catch errors and update error state. Optimistic updates MUST roll back on failure.

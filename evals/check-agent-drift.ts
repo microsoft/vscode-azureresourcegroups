@@ -159,6 +159,24 @@ const contracts: Contract[] = [
         grader: "API Login scaffold contract (create-account control and page)",
     },
     {
+        file: "azure-project-scaffold/references/frontend-preview-steps.md",
+        name: "frontend-validation-contract-parity",
+        pattern: /Do not invent stricter frontend-only minimum lengths, maximum lengths, patterns, enums, or cross-field rules/,
+        grader: "generated forms cannot reject values accepted by the API contract",
+    },
+    {
+        file: "shared-references/frontend-patterns.md",
+        name: "frontend-submit-failures-visible",
+        pattern: /A submit handler must never use a silent guard such as `if \(!result\.success\) return`/,
+        grader: "generated forms surface client-validation failures instead of appearing inert",
+    },
+    {
+        file: "azure-project-integrate/references/end-to-end.md",
+        name: "mutation-form-success-and-failure-proof",
+        pattern: /Exercise every distinct mutation form:[\s\S]*Submit backend-valid input[\s\S]*Submit input rejected by client validation[\s\S]*standardized non-2xx API response/,
+        grader: "integration verifies valid writes and both visible rejection paths",
+    },
+    {
         file: "azure-debug-plan/references/inventory.md",
         name: "derived-auth-api-test-inventory",
         pattern: /include implemented registration, login, and current-user endpoints when `API Login` is enabled/,

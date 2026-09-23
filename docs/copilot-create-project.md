@@ -230,6 +230,9 @@ When it finishes, for apps **with a frontend** it writes `.azure/integration-pla
 **Frontend preview** view: it starts your app's dev server and renders the running app (with mock data) inside
 an iframe, topped by an **Approve UI** header and a feedback box.
 
+Generated forms use only constraints declared by the approved request contract at this stage. Invalid submissions
+show field-level or form-level feedback, and rejected mock API calls surface an error without clearing the user's input.
+
 - Click **Approve UI** to continue — this calls `copilotOnRails.startProjectIntegrate` and hands off to
   integration.
 - Or type UI change requests in the feedback box to re‑open the scaffold agent; the dev server hot‑reloads as
@@ -254,8 +257,11 @@ The **`azure-project-integrate`** agent runs in a fresh session and reads `.azur
 
 - Creates the database **schema migrations** (tables, constraints, indexes) — **schema only, no seed data**.
 - **Wires the frontend to live backend data**, replacing all mock data.
+- Reconciles every frontend form with the finished backend validation contract, removing stricter frontend-only
+  rules and ensuring client/API failures are visible without clearing entered values.
 - **Smoke‑tests the backend** so every endpoint responds.
-- Runs the frontend and backend together end‑to‑end.
+- Runs the frontend and backend together end‑to‑end, exercising valid and invalid submissions for every mutation
+  form.
 
 When done it opens the **Scaffold Next Steps** view — a "What's next?" card that drives the next hand‑off
 (set up **Local Development**, or **Deploy**).

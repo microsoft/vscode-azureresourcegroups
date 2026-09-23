@@ -27,7 +27,7 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 
 | Sub-Agent | Responsibility | Scope |
 |-----------|---------------|-------|
-| **Frontend Agent** (general-purpose) | Generate `services/web/`: the `ApiClient` seam (`src/api/` — interface + mock impl + one-line `index.ts` swap point) backed by a mock data layer with real images (F1–F2), pages + shared components that import only the seam `api` object (F3), login UI plus locally seeded identity when `API Login` is `Yes`, and all four data states. Login-enabled frontends MUST include a visible **Create account** button on the login page and a dedicated create-account page wired through `api.createAccount(...)`. When `API Login` is `No`, generate no auth UI or state. **The `ApiClient` interface must cover every entity the UI renders, including reference data the plan has no route for (assignee lookups, the signed-in user) — nothing outside `src/api/` may import `src/mocks/`.** Apply the Rule 13 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
+| **Frontend Agent** (general-purpose) | Generate `services/web/`: the `ApiClient` seam (`src/api/` — interface + mock impl + one-line `index.ts` swap point) backed by a mock data layer with real images (F1–F2), pages + shared components that import only the seam `api` object (F3), login UI plus locally seeded identity when `API Login` is `Yes`, and all four data states. Login-enabled frontends MUST include a visible **Create account** button on the login page and a dedicated create-account page wired through `api.createAccount(...)`. When `API Login` is `No`, generate no auth UI or state. **The `ApiClient` interface must cover every entity the UI renders, including reference data the plan has no route for (assignee lookups, the signed-in user) — nothing outside `src/api/` may import `src/mocks/`.** Forms may enforce only approved request-contract constraints; every client or API rejection must show a visible message, preserve input, and allow retry. Apply the Rule 13 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
 
 **Brief handed to the sub-agent** (full context it receives):
 - The approved plan, especially **Section 6 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
@@ -35,7 +35,7 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 - The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
 
 **Hand-back contract** (what the sub-agent returns):
-- `services/web/` generated and **building cleanly** (it ran the F1–F4 checkpoints: build passes, no `any`, API Login behavior matches the plan, login-enabled apps have the required create-account button and page, four states present, Rule 13 satisfied).
+- `services/web/` generated and **building cleanly** (it ran the F1–F4 checkpoints: build passes, no `any`, API Login behavior matches the plan, login-enabled apps have the required create-account button and page, forms use only approved constraints and visibly surface every validation/API failure, four states present, Rule 13 satisfied).
 - A short report listing the pages generated and any caveats.
 - It MUST NOT call `ask_user` for UX approval — the design was already approved during planning.
 

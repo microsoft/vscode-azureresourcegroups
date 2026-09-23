@@ -214,7 +214,8 @@ The four states MUST be reachable from the running preview **without code edits 
 - [ ] Every page imports primitives from the library named in Section 6 — **zero raw `<div className="card">` / `<div className="header">` placeholders** outside the layout grid wrappers.
 - [ ] App shell is wrapped in the library's theme provider; brand ramp is derived from Section 6 `primary`.
 - [ ] Every icon is a real library icon (Fluent: `*Regular` from `@fluentui/react-icons`; Material: `<mat-icon>name</mat-icon>` with real names; Vuetify: `mdi-*`; Skeleton/Pico: native SVG icons via a real icon set such as Lucide or Tabler). **No emoji, no `<svg viewBox="0 0 1 1">` placeholders.**
-- [ ] Every `form` region has at least one field with a visible validation state (warning/error) and an inline message.
+- [ ] Every `form` region renders real validation state: its constraints come from the approved request contract (no stricter frontend-only rules), every rejected submit shows an inline or form-level message, and failed submissions preserve entered values and allow retry.
+- [ ] Every form surfaces standardized non-2xx API errors instead of swallowing them or logging them only to the console.
 - [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).

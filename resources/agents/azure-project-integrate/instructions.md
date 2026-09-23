@@ -132,10 +132,11 @@ Requires a scaffolded project. Verify before starting:
 | Locate the seam | The scaffold left a stable `ApiClient` seam: `src/api/types.ts` (interface), `src/api/mockClient.ts` (mock impl), `src/api/index.ts` (the one-line swap point). Pages/hooks import only `api` from `src/api/`. Confirm this seam exists (artifact + scan). |
 | Replace local types with shared types | Point `src/api/types.ts` at the shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete the frontend's duplicated entity types. The `ApiClient` shape is unchanged. **No `any` types.** |
 | Build the live client | Add `src/api/client.ts` — a second implementation of the **same `ApiClient` interface** (typed `: ApiClient`), method-for-method against the route inventory, base URL from env. |
-| **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line wires every page/hook to live data — **no page or hook edits**. |
+| **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line normally wires every page/hook to live data. Form-contract reconciliation below is the required exception to the no-page-edit expectation. |
 | Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. |
 | Remove the mock layer | Delete `src/api/mockClient.ts` and `src/mocks/*` (and local types now sourced from shared). A lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
 | **Remove the Mock State Switcher** | Delete the dev-only state switcher the scaffold added: `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — the forced `loading`/`empty`/`error` override must be gone. A lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher = NOT done. |
+| **Reconcile form contracts** | For every create/update form, compare its validators and HTML constraints with the finished backend schema/OpenAPI contract. Remove frontend-only constraints the backend does not declare. Client validation must render every issue; non-2xx responses must render the standardized API error; either failure preserves entered values, clears submitting state, and allows retry. Fix pages/hooks when needed — the seam rule does not override this contract. |
 | Keep correct file extensions | JSX (`<Component />`) MUST be `.tsx`; pure TS `.ts`. |
 | Rebuild the frontend | Run `npm --prefix <frontend> run build` (cwd-independent). Zero errors, zero `any`. |
 
@@ -147,7 +148,8 @@ Requires a scaffolded project. Verify before starting:
 > - Frontend builds with zero errors and zero `any`.
 > - The mock layer (`src/api/mockClient.ts`, `src/mocks/*`) is deleted or no longer imported anywhere.
 > - The Mock State Switcher (`src/api/previewState.ts` + corner switcher component) is deleted and no longer imported anywhere.
-> - The seam (`src/api/index.ts`) points at the live client; pages/hooks were not edited.
+> - The seam (`src/api/index.ts`) points at the live client; page/hook edits are limited to removing preview-state wiring and reconciling form contracts.
+> - Every form matches the backend contract and visibly reports both client-validation and API failures without clearing entered values.
 > - The dev proxy targets the backend host.
 
 ---
@@ -161,7 +163,8 @@ Requires a scaffolded project. Verify before starting:
 | Start the backend | Start the backend host (from Step 2) so it is listening. |
 | Start the frontend dev server | Start the frontend dev server (`npm --prefix <frontend> run dev`) with the dev proxy pointing at the backend. |
 | Verify a live request path | Confirm the frontend successfully fetches from the backend — inspect the dev-server/host logs for a real `/api/...` request returning `200` (or load a page via the browser tool and confirm live data renders, not a mock placeholder). At least one page MUST display data that came from the running backend. |
-| Verify a write path (if applicable) | If the app has a create/update flow, exercise one and confirm the backend receives it and the frontend reflects the result. |
+| Verify valid writes (required when mutations exist) | Exercise every distinct create/update form with backend-valid input. Confirm the backend receives it and the frontend reflects the result. A form that exists but was not exercised is not verified. |
+| Verify invalid writes (required when mutations exist) | For every distinct create/update form, submit input rejected by client validation and confirm a visible field/form message appears with values preserved. Then exercise a backend-rejected request (or temporarily mock the standardized non-2xx response at the HTTP boundary when the UI cannot naturally produce one) and confirm its API message is visible, values remain, submitting clears, and retry is possible. Remove any temporary mock and re-confirm the live client before continuing. |
 | Capture evidence | Record the request/response (path, status) that proves frontend → backend wiring works. |
 | Shut down cleanly | Stop both processes after verifying. |
 
@@ -170,6 +173,7 @@ Requires a scaffolded project. Verify before starting:
 > **✅ Checkpoint**:
 > - Frontend and backend ran concurrently.
 > - At least one real `/api/...` request from the frontend hit the backend and returned `200` with live data (no mock).
+> - Every create/update form proved a backend-valid write plus visible client-validation and API-rejection paths, with input preserved on failure.
 > - Evidence captured. Both processes stopped cleanly.
 
 ---
@@ -190,7 +194,7 @@ Requires a scaffolded project. Verify before starting:
 > 1. Migrations exist, are non-empty, apply cleanly — **no seed data**.
 > 2. Backend host starts, all endpoints register, `GET /api/health` → 200, probes return no schema/runtime `500`s.
 > 3. Frontend builds clean on live data; mock layer removed; no `any`.
-> 4. Frontend + backend ran together; a real `/api/...` request returned live data.
+> 4. Frontend + backend ran together; a real `/api/...` request returned live data; every mutation form passed its valid-write, client-validation, and API-rejection checks.
 > 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
 > 6. Opened the **Next Steps view** (the `open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
