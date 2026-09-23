@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ProgressNode } from './ProgressNode';
 import { StageNode } from './StageNode';
 
-export const ciCdSurveyUrl = 'https://forms.cloud.microsoft/r/AiEj8gCbxN';
+export const ciCdSurveyUrl = 'aka.ms/CICDSurvey';
 
 class CiCdSurveyNode implements ProgressNode {
     getChildren(): ProgressNode[] {
@@ -42,7 +42,7 @@ export class CiCdStageItem extends StageNode {
 
     getTreeItem(): vscode.TreeItem {
         const item = super.getTreeItem();
-        const status = vscode.l10n.t('Coming soon');
+        const status = vscode.l10n.t('Share Input');
         item.description = status;
         item.tooltip = new vscode.MarkdownString(`**${this.label}** — ${status}`);
         return item;
