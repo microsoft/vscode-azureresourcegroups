@@ -64,9 +64,7 @@ if: >-
   github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) ||
   (github.event_name == 'issue_comment' && github.event.action == 'created') ||
   (github.event_name == 'workflow_dispatch' &&
-  (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
-  (github.ref == 'refs/heads/microfish91-fix-cor-reviewer-inference-400' &&
-  github.actor == 'MicroFish91' && inputs.pull_request_number == '1910'))))
+  github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
 jobs:
   pre-activation:
     outputs:
