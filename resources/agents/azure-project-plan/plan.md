@@ -391,6 +391,8 @@ If the user's feedback only affects the plan text (e.g. renaming a section, adju
 
 The webview watches the entire `.azure/.preview-temp/` folder, so the manifest update is picked up automatically. Skipping the `previewStatus` update when preview files *are* being rewritten will leave the overlay absent during generation, also confusing the user.
 
+After **every** feedback revision, keep `.azure/project-plan.md` at `**Status**: Planning`, rerun the Step 3 structural self-check, and call `open_plan_view` again before summarizing the changes or asking for approval. This call is required even when the webview is already open because it refocuses the revised plan. Then stop at the approval gate; never call `start_project_scaffold` until the user explicitly approves the revised plan.
+
 ---
 
 ## ═══════════════════════════════════════════════════

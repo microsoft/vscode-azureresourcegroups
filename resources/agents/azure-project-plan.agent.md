@@ -93,6 +93,8 @@ This is not optional and not conditional. Do not summarize the plan, do not ask 
 
 > **This is the ONLY way to show the planning preview** (see Hard rule 8) — never `simpleBrowser.show`, `vscode.env.openExternal`, a dev server, or a `.preview-temp/*.html` editor tab. The preview is embedded in this webview's **UI Preview** card as sandboxed iframes; there is no port and no URL.
 
+**Feedback re-entry:** Every turn that revises an existing plan returns to Step C. Keep the plan status `Planning`, apply the requested plan and preview changes, rerun the structural self-check, then call `open_plan_view` again before summarizing or requesting approval. Call it even when the view is already open; the call refocuses the revised plan. Do not hand off to scaffolding until the user explicitly approves the revised plan.
+
 ### Step D — require explicit user approval before handing off
 
 After Step C, **stop and wait** for explicit user approval of the plan. Do **not** begin scaffolding and do **not** call the hand-off command in Step E until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.

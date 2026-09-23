@@ -173,7 +173,7 @@ graph LR
 
 ## Migrations
 
-<!-- Only include this section when database migrations are detected for one or more services. Omit entirely if not applicable. -->
+<!-- Include this section when migrations are detected OR when a database dependency has no detectable migration strategy. For an undetected strategy, emit an unchecked [ ] row whose tool is "⚠️ Not detected"; never enable generation for a planned-but-unimplemented tool. Omit entirely only when no service needs database migrations. -->
 <!-- ✏️ User can edit: Generate (check/uncheck) -->
 
 When selected, the generation phase creates automated VS Code tasks that run migration scripts on launch — so emulator databases are automatically provisioned with the correct schema and seed data before the app starts debugging. No manual migration steps needed.
@@ -206,6 +206,7 @@ When selected, the generation phase produces lightweight, runnable API test scri
 ## Convenience Scripts
 
 <!-- The generation phase generates only checked scripts into the project's script runner. -->
+<!-- Add a migration script only when that exact command already exists in the workspace and the matching Migrations row is checked. Never invent or check db:migrate for an undetected/planned-only migration tool. -->
 <!-- ✏️ User can edit: Generate (check/uncheck) -->
 
 | Generate | Script | Registered In | Description |

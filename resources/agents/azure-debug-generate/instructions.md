@@ -13,10 +13,11 @@
 
 1. **Plan is the source of truth** — Read `.azure/vscode-debug-plan.md` and generate exactly what it specifies. Only generate artifacts for rows where `Generate` is checked (`[x]`).
 2. **Update plan progressively** — Mark steps complete as you go; update **Last Updated** timestamp on every status change
-3. ❌ **Destructive actions require `ask_user`** — Always confirm before overwriting, deleting, or modifying existing files
+3. ❌ **Destructive actions require `ask_user`** — Approval of the debug plan already authorizes creating its checked artifacts and non-destructively merging their required settings into existing files; do not ask for blanket permission to perform that approved work. Still confirm before deleting files or data, discarding or replacing user-authored content, or taking an irreversible/stateful action that the approved plan did not explicitly authorize.
 4. **Preserve existing config** — Never silently overwrite project configuration files or `docker-compose.yml`. Merge or ask first.
 5. **Scope — VS Code debug setup only** — These instructions are for generating local debug configurations in VS Code. Cloud architecture, IaC generation, provisioning, and deployment are handled by the **azure-deploy** agent through the complete **azure-app-onboard** pipeline.
 6. **Warn on limited support** — When a project type, runtime, or emulator declared in the plan has no matching reference file, emit a `⚠️ LIMITED SUPPORT:` warning — [limited-support.md](references/limited-support.md).
+7. **Preserve prerequisite markers** — The approved plan's Prerequisites `Installed` column uses only `✅` (confirmed) and `❓` (not confirmed). Environment checks during generation must not rewrite `❓` to `❌`; record missing tools and runtime validation failures in the Debug Configuration Checklist and user guidance instead.
 
 ---
 

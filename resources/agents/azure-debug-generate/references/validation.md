@@ -131,6 +131,10 @@ Debug Configuration Checklist:
 ✅ <config-name> — <ready signal + curl result>
 ✅ <config-name> — <ready signal + curl result>
 ✅ <compound-name> — each service started once + ready + curl result
+
+> ✅ Final teardown — <processes stopped + ports released>
 ```
 
 One line per config (non-compound and compound). For a **non-compound** config, ✅ requires the ready signal observed AND curl confirmed (or curl skipped with a valid reason). For a **compound** config, ✅ requires the real compound test from Step 9 — each member service started **exactly once** AND reached its ready signal AND (where applicable) passed HTTP reachability — never an inferred pass from the individual results.
+
+Every non-config note in this section, including final teardown evidence and environment limitations, **MUST** be a blockquote beginning with `>`. Plain body lines are parsed as checklist entries and will invalidate the plan because they do not name a generated configuration.
