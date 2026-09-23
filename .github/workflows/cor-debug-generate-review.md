@@ -35,6 +35,7 @@ on:
         PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
       with:
         script: |
+          // Default to ineligible so invalid inputs never start the agent job.
           core.setOutput('eligible', 'false');
           const pullNumber = Number(process.env.PULL_REQUEST_NUMBER);
 
@@ -48,6 +49,7 @@ on:
             pull_number: pullNumber,
           });
 
+          // Repository IDs distinguish the base repo from forks with similar names.
           if (!pullRequest.head.repo || pullRequest.head.repo.id !== pullRequest.base.repo.id) {
             return;
           }
@@ -89,6 +91,7 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
+# Do not check out PR code; the reviewer and reader come from the workflow commit.
 checkout: false
 inlined-imports: true
 tools:
@@ -128,9 +131,12 @@ pre-agent-steps:
         const directory = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'cor-review-diffs');
         fs.mkdirSync(directory, { recursive: true });
         // The gateway mounts this directory read-only into the stdio container.
+        // Refuse to overwrite an existing script in runner temp.
         fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
           flag: 'wx', mode: 0o444,
         });
+# The gateway starts a stdio container, not a token-bearing HTTP server.
+# Repository and PR are fixed by the event; tool arguments cannot retarget them.
 mcp-servers:
   cor-review-diffs:
     container: ghcr.io/github/gh-aw-node
@@ -145,6 +151,7 @@ mcp-servers:
       EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     allowed: [read_pr_diff]
+# The agent's GitHub tools are read-only; review publication goes through safe outputs.
 safe-outputs:
   github-token: ${{ secrets.GITHUB_TOKEN }}
   missing-tool: false
@@ -165,6 +172,7 @@ post-steps:
     env:
       REVIEW_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
     run: |
+      # CLI success without a safe-output request is not a completed review.
       # A stale or closed PR can legitimately end with noop.
       if ! jq -se 'any(.[]; .type == "submit_pull_request_review" or .type == "add_comment" or .type == "noop")' "$REVIEW_OUTPUTS" >/dev/null; then
         echo "::error::The agent reviewer finished without requesting a review, diagnostic comment, or noop."
