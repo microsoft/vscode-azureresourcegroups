@@ -380,7 +380,7 @@ the existing `deploy-result.json` inventory, so cleanup evidence from earlier de
 
 Progress is also visible in the **Azure Project** view, which shows the pipeline stages (Create → Local
 Development → Deploy → CI/CD) and their status. CI/CD is marked **Provide Feedback**; its **Take survey**
-action opens the [CI/CD Expectations for Azure Tools in VS Code](https://forms.cloud.microsoft/r/AiEj8gCbxN)
+action opens the [CI/CD Expectations for Azure Tools in VS Code](https://aka.ms/CICDSurvey)
 form so users can share what they need from the future feature.
 
 <p align="center">

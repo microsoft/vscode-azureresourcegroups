@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ProgressNode } from './ProgressNode';
 import { StageNode } from './StageNode';
 
-export const ciCdSurveyUrl = 'aka.ms/CICDSurvey';
+export const ciCdSurveyUrl = 'https://aka.ms/CICDSurvey';
 
 class CiCdSurveyNode implements ProgressNode {
     getChildren(): ProgressNode[] {
