@@ -70,7 +70,7 @@ runtime stage), the same connection configuration as the app, and a `Never` rest
 the **app's** managed identity — or an identity mapped as a database principal the same way — so the
 token it presents is one the database already trusts. Delete the job once it completes, and record its
 creation in `deploy-result.json` so it is not mistaken for an orphaned resource by
-`capture_deployment_inventory`.
+the selected product inventory provider.
 
 ### Tier-2 execution evidence and retry gate
 
@@ -160,8 +160,9 @@ this path has no crash safety at all: nothing records what you changed, so resto
 your responsibility.
 
 - **Record the baseline first**, before any change:
-  `az postgres flexible-server firewall-rule list`, `az mysql flexible-server firewall-rule list`,
-  or `az sql server firewall-rule list`. Write it into the session directory.
+  `az postgres flexible-server firewall-rule list --subscription {sub}`,
+  `az mysql flexible-server firewall-rule list --subscription {sub}`, or
+  `az sql server firewall-rule list --subscription {sub}`. Write it into the session directory.
 - **Add only a single-IP rule** (`startIpAddress` equal to `endIpAddress`) for the current client.
 - **Never** widen to `0.0.0.0`–`255.255.255.255`, **never** disable enforcement, **never** delete
   or modify a pre-existing rule, **never** touch VNet rules or `publicNetworkAccess`.

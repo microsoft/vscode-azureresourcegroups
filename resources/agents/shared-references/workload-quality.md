@@ -34,12 +34,29 @@ Application-level controls derived from the approved `Quality Attributes & Trade
 | `SEC-LOG-01` | Security | Logs never include credentials, tokens, request bodies, or sensitive field values. | Central redaction/allowlist policy + log-capture test. |
 | `SEC-IDENTITY-01` | Security | Every Azure dependency is reached with the deployed identity and an operation that identity's granted role authorizes — including the health probe. | Dependency access row per dependency + a test that fails when operation and permission disagree. |
 | `COST-SCOPE-01` | Cost Optimization | Generated code uses only approved dependencies and services; optional work is not performed when its feature is disabled. | Dependency/service inventory + disabled-feature test where applicable. |
-| `OE-CORRELATION-01` | Operational Excellence | Every request gets or preserves a correlation ID; structured logs include it with operation, status, and duration. | Request middleware + log-capture test. |
+| `OE-CORRELATION-01` | Operational Excellence | Every request accepts a valid `X-Correlation-ID` or generates a new one, replaces invalid values, returns the ID on success and error responses, exposes it through CORS, and includes it in structured logs with operation, status, and duration. | Request middleware + success/error/CORS route tests + log-capture test. |
 | `OE-ERROR-01` | Operational Excellence | Errors are structured, actionable, and do not expose implementation details. | Shared error contract + route tests. |
 | `PE-BOUNDS-01` | Performance Efficiency | Collection routes and variable-size inputs have explicit pagination, item, and payload bounds; concurrency is bounded. | Validation schema/config + boundary tests. |
 
 Reuse the existing runtime-specific patterns. One shared timeout, retry, correlation, and redaction utility per
 service is better than copies in every handler.
+
+### Executable correlation contract
+
+`OE-CORRELATION-01` is an exit gate, not a middleware-presence check. Use one centralized implementation per
+service and require tests that prove:
+
+1. A valid incoming `X-Correlation-ID` (`[A-Za-z0-9._:-]`, 1–128 characters) is preserved exactly.
+2. A missing ID generates a non-empty valid ID; an invalid/oversized ID is replaced, not reflected.
+3. Both a successful request and a structured validation error return `X-Correlation-ID`.
+4. Browser-facing APIs include `X-Correlation-ID` in `Access-Control-Expose-Headers` for the exact approved
+   origin.
+5. One captured request log contains the same ID plus operation/route template, status, and duration, without
+   request bodies or sensitive values.
+
+Deployment re-runs the HTTP portion against the released endpoint with
+`azure-deploy/deploy/scripts/verify-correlation-contract.mjs`. A healthy platform response with a missing
+correlation header is a failed application release.
 
 ⛔ **Evidence must cover every service the control spans.** A control that reaches the browser — bounded inputs,
 error and retry UI, no sensitive values in browser logs, correlation preserved across the seam — is not evidenced

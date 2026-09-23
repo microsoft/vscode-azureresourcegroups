@@ -26,17 +26,22 @@ export interface OrphanResourceGroup {
   /** Which healing attempt created or targeted this RG. Omitted when derived by the
    *  deterministic `capture_deployment_inventory` diff rather than a tracked healing attempt. */
   healingAttempt?: number;
-  /** Why this RG was abandoned (e.g., "region fallback to westus2") */
-  reason: string;
+  /** Why this RG was abandoned (e.g., "region fallback to westus2"). Optional for
+   *  inventory-derived groups, whose raw provider output carries `resourceCount`. */
+  reason?: string;
+  /** Number of post-baseline resources observed in this group by an inventory provider. */
+  resourceCount?: number;
+  /** Subscription for a cross-target healing artifact, when different from DeployResult.subscriptionId. */
+  subscription?: string;
 }
 export type DeployHealingAction = "routed-to-scaffold" | "retried" | "surfaced-to-user";
 export type DeployHealingResult = "fixed" | "still-failing" | "blocked";
 
-// ─── Deterministic resource inventory (capture_deployment_inventory) ─────────
+// ─── Deterministic resource inventory (extension MCP or portable provider) ───
 
 /** How a resource created during this session relates to the tracked deployment(s).
- *  Computed deterministically by the `capture_deployment_inventory` MCP tool from a
- *  before/after `resources.list()` diff — NOT inferred from chat history. */
+ *  Computed deterministically by the selected product provider from a before/after
+ *  resource diff — NOT inferred from chat history. */
 export type CreatedResourceClassification =
   /** Reported `Succeeded` by a tracked deployment and located in the final target RG.
    *  Part of the working deployment — never a cleanup candidate. */
@@ -53,7 +58,8 @@ export type CreatedResourceClassification =
    *  transient failure), so nothing could be attributed. Never a cleanup candidate. */
   | "unverified";
 
-/** A resource that exists now because of this session (post − baseline diff). */
+/** A resource that appeared after the baseline. Only tracked deployment operations establish
+ *  attribution; `orphaned` entries may belong to unrelated concurrent work. */
 export interface CreatedResource {
   /** Full ARM resource ID. */
   id: string;
@@ -114,6 +120,45 @@ export interface ResourceResult {
   error?: string;
 }
 
+export type MigrationControllerKind =
+  | "container-app-exec"
+  | "container-app-job"
+  | "function-trigger"
+  | "app-service-ssh"
+  | "client";
+
+export interface DeployMigrationResult {
+  /** True when the project contains migrations or the plan provisions a relational database. */
+  required: boolean;
+  tier?: 1 | 2 | 3;
+  artifactPath?: string;
+  /** True only after the immutable package/image was inspected for the entrypoint,
+   *  migration files, runtime, and production dependencies. */
+  artifactVerified?: boolean;
+  command?: string;
+  controllerKind?: MigrationControllerKind;
+  controllerResourceId?: string;
+  reachabilityProbeCommand?: string;
+  reachabilityProbeExitCode?: number;
+  /** Set only after the live controller probe starts the intended runtime successfully. */
+  controllerReachable?: boolean;
+  reachabilityEvidence?: readonly string[];
+  controllerStatus?: string;
+  /** Application process exit, recorded separately from controller/ARM status. */
+  processExitCode?: number;
+  stdoutPath?: string;
+  stderrPath?: string;
+  stateProbePath?: string;
+  postStateVerified?: boolean;
+}
+
+export interface DeployQualityGates {
+  correlation?: {
+    status: "passed" | "failed" | "not-applicable";
+    evidencePath?: string;
+  };
+}
+
 export interface DeployResult {
   sessionId: string;
   /** Azure subscription ID from context.json.azure.subscriptionId */
@@ -130,21 +175,34 @@ export interface DeployResult {
   warnings: string[];
   partial: boolean;
   resourceResults: readonly ResourceResult[];
-  /** Resources that exist now because of this session, computed deterministically by
-   *  `capture_deployment_inventory` (before/after `resources.list()` diff). Includes
+  /** Resources that appeared after this session's baseline, computed deterministically by
+   *  the product inventory provider (before/after `resources.list()` diff). Includes
    *  expected, failed, and orphaned resources — the source of truth for the handoff
    *  cleanup section. Populated at Step 8 and on the Step 9 failure path. */
   createdResources: readonly CreatedResource[];
+  /** Which product-owned implementation captured the inventory. The portable CLI provider is
+   *  allowed only when the VS Code in-process MCP provider is absent. */
+  inventorySource?: "extension-mcp" | "portable-cli";
+  /** Durable portable-provider evidence paths, relative to the active session directory. */
+  inventoryEvidence?: {
+    baseline?: "deployment-inventory-baseline.json";
+    capture?: "deployment-inventory-capture.json";
+  };
   /** RGs created during healing that are not the final deployment target.
    *  Derived from `createdResources` (resources whose RG != the final target RG).
    *  Surfaced at handoff (Step 9) with manual cleanup commands. */
   orphanedResourceGroups: readonly OrphanResourceGroup[];
   /** Set when `capture_deployment_inventory` could not read the deployment's ARM operations,
-   *  so `createdResources` could not be attributed. When true, present NO cleanup list and
-   *  tell the user to review the resource group in the portal. */
+   *  so `createdResources` could not be attributed. When true, present no resource-level cleanup
+   *  list; retain only the standard exact-RG/session-tag commands with an explicit warning. */
   inventoryUnverified?: boolean;
   /** Why verification failed: `"forbidden"` (missing
    *  `Microsoft.Resources/deployments/operations/read`), `"throttled"`, or `"error"`. */
   inventoryUnverifiedReason?: string;
+  /** Required for DB-backed releases. `status: "succeeded"` is invalid when migration is required
+   *  but the artifact/controller was not proven, process exit was nonzero, or post-state is unknown. */
+  migration?: DeployMigrationResult;
+  /** Live application-contract gates that must pass after code release and before healthy handoff. */
+  qualityGates?: DeployQualityGates;
   healingAttempts?: readonly DeployHealingAttempt[];
 }

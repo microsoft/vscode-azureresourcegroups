@@ -13,7 +13,13 @@ For each endpoint: HTTPS GET, 30s timeout, 3 retries (10s/20s/40s backoff).
 | 5xx ×3 | `degraded` | |
 | Timeout/DNS ×3 | `unreachable` | |
 
-> ⛔ **DB-backed apps: a 200 on `/` is NOT healthy.** When `prepare-plan.json.services[]` includes a database, probing only `/` (or any non-DB route) just proves the web server booted. Probe at least one **data-backed route** (derive from the app's detected routes, e.g. a REST resource path) and inspect the body for DB errors (`insecure transport`, `Access denied`, `connection refused`, `Unknown database`, `doesn't exist`) → mark `degraded`, not `healthy`.
+> ⛔ **DB-backed apps: a 200 on `/` is NOT healthy.** When `prepare-plan.json.services[]` includes a database,
+> probing only `/` (or any non-DB route) just proves the web server booted. Before application-health
+> acceptance, prove and run the migration controller per
+> [database-post-deploy.md](database-post-deploy.md), require `artifactVerified: true`, a successful live
+> controller probe, process exit 0, and verified post-state, then probe
+> at least one **data-backed route**. Inspect the body for DB errors (`insecure transport`, `Access denied`,
+> `connection refused`, `Unknown database`, `doesn't exist`) and mark `degraded`, not `healthy`.
 
 ### HTTP Redirect Handling (Container Apps)
 
@@ -91,7 +97,7 @@ Health checks only confirm the web server is responding. Exercise a route that d
 |---------|-----------------|
 | Database in the plan (MySQL/PostgreSQL/SQL/Cosmos) | Probe a route that reads/writes the DB (a detected app route, NOT `/` — root often serves a static page with no DB access, so 200 on `/` masks broken DB connectivity). A 5xx or a DB error in the body (`connection refused`, `does not exist`, token/auth failure) → `degraded` — usually the app MI wasn't granted a DB role (see [database-post-deploy.md](database-post-deploy.md) § 2). |
 | `FIRST_SUPERUSER` env var or `prestart.sh`/`init_db()` | After health passes, attempt login endpoint. If 401/500 → startup scripts may have failed. Trigger `az containerapp revision restart` to re-run startup. |
-| Migration frameworks (Alembic, Django, Prisma, EF) | After health passes, check `prereq-output.json` for migration signals. If found, run migrations per [database-post-deploy.md](database-post-deploy.md). |
+| Migration frameworks (Alembic, Django, Prisma, EF) | Before health acceptance, prove the entrypoint is in the immutable artifact, prove the live controller is reachable, execute once with separate controller/process evidence, and verify post-state per [database-post-deploy.md](database-post-deploy.md). Platform readiness alone cannot produce `healthy`. |
 | Two-phase Container Apps (managed identity) | Wait 60s after Phase 2 for AcrPull RBAC propagation. If the DB fails with auth/token errors, the app MI may not yet have its DB role — grant it (see [database-post-deploy.md](database-post-deploy.md)) and create a new revision. |
 
 ### Re-run the Dependency Access probes

@@ -22,7 +22,7 @@ single most common cause of a "provisioned but broken" Flex app. See
 | --- | --- |
 | `FUNCTIONS_WORKER_RUNTIME` | Conflicts with `functionAppConfig.runtime`. The runtime is declared **only** in `functionAppConfig.runtime`. |
 | `FUNCTIONS_EXTENSION_VERSION` | Managed by the platform on Flex. |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT`, `ENABLE_ORYX_BUILD` | Oryx/Kudu build settings — unsupported. Flex builds via a **remote build** during package deploy (see the deploy reference), not Oryx-on-SCM. |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT`, `ENABLE_ORYX_BUILD` | Oryx/Kudu build settings — unsupported. Flex uses the package-deploy channel; TypeScript packages are compiled and validated locally with remote build disabled (see the deploy reference). |
 | `WEBSITE_RUN_FROM_PACKAGE` | Flex runs from its deployment blob container automatically. |
 | `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING`, `WEBSITE_CONTENTSHARE` | Flex has no content share. |
 | `WEBSITES_CONTAINER_START_TIME_LIMIT`, `WEBSITE_TIME_ZONE`, `TZ` | Not supported on Flex. |
@@ -49,7 +49,7 @@ param deploymentContainerName string       // blob container that holds the pack
 param appInsightsConnectionString string
 @allowed(['dotnet-isolated', 'node', 'python', 'java', 'powershell', 'go'])
 param runtimeName string
-param runtimeVersion string                // e.g. '8.0' (dotnet-isolated), '20' (node), '3.11' (python)
+param runtimeVersion string                // e.g. '8.0' (dotnet-isolated), '22' (node), '3.11' (python)
 param instanceMemoryMB int = 2048          // 512 | 2048 | 4096
 param maximumInstanceCount int = 100
 

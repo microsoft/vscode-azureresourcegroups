@@ -8,11 +8,12 @@ For core patterns (file structure, skeleton, naming, tagging), see [bicep-patter
 
 > ⛔ **Password authentication is disabled.** No `administratorLogin` / `administratorLoginPassword`. The deploying principal is set as the Entra admin so migrations/seeding run token-based; the app's managed identity is granted a DB role as a post-deploy data-plane step (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md)).
 
-Use two modules. The first deployment creates the server and firewall rule; the second deployment creates the
-administrator and remaining children. The `serverName` output consumed by the second module is deliberate:
-it creates a nested-deployment completion barrier before the administrator PUT. A `parent:` relationship or
-resource-level `dependsOn` only waits for the server resource PUT and can still race PostgreSQL management
-readiness with `AadAuthOperationCannotBePerformedWhenServerIsNotAccessible`.
+Use three modules. The first deployment creates the server, firewall rule, and Reader assignment for an
+existing user-assigned identity. The second runs an Azure CLI deployment script under that identity until the
+server reports `Ready` and the administrator child-provider endpoint responds, then waits through a stabilization
+interval. Only the third creates the administrator and remaining children. A module output, `parent:`, or resource-level `dependsOn` only proves ARM PUT
+completion; it does not prove the PostgreSQL management provider will accept child operations and can still
+race with `AadAuthOperationCannotBePerformedWhenServerIsNotAccessible`.
 
 **`infra/modules/postgres.bicep` — server deployment:**
 
@@ -20,6 +21,7 @@ readiness with `AadAuthOperationCannotBePerformedWhenServerIsNotAccessible`.
 param pgName string
 param location string
 param tags object
+param readinessPrincipalId string
 
 resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: pgName
@@ -44,11 +46,82 @@ resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@202
   properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
 }
 
-// Consuming this output from a second module creates the deployment boundary.
+resource readinessReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(pg.id, readinessPrincipalId, 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+  scope: pg
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'acdd72a7-3385-48ef-bd42-f606fba81ae7'
+    )
+    principalId: readinessPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output serverName string = pg.name
 ```
 
-**`infra/modules/postgres-children.bicep` — management-ready children:**
+**`infra/modules/postgres-readiness.bicep` — executable management-readiness barrier:**
+
+```bicep
+param location string
+param tags object
+param sessionId string
+param subscriptionId string
+param serverName string
+param readinessIdentityResourceId string
+
+resource readiness 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'wait-postgres-${uniqueString(serverName)}'
+  location: location
+  tags: tags
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${readinessIdentityResourceId}': {}
+    }
+  }
+  properties: {
+    azCliVersion: '2.89.0'
+    cleanupPreference: 'OnSuccess'
+    forceUpdateTag: sessionId
+    retentionInterval: 'P1D'
+    timeout: 'PT20M'
+    environmentVariables: [
+      { name: 'SUBSCRIPTION_ID', value: subscriptionId }
+      { name: 'RESOURCE_GROUP', value: resourceGroup().name }
+      { name: 'SERVER_NAME', value: serverName }
+    ]
+    scriptContent: '''
+      for attempt in $(seq 1 40); do
+        state=$(az postgres flexible-server show --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --name "$SERVER_NAME" --query state -o tsv 2>/dev/null || true)
+        if [ "$state" = "Ready" ]; then
+          if az postgres flexible-server microsoft-entra-admin list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --server-name "$SERVER_NAME" --output none 2>/dev/null; then
+            sleep 90
+            printf '{"ready":true,"state":"%s","attempt":%s}\n' "$state" "$attempt" > "$AZ_SCRIPTS_OUTPUT_PATH"
+            exit 0
+          fi
+        fi
+        sleep 15
+      done
+      printf '{"ready":false,"state":"%s","attempt":40}\n' "$state" > "$AZ_SCRIPTS_OUTPUT_PATH"
+      exit 1
+    '''
+  }
+}
+
+output serverName string = serverName
+output readiness object = readiness.properties.outputs
+```
+
+The script is bounded, passes subscription and resource group explicitly, has no `jq` dependency, fails
+closed, and records its result at `$AZ_SCRIPTS_OUTPUT_PATH`. It must successfully read the exact
+`microsoft-entra-admin` child-provider endpoint before the stabilization wait; server state alone is not
+provider-readiness proof, and live provider acceptance can lag the state transition.
+
+**`infra/modules/postgres-children.bicep` — post-readiness children:**
 
 ```bicep
 param pgName string
@@ -100,6 +173,20 @@ module pg 'modules/postgres.bicep' = {
     pgName: pgName
     location: location
     tags: tags
+    readinessPrincipalId: identity.outputs.principalId
+  }
+}
+
+module pgReadiness 'modules/postgres-readiness.bicep' = {
+  name: 'postgres-readiness'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    sessionId: sessionId
+    subscriptionId: subscription().subscriptionId
+    serverName: pg.outputs.serverName
+    readinessIdentityResourceId: identity.outputs.resourceId
   }
 }
 
@@ -107,8 +194,8 @@ module pgChildren 'modules/postgres-children.bicep' = {
   name: 'postgres-children'
   scope: rg
   params: {
-    // ⛔ Do not replace with the original pgName variable. This output reference is the readiness barrier.
-    pgName: pg.outputs.serverName
+    // ⛔ Do not bypass the executable readiness module with pg.outputs.serverName.
+    pgName: pgReadiness.outputs.serverName
     entraAdminObjectId: entraAdminObjectId
     entraAdminName: entraAdminName
     entraAdminType: entraAdminType
@@ -119,15 +206,17 @@ module pgChildren 'modules/postgres-children.bicep' = {
 
 > ⛔ **Both levels of ordering are required.**
 >
-> 1. The separate `pgChildren` nested deployment, linked through `pg.outputs.serverName`, keeps the
->    administrator PUT out of the server deployment that can finish before the management plane is accessible.
-> 2. Inside the companion module, `pgAdmin → pgExtensions → pgDb` remains serialized so ARM does not start the
+> 1. `pg.outputs.serverName` feeds the managed-identity deployment script, which polls the exact subscription,
+>    resource group, and server until `Ready`, successfully probes the `microsoft-entra-admin` child endpoint,
+>    stabilizes, and fails closed.
+> 2. `pgReadiness.outputs.serverName` feeds `pgChildren`; bypassing it with the original name/output is invalid.
+> 3. Inside the companion module, `pgAdmin → pgExtensions → pgDb` remains serialized so ARM does not start the
 >    children in parallel.
 >
 > `az bicep build` and `what-if` validate shape but do not exercise either runtime constraint. The scaffold
 > conformance gate therefore blocks a PostgreSQL administrator whose `name` is not `entraAdminObjectId`
-> (`PG-ENTRA-ADMIN-ID`) and blocks a same-deployment administrator without this output barrier
-> (`PG-ADMIN-READY-BARRIER`).
+> (`PG-ENTRA-ADMIN-ID`) and blocks a missing, bypassed, unbounded, non-portable, or non-failing executable
+> readiness barrier (`PG-ADMIN-READY-BARRIER`).
 
 Wire connection **parameters** (host, db name, MI username, `sslmode=require`) as plain app settings — NOT a Key Vault secret. The driver fetches an Entra access token at runtime as the password. The app's managed identity is granted a DB role post-deploy via `pgaadauth_create_principal` (see [database-post-deploy.md](../../deploy/references/database-post-deploy.md) § Grant the app managed identity a DB role).
 

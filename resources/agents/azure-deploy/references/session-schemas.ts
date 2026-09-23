@@ -60,8 +60,22 @@ export interface AppOnboardAzureTarget {
   /** Display name of the subscription (from `az account show --query name`).
    *  Shown at both approval gates so the user can verify the target. */
   subscriptionName: string;
+  tenantId?: string;
+  userDisplayName?: string;
   resourceGroup: string;
   region: string;
+  /** How this session selected its canonical Azure target. Explicit prompt values always
+   *  outrank environment and active-CLI defaults. */
+  selectionSource?: "user-prompt" | "environment" | "saved-session" | "active-cli" | "picker";
+  /** Fields that later phases must verify but never silently replace. */
+  lockedFields?: readonly ("subscriptionId" | "tenantId" | "resourceGroup" | "region")[];
+}
+
+export interface AppOnboardExecution {
+  /** Exact runtime model identifier selected for this pipeline invocation. Every generic
+   *  `task` / `runSubagent` dispatch must pass this value explicitly. */
+  modelId: string;
+  selectedUtc: string;
 }
 
 export interface AppOnboardRepoInfo {
@@ -118,6 +132,9 @@ export interface AppOnboardContext {
    *  Displayed in the session picker when the user resumes or switches sessions. */
   statusSummary?: string;
   intent: AppOnboardIntent;
+  /** Present on new sessions. Optional only so sessions created before this field can resume;
+   *  the orchestrator backfills it from the current runtime before dispatching a sub-agent. */
+  execution?: AppOnboardExecution;
   components: AppOnboardComponent[];
   azure: AppOnboardAzureTarget;
   repo: AppOnboardRepoInfo;

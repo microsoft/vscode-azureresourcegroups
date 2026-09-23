@@ -16,7 +16,7 @@ Artifact write procedures for the prereq phase exit. Read at Step 4 of the [read
    >
    > ⛔ **Entry point:** Write to `entryPoint` (e.g., `"index.js"`). `null` for .NET/Go/Java (Oryx handles startup).
    >
-   > ⛔ **`postDeployRecommendations[]`:** For each ⚠️ WARN, write per `PostDeployRecommendation` schema from [`session-schemas.ts`](session-schemas.ts): `{ "title", "reason", "effort": "low|medium|high", "services": [] }`.
+   > ⛔ **`postDeployRecommendations[]`:** For each ⚠️ WARN, write per `PostDeployRecommendation` schema from [`session-schemas.ts`](../../references/session-schemas.ts): `{ "title", "reason", "effort": "low|medium|high", "services": [] }`.
 
 2. **`context.json`** — ⛔ Use `edit` (not `create` — Step 1 already created it). Populate `components[]`, `repo`, `detectedInfra[]`, `detectedServices[]`, `app.name` (from primary component's project manifest or workspace root dir name). Append `"prereq"` to `completedPhases` NOW (before presenting), set `currentPhase: null`, update `lastModifiedUtc`.
 

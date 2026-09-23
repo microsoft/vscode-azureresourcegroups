@@ -21,6 +21,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
@@ -51,6 +52,14 @@ interface ConsistencyRule {
     name: string;
     pattern: RegExp;
     message: string;
+}
+
+/** An executable invariant whose shipped self-test must pass. */
+interface ExecutableContract {
+    name: string;
+    file: string;
+    args: string[];
+    grader: string;
 }
 
 /** The `agent-assets.lock.json` baseline. */
@@ -186,7 +195,7 @@ const contracts: Contract[] = [
     {
         file: "azure-deploy/scaffold/references/subagent-iac-gen.md",
         name: "postgres-admin-id-and-readiness-barrier",
-        pattern: /(?=[\s\S]*name: entraAdminObjectId)(?=[\s\S]*pgName: pg\.outputs\.serverName)/,
+        pattern: /(?=[\s\S]*name: entraAdminObjectId)(?=[\s\S]*postgres-readiness\.bicep)(?=[\s\S]*--subscription)(?=[\s\S]*state `Ready`)(?=[\s\S]*microsoft-entra-admin)(?=[\s\S]*pgName: postgresReadiness\.outputs\.serverName)/,
         grader: "scaffold-conformance PG-ENTRA-ADMIN-ID / PG-ADMIN-READY-BARRIER",
     },
     {
@@ -194,6 +203,99 @@ const contracts: Contract[] = [
         name: "tier2-migration-state-aware-retry",
         pattern: /(?=[\s\S]*BackoffLimitExceeded)(?=[\s\S]*pgmigrations)(?=[\s\S]*principal\/OID)(?=[\s\S]*one unchanged retry)/,
         grader: "Tier-2 deployment recovery evidence contract",
+    },
+    {
+        file: "azure-deploy/references/session-protocol.md",
+        name: "explicit-azure-target-lock",
+        pattern: /(?=[\s\S]*explicit user target → environment target → saved locked target → active[\s\S]*CLI default)(?=[\s\S]*az account show --subscription \{requestedSubscriptionIdOrName\})(?=[\s\S]*do not call[\s\S]*az account set)(?=[\s\S]*hard stop before session planning,[\s\S]*what-if, inventory, or provisioning)/i,
+        grader: "deployment target selection cannot be replaced by active Azure CLI state",
+    },
+    {
+        file: "azure-deploy/references/session-protocol.md",
+        name: "nested-model-lock",
+        pattern: /Every `task` or `runSubagent` call MUST pass `model: context\.json\.execution\.modelId` explicitly/,
+        grader: "nested generic task dispatches stay on the top-level model",
+    },
+    {
+        file: "azure-deploy/prereq/references/zero-code-path.md",
+        name: "zero-code-task-model-lock",
+        pattern: /`task` call with `model: context\.json\.execution\.modelId`/,
+        grader: "zero-code starter scaffolding cannot fall back to the task-agent model",
+    },
+    {
+        file: "azure-deploy/prepare/instructions.md",
+        name: "prepare-task-model-lock",
+        pattern: /(?=[\s\S]*subagent-quota\.md[\s\S]*model: context\.json\.execution\.modelId)(?=[\s\S]*subagent-pricing\.md[\s\S]*model: context\.json\.execution\.modelId)/,
+        grader: "quota and pricing fallback tasks retain the session model",
+    },
+    {
+        file: "azure-project-plan/plan.md",
+        name: "plan-preview-task-model-lock",
+        pattern: /runSubagent`\/`task` call per page[\s\S]*model: parentModelId/,
+        grader: "page-preview tasks retain the parent model",
+    },
+    {
+        file: "azure-project-scaffold/instructions.md",
+        name: "scaffold-task-model-lock",
+        pattern: /Every `task` \/ `runSubagent`[\s\S]*MUST pass `model: parentModelId`/,
+        grader: "frontend/backend/build/repair/verification tasks retain the parent model",
+    },
+    {
+        file: "azure-deploy/prereq/instructions.md",
+        name: "prereq-canonical-target-lock",
+        pattern: /\[`session-protocol\.md`\]\(\.\.\/references\/session-protocol\.md\)[\s\S]*unscoped Azure CLI default[\s\S]*names a target/,
+        grader: "direct prereq entry uses the same explicit Azure target precedence as orchestration",
+    },
+    {
+        file: "azure-deploy/deploy/references/preflight-checks.md",
+        name: "preflight-target-binding",
+        pattern: /az account show --subscription \{subscriptionId\}[\s\S]*exact locked subscription \+ tenant/,
+        grader: "deployment preflight verifies rather than adopts the active Azure CLI target",
+    },
+    {
+        file: "azure-deploy/deploy/instructions.md",
+        name: "portable-product-inventory",
+        pattern: /(?=[\s\S]*capture-deployment-inventory\.mjs)(?=[\s\S]*Do not substitute hand-written[\s\S]*az resource list)(?=[\s\S]*inventorySource)(?=[\s\S]*unverified[\s\S]*no cleanup list)/i,
+        grader: "CLI-hosted deployments retain product-owned inventory attribution",
+    },
+    {
+        file: "azure-deploy/deploy/references/code-deployment-functions-flex.md",
+        name: "typescript-flex-prebuilt-package",
+        pattern: /(?=[\s\S]*validate-functions-flex-package\.mjs)(?=[\s\S]*--build-remote false)(?=[\s\S]*registered Functions to equal the expected set)(?=[\s\S]*dependency-aware)/,
+        grader: "Flex Node runtime/package closure and post-upload registration gates",
+    },
+    {
+        file: "azure-deploy/deploy/references/database-post-deploy.md",
+        name: "migration-controller-reachability",
+        pattern: /(?=[\s\S]*Pre-deploy artifact proof)(?=[\s\S]*Controller proof)(?=[\s\S]*Live reachability probe)(?=[\s\S]*process exit)(?=[\s\S]*Post-state proof)/,
+        grader: "migration controllers must be reachable before application health acceptance",
+    },
+    {
+        file: "azure-deploy/deploy/instructions.md",
+        name: "live-correlation-gate",
+        pattern: /verify-correlation-contract\.mjs[\s\S]*correlation-verification\.json[\s\S]*blocks healthy\/succeeded/,
+        grader: "OE-CORRELATION-01 live success/error/CORS acceptance",
+    },
+];
+
+const executableContracts: ExecutableContract[] = [
+    {
+        name: "portable-product-inventory-self-test",
+        file: "azure-deploy/deploy/scripts/capture-deployment-inventory.mjs",
+        args: ["--self-test"],
+        grader: "portable inventory path/schema/attribution behavior",
+    },
+    {
+        name: "functions-flex-package-self-test",
+        file: "azure-deploy/deploy/scripts/validate-functions-flex-package.mjs",
+        args: ["--self-test"],
+        grader: "Flex package Node/function/import-closure rejection behavior",
+    },
+    {
+        name: "correlation-contract-self-test",
+        file: "azure-deploy/deploy/scripts/verify-correlation-contract.mjs",
+        args: ["--self-test"],
+        grader: "live correlation preservation/generation/error/CORS behavior",
     },
 ];
 
@@ -346,6 +448,40 @@ for (const contract of contracts) {
             `${contract.name}: ${contract.file} no longer states this contract.\n`
             + `    Expected to match: ${contract.pattern}\n`
             + `    Depended on by:    ${contract.grader}`,
+        );
+    }
+}
+
+for (const contract of executableContracts) {
+    const filePath = path.join(agentsRoot, contract.file);
+    if (!fs.existsSync(filePath)) {
+        failures.push(`${contract.name}: ${contract.file} is missing (needed by ${contract.grader})`);
+        continue;
+    }
+    const result = spawnSync(process.execPath, [filePath, ...contract.args], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        maxBuffer: 10 * 1024 * 1024,
+    });
+    const stdout = result.stdout.trim();
+    const stderr = result.stderr.trim();
+    let passed = false;
+    if (result.status === 0) {
+        try {
+            const lastLine = stdout.split(/\r?\n/).filter(Boolean).at(-1) ?? "";
+            passed = (JSON.parse(lastLine) as { passed?: unknown }).passed === true;
+        } catch {
+            passed = false;
+        }
+    }
+    if (passed) {
+        checked.push(`${contract.name} (${contract.file})`);
+    } else {
+        failures.push(
+            `${contract.name}: ${contract.file} self-test failed (needed by ${contract.grader}).\n`
+            + `    exit: ${String(result.status)}\n`
+            + `    stdout: ${stdout || "(empty)"}\n`
+            + `    stderr: ${stderr || "(empty)"}`,
         );
     }
 }

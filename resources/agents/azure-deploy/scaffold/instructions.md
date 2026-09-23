@@ -68,6 +68,10 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
 >
 > ⛔ **Dispatch type: `task` ONLY — NEVER `general-purpose`.** `general-purpose` leaks sub-agent context into the main thread, accelerating compaction and evicting the orchestrator workflow. `task` isolates sub-agent context.
 >
+> ⛔ **Dispatch model: every `task` call MUST include `model: context.json.execution.modelId`.** The generic
+> task agent has its own default model, so omission is a routing change, not inheritance. Backfill legacy
+> contexts from the exact current runtime model ID before dispatch; never accept an implicit default.
+>
 > ⛔ **How to dispatch — VERBATIM COPY required:**
 > 1. `view` the `subagent-*.md` template file
 > 2. Your **NEXT action MUST be a `task` tool call** — not `view`, `powershell`, `create`, or ANY other tool
@@ -76,7 +80,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
 >
 > **Anti-pattern (causes regressions):** Writing your OWN prompt that lists workflow steps or describes what to generate. The template already contains the complete workflow — your job is to COPY it, not rewrite it.
 
-5. **IaC generation** — ⛔ **You MUST dispatch [`subagent-iac-gen.md`](references/subagent-iac-gen.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
+5. **IaC generation** — ⛔ **You MUST dispatch [`subagent-iac-gen.md`](references/subagent-iac-gen.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`; ⛔ model: `context.json.execution.modelId`.
    ```
    <<<TEMPLATE_START>>>
    {paste the ENTIRE content of subagent-iac-gen.md here — unmodified}
@@ -101,7 +105,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    - **Expect:** IaC files written to `infra/`, file list returned for `scaffold-manifest.json.files[]`
    - The tag `app-onboard-skill: 'true'` MUST appear verbatim in generated Bicep.
 
-5b. **Deploy checklist (parallel with Step 5)** — Dispatch as a `task` **in parallel** with the IaC gen subagent above. ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
+5b. **Deploy checklist (parallel with Step 5)** — Dispatch as a `task` **in parallel** with the IaC gen subagent above. ⛔ agent_type: `"task"` — NEVER `"general-purpose"`; ⛔ model: `context.json.execution.modelId`.
    ```
    <<<TEMPLATE_START>>>
    You are a deploy-checklist generator. Do NOT invoke any agents.
@@ -122,7 +126,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    ```
    - **Expect:** `deploy-checklist.md` written to session folder. If this subagent fails, the validate subagent (Steps 10b–12.5) will catch the missing file.
 
-6–9. **Self-review** — ⛔ **You MUST dispatch [`subagent-review.md`](references/subagent-review.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
+6–9. **Self-review** — ⛔ **You MUST dispatch [`subagent-review.md`](references/subagent-review.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`; ⛔ model: `context.json.execution.modelId`.
    ```
    <<<TEMPLATE_START>>>
    {paste the ENTIRE content of subagent-review.md here — unmodified}
@@ -151,7 +155,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    ⛔ **Prefer the `.ps1` when `pwsh` is available** — it runs every check unconditionally. The `.sh` twin skips the plan-dependent checks (`DB-VERSION-MATCH`, `SERVICES-COMPLETE`, `DB-NAME-PRESENT`, `WARN-FIXED`) when `jq` is absent.
    ⛔ Any BLOCK failure → fix the IaC, re-run (max 3); never present the deploy gate with an open BLOCK. Run it here in the main thread — do NOT delegate to the validate subagent or hand-judge the result when a shell exists. Pass the JSON to the validate subagent for `scaffold-manifest.json.conformance`.
 
-10b–12.5. **Validation + manifest** — ⛔ **You MUST dispatch [`subagent-validate.md`](references/subagent-validate.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
+10b–12.5. **Validation + manifest** — ⛔ **You MUST dispatch [`subagent-validate.md`](references/subagent-validate.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`; ⛔ model: `context.json.execution.modelId`.
    ```
    <<<TEMPLATE_START>>>
    {paste the ENTIRE content of subagent-validate.md here — unmodified}

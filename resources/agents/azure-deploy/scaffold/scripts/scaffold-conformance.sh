@@ -239,8 +239,9 @@ if [ "$has_mysql" = 1 ] || [ "$has_pg" = 1 ]; then
       add_fail "PG-ENTRA-ADMIN-ID" "PostgreSQL administrator child name must be the entraAdminObjectId parameter — the name is the ARM URL object-ID segment, so labels or literals such as 'activeDirectory' fail at runtime" "infra/modules"
     fi
 
-    # 11b3. PG-ADMIN-READY-BARRIER — parent ordering only waits for the server
-    # PUT. Require the canonical companion-module/output boundary before admin PUT.
+    # 11b3. PG-ADMIN-READY-BARRIER — ARM ordering only proves the server PUT
+    # completed. Require an executable UAMI Ready poll and admin child-provider
+    # probe before child resources.
     if [ "$pg_admin_found" = 1 ]; then
       server_and_admin_together=0
       existing_server_target=0
@@ -253,11 +254,50 @@ if [ "$has_mysql" = 1 ] || [ "$has_pg" = 1 ]; then
           existing_server_target=1
         fi
       done < <(find "$INFRA_PATH" -name '*.bicep' -type f -print0 2>/dev/null)
+
+      readiness_module_name="$(printf '%s' "$main_bicep" |
+        sed -nE "s/^[[:space:]]*module[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]+'[^']*postgres-readiness[.]bicep'[[:space:]]*=.*/\1/p" |
+        head -n 1)"
+      readiness_file="$(find "$INFRA_PATH" -name 'postgres-readiness.bicep' -type f -print 2>/dev/null | head -n 1)"
+      executable_readiness=0
+      if [ -n "$readiness_file" ] &&
+         grep -qE 'Microsoft[.]Resources/deploymentScripts@' "$readiness_file" &&
+         grep -qE "^[[:space:]]*kind[[:space:]]*:[[:space:]]*'AzureCLI'[[:space:]]*$" "$readiness_file" &&
+         grep -qE "^[[:space:]]*type[[:space:]]*:[[:space:]]*'UserAssigned'[[:space:]]*$" "$readiness_file" &&
+         grep -E 'az[[:space:]]+postgres[[:space:]]+flexible-server[[:space:]]+show' "$readiness_file" | grep -- '--subscription' | grep -- '--resource-group' | grep -qE -- '--name([[:space:]]|=)' &&
+         grep -E 'az[[:space:]]+postgres[[:space:]]+flexible-server[[:space:]]+microsoft-entra-admin[[:space:]]+list' "$readiness_file" | grep -- '--subscription' | grep -- '--resource-group' | grep -qE -- '--server-name([[:space:]]|=)' &&
+         grep -qE "name[[:space:]]*:[[:space:]]*'SUBSCRIPTION_ID'" "$readiness_file" &&
+         grep -qE 'value[[:space:]]*:[[:space:]]*subscriptionId' "$readiness_file" &&
+         grep -qE "name[[:space:]]*:[[:space:]]*'RESOURCE_GROUP'" "$readiness_file" &&
+         grep -qE 'value[[:space:]]*:[[:space:]]*resourceGroup[(][)][.]name' "$readiness_file" &&
+         grep -qE "name[[:space:]]*:[[:space:]]*'SERVER_NAME'" "$readiness_file" &&
+         grep -qE 'value[[:space:]]*:[[:space:]]*serverName' "$readiness_file" &&
+         grep -qE -- '--query[[:space:]]+state' "$readiness_file" &&
+         grep -qE "['\"]Ready['\"]" "$readiness_file" &&
+         grep -qE '(seq[[:space:]]+1[[:space:]]+[0-9]+|\{1[.][.][0-9]+\})' "$readiness_file" &&
+         grep -qE '^[[:space:]]*sleep[[:space:]]+(6[0-9]|[7-9][0-9]|[1-9][0-9]{2,})[[:space:]]*$' "$readiness_file" &&
+         grep -q 'AZ_SCRIPTS_OUTPUT_PATH' "$readiness_file" &&
+         grep -qE '^[[:space:]]*exit[[:space:]]+1[[:space:]]*$' "$readiness_file" &&
+         grep -qE '^[[:space:]]*output[[:space:]]+serverName[[:space:]]+string[[:space:]]*=[[:space:]]*serverName[[:space:]]*$' "$readiness_file" &&
+         ! grep -qE '\bjq\b' "$readiness_file"; then
+        executable_readiness=1
+      fi
+
+      readiness_to_children=0
+      if [ -n "$readiness_module_name" ] &&
+         printf '%s' "$main_bicep" |
+           grep -qE "^[[:space:]]*pgName[[:space:]]*:[[:space:]]*${readiness_module_name}[.]outputs[.]serverName[[:space:]]*(//.*)?$"; then
+        readiness_to_children=1
+      fi
+
       if [ "$server_and_admin_together" = 1 ] ||
          ! printf '%s' "$iac" | grep -qE '^[[:space:]]*output[[:space:]]+serverName[[:space:]]+string[[:space:]]*=[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[.]name[[:space:]]*(//.*)?$' ||
-         ! printf '%s' "$main_bicep" | grep -qE '^[[:space:]]*pgName[[:space:]]*:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[.]outputs[.]serverName[[:space:]]*(//.*)?$' ||
-         [ "$existing_server_target" != 1 ]; then
-        add_fail "PG-ADMIN-READY-BARRIER" "PostgreSQL administrator must be in a companion module that targets an existing pgName supplied from the server module outputs.serverName — parent/dependsOn ordering alone does not wait for management readiness" "infra/main.bicep + infra/modules"
+         ! printf '%s' "$main_bicep" | grep -qE '^[[:space:]]*serverName[[:space:]]*:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[.]outputs[.]serverName[[:space:]]*(//.*)?$' ||
+         [ "$readiness_to_children" != 1 ] ||
+         [ "$executable_readiness" != 1 ] ||
+         [ "$existing_server_target" != 1 ] ||
+         ! printf '%s' "$iac" | grep -q 'acdd72a7-3385-48ef-bd42-f606fba81ae7'; then
+        add_fail "PG-ADMIN-READY-BARRIER" "PostgreSQL children must be gated by a UAMI deployment script chained server output -> bounded Ready poll + Microsoft Entra admin child-provider probe with explicit subscription/RG/server environment -> >=60s stabilization -> readiness output -> serialized children; jq, bypasses, and success-on-timeout are forbidden" "infra/main.bicep + infra/modules/postgres*.bicep"
       fi
     fi
   fi

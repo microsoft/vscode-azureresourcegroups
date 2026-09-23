@@ -371,7 +371,12 @@ The instant `theme.css` and `manifest.json` exist, the agent workflow opens the 
 
 #### 3.5b. Fan out one sub-agent per page (parallel)
 
-Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
+Resolve the exact current runtime model identifier as `parentModelId` before fan-out. Launch one
+`runSubagent`/`task` call per page, **all in a single tool-call batch** (the platform parallelizes independent
+sub-agent invocations), and pass `model: parentModelId` on every call. The generic task agent has its own
+default model; omitting `model` is forbidden. If the runtime does not expose an exact identifier, stop instead
+of silently routing page generation to another model. Cap at **4 concurrent** — if the plan has more than 4
+pages, split into batches of 4. Each sub-agent's prompt MUST contain:
 
 1. The page's row from the Design System section's Pages table (page name, route, purpose, layout regions).
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).

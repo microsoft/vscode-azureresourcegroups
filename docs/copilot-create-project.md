@@ -321,6 +321,13 @@ machine** — if it isn't started, generation asks before starting it. You can s
 Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
 `.copilot-azure/sessions/{id}/prepare-plan.json` and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. Existing service boundaries are preserved: for example, a scaffolded SPA and Azure Functions API remain a frontend service and a separate Function App. Static Web Apps can host the frontend, but the agent must not convert the Functions project into an SWA-managed API or switch its authentication provider to `azureStaticWebApps`. After you approve, the agent generates and validates Bicep or Terraform, provisions it through Azure Resource Manager, deploys each application service through its service-specific channel, and health-checks the result. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built-in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
+The deploy session locks the exact subscription, tenant, resource group, and region named in your prompt.
+An explicit target takes precedence over environment variables, saved session state, and the Azure CLI's
+active default; the agent verifies it with a scoped account lookup and never changes the global CLI default.
+A mismatch stops before planning, inventory, or provisioning. The session also records the exact selected
+model, and every nested planning, scaffold, build, repair, and verification task is explicitly dispatched
+with that same model rather than falling back to a task-agent default.
+
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
 
 <p align="center">
@@ -338,13 +345,34 @@ it closes automatically as the Deployment results view opens.
   <img src="images/copilot-create-project/16-deployment-progress-view.png" alt="Deployment progress view" />
 </p>
 
+### What counts as a healthy deployment
+
+Azure reporting a resource or revision as ready is necessary, but it is not enough to mark the application
+healthy. The deploy agent now applies these release gates when they are relevant:
+
+- **PostgreSQL provider readiness.** Generated Bicep creates the server, then a managed-identity deployment
+  script polls the exact subscription/resource group until the server reports `Ready`, successfully reads the
+  `microsoft-entra-admin` child-provider endpoint, and waits for provider stabilization. Only that script's
+  output can feed the serialized administrator, extension, and database child resources.
+- **TypeScript Functions on Flex Consumption.** The agent clean-builds a self-contained package locally,
+  verifies its Node major, production dependencies, compiled shared-import closure, and exact Function
+  modules, and deploys it with remote build disabled. It then requires the registered Function set to match
+  and the dependency-aware health route to respond; a successful ZIP upload alone does not pass.
+- **Database migrations.** The migration entrypoint must exist in the immutable package or image. The
+  selected live controller must exist and pass a side-effect-free reachability probe before one execution;
+  controller state, process exit, stdout/stderr, migration history, tables, principal identity, and row/seed
+  state are recorded separately. Platform readiness cannot hide an unreachable migration controller.
+- **Correlation.** APIs are probed live for valid incoming `X-Correlation-ID` preservation, generation or
+  replacement, success and structured-error response headers, and exact-origin CORS exposure.
+
 ### Knowing what was created (and cleaning up after a failure)
 
 Deploying real Azure resources means a failed or partially-completed deployment can leave resources behind. To
-make this deterministic rather than a guess, the deploy agent records **exactly which resources this session
-created** by snapshotting your subscription with the Azure Resource Manager API **before** the first
-deployment and **after** each attempt, then diffing the two lists. Whatever is present afterward but not
-before appeared while this run was in flight.
+make this deterministic rather than a guess, the deploy agent uses a product-owned inventory provider to
+record **which resources appeared during this session and which tracked deployment can be attributed to
+them**. It snapshots the explicitly locked subscription
+**before** the first deployment and **after** each attempt, then diffs the two lists. Whatever is present
+afterward but not before appeared while this run was in flight.
 
 Each created resource is then checked against what the ARM deployment itself reported, and classified:
 
@@ -353,11 +381,15 @@ Each created resource is then checked against what the ARM deployment itself rep
 | **expected** | The deployment reported it as succeeded in the target resource group — part of your working app. |
 | **failed** | The deployment reported it, but it didn't provision successfully. Confirmed to be this deployment's, so the view offers a delete command. |
 | **orphaned** | It appeared while the deploy ran, but no deployment reported it. Usually a leftover from a healing retry or an imperative fallback — but on a subscription you share with others it may not be yours at all, so it's listed for **review** rather than with a delete command. |
-| **unverified** | The deployment's operations couldn't be read (for example, the signed-in account lacks `Microsoft.Resources/deployments/operations/read`), so nothing could be attributed. No cleanup list is shown. |
+| **unverified** | The deployment's operations couldn't be read (for example, the signed-in account lacks `Microsoft.Resources/deployments/operations/read`), so nothing could be attributed. No resource-level cleanup list is shown. |
 
 The results are recorded in the deploy result (`deploy-result.json`) and surfaced in the Deployment results
-view. The baseline is held in memory during the deploy — no extra files are written to your workspace.
-Nothing is ever deleted automatically — the capture only reports. See
+view. In the VS Code host, the preferred `capture_deployment_inventory` provider holds its baseline in
+memory. If a direct CLI/plugin host does not expose that in-process provider, the same shipped agent uses its
+portable product provider instead; it writes `deployment-inventory-baseline.json` and
+`deployment-inventory-capture.json` atomically in the active session folder and records
+`inventorySource: "portable-cli"`. It never substitutes an ad-hoc CLI inventory. Both providers use the same
+classifications and never delete anything. See
 [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy).
 
 When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
@@ -462,17 +494,18 @@ calls from later turns in the same chat are ignored.
 | 3 | `azure-project-integrate` | integration plan and quality validations | migrations, live‑wired frontend, control results | `start_local_development` |
 | 4 | `azure-debug-plan` | project source | `.azure/vscode-debug-plan.md` | `start_azure_debug_generate` |
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
-| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, Dockerfiles, `deploy-result.json` | Live, health-checked Azure deployment |
+| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, Dockerfiles, `deploy-result.json`, portable inventory evidence when needed | Live, health-checked Azure deployment |
 
 After a successful deploy, `azure-deploy` also **runs the project's outstanding database migrations**
 rather than leaving them as a manual next step. It reaches the database in tier order — inside the
 deployed app first, then a one‑shot job in the same environment, and only as a last resort through a
-temporary single‑IP firewall rule. PostgreSQL scaffolds put the Entra administrator in a second,
-output-linked Bicep module: this keeps its runtime PUT behind a server-readiness deployment barrier, and
-the conformance gate rejects a child name that is not the administrator object-ID parameter. For a failed
-one-shot migration job, the agent preserves application logs and reads migration history, expected tables,
-and principal identity state before it classifies or retries the execution; a controller
-`BackoffLimitExceeded` reason alone is not treated as the root cause.
+temporary single‑IP firewall rule. PostgreSQL scaffolds put the Entra administrator in a separate companion module behind an executable
+managed-identity readiness module; the child module can consume only the readiness output, and the
+conformance gate rejects a child name that is not the administrator object-ID parameter. Before a migration,
+the agent proves the immutable artifact and live controller are reachable. For a failed one-shot migration
+job, it preserves application logs and reads migration history, expected tables, and principal identity state
+before it classifies or retries the execution; a controller `BackoffLimitExceeded` reason alone is not
+treated as the root cause.
 
 Agent instructions are **version‑stamped**. A `.version` file next to the copied folders records the
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
@@ -503,6 +536,11 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `open_database_migration_access` | Last‑resort database access for post‑deploy migrations. Adds a **single‑IP** firewall allow rule and records it first, so the extension can remove it even if the session dies. Refuses a server whose public network access is disabled or unconfirmed rather than opening it. |
 | `close_database_migration_access` | Removes the temporary rule that `open_database_migration_access` created and clears its record. Only ever removes rules the extension created, so it can't delete one from the generated infrastructure. |
 
+Direct CLI/plugin hosts may not load `capture_deployment_inventory`. After one exact-name retry proves the
+tool is unavailable, `azure-deploy` uses the shipped
+`.github/agents/azure-deploy/deploy/scripts/capture-deployment-inventory.mjs` provider. This is a supported
+product fallback, not a synthesized `az resource list` report.
+
 ## Files & state
 
 Everything the flow produces lives in the workspace, so it's inspectable and reversible.
@@ -516,8 +554,10 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes, including workload answers, application-control evidence, executable validations, deferred risks, and the Dependency Access rows deployment reads to assign roles and re-run each probe against the deployed identity. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
-| `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
-| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
+| `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current/completed phases, exact execution-model lock, and locked Azure target (subscription, tenant, resource group, and region). Drives the Deployment progress view. |
+| `.copilot-azure/sessions/{id}/deployment-inventory-baseline.json` | deploy agent's portable inventory provider | Atomic pre-deployment resource-ID snapshot for the exact session and subscription. Written only when the in-process inventory provider is unavailable. |
+| `.copilot-azure/sessions/{id}/deployment-inventory-capture.json` | deploy agent's portable inventory provider | Atomic post-attempt diff, ARM-operation attribution, verification status, and resource classifications. Written only when the portable provider is selected. |
+| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, inventory source/evidence, migration-controller proof, correlation gate, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
@@ -615,6 +655,10 @@ before submitting.
 | **Report Issue** / **Inspect Diagnostics** say "No … diagnostics … recorded." | The flow never ran in this workspace, or state was reset. | Expected. Reproduce the issue in this workspace first so events are recorded. |
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
+| The deploy agent selected a different subscription, resource group, or region than the prompt. | The session predates target locking, or its locked target conflicts with the new request. | Inspect `.copilot-azure/sessions/{id}/context.json.azure`. Start a fresh session or explicitly approve a target change; do not use `az account set` as a workaround. Every deployment command should include the locked subscription. |
+| A Flex ZIP upload succeeded but no Functions are registered, or Azure chose the wrong Node build runtime. | A source/remote build did not produce a self-contained artifact. | Rebuild from a clean tree, run `validate-functions-flex-package.mjs` against both staging root and final ZIP, deploy with `--build-remote false`, then compare the exact registered Function set and probe `/api/health`. |
+| Azure reports the app or migration job ready, but the release is not application-healthy. | The migration entrypoint/controller was absent or unreachable, the process failed, or database post-state was not verified. | Inspect `deploy-result.json.migration`: artifact proof, controller reachability, process exit, stdout/stderr, migration history, tables, principal/OID, and row state must all be present before retry or acceptance. |
+| API requests do not consistently return `X-Correlation-ID`. | Correlation middleware, structured-error handling, or CORS exposure is incomplete. | Run the shipped `verify-correlation-contract.mjs` live gate and fix preservation, generation/replacement, error response, or `Access-Control-Expose-Headers` behavior before accepting the release. |
 | F5 / *Start Emulators* fails with a connection or "cannot connect to the container runtime" error. | The container engine the plan selected isn't running. | For **Docker**, start Docker Desktop / the Docker service. For **Podman** on Windows/macOS, ensure a **Podman machine** exists and is started (`podman machine init` once, then `podman machine start`). Generation's preflight asks before starting a stopped machine but won't create one for you. |
 | Emulators start under Docker but not after switching the plan to **Podman**. | `podman compose` needs an external Compose provider, or the emulator isn't Podman‑certified. | Confirm `podman compose version` returns a version (it wraps `docker-compose`/`podman-compose`). Azurite and PostgreSQL are certified; other emulators generate best‑effort under Podman and emit a `⚠️ LIMITED SUPPORT` warning. |
 | The plan says *Podman (Docker-compatible)* but `docker compose` can't reach an engine. | Podman's Docker-compatible socket isn't up. | Enable **Docker compatibility** in Podman Desktop and make sure the **Podman machine** is started (`podman machine start`). `docker info` should then report the Podman server. The generated tasks keep using `docker compose` — that's the command that talks to the compatible socket. |
@@ -624,9 +668,10 @@ before submitting.
 ## Clean up resources after a failed deploy
 
 Because deploying creates real Azure resources, the deploy agent tracks them deterministically instead of
-relying on the model's memory. It snapshots your subscription with the ARM API **before** the first
-deployment (kept **in memory** — no files are written to your workspace) and again **after** each attempt,
-then diffs the two lists — anything new is a resource this session created.
+relying on the model's memory. The in-process provider snapshots the locked subscription in memory; the
+portable CLI-host provider writes an atomic baseline/capture pair in the active session folder. Both capture
+**before** the first deployment and **after** each attempt, then diff the two lists and use ARM operations to
+separate attributed resources from concurrent, review-only arrivals.
 
 Where to look, in order:
 
@@ -652,12 +697,12 @@ Cleanup patterns the agent emits (run them yourself — the capture **never dele
 - **Whole orphaned resource group:** `az group delete --name {rg} --subscription {sub} --yes --no-wait`
 - **Individual leftover resource:** `az resource delete --ids {resourceId} --subscription {sub}`
 - **Everything from the session (tag‑based):**
-  `az group list --tag app-onboard-session-id={id} --query "[].name" -o tsv | ForEach-Object { az group delete -n $_ --yes --no-wait }`
+  `az group list --subscription {sub} --tag app-onboard-session-id={id} --query "[].name" -o tsv | ForEach-Object { az group delete --subscription {sub} -n $_ --yes --no-wait }`
 
-The agent's baseline lives in memory only. If VS Code is reloaded mid‑deploy it can re‑run
-`capture_deployment_inventory` with `phase: "capture"`, and without a baseline the capture falls back to
-reporting only what the tracked ARM deployments touched — it will miss imperative strays, but it never
-reports pre‑existing resources as new. A clean run always captures the baseline before deploying.
+If the in-process baseline is lost during a VS Code reload, capture falls back to reporting only what the
+tracked ARM deployments touched — it can miss imperative strays, but it never reports pre-existing resources
+as new. The portable provider validates and reuses its durable baseline for the same session/subscription.
+A clean run always captures or refreshes the baseline before provisioning.
 
 ## Re‑download agent instructions
 

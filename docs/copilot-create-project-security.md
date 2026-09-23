@@ -53,6 +53,29 @@ When reading a `package.json` from the user's project workspace, require an obje
 values are strings and drop entries with other value types. When key presence changes behavior, use an
 own-property check such as `Object.hasOwn(record, key)` rather than reading through the prototype chain.
 
+## Portable deployment inventory
+
+`deployment-inventory-baseline.json` and `deployment-inventory-capture.json` are durable, untrusted session
+artifacts written only when a CLI/plugin host cannot access the extension's in-process
+`capture_deployment_inventory` provider.
+
+- Confine `--session-path` to the real (symlink-resolved) current workspace path
+  `.copilot-azure/sessions/{uuid}` before any read, temporary-file creation, rename, or write. A path that
+  merely ends with those segments is not sufficient.
+- Require a GUID session directory and subscription ID. Invoke Azure CLI with an argument array and an
+  explicit `--subscription`; never construct a shell command from artifact or prompt text.
+- Write only the two fixed filenames. Use exclusive temporary-file creation in the same directory followed
+  by an atomic rename, and remove a leftover temporary file on failure.
+- Before consuming a baseline, bound its size and resource count; parse with one-argument `JSON.parse`; then
+  validate the object root, schema version, session ID, subscription ID, and every resource ID's subscription
+  prefix. Reject a mismatched or partial baseline instead of treating it as empty.
+- Treat ARM/CLI response JSON as `unknown`: require array roots and object/string fields before attribution.
+  If deployment operations cannot be read, classify resources as `unverified`, emit no resource-level
+  cleanup recommendation, and do not turn a raw resource-list diff into a success-shaped fallback.
+- Consumers must runtime-validate the capture again before copying fields into `deploy-result.json` or
+  rendering them. `inventorySource` identifies `extension-mcp` versus `portable-cli`; it is evidence
+  provenance, not a trust marker.
+
 ## Markdown, HTML, and SVG
 
 Prefer a small parsed node model and React nodes for agent-written Markdown. Do not use
@@ -81,3 +104,6 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
 8. For workload-quality changes, test unknown question IDs/values, missing pillar rows, placeholder evidence,
    and false claims such as `WAF compliant`. A successful scaffold or deployment is not proof of framework
    compliance.
+9. For portable inventory changes, test workspace confinement, cross-subscription baseline rejection, atomic
+   fixed-file output, malformed/wrong-root JSON, bounded arrays, and the rule that unverified attribution
+   never yields resource-level cleanup commands.

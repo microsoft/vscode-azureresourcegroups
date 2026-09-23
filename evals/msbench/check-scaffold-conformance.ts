@@ -26,6 +26,9 @@ interface Fixture {
     adminName: string;
     colocateAdmin: boolean;
     existingName?: string;
+    includeReadiness?: boolean;
+    readinessSource?: string;
+    childServerExpression?: string;
     expectedFailure?: string;
 }
 
@@ -47,6 +50,7 @@ const root = mkdtempSync(join(tmpdir(), "scaffold-conformance-"));
 
 const serverModule = `param pgName string
 param location string
+param readinessPrincipalId string
 
 resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: pgName
@@ -60,7 +64,61 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
+resource readinessReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(pg.id, readinessPrincipalId, 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+  scope: pg
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+    principalId: readinessPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output serverName string = pg.name
+`;
+
+const readinessModule = `param location string
+param serverName string
+param subscriptionId string
+param managedIdentityResourceId string
+
+resource readiness 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'wait-postgres'
+  location: location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '\${managedIdentityResourceId}': {}
+    }
+  }
+  properties: {
+    azCliVersion: '2.89.0'
+    timeout: 'PT20M'
+    environmentVariables: [
+      { name: 'SUBSCRIPTION_ID', value: subscriptionId }
+      { name: 'RESOURCE_GROUP', value: resourceGroup().name }
+      { name: 'SERVER_NAME', value: serverName }
+    ]
+    scriptContent: '''
+      for attempt in $(seq 1 40); do
+        state=$(az postgres flexible-server show --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --name "$SERVER_NAME" --query state -o tsv || true)
+        if [ "$state" = "Ready" ]; then
+          if az postgres flexible-server microsoft-entra-admin list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --server-name "$SERVER_NAME" --output none 2>/dev/null; then
+            sleep 90
+            printf '{"ready":true}\\n' > "$AZ_SCRIPTS_OUTPUT_PATH"
+            exit 0
+          fi
+        fi
+        sleep 15
+      done
+      printf '{"ready":false}\\n' > "$AZ_SCRIPTS_OUTPUT_PATH"
+      exit 1
+    '''
+  }
+}
+
+output serverName string = serverName
 `;
 
 function adminModule(adminName: string, includeServer: boolean, existingName = "pgName"): string {
@@ -87,7 +145,22 @@ resource pgAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-
 `;
 }
 
-const mainModule = `targetScope = 'subscription'
+function mainModule(includeReadiness = true, childServerExpression = "pgReadiness.outputs.serverName"): string {
+    const readiness = includeReadiness
+        ? `
+module pgReadiness 'modules/postgres-readiness.bicep' = {
+  name: 'postgres-readiness'
+  scope: rg
+  params: {
+    location: 'westus2'
+    serverName: pg.outputs.serverName
+    subscriptionId: subscription().subscriptionId
+    managedIdentityResourceId: '/subscriptions/test/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/readiness'
+  }
+}
+`
+        : "";
+    return `targetScope = 'subscription'
 
 param entraAdminObjectId string
 
@@ -102,18 +175,21 @@ module pg 'modules/postgres.bicep' = {
   params: {
     pgName: 'pg-test'
     location: 'westus2'
+    readinessPrincipalId: entraAdminObjectId
   }
 }
 
+${readiness}
 module pgChildren 'modules/postgres-children.bicep' = {
   name: 'postgres-children'
   scope: rg
   params: {
-    pgName: pg.outputs.serverName
+    pgName: ${childServerExpression}
     entraAdminObjectId: entraAdminObjectId
   }
 }
 `;
+}
 
 const fixtures: Fixture[] = [
     { name: "canonical", adminName: "entraAdminObjectId", colocateAdmin: false },
@@ -121,6 +197,15 @@ const fixtures: Fixture[] = [
     { name: "literal-guid", adminName: "'11111111-2222-3333-4444-555555555555'", colocateAdmin: false, expectedFailure: "PG-ENTRA-ADMIN-ID" },
     { name: "same-deployment", adminName: "entraAdminObjectId", colocateAdmin: true, expectedFailure: "PG-ADMIN-READY-BARRIER" },
     { name: "wrong-existing-target", adminName: "entraAdminObjectId", colocateAdmin: false, existingName: "'pg-test'", expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "missing-readiness", adminName: "entraAdminObjectId", colocateAdmin: false, includeReadiness: false, childServerExpression: "pg.outputs.serverName", expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "bypassed-readiness", adminName: "entraAdminObjectId", colocateAdmin: false, childServerExpression: "pg.outputs.serverName", expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "missing-readiness-environment", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace(/ {4}environmentVariables: \[[\s\S]*? {4}\]\n/, ""), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "unscoped-readiness-show", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace('--subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" ', ""), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "missing-provider-probe", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace(/ {10}if az postgres flexible-server microsoft-entra-admin list[^\n]+/, "          if false; then"), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "unscoped-provider-probe", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace('microsoft-entra-admin list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --server-name', 'microsoft-entra-admin list --server-name'), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "short-stabilization", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace("sleep 90", "sleep 30"), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "jq-readiness", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace("--query state -o tsv", "-o json | jq -r .state"), expectedFailure: "PG-ADMIN-READY-BARRIER" },
+    { name: "success-on-timeout", adminName: "entraAdminObjectId", colocateAdmin: false, readinessSource: readinessModule.replace('      exit 1\n', '      exit 0\n'), expectedFailure: "PG-ADMIN-READY-BARRIER" },
 ];
 
 function run(command: string, args: string[], cwd: string): ConformanceResult {
@@ -183,9 +268,15 @@ try {
         if (fixture.colocateAdmin) {
             writeFileSync(join(infraDir, "main.bicep"), adminModule(fixture.adminName, true));
         } else {
-            writeFileSync(join(infraDir, "main.bicep"), mainModule);
+            writeFileSync(
+                join(infraDir, "main.bicep"),
+                mainModule(fixture.includeReadiness !== false, fixture.childServerExpression),
+            );
             writeFileSync(join(modulesDir, "postgres.bicep"), serverModule);
             writeFileSync(join(modulesDir, "postgres-children.bicep"), adminModule(fixture.adminName, false, fixture.existingName));
+            if (fixture.includeReadiness !== false) {
+                writeFileSync(join(modulesDir, "postgres-readiness.bicep"), fixture.readinessSource ?? readinessModule);
+            }
         }
 
         const psResult = run(
@@ -206,4 +297,4 @@ try {
     rmSync(root, { recursive: true, force: true });
 }
 
-console.log(`✔ Scaffold conformance scripts reject ${fixtures.length - 1} PostgreSQL administrator mutations.`);
+console.log(`✔ Scaffold conformance scripts reject ${fixtures.length - 1} PostgreSQL administrator/readiness mutations.`);

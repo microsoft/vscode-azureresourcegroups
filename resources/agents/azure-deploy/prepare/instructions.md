@@ -39,14 +39,20 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 
 ## Workflow
 
+> ⛔ **Nested-model lock:** Before any Step 5/6 fallback delegation, read
+> `context.json.execution.modelId`. Every `task` call MUST include
+> `model: context.json.execution.modelId`; omitting it routes the built-in task agent to its own default model.
+> Backfill a legacy session from the exact current runtime model ID before dispatch. If no exact ID is
+> available, stop instead of delegating with an implicit default.
+
 | # | Step | Action | Reference |
 |---|------|--------|-----------|
 | 1 | **Read session state** | Load `prereq-output.json` + `context.json`. Resolve subscription | Cross-ref [subscription-resolution.md](../references/subscription-resolution.md) if needed |
 | 2 | **Query policy constraints** | Inline MCP: fetch policy + advisor recommendations | `mcp_azure_mcp_policy` + `mcp_azure_mcp_advisor` |
 | 3 | **Map components to services** | Per-component Azure service selection, Dockerfile routing, deploy-as-is. ⛔ Existing Azure Functions components MUST remain separate Azure Functions services. | ⛔ **You MUST read [service-mapping.md](references/service-mapping.md) and [deploy-strategy.md](references/deploy-strategy.md)** |
 | 4 | **Select SKUs + WAF analysis** | Budget-aware SKU selection, inline WAF service guidance | ⛔ **You MUST read [sku-matrix.md](references/sku-matrix.md)** |
-| 5 | **Validate quotas + region capacity** | ⛔ Read [`subagent-quota.md`](references/subagent-quota.md) → dispatch as `task` (NEXT action MUST be `task`, ⛔ agent_type: `"task"` — NEVER `"general-purpose"`). Copy the **COMPLETE and UNMODIFIED** template text into the task prompt between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters — do NOT summarize. Append the caller-provided inputs listed in [`subagent-quota.md`](references/subagent-quota.md)'s Input table AFTER the template block. ⛔ **After dispatching, proceed to Step 6 (cost estimation) while the subagent runs. Do NOT run quota checks yourself — the subagent handles it. Collect subagent results before Step 9 (write plan).** | ⛔ **You MUST read [`subagent-quota.md`](references/subagent-quota.md)** |
-| 6 | **Estimate costs** | ⛔ **You MUST read [pricing-guide.md](references/pricing-guide.md)** for methodology, then [pricing-guide-services.md](references/pricing-guide-services.md) for per-service filters. Call the pricing router (`mcp_azure_mcp_pricing`/`azure-pricing`) with `command: "pricing_get"` + a `parameters{}` object inline per paid service. If MCP unavailable or fails → ⛔ Read [`subagent-pricing.md`](references/subagent-pricing.md) → dispatch as `task` (NEXT action MUST be `task`, ⛔ agent_type: `"task"` — NEVER `"general-purpose"`). Copy the **COMPLETE and UNMODIFIED** template text into the task prompt between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters — do NOT summarize. Append data (services[], region, budget tier) AFTER the template block. Write results to `prepare-plan.json.costEstimate`. | [pricing-guide.md](references/pricing-guide.md) |
+| 5 | **Validate quotas + region capacity** | ⛔ Read [`subagent-quota.md`](references/subagent-quota.md) → dispatch as `task` (NEXT action MUST be `task`, ⛔ agent_type: `"task"` — NEVER `"general-purpose"`, ⛔ `model: context.json.execution.modelId`). Copy the **COMPLETE and UNMODIFIED** template text into the task prompt between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters — do NOT summarize. Append the caller-provided inputs listed in [`subagent-quota.md`](references/subagent-quota.md)'s Input table AFTER the template block. ⛔ **After dispatching, proceed to Step 6 (cost estimation) while the subagent runs. Do NOT run quota checks yourself — the subagent handles it. Collect subagent results before Step 9 (write plan).** | ⛔ **You MUST read [`subagent-quota.md`](references/subagent-quota.md)** |
+| 6 | **Estimate costs** | ⛔ **You MUST read [pricing-guide.md](references/pricing-guide.md)** for methodology, then [pricing-guide-services.md](references/pricing-guide-services.md) for per-service filters. Call the pricing router (`mcp_azure_mcp_pricing`/`azure-pricing`) with `command: "pricing_get"` + a `parameters{}` object inline per paid service. If MCP unavailable or fails → ⛔ Read [`subagent-pricing.md`](references/subagent-pricing.md) → dispatch as `task` (NEXT action MUST be `task`, ⛔ agent_type: `"task"` — NEVER `"general-purpose"`, ⛔ `model: context.json.execution.modelId`). Copy the **COMPLETE and UNMODIFIED** template text into the task prompt between `<<<TEMPLATE_START>>>` / `<<<TEMPLATE_END>>>` delimiters — do NOT summarize. Append data (services[], region, budget tier) AFTER the template block. Write results to `prepare-plan.json.costEstimate`. | [pricing-guide.md](references/pricing-guide.md) |
 | 7 | **Generate naming** | Centralized naming: suffix, prefix, all resource names | ⛔ **You MUST read [naming-patterns.md](references/naming-patterns.md)** |
 | 8 | **Determine IaC format** | Existing non-Azure `.tf` → `ask_user` Bicep vs TF, write to `overrides[].iacFormat`. No `.tf` → default Bicep. | (inline) |
 | 9 | **Write prepare-plan.json** | Per `PreparePlan` schema. Include postDeployRecommendations, deploymentVariables | ⛔ **You MUST read [prepare-schemas.ts](references/prepare-schemas.ts)** for `PreparePlan` schema |
@@ -65,7 +71,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 | Error | Remediation |
 |-------|-------------|
 | Pricing API 400 | Verify `--sku` included in the query |
-| MCP pricing unavailable | Dispatch [`subagent-pricing.md`](references/subagent-pricing.md) as `task` fallback (uses direct HTTP to `prices.azure.com`) |
+| MCP pricing unavailable | Dispatch [`subagent-pricing.md`](references/subagent-pricing.md) as `task` fallback with `model: context.json.execution.modelId` (uses direct HTTP to `prices.azure.com`) |
 | Prereq output missing | Trigger prereq backfill |
 | Quota check fails | Fall back to best-effort estimate + disclaimer |
 | Override conflicts | Re-run from Step 3 with new constraints |

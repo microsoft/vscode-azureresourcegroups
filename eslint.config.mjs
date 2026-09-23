@@ -45,10 +45,10 @@ export default defineConfig([
         },
     },
     {
-        // The eval harness is plain Node JS (.cjs/.mjs) run directly by node — it is not
-        // part of the extension's TypeScript program, so the type-aware project service
-        // can't resolve these files. Lint them without type information, against Node globals.
-        files: ['evals/**/*.{js,cjs,mjs}'],
+        // The eval harness and shipped agent utilities are plain Node JS run directly by
+        // node. They are not part of the extension's TypeScript program, so lint them
+        // without type information, against Node globals.
+        files: ['evals/**/*.{js,cjs,mjs}', 'resources/agents/**/*.mjs'],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: {
             parserOptions: {
@@ -58,13 +58,18 @@ export default defineConfig([
             globals: {
                 __dirname: 'readonly',
                 __filename: 'readonly',
+                AbortController: 'readonly',
                 Buffer: 'readonly',
+                clearTimeout: 'readonly',
                 console: 'readonly',
                 crypto: 'readonly',
                 exports: 'writable',
+                fetch: 'readonly',
                 module: 'writable',
                 process: 'readonly',
                 require: 'readonly',
+                setTimeout: 'readonly',
+                URL: 'readonly',
             },
         },
         rules: {
