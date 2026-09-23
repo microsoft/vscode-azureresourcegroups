@@ -1,21 +1,60 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { createInterface } from 'node:readline';
 import { test } from 'node:test';
 
 const directory = new URL('./', import.meta.url);
 const fixture = JSON.parse(readFileSync(new URL('fixtures/pr-1892.json', directory), 'utf8'));
-const workflow = readFileSync(new URL('../../../workflows/cor-debug-generate-review.md', directory), 'utf8');
-const scriptBlock = workflow.match(/^    script: \|\n([\s\S]*?)^safe-outputs:/m)?.[1];
-assert.ok(scriptBlock, 'Expected the workflow to define the callable diff reader');
-const script = scriptBlock.split('\n').map(line => line.startsWith('      ') ? line.slice(6) : line).join('\n');
-const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-const execute = new AsyncFunction('inputs', 'fetch', 'process', 'require', 'AbortSignal',
-  `const { mode, cursor, filename, baseSha, headSha } = inputs;\n${script}`);
+const { readPrDiff } = createRequire(import.meta.url)('./diff-reader.cjs');
 const repository = 'microsoft/vscode-azureresourcegroups';
 const base = '5a564544ee12d00fc276effdc2f26c611e85a754';
 const head = '90e65bd6af6f0abe86794bb61455fc1ceb371e9b';
 const filename = 'resources/agents/azure-debug-generate/references/generate.md';
+
+test('compiled workflow runs the token-bearing reader over read-only mounted stdio', () => {
+  const lock = readFileSync(new URL('../../../workflows/cor-debug-generate-review.lock.yml', directory), 'utf8');
+  assert.match(lock, /"cor-review-diffs": \{\s+"type": "stdio"/);
+  assert.match(lock, /"mounts": \[\s+"\$\{RUNNER_TEMP\}\/gh-aw\/cor-review-diffs:\/cor-review-diffs:ro"/);
+  assert.match(lock, /"GH_TOKEN": "\\?\$\{GITHUB_TOKEN\}"/);
+  assert.ok(!lock.includes('GH_AW_MCP_SCRIPTS_API_KEY'));
+  assert.ok(!lock.includes('Start MCP Scripts Server'));
+});
+
+test('serves only the bounded reader over stdio without a listening port', async () => {
+  const child = spawn(process.execPath, [new URL('diff-reader.cjs', directory).pathname], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { GH_TOKEN: 'sentinel-token', TARGET_REPOSITORY: repository, TARGET_PR: '1892' },
+  });
+  const closed = once(child, 'close');
+  const lines = createInterface({ input: child.stdout });
+  const responses = [];
+  const collected = (async () => {
+    for await (const line of lines) {
+      responses.push(JSON.parse(line));
+    }
+  })();
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} })}\n`);
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' })}\n`);
+  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call',
+    params: { name: 'read_pr_diff', arguments: { mode: 'unexpected' } } })}\n`);
+  child.stdin.end();
+  const [[exitCode]] = await Promise.all([closed, collected]);
+  assert.equal(exitCode, 0);
+  assert.equal(responses[0].result.capabilities.tools.constructor, Object);
+  assert.deepEqual(responses[1].result.tools.map(tool => tool.name), ['read_pr_diff']);
+  assert.equal(responses[2].result.isError, true);
+  assert.match(responses[2].result.content[0].text, /Invalid mode/);
+  assert.ok(!JSON.stringify(responses).includes('sentinel-token'));
+});
 
 function reader(files = fixture.files, options = {}) {
   let pullReads = 0;
@@ -29,14 +68,16 @@ function reader(files = fixture.files, options = {}) {
   const fetch = async url => {
     const path = new URL(url).pathname;
     let data;
-    if (path.endsWith('/pulls/1892')) data = pull();
-    else if (path.includes('/compare/')) data = {
+    if (path.endsWith('/pulls/1892')) {data = pull();}
+    else if (path.includes('/compare/')) {data = {
       merge_base_commit: { sha: base }, files: options.compareFiles ?? files,
-    };
+    };}
     else if (path.endsWith('/pulls/1892/files')) {
       const page = Number(new URL(url).searchParams.get('page'));
       data = files.slice((page - 1) * 100, page * 100);
-    } else throw Error(`Unexpected API request: ${path}`);
+    } else {
+      throw Error(`Unexpected API request: ${path}`);
+    }
     return { ok: true, json: async () => data };
   };
   const env = {
@@ -44,14 +85,8 @@ function reader(files = fixture.files, options = {}) {
     EXPECTED_BASE_SHA: options.manual ? '' : base,
     EXPECTED_HEAD_SHA: options.manual ? '' : head,
   };
-  return inputs => execute(inputs, fetch, { env }, requireBuiltin, AbortSignal);
+  return inputs => readPrDiff(inputs, { fetch, env });
 }
-
-function requireBuiltin(name) {
-  assert.equal(name, 'node:crypto');
-  return requireCrypto;
-}
-const requireCrypto = await import('node:crypto');
 
 test('lists all 61 PR files without leaking patches, then reconstructs the 27 KB patch', async () => {
   const read = reader();
@@ -64,12 +99,14 @@ test('lists all 61 PR files without leaking patches, then reconstructs the 27 KB
     assert.equal(result.changedFiles, 61);
     assert.equal(result.baseSha, base);
     assert.equal(result.headSha, head);
-    if (digest) assert.equal(result.listingSha256, digest);
+    if (digest) {assert.equal(result.listingSha256, digest);}
     digest = result.listingSha256;
     assert.ok(result.nextCursor > cursor);
     listed.push(...result.files);
     cursor = result.nextCursor;
-    if (result.complete) break;
+    if (result.complete) {
+      break;
+    }
   } while (cursor < 61);
   assert.equal(cursor, 61);
   assert.equal(new Set(listed.map(file => file.filename)).size, 61);
@@ -167,14 +204,16 @@ test('lists more than 300 files, but refuses unverifiable scoped patches past th
     const result = await read({ mode: 'files', cursor });
     listed.push(...result.files);
     cursor = result.nextCursor;
-    if (result.complete) break;
+    if (result.complete) {
+      break;
+    }
   } while (cursor < 301);
   assert.equal(listed.length, 301);
   await assert.rejects(read({ mode: 'diff', filename }), /immutable comparison limit/);
 });
 
 test('bounds escaped large patches and handles a scope-empty PR', async () => {
-  const patch = `@@ -0,0 +1 @@\n+${'\\\\\"'.repeat(30000)}`;
+  const patch = `@@ -0,0 +1 @@\n+${'\\\\"'.repeat(30000)}`;
   const read = reader([{ filename, status: 'added', additions: 1, deletions: 0, changes: 1, patch }]);
   let cursor = 0;
   let assembled = '';
@@ -183,7 +222,9 @@ test('bounds escaped large patches and handles a scope-empty PR', async () => {
     assert.ok(Buffer.byteLength(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(result) }] })) <= 7000);
     assembled += result.chunk;
     cursor = result.nextCursor;
-    if (result.complete) break;
+    if (result.complete) {
+      break;
+    }
   } while (cursor < Buffer.byteLength(patch));
   assert.equal(assembled, patch);
   const empty = await reader([])({ mode: 'files', cursor: 0 });
@@ -196,7 +237,7 @@ test('reads the live #1892 API response through the workflow tool', { skip: !pro
     GH_TOKEN: process.env.GH_TOKEN, TARGET_REPOSITORY: repository, TARGET_PR: '1892',
     EXPECTED_BASE_SHA: base, EXPECTED_HEAD_SHA: head,
   };
-  const read = inputs => execute(inputs, globalThis.fetch, { env }, requireBuiltin, AbortSignal);
+  const read = inputs => readPrDiff(inputs, { fetch: globalThis.fetch, env });
   const listing = await read({ mode: 'files', cursor: 0 });
   assert.equal(listing.changedFiles, 61);
   let cursor = 0;
@@ -206,7 +247,9 @@ test('reads the live #1892 API response through the workflow tool', { skip: !pro
     assert.ok(Buffer.byteLength(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(chunk) }] })) <= 7000);
     patch += chunk.chunk;
     cursor = chunk.nextCursor;
-    if (chunk.complete) break;
+    if (chunk.complete) {
+      break;
+    }
   } while (cursor < 30000);
   assert.equal(patch, fixture.files.find(file => file.filename === filename).patch);
 });
