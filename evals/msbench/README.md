@@ -38,7 +38,8 @@ directly against the same graders and shipped agent contracts.
 | `scaffold-api-only` | plan → scaffold | 4 | 23 | `none` | `--assert-no-frontend` |
 | `integrate-seam` | scaffold → integrate | 3 | 8 | `approved-fullstack` | `--has-frontend` |
 | `debug-plan-approval-gate` | scaffold → local-dev | 2 | 8 | `approved-fullstack` | — |
-| `debug-generate-artifacts` | scaffold → local-dev → generate | 5 | 17 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `debug-generate-artifacts` | scaffold → local-dev → blocked preflight → generate | 5 | 18 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `debug-generate-deploy-handoff` | local-dev follow-up | 1 | 2 | `implemented-debug-plan` | — |
 | `deploy-scaffold-iac` | deploy-scaffold | 2 | 14 | `approved-fullstack` | `--require-artifacts` |
 | `launch-report-*` (3 probes) | direct custom-agent launch | 1 each | 2 each | `none` | — |
 | `debug-probe-smoke` | probe-smoke | 1 | 2 | — | — (infrastructure only, see below) |

@@ -201,7 +201,8 @@ Login answer.
 The plan agent writes `.azure/project-plan.md` (with `**Status**: Planning`) and opens the **Plan preview** view.
 For apps with a UI, the preview also renders one **UI Preview** card per screen (each a sandboxed HTML
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
-type feedback to revise it).
+type feedback to revise it). After feedback, the agent keeps the plan in `Planning`, updates any affected UI
+previews, reruns its structural check, and reopens or refocuses the Plan preview for another explicit approval.
 
 Editable service-stack choices follow the service role and language. API, backend, and worker sections offer
 backend frameworks, while web app and frontend sections offer frontend frameworks. The view also recognizes
@@ -275,6 +276,18 @@ section shows deterministic **Install** links resolved by the extension from its
 plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
 attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
 `https`, or `mailto` URLs. Mermaid diagrams use strict security mode.
+
+Approving the debug plan authorizes creation of its checked artifacts and non-destructive merges into existing
+configuration, so generation does not ask for a second blanket file-change confirmation. It still asks before
+destructive changes and when environment blockers such as an unavailable container runtime or occupied ports
+need a user decision. For those blockers, you can fix the environment, change the approved configuration, or
+explicitly generate the artifacts without runtime validation. That last option preserves the approved runtime and
+ports, records blocked checks as `❌`, and lets you resolve them before using F5. After generation, choosing
+**Deploy to Azure** hands off directly to the deployment agent without rerunning debug setup.
+
+Migration startup automation is enabled only when the workspace already contains a detectable migration command,
+dependency, or migration files. A migration tool mentioned only in a project or integration plan is not treated as
+implemented; the debug plan leaves that row unchecked so approval cannot promise an F5 task that does not exist.
 
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.

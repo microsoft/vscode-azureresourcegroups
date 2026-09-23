@@ -185,6 +185,19 @@ const RECIPES: Record<string, Recipe> = {
     ],
 
     /**
+     * The completed-plan context for the isolated debug → deploy hand-off probe.
+     *
+     * The probe grades only the agent's MCP tool call; it does not grade this file.
+     * Reusing the certified reference plan avoids a second hand-maintained debug-plan
+     * shape while keeping the hand-off test independent from the expensive scaffold
+     * and generation chain.
+     */
+    'implemented-debug-plan': () => [{
+        path: '.azure/vscode-debug-plan.md',
+        content: readFileSync(join(REFERENCE_FIXTURE, '.azure', 'vscode-debug-plan.md'), 'utf8'),
+    }],
+
+    /**
      * A complete, runnable project — the one the graders already certify against.
      *
      * ⚠️ HARNESS SELF-TEST ONLY. This seed stages `.vscode/launch.json`,

@@ -119,91 +119,64 @@ promptSteps:
   - chatMode: azure-debug-generate
     text: "The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."
     assertions:
-      # Liveness sentinel, turn 3. Every graded assertion in this stimulus hangs
-      # off this turn, so a run that got this far and then stalled is exactly the
-      # case that would otherwise report as a product failure.
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      # vally: program debug-plan-implemented --assert-status=Implemented --assert-checklist
-      # The same validator as turn 1's, under stricter expectations: the plan must
-      # now say `Implemented` and its checklist must be filled in. That is what
-      # makes the plan a record of what was generated rather than a proposal.
-      #
-      # Also subsumes eval.yaml's `file-exists launch-json-exists`, which cannot
-      # be ported as a `files` query under snapshotWorkspace: false — the
-      # structural grader below reads `.vscode/launch.json` directly and fails
-      # when it is absent, so a separate existence check would be weaker.
-      - comment: The debug plan is marked Implemented with a completed checklist
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts --assert-status=Implemented --assert-checklist
+      # The stock runner intentionally has no Docker daemon, and its preview
+      # process owns port 5173. Guided mode must surface the runtime decision.
+      # The harness responds that the user is unavailable and delegates an
+      # autonomous choice, so generation may then continue with failed runtime
+      # checklist rows; asserting a pause would contradict that harness reply.
+      - comment: Agent should surface unavailable runtime prerequisites
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%askQuestion%' AND json_extract(args, '$.questions[0].header') = 'Docker prerequisite'
 
-      # vally: program debug-config-structurally-sound
-      # launch.json and tasks.json: named configurations, resolvable
-      # preLaunchTask and dependsOn chains, terminating dependency graphs,
-      # compounds that start each service exactly once. These are the defects a
-      # user hits on the first F5, all detectable without running anything.
-      #
-      # This is the grader that made `jsonc-parser` travel with the staged tree —
-      # launch.json is JSON with comments, and a hand-rolled tolerant reader
-      # fails by silently mis-parsing rather than by erroring.
-      - comment: launch.json and tasks.json are structurally sound
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
-
-      # vally: tool-calls required [workflow-tools-open_local_next_steps_view]
-      # The hand-off surface this turn is contracted to end on. `azure-debug-generate`
-      # finishes by showing the user what to do next; without the call the artifacts
-      # exist on disk and the user is told nothing, which every artifact assertion
-      # above is blind to because the files it grades are all present and correct.
-      #
-      # This turn is the one that runs under `chatMode: azure-debug-generate`, so it
-      # is the only place in the suite where that agent answers and the assertion can
-      # mean anything.
+      # MSBench's unavailable-user response delegates the safe option, so the
+      # agent may complete generation and open next steps on this same turn.
       - comment: Agent should have opened the local next steps view
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_local_next_steps_view%'
 
-      # vally: tool-calls forbidden [workflow-tools-start_deployment]
-      # The other end of the same boundary. Generating debug artifacts is where this
-      # phase stops; `start_deployment` moves the user into the deploy pipeline, and
-      # nothing in this turn approves that. Asserted negatively because the prompt
-      # asks only for artifact generation — a positive here would demand a transition
-      # the stimulus never authorises, which is how a gate ends up red for correct
-      # behaviour.
+      # The approved plan already authorizes creation and non-destructive merges.
+      # Runtime and port questions are legitimate here; a second blanket file
+      # approval is not.
+      - comment: Agent should not request blanket approval for the approved generation work
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%' AND json_extract(args, '$.questions[0].header') = 'Approve file changes'
+
       - comment: Agent should not have started deployment from the generate phase
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
 
-      # vally: program artifacts-conform-to-plan
-      # The conformance check: every plan row marked `[x]` produced exactly one
-      # artifact and every `[ ]` produced none. Catches generation quietly
-      # diverging from what the user actually approved, which none of the
-      # structural graders above can see.
-      - comment: Generated debug artifacts match the approved plan
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
-
-      # vally: constraints.reject_tools [vscode_askQuestions] — turn 3 copy.
-      - comment: Agent should not fall back to the chat question tool (turn 3)
-        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
-
-      # Recorded, not asserted. On the last step, where the `exec:` graders run.
-      # See config/stimuli/photo-app-requirements.yaml.
-      - comment: Environment fingerprint for triage
-        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'
-        assertZeroExitCode: false
-
-  # ─── Turn 4: approve the deployment hand-off ─────────────────────────────
+  # ─── Turn 4: record the explicit no-runtime-validation decision ──────────
   #
-  # Turn 3 proves the agent does not deploy merely because generation completed.
-  # This turn uses the exact option its instructions present and requires the
-  # opposite result, so an agent that always or never hands off fails one half of
-  # the pair. The MCP tool is a stub in MSBench: it records the hand-off without
-  # opening a deployment chat or provisioning resources.
+  # The harness may already have selected this safe path autonomously on turn 3.
+  # This turn records the user's explicit choice and is where the artifact
+  # graders run against the final plan wording and files.
   - chatMode: azure-debug-generate
-    text: "Deploy to Azure"
+    text: |
+      Generate the approved artifacts now without runtime validation. Keep the
+      approved Docker runtime and ports unchanged, do not stop existing
+      processes, record Docker- and port-dependent checks as failed, and
+      continue through the next-steps view.
     assertions:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      - comment: Agent should start deployment after the user selects Deploy to Azure
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
+      # The same validator as the planning turn, under stricter expectations:
+      # Implemented means every selected artifact was generated and every
+      # checklist row has a real result; it does not hide legitimate ❌ rows.
+      - comment: The debug plan is marked Implemented with a completed checklist
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts --assert-status=Implemented --assert-checklist
+
+      - comment: launch.json and tasks.json are structurally sound
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
+
+      - comment: Agent should not have started deployment from the generate phase
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
+
+      - comment: Generated debug artifacts match the approved plan
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
 
       - comment: Agent should not fall back to the chat question tool (turn 4)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'
+        assertZeroExitCode: false
