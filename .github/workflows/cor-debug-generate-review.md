@@ -73,9 +73,21 @@ permissions:
   contents: read
   pull-requests: read
   copilot-requests: write
-# gh-aw v0.89.17+ pins a gateway that works with Copilot CLI's MCP discovery.
-engine: copilot
+# Upgrading gh-aw for MCP gateway v0.4.25 also bumped the bundled CLI
+# from 1.0.80 to 1.0.85, which got a zero-token 400 (run 35790339047).
+# See https://github.com/github/gh-aw/issues/60820. Pin the original
+# CLI 1.0.80; it also failed with AWF v0.28.20 (run 35792449603).
+engine:
+  id: copilot
+  version: '1.0.80'
 model: gpt-5.6-sol
+# The gh-aw upgrade also selected AWF v0.28.20 instead of v0.28.14.
+# An earlier run with AWF v0.28.14 reached inference, but its gateway
+# v0.4.18 could not list MCP tools.
+sandbox:
+  agent:
+    id: awf
+    version: 'v0.28.14'
 network: defaults
 checkout: false
 inlined-imports: true
