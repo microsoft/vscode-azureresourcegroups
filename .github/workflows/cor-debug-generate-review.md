@@ -80,7 +80,6 @@ permissions:
 engine:
   id: copilot
   version: '1.0.80'
-# Keep the original gpt-5.6-sol model; branch run 35798299342 used it.
 model: gpt-5.6-sol
 # The gh-aw upgrade also selected AWF v0.28.20 instead of v0.28.14.
 # An earlier run with AWF v0.28.14 reached inference, but its gateway
