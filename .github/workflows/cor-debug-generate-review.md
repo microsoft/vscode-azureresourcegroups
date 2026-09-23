@@ -101,13 +101,11 @@ tools:
     toolsets: [pull_requests, repos]
     allowed: [pull_request_read, get_file_contents]
     min-integrity: none
-# GitHub MCP get_diff returns the whole PR, while get_files includes each whole
-# patch even on a one-file page (github/github-mcp-server#625 and
-# github/github-mcp-server#3236).
-# gh-aw's pre-agent gh pr diff example truncates at 2,000 lines; keep this
-# read-only, bounded reader so missing old-side evidence remains INCOMPLETE.
-# A containerized stdio MCP server avoids gh-aw v0.89.17's unauthenticated
-# mcp-scripts HTTP listener, which would otherwise hold a GitHub token.
+# The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
+# `get_diff` returns the entire PR; `get_files` paginates files but includes each
+# complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
+# This stdio reader provides bounded scoped diffs without a token-bearing HTTP listener.
+# See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Stage trusted diff reader
     uses: actions/github-script@v9
@@ -117,6 +115,7 @@ pre-agent-steps:
       script: |
         const fs = require('node:fs');
         const path = require('node:path');
+        // With checkout disabled, fetch code from the workflow commit, never the PR head.
         const { data } = await github.rest.repos.getContent({
           owner: context.repo.owner,
           repo: context.repo.repo,
@@ -128,6 +127,7 @@ pre-agent-steps:
         }
         const directory = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'cor-review-diffs');
         fs.mkdirSync(directory, { recursive: true });
+        // The gateway mounts this directory read-only into the stdio container.
         fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
           flag: 'wx', mode: 0o444,
         });

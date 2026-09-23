@@ -40,6 +40,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
       (!baseSha || !headSha)) {
     throw new Error('Recorded commit SHAs required after initial listing');
   }
+  // Event SHAs pin automatic runs; manual runs record SHAs on the first listing.
   const expectedBase = env.EXPECTED_BASE_SHA || baseSha;
   const expectedHead = env.EXPECTED_HEAD_SHA || headSha;
   if ((expectedBase || expectedHead) && (!shaPattern.test(expectedBase) || !shaPattern.test(expectedHead))) {
@@ -84,12 +85,14 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
   if (!Number.isSafeInteger(count) || count < 0 || count > 3000) {
     throw new Error('PR changed-file count exceeds the 3,000-file API limit');
   }
+  // Compare uses the merge base, unlike reading a file directly at the base tip.
   const compare = await get(`/compare/${base}...${head}`);
   if (!shaPattern.test(compare.merge_base_commit?.sha) || !Array.isArray(compare.files)) {
     throw new Error('Missing immutable merge-base comparison');
   }
   const files = [];
   const names = new Set();
+  // Fetch every page before answering, so a partial listing cannot look complete.
   for (let page = 1; files.length < count; page++) {
     const entries = await get(`${pullPath}/files?per_page=100&page=${page}`);
     if (!Array.isArray(entries) || !entries.length || entries.length > 100) {
@@ -114,6 +117,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
       (await get(`${pullPath}/files?per_page=100&page=${count / 100 + 1}`)).length) {
     throw new Error('PR file count does not match changed_files');
   }
+  // GitHub limits compare.files to 300 entries; later scoped patches fail closed.
   if (compare.files.length !== Math.min(count, 300) ||
       compare.files.some(file => {
         const listed = files.find(entry => entry.filename === file.filename);
@@ -124,11 +128,13 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
       })) {
     throw new Error('Immutable comparison differs from the PR file listing');
   }
+  // The PR may have moved while its pages were being read.
   checkPull(await get(pullPath), base, head);
   const metadata = files.map(({ filename, previous_filename, status, additions, deletions, changes }) =>
     ({ filename, previous_filename, status, additions, deletions, changes }));
   const hash = value => createHash('sha256').update(value).digest('hex');
   const listingSha256 = hash(JSON.stringify(metadata));
+  // Account for JSON escaping and the MCP envelope, not just raw patch bytes.
   const responseFits = value => Buffer.byteLength(JSON.stringify({
     content: [{ type: 'text', text: JSON.stringify(value) }],
   })) <= 7000;
@@ -181,6 +187,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
   let oldRemaining = 0;
   let newRemaining = 0;
   let hunks = 0;
+  // GitHub may omit patch text; hunk lengths and change counts expose truncation.
   for (const line of patch ? patch.split('\n') : []) {
     const header = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/.exec(line);
     if (header) {
@@ -211,6 +218,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
     throw new Error('Truncated or inconsistent PR patch');
   }
   const bytes = Buffer.from(patch, 'utf8');
+  // Cursor offsets are bytes, but each returned chunk must end on a character.
   if (position > bytes.length || position < bytes.length && (bytes[position] & 0xc0) === 0x80) {
     throw new Error('Diff cursor is not a UTF-8 character boundary');
   }
@@ -234,6 +242,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
   return result;
 }
 
+// Stdio MCP uses one JSON-RPC message per line; this process opens no port.
 async function serve() {
   for await (const line of createInterface({ input: process.stdin, crlfDelay: Infinity })) {
     let message;
