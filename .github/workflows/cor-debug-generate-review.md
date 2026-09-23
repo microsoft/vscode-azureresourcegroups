@@ -101,6 +101,11 @@ tools:
     toolsets: [pull_requests, repos]
     allowed: [pull_request_read, get_file_contents]
     min-integrity: none
+# GitHub MCP get_diff returns the whole PR, while get_files includes each whole
+# patch even on a one-file page (github/github-mcp-server#625 and
+# github/github-mcp-server#3236).
+# gh-aw's pre-agent gh pr diff example truncates at 2,000 lines; keep this
+# read-only, bounded MCP reader so missing old-side evidence remains INCOMPLETE.
 mcp-scripts:
   read_pr_diff:
     description: List every changed file or read a bounded, verified chunk of a scoped PR patch.
