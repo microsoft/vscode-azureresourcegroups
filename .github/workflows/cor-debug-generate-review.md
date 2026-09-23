@@ -64,11 +64,15 @@ if: >-
   github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) ||
   (github.event_name == 'issue_comment' && github.event.action == 'created') ||
   (github.event_name == 'workflow_dispatch' &&
-  github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
+  (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+  (github.ref == 'refs/heads/microfish91-chunked-cor-review-diffs' &&
+  inputs.pull_request_number == '1892'))))
 jobs:
   pre-activation:
     outputs:
       same_repository_pr: ${{ steps.same_repository_pr.outputs.eligible }}
+  safe_outputs:
+    if: github.ref != 'refs/heads/microfish91-chunked-cor-review-diffs'
 permissions:
   contents: read
   pull-requests: read
@@ -212,6 +216,13 @@ concurrency:
   cancel-in-progress: true
 timeout-minutes: 15
 ---
+
+For a `workflow_dispatch` on `microfish91-chunked-cor-review-diffs`, this is
+only a transport test. List all files with `read_pr_diff`, then read every chunk
+of `resources/agents/azure-debug-generate/references/generate.md` from #1892.
+Check the 61-file listing, byte offsets, total length, and SHA-256. Call `noop`
+with just the file count, number of chunks, total bytes, and digest. Never post
+a review or comment and do not quote patch text in the output. Stop there.
 
 Review pull request #${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
 in `${{ github.repository }}` using the imported reviewer instructions and rubric.
