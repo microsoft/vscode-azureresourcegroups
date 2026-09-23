@@ -130,7 +130,8 @@ promptSteps:
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%askQuestion%' AND json_extract(args, '$.questions[0].header') = 'Docker prerequisite'
 
       - comment: Generation should pause at unresolved runtime prerequisites
-        exec: 'grep -q "^> \*\*Status:\*\* Executing" /workspace/.azure/vscode-debug-plan.md && test ! -f /workspace/.vscode/launch.json'
+        exec: >-
+          node -e "const fs=require('fs'); const plan=fs.readFileSync('.azure/vscode-debug-plan.md','utf8'); process.exit(plan.includes('**Status:** Executing') && !fs.existsSync('.vscode/launch.json') ? 0 : 1)"
 
       - comment: Agent should not open next steps while generation is blocked
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_local_next_steps_view%'
