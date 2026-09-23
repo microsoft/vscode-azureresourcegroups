@@ -13,7 +13,7 @@ suite('CiCdStageItem', () => {
         const stageItem = stage.getTreeItem();
 
         assert.strictEqual(stageItem.label, '4. CI/CD');
-        assert.strictEqual(stageItem.description, 'Coming soon');
+        assert.strictEqual(stageItem.description, 'Provide Feedback');
 
         const children = stage.getChildren();
         assert.strictEqual(children.length, 1);

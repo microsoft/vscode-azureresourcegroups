@@ -42,7 +42,7 @@ export class CiCdStageItem extends StageNode {
 
     getTreeItem(): vscode.TreeItem {
         const item = super.getTreeItem();
-        const status = vscode.l10n.t('Share Input');
+        const status = vscode.l10n.t('Provide Feedback');
         item.description = status;
         item.tooltip = new vscode.MarkdownString(`**${this.label}** — ${status}`);
         return item;
