@@ -75,7 +75,6 @@ permissions:
   copilot-requests: write
 # CLI 1.0.85 generated tokens with AWF v0.28.14, but its /responses request
 # received GitHub's HTML 400 with v0.28.20. Pin only AWF, not the fixed gateway.
-# https://github.com/github/gh-aw/blob/v0.89.17/docs/adr/27626-sandbox-agent-version-and-network-firewall-migration.md
 engine:
   id: copilot
   version: '1.0.80'
