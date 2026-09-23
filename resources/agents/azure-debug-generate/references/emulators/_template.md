@@ -1,12 +1,12 @@
 # {Emulator Name}
 
-> **Template** — Copy this file to `emulators/{name}.md` when adding a new emulator.
+> **Template** — Copy to `emulators/{name}.md` for new emulator.
 
 ---
 
 ## Docker Image
 
-<!-- Official image and recommended pinned tag. -->
+<!-- Official image + recommended pinned tag. -->
 
 ```
 {org}/{image}:{tag}
@@ -14,7 +14,7 @@
 
 ## docker-compose Service Block
 
-<!-- Complete service YAML block, ready to paste. Includes ports, volumes, health check. -->
+<!-- Paste-ready service YAML: ports, volumes, health check. -->
 
 ```yaml
 services:
@@ -29,7 +29,7 @@ services:
 
 ## Connection String
 
-<!-- Default local connection string for the app to use. -->
+<!-- App's default local connection string. -->
 
 ```
 {connection-string}
@@ -37,7 +37,7 @@ services:
 
 ## Required App Environment Variables
 
-<!-- Variable names the app must set to point at this emulator. -->
+<!-- App variables targeting emulator. -->
 
 | Variable | Value |
 |----------|-------|
@@ -45,9 +45,9 @@ services:
 
 ## Healthcheck (Database Emulators Only)
 
-<!-- If this emulator is a database, include a healthcheck block in the docker-compose service above AND document it here. The migration service (see migrations.md) depends on `condition: service_healthy` to wait for the database before running migrations. Without a healthcheck, auto-migration will not work. -->
+<!-- For database emulator, add healthcheck above AND document here. Migration service (see migrations.md) uses `condition: service_healthy` before migrations. No healthcheck breaks auto-migration. -->
 
-<!-- Delete this section if the emulator is not a database. -->
+<!-- Delete for non-database emulator. -->
 
 ## Container Runtime Support
 
@@ -61,5 +61,5 @@ services:
 
 ## Notes
 
-<!-- Platform caveats (arm64/x86), known issues, resource requirements. -->
-<!-- Note any Podman-specific caveats here (SELinux `:Z` labels on Linux, rootless port ranges, Podman-machine bind-mount paths). -->
+<!-- Platform caveats (arm64/x86), known issues, resource needs. -->
+<!-- Note Podman-specific caveats here (SELinux `:Z` labels on Linux, rootless port ranges, Podman-machine bind-mount paths). -->

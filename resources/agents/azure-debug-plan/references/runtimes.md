@@ -1,7 +1,7 @@
 # Runtimes
 
-> These are **common examples, not an exhaustive list**. If a service root uses a runtime
-> not listed here, identify it by the language and toolchain present (e.g. `rust`, `ruby`, etc.).
+> **Common examples, not exhaustive.** For unlisted runtime, identify from present
+> language and toolchain (e.g. `rust`, `ruby`, etc.).
 
 ## Detection Table
 
@@ -20,11 +20,11 @@
 
 ### Version Detection
 
-Read `<TargetFramework>` from the `.csproj` to determine the runtime version (e.g. `net8.0` → `8.0`).
+Read `<TargetFramework>` from `.csproj` for runtime version (e.g. `net8.0` → `8.0`).
 
 ### Assembly Name
 
-Derive the assembly name for the plan's Service Label:
+Derive plan Service Label assembly name:
 
-1. If `<AssemblyName>` is set → use that value
+1. If `<AssemblyName>` set → use its value
 2. Otherwise → `.csproj` filename without extension (e.g. `Functions.csproj` → `Functions`)
