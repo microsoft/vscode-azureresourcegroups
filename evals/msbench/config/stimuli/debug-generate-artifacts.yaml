@@ -4,10 +4,11 @@
 # seed: approved-fullstack
 #
 # Ports the second local-development stimulus: the approved debug plan is carried
-# through to `azure-debug-generate`, which must emit `.vscode/launch.json`,
-# `.vscode/tasks.json` and friends that conform to the plan the user approved.
+# through to `azure-debug-generate`, which must stop at unresolved runtime and
+# port prerequisites rather than silently changing the approved configuration or
+# claiming generation completed.
 #
-# This is the longest chain in the folder — five turns, two agents, a real
+# This is a four-turn chain across two agents and a real
 # scaffold and a real generate. Everything about the setup is shared with
 # config/stimuli/debug-plan-approval-gate.yaml: why the scaffold is chained rather
 # than seeded, why `promptSteps[].chatMode` is used, why the `handoff` step type
@@ -44,7 +45,7 @@
 
 # Same seed and same precondition as debug-plan-approval-gate.yaml. A seed that
 # silently failed to copy would take out the scaffold turn, then the plan turn,
-# then the generate turns, and report five turns of red for a failed `cp`.
+# then the generate turn, and report four turns of red for a failed `cp`.
 preConditions:
   - comment: The approved plan seed must be present before the agent starts
     exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
@@ -59,7 +60,7 @@ promptSteps:
       `.azure/project-plan.md` and scaffold the project.
     assertions:
       # Liveness sentinel, turn 0. One per turn — see README.md, "Multi-turn
-      # stimuli". With five turns this file is the strongest case for the rule:
+      # stimuli". With four turns this file is a strong case for the rule:
       # a run that dies at turn 1 would otherwise report the turn-3 negatives as
       # passes.
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
@@ -123,17 +124,16 @@ promptSteps:
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
       # The stock runner intentionally has no Docker daemon, and its preview
-      # process owns port 5173. Guided mode must surface the runtime decision.
-      # The harness responds that the user is unavailable and delegates an
-      # autonomous choice, so generation may then continue with failed runtime
-      # checklist rows; asserting a pause would contradict that harness reply.
+      # process owns port 5173. Guided mode must surface the runtime decision and
+      # stop before generating artifacts.
       - comment: Agent should surface unavailable runtime prerequisites
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%askQuestion%' AND json_extract(args, '$.questions[0].header') = 'Docker prerequisite'
 
-      # MSBench's unavailable-user response delegates the safe option, so the
-      # agent may complete generation and open next steps on this same turn.
-      - comment: Agent should have opened the local next steps view
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_local_next_steps_view%'
+      - comment: Generation should pause at unresolved runtime prerequisites
+        exec: 'grep -q "^> \*\*Status:\*\* Executing" /workspace/.azure/vscode-debug-plan.md && test ! -f /workspace/.vscode/launch.json'
+
+      - comment: Agent should not open next steps while generation is blocked
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_local_next_steps_view%'
 
       # The approved plan already authorizes creation and non-destructive merges.
       # Runtime and port questions are legitimate here; a second blanket file
@@ -143,39 +143,6 @@ promptSteps:
 
       - comment: Agent should not have started deployment from the generate phase
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
-
-  # ─── Turn 4: record the explicit no-runtime-validation decision ──────────
-  #
-  # The harness may already have selected this safe path autonomously on turn 3.
-  # This turn records the user's explicit choice and is where the artifact
-  # graders run against the final plan wording and files.
-  - chatMode: azure-debug-generate
-    text: |
-      Generate the approved artifacts now without runtime validation. Keep the
-      approved Docker runtime and ports unchanged, do not stop existing
-      processes, record Docker- and port-dependent checks as failed, and
-      continue through the next-steps view.
-    assertions:
-      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
-        query: SELECT COUNT(*) > 0 FROM llm_responses
-
-      # The same validator as the planning turn, under stricter expectations:
-      # Implemented means every selected artifact was generated and every
-      # checklist row has a real result; it does not hide legitimate ❌ rows.
-      - comment: The debug plan is marked Implemented with a completed checklist
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts --assert-status=Implemented --assert-checklist
-
-      - comment: launch.json and tasks.json are structurally sound
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-config.ts
-
-      - comment: Agent should not have started deployment from the generate phase
-        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
-
-      - comment: Generated debug artifacts match the approved plan
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
-
-      - comment: Agent should not fall back to the chat question tool (turn 4)
-        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
 
       - comment: Environment fingerprint for triage
         exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'

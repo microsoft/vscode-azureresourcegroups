@@ -29,22 +29,9 @@ Read the container runtime from the plan's Orchestrator table (**Docker**, **Pod
     On approval, run `podman machine start` and wait for it to report ready.
   - If **no machine exists**, do NOT silently `podman machine init` — tell the user to run `podman machine init && podman machine start` (a one-time, multi-minute setup) and re-run once it is ready.
 
-> ⛔ **NEVER switch the plan's container runtime on your own — not at readiness, not during generation, not during validation.** The runtime in the Orchestrator table was chosen (and, when the user asked for a specific engine, chosen *by them*). If the selected engine fails at **any** point — the engine won't start, a container won't come up, ports don't forward to the host, a volume/permission error, a health check never passes — **STOP and surface the blocker to the user with `ask_user`**, describing the failure and the options: fix the selected engine, explicitly switch to another installed engine, or generate the approved artifacts now without runtime validation. Do **not** silently rewrite the Orchestrator row, the `Start Emulators` task, or the convenience scripts to a different engine and continue. Silently falling back — e.g. from a user-requested Podman to Docker because Podman had a networking or bind-mount issue — is a **failure of this agent**, even if the resulting app works: the user asked for Podman and must decide, not discover after the fact that Docker ran everything.
+> ⛔ **NEVER switch the plan's container runtime on your own — not at readiness, not during generation, not during validation.** The runtime in the Orchestrator table was chosen (and, when the user asked for a specific engine, chosen *by them*). If the selected engine fails at **any** point — the engine won't start, a container won't come up, ports don't forward to the host, a volume/permission error, a health check never passes — **STOP and surface the blocker to the user with `ask_user`**, describing the failure and the options (fix the engine, or explicitly switch to the other engine). Do **not** silently rewrite the Orchestrator row, the `Start Emulators` task, or the convenience scripts to a different engine and continue. Silently falling back — e.g. from a user-requested Podman to Docker because Podman had a networking or bind-mount issue — is a **failure of this agent**, even if the resulting app works: the user asked for Podman and must decide, not discover after the fact that Docker ran everything.
 >
 > When you do surface a runtime blocker, prefer offering the **fix** first (many Podman-on-Windows issues are config, not dead ends — e.g. use the WSL machine provider for host port forwarding; database emulators must use a named volume, not a workspace bind mount, so `initdb` can `chown` its data dir). Only switch engines if the user explicitly chooses to.
-
-### Generate without runtime validation
-
-If the user explicitly chooses to generate without runtime validation, including on a later turn after the blocker was reported:
-
-1. Keep the approved container runtime, ports, and configuration unchanged.
-2. Do not re-prompt for the same runtime or port blockers, stop external processes, remap ports, or silently switch engines.
-3. Continue through artifact generation.
-4. Run every static and runtime validation that the environment permits. Record each runtime-dependent configuration as `❌` with the concrete blocker when its prerequisites cannot run.
-5. Complete the checklist and set the plan to `Implemented` only after all selected artifacts exist and every validation row has a real result. `Implemented` means the approved artifacts were generated; the `❌` rows remain the honest record that runtime validation did not pass.
-6. Open the next-steps view, but clearly state that the failed checklist items must be resolved before F5 can succeed.
-
-An explicit request such as “generate the approved artifacts without runtime validation, keep the approved ports, and do not stop existing processes” resolves both the runtime and port decisions. Proceed directly; do not ask those questions again.
 
 ## Stale Data Directory Check
 
@@ -88,13 +75,11 @@ ask_user(
   question: "The following ports are already in use on your machine:\n\n- Port 5432 → postgres (PID 1234)\n\nThese ports are needed by the planned emulators. How would you like to handle this?",
   choices: [
     "Help me remap the conflicting ports to alternatives",
-    "I'll handle it myself — proceed with the plan as-is",
-    "Generate the artifacts without runtime validation"
+    "I'll handle it myself — proceed with the plan as-is"
   ]
 )
 ```
 
 3. **If the user wants help remapping** — Propose alternative port numbers, update all references in the plan and project files (docker-compose service ports, connection strings, convenience scripts, VS Code debug config), then resume generation.
 4. **If the user will handle it themselves** — Proceed with generation using the original ports.
-5. **If the user chooses generation without runtime validation** — Follow [Generate without runtime validation](#generate-without-runtime-validation), preserve the approved ports, and record the conflict in affected checklist rows.
-6. **Never remap ports or modify config silently** — Always confirm with the user before making changes.
+5. **Never remap ports or modify config silently** — Always confirm with the user before making changes.

@@ -280,10 +280,8 @@ attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creat
 Approving the debug plan authorizes creation of its checked artifacts and non-destructive merges into existing
 configuration, so generation does not ask for a second blanket file-change confirmation. It still asks before
 destructive changes and when environment blockers such as an unavailable container runtime or occupied ports
-need a user decision. For those blockers, you can fix the environment, change the approved configuration, or
-explicitly generate the artifacts without runtime validation. That last option preserves the approved runtime and
-ports, records blocked checks as `❌`, and lets you resolve them before using F5. After generation, choosing
-**Deploy to Azure** hands off directly to the deployment agent without rerunning debug setup.
+need a user decision. After generation, choosing **Deploy to Azure** hands off directly to the deployment agent
+without rerunning debug setup.
 
 Migration startup automation is enabled only when the workspace already contains a detectable migration command,
 dependency, or migration files. A migration tool mentioned only in a project or integration plan is not treated as

@@ -17,7 +17,6 @@
 4. **Preserve existing config** — Never silently overwrite project configuration files or `docker-compose.yml`. Merge or ask first.
 5. **Scope — VS Code debug setup only** — These instructions are for generating local debug configurations in VS Code. Cloud architecture, IaC generation, provisioning, and deployment are handled by the **azure-deploy** agent through the complete **azure-app-onboard** pipeline.
 6. **Warn on limited support** — When a project type, runtime, or emulator declared in the plan has no matching reference file, emit a `⚠️ LIMITED SUPPORT:` warning — [limited-support.md](references/limited-support.md).
-7. **Preserve prerequisite markers** — The approved plan's Prerequisites `Installed` column uses only `✅` (confirmed) and `❓` (not confirmed). Environment checks during generation must not rewrite `❓` to `❌`; record missing tools and runtime validation failures in the Debug Configuration Checklist and user guidance instead.
 
 ---
 
