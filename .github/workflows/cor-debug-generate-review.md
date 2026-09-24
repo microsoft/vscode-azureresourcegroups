@@ -308,7 +308,7 @@ concurrency:
     github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
   job-discriminator: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
   cancel-in-progress: true
-timeout-minutes: 15
+timeout-minutes: 30
 ---
 
 Review pull request #${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
