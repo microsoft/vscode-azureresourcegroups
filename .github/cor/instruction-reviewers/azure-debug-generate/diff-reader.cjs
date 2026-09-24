@@ -9,8 +9,9 @@ const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { createInterface } = require('node:readline');
 
-const scoped = path => path === 'resources/agents/azure-debug-generate.agent.md' ||
-    path?.startsWith('resources/agents/azure-debug-generate/');
+const scoped = path => typeof path === 'string' &&
+    (path === 'resources/agents/azure-debug-generate.agent.md' ||
+        path.startsWith('resources/agents/azure-debug-generate/'));
 
 let stagedSnapshot;
 
@@ -87,6 +88,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     function checkPull(current, base, head) {
         if (!current || typeof current !== 'object' || current.state !== 'open' ||
             current.base?.repo?.full_name !== repository ||
+            !Number.isSafeInteger(current.base?.repo?.id) || current.base.repo.id < 1 ||
             current.head?.repo?.id !== current.base?.repo?.id ||
             current.base?.sha !== base || current.head?.sha !== head) {
             throw new Error('PR closed, moved, or is not from the same repository');
@@ -124,7 +126,10 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
             if (!file || typeof file !== 'object' ||
                 typeof file.filename !== 'string' || !file.filename ||
                 names.has(file.filename) || typeof file.status !== 'string' ||
+                (file.previous_filename !== undefined &&
+                    (typeof file.previous_filename !== 'string' || !file.previous_filename)) ||
                 !Number.isSafeInteger(file.additions) || !Number.isSafeInteger(file.deletions) ||
+                file.additions < 0 || file.deletions < 0 || !Number.isSafeInteger(file.changes) ||
                 file.changes !== file.additions + file.deletions ||
                 file.status === 'renamed' && !file.previous_filename) {
                 throw new Error('Invalid or duplicated PR file metadata');
