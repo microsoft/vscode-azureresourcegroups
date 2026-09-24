@@ -105,13 +105,11 @@ tools:
     min-integrity: none
 mcp-servers:
   staged-review:
-    container: ghcr.io/github/gh-aw-node@sha256:0daa8971fa4732b647150cb6524a6b0804b68d5d24f6f58b5dd1af23bd63fb23
+    container: ghcr.io/github/gh-aw-node
     entrypoint: node
-    args:
-      - '--mount'
-      - 'type=bind,source=${{ runner.temp }}/gh-aw/review-helpers/review-reader.mjs,target=/review/reader.mjs,readonly'
-      - '--mount'
-      - 'type=bind,source=${{ runner.temp }}/gh-aw/review-evidence/bundle.json,target=/review/bundle.json,readonly'
+    mounts:
+      - '${{ runner.temp }}/gh-aw/review-helpers/review-reader.mjs:/review/reader.mjs:ro'
+      - '${{ runner.temp }}/gh-aw/review-evidence/bundle.json:/review/bundle.json:ro'
     entrypointArgs: ['/review/reader.mjs']
     env:
       REVIEW_BUNDLE_DIR: /review
