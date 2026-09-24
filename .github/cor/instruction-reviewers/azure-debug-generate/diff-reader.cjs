@@ -10,28 +10,13 @@ const { createInterface } = require('node:readline');
 
 const shaPattern = /^[a-f0-9]{40}$/i;
 const emptyBlob = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
+const missingBlob = '0'.repeat(40);
 const regularModes = new Set(['000000', '100644', '100755']);
 const scoped = path => path === 'resources/agents/azure-debug-generate.agent.md' ||
     path?.startsWith('resources/agents/azure-debug-generate/');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
-let stagedReview;
-
-const tool = {
-    name: 'read_pr_diff',
-    description: 'List every changed file or read a bounded, verified chunk of a scoped PR patch.',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            mode: { type: 'string', enum: ['files', 'diff'] },
-            cursor: { type: 'number', description: 'File index for files, UTF-8 byte offset for diff.' },
-            filename: { type: 'string', description: 'Exact scoped filename returned by files mode; required for diff.' },
-            baseSha: { type: 'string', description: 'Recorded base SHA from the first files response.' },
-            headSha: { type: 'string', description: 'Recorded head SHA from the first files response.' },
-        },
-        required: ['mode'],
-    },
-};
+let cachedReview;
 
 function git(checkout, ...args) {
     const bytes = execFileSync('git', [
@@ -118,7 +103,7 @@ function readGitFiles(checkout, base, head, count) {
     return { mergeBaseSha, files };
 }
 
-function prepareReview(data, repository, pr, expectedBase, expectedHead, checkout) {
+function prepareReview(data, { repository, pr, expectedBase, expectedHead, checkout }) {
     if (data.error) {
         throw new Error(`Diff snapshot preparation failed: ${data.error}`);
     }
@@ -193,8 +178,8 @@ function verifyPatch(file, checkout) {
         throw new Error('Scoped file has an unsupported binary or object type');
     }
     // Blob IDs, not PR-controlled paths, are the only variable Git arguments.
-    const oldBlob = file.oldBlob === '0'.repeat(40) ? emptyBlob : file.oldBlob;
-    const newBlob = file.newBlob === '0'.repeat(40) ? emptyBlob : file.newBlob;
+    const oldBlob = file.oldBlob === missingBlob ? emptyBlob : file.oldBlob;
+    const newBlob = file.newBlob === missingBlob ? emptyBlob : file.newBlob;
     const output = git(checkout, 'diff', '--no-ext-diff', '--no-textconv',
         '--no-color', '--unified=3', oldBlob, newBlob);
     const firstHunk = /^@@ -/m.exec(output);
@@ -276,12 +261,12 @@ function readPatchChunk(review, filename, position) {
         chunk: bytes.subarray(position, end).toString('utf8'), nextCursor: end, complete: end === bytes.length,
     };
     while (!responseFits(result) && end > position) {
-        end = utf8Boundary(bytes, end - 256);
+        end = utf8Boundary(bytes, Math.max(position, end - 256));
         result.chunk = bytes.subarray(position, end).toString('utf8');
         result.nextCursor = end;
         result.complete = end === bytes.length;
     }
-    if (end === position && position < bytes.length) {
+    if (!responseFits(result) || end === position && position < bytes.length) {
         throw new Error('Diff chunk exceeds the response limit');
     }
     return result;
@@ -326,16 +311,32 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('Event commit SHA mismatch');
     }
 
+    const config = { repository, pr, expectedBase, expectedHead, checkout };
     const review = snapshot
-        ? prepareReview(snapshot, repository, pr, expectedBase, expectedHead, checkout)
-        : (stagedReview ??= prepareReview(
-            JSON.parse(readFileSync(env.SNAPSHOT_PATH, 'utf8')), repository, pr, expectedBase, expectedHead, checkout));
+        ? prepareReview(snapshot, config)
+        : (cachedReview ??= prepareReview(JSON.parse(readFileSync(env.SNAPSHOT_PATH, 'utf8')), config));
     if (mode === 'files') {
         return listChangedFiles(review, position, filename);
     }
 
     return readPatchChunk(review, filename, position);
 }
+
+const tool = {
+    name: 'read_pr_diff',
+    description: 'List every changed file or read a bounded, verified chunk of a scoped PR patch.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            mode: { type: 'string', enum: ['files', 'diff'] },
+            cursor: { type: 'number', description: 'File index for files, UTF-8 byte offset for diff.' },
+            filename: { type: 'string', description: 'Exact scoped filename returned by files mode; required for diff.' },
+            baseSha: { type: 'string', description: 'Recorded base SHA from the first files response.' },
+            headSha: { type: 'string', description: 'Recorded head SHA from the first files response.' },
+        },
+        required: ['mode'],
+    },
+};
 
 // Stdio MCP uses one JSON-RPC message per line; this process opens no port.
 async function serve() {

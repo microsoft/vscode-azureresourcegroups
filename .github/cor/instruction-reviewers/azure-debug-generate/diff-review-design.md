@@ -36,6 +36,13 @@ what changed.
   not cross-check its patch even though the PR remained within the existing
   3,000-file PR limit. It correctly returned `INCOMPLETE` rather than
   pretending the later patch was verified.
+- The next version used trusted Actions steps to compute Git patches before
+  the agent ran. It [worked on a large hosted
+  diff](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/35940916817),
+  but split Git parsing and patch verification between an inline workflow
+  script and the MCP reader. It also staged every scoped patch up front.
+  Moving the fixed Git commands into the offline reader keeps that logic
+  together and computes only patches the reviewer requests.
 - Checking out the PR head for the **agent** would make new files accessible,
   not the merge-base diff. Adding general shell access would let it use Git,
   but would also let instructions embedded in PR files steer command
@@ -113,10 +120,10 @@ change this assessment.
   budget also prevents a complete review. The reviewer checks PR state
   again before posting; as with any remote check, a change after that check
   can still race publication. Its verdict records the reviewed head SHA.
-- Removing the checkout before agent execution also means the reviewer must
-  read proposed file content through the read-only GitHub tool at the pinned
-  head SHA. If a required full file is too large for that tool, it must
-  return `INCOMPLETE`; bounded diffs do not silently waive missing context.
+- The agent cannot read the isolated checkout directly. It must read proposed
+  file content through the read-only GitHub tool at the pinned head SHA.
+  If a required full file is too large for that tool, it must return
+  `INCOMPLETE`; bounded diffs do not silently waive missing context.
 
 These cases fail closed as `INCOMPLETE` when the agent can run, or fail the
 workflow if preparation itself cannot run. They are not treated as PASS.
@@ -136,13 +143,17 @@ review succeeds.
 
 ## Verification
 
-The [hosted test run](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/35940916817)
-reviewed a temporary `generate.md` patch whose GitHub REST patch was 37,713
-bytes. That run proved the earlier Git-staging version could traverse seven
-bounded calls and submit a PASS review; it does **not** test the new Git-backed
-MCP container. Local tests of the new reader listed all 61 files from #1892
-and reconstructed its scoped Git patch in five chunks. They also covered a
-scoped file after position 300, renames, deletions, additions, mode-only
-changes, binary rejection, unusual paths, stale SHAs, and mismatched counts.
-An offline, read-only container test checked its Git mount and MCP response.
-The new workflow still needs a hosted review before this version is proven.
+The [Git-backed MCP hosted run](https://github.com/microsoft/vscode-azureresourcegroups/actions/runs/35944592766)
+reviewed a temporary `generate.md` change whose GitHub REST patch was 37,713
+bytes. The reviewer traversed seven bounded Git diff calls, submitted a PASS
+review, and the checkout action's post-step completed successfully. The
+temporary change and branch dispatch gate were removed afterward.
+
+Local tests of the reader listed all 61 files from #1892 and reconstructed its
+scoped Git patch in five chunks. They also covered a scoped file after
+position 300, renames, deletions, additions, mode-only changes, binary
+rejection, unusual paths, stale SHAs, and mismatched counts. A separate
+end-to-end test ran the trusted preparation script, then invoked the reader
+in the pinned Node image with no network, a read-only filesystem, and a
+read-only checkout mount. The workflow passed strict gh-aw compilation and
+validation with actionlint and shellcheck.
