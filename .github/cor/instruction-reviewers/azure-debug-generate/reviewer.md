@@ -67,9 +67,13 @@ Stay on the specified PR and repository.
    partial chunk as the full change. The reader rejects missing or inconsistent
    patches rather than truncating them. GitHub's immutable comparison covers
    at most 300 files; a scoped file beyond that limit is `INCOMPLETE`, even
-   when the listing is complete. Read full proposed files from the head
-   repository at the recorded head SHA with `get_file_contents`; always pass
-   `sha` and reject path or ref fallbacks. Use the diff and
+   when the listing is complete. For every scoped file still present at head,
+   call `read_pr_diff` with `mode: head` and its exact `filename`. Read every
+   chunk, checking consecutive byte offsets, fixed total bytes and SHA-256,
+   and the recorded commits. This head content was staged from the recorded
+   head SHA, so even large files remain readable without a tool-output spill.
+   Use `get_file_contents` with the recorded `sha` for related unchanged
+   context only; reject path or ref fallbacks. Use the diff and
    `previous_filename` for rename and deletion evidence. Read additions from
    head only. Base-tip content is context, not merge-base evidence or proof
    of a PR change.

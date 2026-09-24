@@ -14,13 +14,13 @@ let stagedSnapshot;
 
 const tool = {
     name: 'read_pr_diff',
-    description: 'List every changed file or read a bounded, verified chunk of a scoped PR patch.',
+    description: 'List changed files or read bounded, verified chunks of scoped PR patches and head files.',
     inputSchema: {
         type: 'object',
         properties: {
-            mode: { type: 'string', enum: ['files', 'diff'] },
-            cursor: { type: 'number', description: 'File index for files, UTF-8 byte offset for diff.' },
-            filename: { type: 'string', description: 'Exact scoped filename returned by files mode; required for diff.' },
+            mode: { type: 'string', enum: ['files', 'diff', 'head'] },
+            cursor: { type: 'number', description: 'File index for files, UTF-8 byte offset for diff or head.' },
+            filename: { type: 'string', description: 'Exact scoped filename returned by files mode; required for diff or head.' },
             baseSha: { type: 'string', description: 'Recorded base SHA from the first files response.' },
             headSha: { type: 'string', description: 'Recorded head SHA from the first files response.' },
         },
@@ -42,7 +42,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('Diff reader must not receive GitHub credentials');
     }
 
-    if (mode !== 'files' && mode !== 'diff') {
+    if (mode !== 'files' && mode !== 'diff' && mode !== 'head') {
         throw new Error('Invalid mode');
     }
 
@@ -144,6 +144,15 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('Immutable comparison differs from the PR file listing');
     }
 
+    const expectedHeadFiles = files.filter(file =>
+        (scoped(file.filename) || scoped(file.previous_filename)) && file.status !== 'removed');
+    if (!Array.isArray(data.headFiles) || data.headFiles.length !== expectedHeadFiles.length ||
+        new Set(data.headFiles.map(file => file.filename)).size !== data.headFiles.length ||
+        expectedHeadFiles.some(file => !data.headFiles.some(headFile =>
+            headFile.filename === file.filename && typeof headFile.content === 'string'))) {
+        throw new Error('Missing or inconsistent scoped head-file snapshot');
+    }
+
     // The PR may have moved while the snapshot was being fetched.
     checkPull(data.after, base, head);
     // Fingerprint the complete listing so paginated responses can be verified as one consistent snapshot.
@@ -193,6 +202,16 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     if (immutable.patch !== file.patch) {
         throw new Error('PR patch differs from the immutable comparison');
     }
+    if (mode === 'head') {
+        const headFile = data.headFiles.find(entry => entry.filename === filename);
+        if (!headFile) {
+            throw new Error('No head content for a deleted file');
+        }
+        const bytes = Buffer.from(headFile.content, 'utf8');
+        return chunkResponse(bytes, position, {
+            baseSha: base, headSha: head, filename, status: file.status,
+        });
+    }
     if (file.changes && (typeof file.patch !== 'string' || !file.patch)) {
         throw new Error('GitHub omitted a changed file patch');
     }
@@ -236,16 +255,25 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         deletions !== file.deletions || file.changes && !hunks) {
         throw new Error('Truncated or inconsistent PR patch');
     }
-    const bytes = Buffer.from(patch, 'utf8');
+    return chunkResponse(Buffer.from(patch, 'utf8'), position, {
+        baseSha: base, headSha: head, filename, previousFilename: file.previous_filename,
+        status: file.status,
+    });
+}
+
+function chunkResponse(bytes, position, fields) {
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const responseFits = value => Buffer.byteLength(JSON.stringify({
+        content: [{ type: 'text', text: JSON.stringify(value) }],
+    })) <= 7000;
     // Cursor offsets are bytes, but each returned chunk must end on a character.
     if (position > bytes.length || position < bytes.length && (bytes[position] & 0xc0) === 0x80) {
-        throw new Error('Diff cursor is not a UTF-8 character boundary');
+        throw new Error('Chunk cursor is not a UTF-8 character boundary');
     }
     let end = Math.min(position + 5500, bytes.length);
     while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) { end--; }
     const result = {
-        baseSha: base, headSha: head, filename, previousFilename: file.previous_filename,
-        status: file.status, offset: position, totalBytes: bytes.length, sha256: hash(bytes),
+        ...fields, offset: position, totalBytes: bytes.length, sha256: hash,
         chunk: bytes.subarray(position, end).toString('utf8'), nextCursor: end, complete: end === bytes.length,
     };
     while (!responseFits(result) && end > position) {

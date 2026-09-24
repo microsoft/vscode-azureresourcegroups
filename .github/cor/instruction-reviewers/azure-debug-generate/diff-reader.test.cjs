@@ -2,6 +2,9 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
+const { mkdtempSync, rmSync, writeFileSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
 const { test } = require('node:test');
 const { readPrDiff, scoped } = require('./diff-reader.cjs');
 
@@ -16,6 +19,7 @@ const otherScoped = [
 ];
 const patch = `@@ -0,0 +1,500 @@\n${Array.from({ length: 500 }, (_, i) =>
     `+${i} ${'review 🌊'.repeat(7)}`).join('\n')}`;
+const headContent = patch.split('\n').slice(1).map(line => line.slice(1)).join('\n');
 const sha256 = text => createHash('sha256').update(text).digest('hex');
 
 function fixture() {
@@ -37,6 +41,9 @@ function fixture() {
         repository, pr: 1892, before: pull, after: pull,
         compare: { merge_base_commit: { sha: base }, files: structuredClone(files) },
         pages: [files],
+        headFiles: [filename, ...otherScoped].map(path => ({
+            filename: path, content: path === filename ? headContent : 'smoke',
+        })),
     };
 }
 
@@ -69,6 +76,9 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
         const result = await readPrDiff({ mode: 'diff', filename: path, baseSha: base, headSha: head }, { env, snapshot });
         assert.equal(result.chunk, '@@ -0,0 +1 @@\n+smoke');
         assert.equal(result.complete, true);
+        const headResult = await readPrDiff({ mode: 'head', filename: path, baseSha: base, headSha: head }, { env, snapshot });
+        assert.equal(headResult.chunk, 'smoke');
+        assert.equal(headResult.complete, true);
     }
 
     cursor = 0;
@@ -87,6 +97,22 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
     assert.ok(chunks.length > 1);
     assert.equal(chunks.join(''), patch);
     assert.equal(cursor, Buffer.byteLength(patch));
+
+    cursor = 0;
+    const headChunks = [];
+    do {
+        const result = await readPrDiff({ mode: 'head', filename, cursor, baseSha: base, headSha: head }, { env, snapshot });
+        assert.equal(result.offset, cursor);
+        assert.equal(result.totalBytes, Buffer.byteLength(headContent));
+        assert.equal(result.sha256, sha256(headContent));
+        assert.ok(Buffer.byteLength(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(result) }] })) <= 7000);
+        headChunks.push(result.chunk);
+        cursor = result.nextCursor;
+        if (result.complete) { break; }
+        assert.ok(result.nextCursor > result.offset);
+    } while (true);
+    assert.ok(headChunks.length > 1);
+    assert.equal(headChunks.join(''), headContent);
 });
 
 test('rejects partial listings, moved PRs, changed comparisons and missing patches', async () => {
@@ -97,6 +123,8 @@ test('rejects partial listings, moved PRs, changed comparisons and missing patch
         [snapshot => { delete snapshot.pages[0][0].patch; }, /patch differs/],
         [snapshot => { snapshot.pages[0][0].patch = patch.slice(0, patch.lastIndexOf('\n')); snapshot.compare.files[0].patch = snapshot.pages[0][0].patch; }, /Truncated|inconsistent/],
         [snapshot => { snapshot.before.changed_files = 3001; }, /3,000-file/],
+        [snapshot => { snapshot.headFiles.pop(); }, /head-file snapshot/],
+        [snapshot => { snapshot.headFiles[1].filename = filename; }, /head-file snapshot/],
     ];
     for (const [mutate, expected] of invalid) {
         const snapshot = fixture();
@@ -115,23 +143,30 @@ test('rejects partial listings, moved PRs, changed comparisons and missing patch
 });
 
 test('stdio MCP exposes only the reader and returns bounded JSON-RPC results', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cor-review-reader-'));
+    const snapshotPath = join(dir, 'snapshot.json');
+    writeFileSync(snapshotPath, JSON.stringify(fixture()));
     const child = spawn(process.execPath, [require.resolve('./diff-reader.cjs')], {
-        env: { PATH: process.env.PATH, TARGET_REPOSITORY: repository, TARGET_PR: '1892' },
+        env: { PATH: process.env.PATH, ...env, SNAPSHOT_PATH: snapshotPath },
         stdio: ['pipe', 'pipe', 'pipe'],
     });
     const messages = [
         { jsonrpc: '2.0', id: 1, method: 'initialize' },
         { jsonrpc: '2.0', id: 2, method: 'tools/list' },
         { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'read_pr_diff', arguments: { mode: 'files' } } },
+        { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'read_pr_diff', arguments: { mode: 'diff', filename, baseSha: base, headSha: head } } },
+        { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'read_pr_diff', arguments: { mode: 'head', filename, baseSha: base, headSha: head } } },
     ];
     let output = '';
     child.stdout.on('data', chunk => { output += chunk; });
     child.stdin.end(messages.map(message => JSON.stringify(message)).join('\n') + '\n');
     const [code] = await once(child, 'close');
+    rmSync(dir, { recursive: true });
     assert.equal(code, 0);
     const responses = output.trim().split('\n').map(JSON.parse);
     assert.equal(responses[0].result.serverInfo.name, 'cor-review-diffs');
     assert.deepEqual(responses[1].result.tools.map(tool => tool.name), ['read_pr_diff']);
-    assert.equal(responses[2].result.isError, true);
-    assert.match(responses[2].result.content[0].text, /Invalid diff reader configuration/);
+    assert.equal(JSON.parse(responses[2].result.content[0].text).changedFiles, 61);
+    assert.equal(JSON.parse(responses[3].result.content[0].text).totalBytes, Buffer.byteLength(patch));
+    assert.equal(JSON.parse(responses[4].result.content[0].text).totalBytes, Buffer.byteLength(headContent));
 });

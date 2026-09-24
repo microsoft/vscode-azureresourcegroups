@@ -106,7 +106,7 @@ tools:
 # The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
 # `get_diff` returns the entire PR; `get_files` paginates files but includes each
 # complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# A trusted Actions step stages the API response; the stdio reader only chunks local data.
+# A trusted Actions step stages the API responses; the stdio reader only chunks local data.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Stage trusted diff snapshot
@@ -159,7 +159,7 @@ pre-agent-steps:
           ...(scoped(file.filename) || scoped(file.previous_filename) ? { patch: file.patch } : {}),
         });
         const getPull = async () => (await github.rest.pulls.get({ owner, repo, pull_number: pr })).data;
-        const snapshot = { repository, pr, pages: [] };
+        const snapshot = { repository, pr, pages: [], headFiles: [] };
         try {
           const before = await getPull();
           snapshot.before = selectPull(before);
@@ -193,6 +193,20 @@ pre-agent-steps:
                 owner, repo, pull_number: pr, per_page: 100, page: count / 100 + 1,
               })).data;
               snapshot.pages.push(extra.map(selectFile));
+            }
+            for (const file of snapshot.pages.flat()) {
+              if ((scoped(file.filename) || scoped(file.previous_filename)) && file.status !== 'removed') {
+                const { data: content } = await github.rest.repos.getContent({
+                  owner, repo, path: file.filename, ref: head,
+                });
+                if (Array.isArray(content) || content.type !== 'file' || content.encoding !== 'base64') {
+                  throw new Error('Scoped head file is not available as UTF-8 content');
+                }
+                snapshot.headFiles.push({
+                  filename: file.filename,
+                  content: new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(content.content, 'base64')),
+                });
+              }
             }
             snapshot.after = selectPull(await getPull());
           } else {
