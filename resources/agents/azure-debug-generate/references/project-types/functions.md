@@ -28,7 +28,7 @@ Local development reference for Azure Functions projects.
 | node-ts | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | node-js | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | dotnet (Functions isolated) | ✅ Implemented | [runtimes/dotnet.md](../runtimes/dotnet.md) |
-| python  | 🔲 Planned | [limited-support.md](../limited-support.md) |
+| python  | 🔲 Planned (best-effort guidance) | [runtimes/python.md](../runtimes/python.md), [limited-support.md](../limited-support.md) |
 | java    | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
 > **Limited-support runtimes:** Emit `⚠️ LIMITED SUPPORT:` per [limited-support.md](../limited-support.md), then ask whether to proceed. On agreement, best-effort generate all artifacts (emulators, debug config, tasks). Never silently skip debug/launch configuration; user decides.
@@ -84,6 +84,17 @@ func host start
 
 > For .NET, Functions host spawns worker; VS Code attaches via `coreclr`. No extra command-line debug flags.
 
+**Python (best effort after limited-support consent):**
+
+Use the service's selected virtual environment with `func host start`.
+The Azure Functions VS Code extension supplies Python's worker debug
+arguments through its `func` task provider when the Python extension is
+installed. Do not copy Node's `--inspect` flag or hardcode
+`languageWorkers__python__arguments`: the Python extension builds that
+launcher command for its own installed version. See
+[runtimes/python.md](../runtimes/python.md) for interpreter selection,
+dependency setup, and the `debugpy` attach configuration.
+
 ---
 
 ## Runtime Wiring
@@ -97,7 +108,7 @@ func host start
 | node-ts | `{service-id}: func host start` | `func` | `$func-node-watch` | `attach` | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | node-js | `{service-id}: func host start` | `func` | `$func-node-watch` | `attach` | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | dotnet  | `{service-id}: func host start` | `func` | `$func-dotnet-watch` | `attach` | ✅ Implemented | [runtimes/dotnet.md](../runtimes/dotnet.md) |
-| python  | `{service-id}: func host start` | `func` | `$func-python-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
+| python  | `{service-id}: func host start` | `func` | `$func-python-watch` | `attach` | 🔲 Planned | [runtimes/python.md](../runtimes/python.md), [limited-support.md](../limited-support.md) |
 | java    | `{service-id}: func host start` | `func` | `$func-java-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
 > `{service-id}` is kebab-case ID from plan Service Label; see [generate.md § Service ID Derivation](../generate.md).
@@ -116,7 +127,11 @@ Top-level task uses Azure Functions extension (`ms-azuretools.vscode-azurefuncti
 
 #### Debug Argument Injection
 
-Functions host runs code in separate **language-worker**, which must start with runtime debug flag. Inject through task `options.env` using `languageWorkers__<runtime>__arguments`; point matching `attach` config at that port. Per runtime, only env key, flag, and attach `type`/`port` differ; keep remaining `func host start` task identical.
+Functions host runs code in a separate **language-worker**. For Node, inject
+its debug flag through task `options.env` using
+`languageWorkers__node__arguments`; point the matching `attach` config at
+that port. Python instead uses the Functions extension's Python worker
+launcher as described above; do not replace its generated arguments.
 
 | Runtime | `options.env` setting | Value to inject | Debug port | `attach` type | Status |
 |---------|-----------------------|-----------------|------------|---------------|--------|
@@ -165,6 +180,29 @@ Functions host runs code in separate **language-worker**, which must start with 
 > Remove `"Start Emulators"` from `dependsOn` if plan has no checked emulators.
 
 > `dependsOn` first entry is runtime prerequisite: TypeScript watch or JavaScript install. Exact service-ID-prefixed labels come from `runtimes/{rt}.md` § Build Chain.
+
+**python** (best effort; no compile/watch task):
+
+```json
+{
+  "type": "func",
+  "label": "{service-id}: func host start",
+  "command": "host start",
+  "options": { "cwd": "${workspaceFolder}/{path-to-functions-project}" },
+  "problemMatcher": "$func-python-watch",
+  "isBackground": true,
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
+  "dependsOn": ["{service-id}: python install", "Start Emulators"]
+}
+```
+
+Omit `Start Emulators` when none are planned. The Python install task and
+virtual-environment interpreter are owned by `runtimes/python.md`. Keep
+`local.settings.json`'s existing `Values.FUNCTIONS_WORKER_RUNTIME`; for a
+confirmed Python Functions project with a missing value, add `python`
+without overwriting any other settings. If the runtime value conflicts
+with the scanned sources, stop and resolve the mismatch instead of
+silently switching it.
 
 **dotnet** (compile before host):
 

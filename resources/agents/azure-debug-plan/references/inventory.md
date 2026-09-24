@@ -43,6 +43,14 @@ Common SDK-to-service mappings below are **not exhaustive**. Map every package i
 > Consolidate multiple storage bindings (blob + queue + table) into **one** azurite entry.
 > Confirm findings against connection references in `local.settings.json`, `.env`, and app config.
 
+For Python, inspect the service's `requirements.txt`, `pyproject.toml`, or
+`Pipfile` and the code that actually constructs clients. `azure-storage-blob`
+and `azure-storage-queue` imply storage; `azure-cosmos` implies Cosmos DB;
+`azure-servicebus` implies Service Bus; `psycopg`, `psycopg2`, or
+`asyncpg` imply PostgreSQL. Use the existing emulator mapping and retain
+each emulator's limited-support status. Never treat a package installed for
+a shared library as proof that every Python service uses it.
+
 ---
 
 ## Step 3: API Test Collection Inventory

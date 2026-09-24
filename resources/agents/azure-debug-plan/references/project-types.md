@@ -40,6 +40,24 @@ For Azure Functions projects, scan bindings for Azure dependencies. Parse `funct
 > Consolidate multiple storage bindings (blob + queue + table) into **one** azurite entry.
 > Table is **not exhaustive**; map every other binding to its Azure service.
 
+### Python Functions source discovery
+
+With `host.json` and Python sources, inspect `local.settings.json` for
+`FUNCTIONS_WORKER_RUNTIME=python` and the service dependency manifest for
+`azure-functions`. Do not classify a directory containing only shared Python
+modules as a runnable service. A `function_app.py` with `FunctionApp` and
+decorators indicates the v2 model; `function.json` files indicate v1. Scan
+registered decorators and their arguments, including blueprint registrations,
+for HTTP routes and storage/queue/timer bindings. Read `function.json`
+bindings for v1 instead. Include only routes and triggers that are actually
+registered; never infer an HTTP health endpoint from the framework name.
+
+Keep the implicit Azurite entry even if the only Python trigger is HTTP.
+Record additional Azure dependencies from both bindings and imports or
+dependency files as described in [inventory.md](inventory.md). The plan
+still uses `functions` / `python` in its existing Debug Configurations row;
+the generation reference decides how to start Core Tools.
+
 ---
 
 ## frontend-spa

@@ -93,6 +93,7 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 <!-- | [x] | Payments API (debug) | Payments API | ./api | functions | node-ts | 20.x | Azure Storage, Azure PostgreSQL | -->
 <!-- | [x] | Customer Portal (debug) | Customer Portal | ./web | frontend-spa | node-ts | 20.x | — | -->
 <!-- | [x] | Debug All Services | Debug All Services | | *Compound Config* |||| -->
+<!-- For a Python Functions row, record the detected v1/v2 model, dependency manifest, and existing virtual-environment path in a short note immediately below this table. Put the probed interpreter version in the Version cell; do not add columns. -->
 
 <!-- Project Type descriptions are shown in a collapsible block so the table stays compact. -->
 <!-- Only include project types that appear in the table above. -->
