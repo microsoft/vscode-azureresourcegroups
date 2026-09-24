@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
@@ -54,6 +59,7 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
     let cursor = 0;
     const listed = [];
     let listingSha256;
+    let complete;
     do {
         const result = await readPrDiff({ mode: 'files', cursor, baseSha: base, headSha: head }, { env, snapshot });
         assert.equal(result.baseSha, base);
@@ -65,8 +71,8 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
         assert.ok(Buffer.byteLength(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(result) }] })) <= 7000);
         listed.push(...result.files);
         cursor = result.nextCursor;
-        if (result.complete) { break; }
-    } while (true);
+        complete = result.complete;
+    } while (!complete);
     assert.equal(cursor, 61);
     assert.equal(new Set(listed.map(file => file.filename)).size, 61);
     assert.ok(scoped(listed[0].filename));
@@ -92,8 +98,8 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
         assert.ok(result.nextCursor > cursor);
         chunks.push(result.chunk);
         cursor = result.nextCursor;
-        if (result.complete) { break; }
-    } while (true);
+        complete = result.complete;
+    } while (!complete);
     assert.ok(chunks.length > 1);
     assert.equal(chunks.join(''), patch);
     assert.equal(cursor, Buffer.byteLength(patch));
@@ -108,9 +114,11 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
         assert.ok(Buffer.byteLength(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(result) }] })) <= 7000);
         headChunks.push(result.chunk);
         cursor = result.nextCursor;
-        if (result.complete) { break; }
-        assert.ok(result.nextCursor > result.offset);
-    } while (true);
+        complete = result.complete;
+        if (!complete) {
+            assert.ok(result.nextCursor > result.offset);
+        }
+    } while (!complete);
     assert.ok(headChunks.length > 1);
     assert.equal(headChunks.join(''), headContent);
 });

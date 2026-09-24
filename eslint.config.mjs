@@ -45,10 +45,9 @@ export default defineConfig([
         },
     },
     {
-        // The eval harness is plain Node JS (.cjs/.mjs) run directly by node — it is not
-        // part of the extension's TypeScript program, so the type-aware project service
-        // can't resolve these files. Lint them without type information, against Node globals.
-        files: ['evals/**/*.{js,cjs,mjs}'],
+        // Node-run scripts outside the extension's TypeScript program need
+        // linting without the type-aware project service.
+        files: ['evals/**/*.{js,cjs,mjs}', '.github/cor/instruction-reviewers/**/*.cjs'],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: {
             parserOptions: {
@@ -65,6 +64,7 @@ export default defineConfig([
                 module: 'writable',
                 process: 'readonly',
                 require: 'readonly',
+                structuredClone: 'readonly',
             },
         },
         rules: {
@@ -72,6 +72,12 @@ export default defineConfig([
             // belonged to the deleted headless runner. The exemption for
             // `no-require-imports` went with them, so a stray `require()` in a new
             // eval script is now correctly a lint error.
+        },
+    },
+    {
+        files: ['.github/cor/instruction-reviewers/**/*.cjs'],
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
         },
     },
     {
