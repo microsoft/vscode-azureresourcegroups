@@ -9,18 +9,24 @@ const base = 'a'.repeat(40);
 const head = 'b'.repeat(40);
 const repository = 'microsoft/vscode-azureresourcegroups';
 const filename = 'resources/agents/azure-debug-generate/references/generate.md';
+const otherScoped = [
+    'resources/agents/azure-debug-generate/references/project-types/functions.md',
+    'resources/agents/azure-debug-generate/references/runtimes/node.md',
+    'resources/agents/azure-debug-generate/references/emulators/azurite.md',
+];
 const patch = `@@ -0,0 +1,500 @@\n${Array.from({ length: 500 }, (_, i) =>
     `+${i} ${'review 🌊'.repeat(7)}`).join('\n')}`;
 const sha256 = text => createHash('sha256').update(text).digest('hex');
 
 function fixture() {
     const files = Array.from({ length: 61 }, (_, i) => ({
-        filename: i === 0 ? filename : `other/${String(i).padStart(3, '0')}-${'x'.repeat(85)}.md`,
+        filename: i === 0 ? filename : otherScoped[i - 2] ??
+            `other/${String(i).padStart(3, '0')}-${'x'.repeat(85)}.md`,
         status: 'added',
         additions: i === 0 ? 500 : 1,
         deletions: 0,
         changes: i === 0 ? 500 : 1,
-        ...(i === 0 ? { patch } : {}),
+        ...(i === 0 ? { patch } : i >= 2 && i <= 4 ? { patch: '@@ -0,0 +1 @@\n+smoke' } : {}),
     }));
     const pull = {
         state: 'open', changed_files: files.length,
@@ -58,6 +64,12 @@ test('reconstructs bounded UTF-8 patch chunks and complete paginated metadata', 
     assert.equal(new Set(listed.map(file => file.filename)).size, 61);
     assert.ok(scoped(listed[0].filename));
     assert.ok(!scoped(listed[1].filename));
+    assert.deepEqual(listed.filter(file => scoped(file.filename)).map(file => file.filename), [filename, ...otherScoped]);
+    for (const path of otherScoped) {
+        const result = await readPrDiff({ mode: 'diff', filename: path, baseSha: base, headSha: head }, { env, snapshot });
+        assert.equal(result.chunk, '@@ -0,0 +1 @@\n+smoke');
+        assert.equal(result.complete, true);
+    }
 
     cursor = 0;
     const chunks = [];
