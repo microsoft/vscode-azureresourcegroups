@@ -91,7 +91,9 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# Do not check out PR code; the reviewer and reader come from the workflow commit.
+# This pull_request_target job reads SHA-pinned PR evidence through tools, not a checkout.
+# Putting untrusted PR-head files in the token-bearing job adds risk without aiding review.
+# Reviewer instructions and the reader come from the workflow commit.
 checkout: false
 inlined-imports: true
 tools:
