@@ -91,9 +91,9 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# A trusted preparation step checks out the exact PR commit without persisting
-# credentials, stages its diff, and deletes the checkout before the agent starts.
-# The agent sees only bounded evidence; reviewer and reader code come from the workflow commit.
+# Only trusted steps need the PR checkout: they diff the merge base and delete
+# it before the agent starts. An agent checkout plus shell would let PR text
+# steer commands; `checkout: false` does not disable the pinned fetch below.
 checkout: false
 inlined-imports: true
 tools:
@@ -109,7 +109,8 @@ tools:
 # The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
 # `get_diff` returns the entire PR; `get_files` paginates files but includes each
 # complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# A trusted Actions step stages Git's merge-base diff; the stdio reader only chunks local data.
+# GitHub's compare response stops at 300 files. Trusted Git gives a complete
+# merge-base comparison; the offline stdio reader verifies and bounds responses.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Pin review commits
@@ -142,6 +143,7 @@ pre-agent-steps:
     uses: actions/checkout@v7
     with:
       ref: ${{ steps.review_commits.outputs.head_sha }}
+      # The base/head merge base can be older than either tip.
       fetch-depth: 0
       persist-credentials: false
       path: .cor-review-input
