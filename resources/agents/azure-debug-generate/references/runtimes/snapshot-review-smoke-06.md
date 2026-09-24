@@ -1,0 +1,41 @@
+# Temporary snapshot smoke reference 6
+
+Test-only review transport data; no agent instruction links to this file.
+
+- Record 06-001: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-002: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-003: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-004: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-005: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-006: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-007: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-008: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-009: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-010: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-011: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-012: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-013: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-014: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-015: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-016: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-017: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-018: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-019: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-020: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-021: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-022: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-023: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-024: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-025: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-026: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-027: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-028: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-029: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-030: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-031: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-032: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-033: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-034: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-035: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-036: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
+- Record 06-037: The bounded PR reader retains this distinct instruction-reference entry, its exact UTF-8 offset, and its immutable digest.
