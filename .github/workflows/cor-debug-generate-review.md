@@ -107,13 +107,16 @@ tools:
 # The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
 # `get_diff` returns the entire PR; `get_files` paginates files but includes each
 # complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# This stdio reader provides bounded scoped diffs without a token-bearing HTTP listener.
+# A trusted Actions step stages the API response; the stdio reader only chunks local data.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
-  - name: Stage trusted diff reader
+  - name: Stage trusted diff snapshot
     uses: actions/github-script@v9
     env:
       TRUSTED_SHA: ${{ github.workflow_sha }}
+      TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     with:
       script: |
         const fs = require('node:fs');
@@ -135,17 +138,91 @@ pre-agent-steps:
         fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
           flag: 'wx', mode: 0o444,
         });
-# The gateway starts a stdio container, not a token-bearing HTTP server.
-# Repository and PR are fixed by the event; tool arguments cannot retarget them.
+        const { scoped } = require(path.join(directory, 'diff-reader.cjs'));
+        const owner = context.repo.owner;
+        const repo = context.repo.repo;
+        const repository = `${owner}/${repo}`;
+        const pr = Number(process.env.TARGET_PR);
+        if (!Number.isSafeInteger(pr) || pr < 1) {
+          throw new Error('Invalid PR number for diff snapshot');
+        }
+        const selectPull = pull => ({
+          state: pull.state, changed_files: pull.changed_files,
+          base: { sha: pull.base?.sha, repo: {
+            id: pull.base?.repo?.id, full_name: pull.base?.repo?.full_name,
+          } },
+          head: { sha: pull.head?.sha, repo: { id: pull.head?.repo?.id } },
+        });
+        const selectFile = file => ({
+          filename: file.filename, previous_filename: file.previous_filename,
+          status: file.status, additions: file.additions,
+          deletions: file.deletions, changes: file.changes,
+          ...(scoped(file.filename) || scoped(file.previous_filename) ? { patch: file.patch } : {}),
+        });
+        const getPull = async () => (await github.rest.pulls.get({ owner, repo, pull_number: pr })).data;
+        const snapshot = { repository, pr, pages: [] };
+        try {
+          const before = await getPull();
+          snapshot.before = selectPull(before);
+          const base = process.env.EXPECTED_BASE_SHA || before.base?.sha;
+          const head = process.env.EXPECTED_HEAD_SHA || before.head?.sha;
+          if (before.state === 'open' && before.base?.repo?.full_name === repository &&
+              before.head?.repo?.id === before.base?.repo?.id &&
+              before.base.sha === base && before.head.sha === head &&
+              Number.isSafeInteger(before.changed_files) && before.changed_files <= 3000) {
+            // Fetch full patches here, but only stage patches from the reviewed bundle.
+            const comparison = (await github.rest.repos.compareCommitsWithBasehead({
+              owner, repo, basehead: `${base}...${head}`,
+            })).data;
+            snapshot.compare = {
+              merge_base_commit: { sha: comparison.merge_base_commit?.sha },
+              files: comparison.files?.map(selectFile),
+            };
+            let count = 0;
+            for (let page = 1; count < before.changed_files; page++) {
+              const entries = (await github.rest.pulls.listFiles({
+                owner, repo, pull_number: pr, per_page: 100, page,
+              })).data;
+              snapshot.pages.push(entries.map(selectFile));
+              count += entries.length;
+              if (entries.length < 100) {
+                break;
+              }
+            }
+            if (count === before.changed_files && count > 0 && count % 100 === 0) {
+              const extra = (await github.rest.pulls.listFiles({
+                owner, repo, pull_number: pr, per_page: 100, page: count / 100 + 1,
+              })).data;
+              snapshot.pages.push(extra.map(selectFile));
+            }
+            snapshot.after = selectPull(await getPull());
+          } else {
+            snapshot.after = snapshot.before;
+          }
+        } catch (error) {
+          const status = Number.isSafeInteger(error.status) ? error.status : 'unavailable';
+          snapshot.error = status === 'unavailable'
+            ? `Snapshot staging failed (${error.name || 'unknown error'})`
+            : `GitHub read failed (${status})`;
+          core.warning(snapshot.error);
+        }
+        let serialized = JSON.stringify(snapshot);
+        if (Buffer.byteLength(serialized) > 16 * 1024 * 1024) {
+          serialized = JSON.stringify({ repository, pr, error: 'Snapshot exceeds 16 MiB' });
+          core.warning('Diff snapshot exceeds the 16 MiB limit');
+        }
+        fs.writeFileSync(path.join(directory, 'snapshot.json'), serialized, { flag: 'wx', mode: 0o444 });
+# The reader has no token or network; GitHub MCP and the trusted Actions step handle API calls.
 mcp-servers:
   cor-review-diffs:
     container: ghcr.io/github/gh-aw-node
+    args: [--network, none]
     entrypoint: node
     entrypointArgs: [/cor-review-diffs/diff-reader.cjs]
     mounts:
       - "${RUNNER_TEMP}/gh-aw/cor-review-diffs:/cor-review-diffs:ro"
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SNAPSHOT_PATH: /cor-review-diffs/snapshot.json
       TARGET_REPOSITORY: ${{ github.repository }}
       TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
       EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}

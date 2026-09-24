@@ -4,7 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 const { createHash } = require('node:crypto');
+const { readFileSync } = require('node:fs');
 const { createInterface } = require('node:readline');
+
+const scoped = path => path === 'resources/agents/azure-debug-generate.agent.md' ||
+    path?.startsWith('resources/agents/azure-debug-generate/');
+
+let stagedSnapshot;
 
 const tool = {
     name: 'read_pr_diff',
@@ -22,14 +28,18 @@ const tool = {
     },
 };
 
-async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch: request = fetch, env = process.env } = {}) {
+async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = process.env, snapshot } = {}) {
     const repository = env.TARGET_REPOSITORY;
     const pr = Number(env.TARGET_PR);
     const shaPattern = /^[a-f0-9]{40}$/i;
     const position = cursor ?? 0;
 
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !Number.isSafeInteger(pr) || pr < 1 || !env.GH_TOKEN) {
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !Number.isSafeInteger(pr) || pr < 1 ||
+        !snapshot && !env.SNAPSHOT_PATH) {
         throw new Error('Invalid diff reader configuration');
+    }
+    if (env.GH_TOKEN || env.GITHUB_TOKEN || env.GITHUB_MCP_SERVER_TOKEN) {
+        throw new Error('Diff reader must not receive GitHub credentials');
     }
 
     if (mode !== 'files' && mode !== 'diff') {
@@ -57,25 +67,15 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
         throw new Error('Event commit SHA mismatch');
     }
 
-    const root = `https://api.github.com/repos/${repository}`;
-    async function get(path) {
-        const response = await request(`${root}${path}`, {
-            headers: {
-                Accept: 'application/vnd.github+json',
-                Authorization: `Bearer ${env.GH_TOKEN}`,
-                'X-GitHub-Api-Version': '2022-11-28',
-            },
-            redirect: 'error',
-            signal: AbortSignal.timeout(30000),
-        });
-        if (!response.ok) {
-            throw new Error(`GitHub read failed (${response.status})`);
-        }
-        return response.json();
+    const data = snapshot || (stagedSnapshot ??= JSON.parse(readFileSync(env.SNAPSHOT_PATH, 'utf8')));
+    if (data.error) {
+        throw new Error(`Diff snapshot preparation failed: ${data.error}`);
+    }
+    if (data.repository !== repository || data.pr !== pr || !Array.isArray(data.pages)) {
+        throw new Error('Diff snapshot does not match the requested PR');
     }
 
-    const pullPath = `/pulls/${pr}`;
-    const pull = await get(pullPath);
+    const pull = data.before;
     function checkPull(current, base, head) {
         if (current.state !== 'open' || current.base?.repo?.full_name !== repository ||
             current.head?.repo?.id !== current.base?.repo?.id ||
@@ -98,16 +98,16 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
     }
 
     // Compare uses the merge base, unlike reading a file directly at the base tip.
-    const compare = await get(`/compare/${base}...${head}`);
+    const compare = data.compare;
     if (!shaPattern.test(compare.merge_base_commit?.sha) || !Array.isArray(compare.files)) {
         throw new Error('Missing immutable merge-base comparison');
     }
 
     const files = [];
     const names = new Set();
-    // Fetch every page before answering, so a partial listing cannot look complete.
+    // Check every staged API page before answering, so a partial listing cannot look complete.
     for (let page = 1; files.length < count; page++) {
-        const entries = await get(`${pullPath}/files?per_page=100&page=${page}`);
+        const entries = data.pages[page - 1];
         if (!Array.isArray(entries) || !entries.length || entries.length > 100) {
             throw new Error('Incomplete PR file pagination');
         }
@@ -128,7 +128,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
     }
 
     if (files.length !== count || count > 0 && count % 100 === 0 &&
-        (await get(`${pullPath}/files?per_page=100&page=${count / 100 + 1}`)).length) {
+        (!Array.isArray(data.pages[count / 100]) || data.pages[count / 100].length)) {
         throw new Error('PR file count does not match changed_files');
     }
 
@@ -144,8 +144,8 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
         throw new Error('Immutable comparison differs from the PR file listing');
     }
 
-    // The PR may have moved while its pages were being read.
-    checkPull(await get(pullPath), base, head);
+    // The PR may have moved while the snapshot was being fetched.
+    checkPull(data.after, base, head);
     // Fingerprint the complete listing so paginated responses can be verified as one consistent snapshot.
     const metadata = files.map(({ filename, previous_filename, status, additions, deletions, changes }) =>
         ({ filename, previous_filename, status, additions, deletions, changes }));
@@ -181,8 +181,6 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { fetch:
         return result;
     }
 
-    const scoped = path => path === 'resources/agents/azure-debug-generate.agent.md' ||
-        path?.startsWith('resources/agents/azure-debug-generate/');
     const file = files.find(entry => entry.filename === filename);
     if (!file || !scoped(file.filename) && !scoped(file.previous_filename)) {
         throw new Error('Diff request is outside the reviewed files');
@@ -312,4 +310,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { readPrDiff };
+module.exports = { readPrDiff, scoped };

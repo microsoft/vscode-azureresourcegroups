@@ -45,14 +45,16 @@ Stay on the specified PR and repository.
    manual runs, resolve the current SHAs.
 
 2. **List every changed file.** Call `read_pr_diff` with `mode: files` and
-   `cursor: 0`. Record its full base/head SHAs and `listingSha256`. For a
-   comment or manual run, pass those SHAs back as `baseSha` and `headSha` on
-   every subsequent call; on automatic runs they must match the event SHAs.
+   `cursor: 0`. Require its full base/head SHAs to match the PR commits
+   recorded in step 1, and record `listingSha256`. For a comment or manual
+   run, pass those SHAs back as `baseSha` and `headSha` on every subsequent
+   call; on automatic runs they must match the event SHAs.
    Follow each `nextCursor` until `complete` is true, checking that cursors
    advance without gaps, both SHAs and the listing digest stay fixed, and the
    number of unique files equals `changedFiles` and the PR's `changed_files`.
-   The reader checks all GitHub API pages, the merge-base comparison, and
-   staleness. More than GitHub's 3,000-file limit, a tool error, or any
+   The trusted pre-agent step stages the GitHub responses; the offline reader
+   checks every page, the merge-base comparison, and both PR states captured
+   during staging. More than GitHub's 3,000-file limit, a tool error, or any
    mismatch is `INCOMPLETE`. Match both `filename` and `previous_filename` so
    deletions and renames into or out of scope are covered.
 
