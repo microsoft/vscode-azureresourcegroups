@@ -125,6 +125,12 @@ test('rejects partial listings, moved PRs, changed comparisons and missing patch
         [snapshot => { snapshot.before.changed_files = 3001; }, /3,000-file/],
         [snapshot => { snapshot.headFiles.pop(); }, /head-file snapshot/],
         [snapshot => { snapshot.headFiles[1].filename = filename; }, /head-file snapshot/],
+        [snapshot => { snapshot.before = null; }, /closed, moved/],
+        [snapshot => { snapshot.after = null; }, /closed, moved/],
+        [snapshot => { snapshot.compare = null; }, /merge-base comparison/],
+        [snapshot => { snapshot.compare.files[0] = null; }, /comparison differs/],
+        [snapshot => { snapshot.pages[0][0] = null; }, /file metadata/],
+        [snapshot => { snapshot.headFiles[0] = null; }, /head-file snapshot/],
     ];
     for (const [mutate, expected] of invalid) {
         const snapshot = fixture();
@@ -139,6 +145,24 @@ test('rejects partial listings, moved PRs, changed comparisons and missing patch
     await assert.rejects(
         readPrDiff({ mode: 'files' }, { env: { ...env, EXPECTED_HEAD_SHA: base, EXPECTED_BASE_SHA: base }, snapshot: fixture() }),
         /closed, moved/,
+    );
+    for (const snapshot of [42, [], { error: {} }]) {
+        await assert.rejects(
+            readPrDiff({ mode: 'files' }, { env, snapshot }),
+            /Invalid diff snapshot/,
+        );
+    }
+});
+
+test('rejects oversized response metadata rather than returning a non-advancing chunk', async () => {
+    const snapshot = fixture();
+    const longFilename = `${filename}${'🌊'.repeat(2000)}`;
+    snapshot.pages[0][0].filename = longFilename;
+    snapshot.compare.files[0].filename = longFilename;
+    snapshot.headFiles[0].filename = longFilename;
+    await assert.rejects(
+        readPrDiff({ mode: 'diff', filename: longFilename, baseSha: base, headSha: head }, { env, snapshot }),
+        /Chunk exceeds the response limit/,
     );
 });
 

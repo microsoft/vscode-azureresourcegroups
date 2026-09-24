@@ -67,7 +67,13 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('Event commit SHA mismatch');
     }
 
-    const data = snapshot || (stagedSnapshot ??= JSON.parse(readFileSync(env.SNAPSHOT_PATH, 'utf8')));
+    const data = snapshot ?? (stagedSnapshot ??= JSON.parse(readFileSync(env.SNAPSHOT_PATH, 'utf8')));
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Invalid diff snapshot root');
+    }
+    if (data.error !== undefined && (typeof data.error !== 'string' || !data.error)) {
+        throw new Error('Invalid diff snapshot error');
+    }
     if (data.error) {
         throw new Error(`Diff snapshot preparation failed: ${data.error}`);
     }
@@ -77,15 +83,16 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
 
     const pull = data.before;
     function checkPull(current, base, head) {
-        if (current.state !== 'open' || current.base?.repo?.full_name !== repository ||
+        if (!current || typeof current !== 'object' || current.state !== 'open' ||
+            current.base?.repo?.full_name !== repository ||
             current.head?.repo?.id !== current.base?.repo?.id ||
             current.base?.sha !== base || current.head?.sha !== head) {
             throw new Error('PR closed, moved, or is not from the same repository');
         }
     }
 
-    const base = expectedBase || pull.base?.sha;
-    const head = expectedHead || pull.head?.sha;
+    const base = expectedBase || pull?.base?.sha;
+    const head = expectedHead || pull?.head?.sha;
     if (!shaPattern.test(base) || !shaPattern.test(head)) {
         throw new Error('Invalid PR commit SHAs');
     }
@@ -99,7 +106,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
 
     // Compare uses the merge base, unlike reading a file directly at the base tip.
     const compare = data.compare;
-    if (!shaPattern.test(compare.merge_base_commit?.sha) || !Array.isArray(compare.files)) {
+    if (!shaPattern.test(compare?.merge_base_commit?.sha) || !Array.isArray(compare?.files)) {
         throw new Error('Missing immutable merge-base comparison');
     }
 
@@ -112,7 +119,8 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
             throw new Error('Incomplete PR file pagination');
         }
         for (const file of entries) {
-            if (typeof file.filename !== 'string' || !file.filename ||
+            if (!file || typeof file !== 'object' ||
+                typeof file.filename !== 'string' || !file.filename ||
                 names.has(file.filename) || typeof file.status !== 'string' ||
                 !Number.isSafeInteger(file.additions) || !Number.isSafeInteger(file.deletions) ||
                 file.changes !== file.additions + file.deletions ||
@@ -135,6 +143,9 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     // GitHub limits compare.files to 300 entries; later scoped patches fail closed.
     if (compare.files.length !== Math.min(count, 300) ||
         compare.files.some(file => {
+            if (!file || typeof file !== 'object') {
+                return true;
+            }
             const listed = files.find(entry => entry.filename === file.filename);
             return !listed || file.status !== listed.status ||
                 file.previous_filename !== listed.previous_filename ||
@@ -147,6 +158,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     const expectedHeadFiles = files.filter(file =>
         (scoped(file.filename) || scoped(file.previous_filename)) && file.status !== 'removed');
     if (!Array.isArray(data.headFiles) || data.headFiles.length !== expectedHeadFiles.length ||
+        data.headFiles.some(file => !file || typeof file !== 'object') ||
         new Set(data.headFiles.map(file => file.filename)).size !== data.headFiles.length ||
         expectedHeadFiles.some(file => !data.headFiles.some(headFile =>
             headFile.filename === file.filename && typeof headFile.content === 'string'))) {
@@ -277,14 +289,14 @@ function chunkResponse(bytes, position, fields) {
         chunk: bytes.subarray(position, end).toString('utf8'), nextCursor: end, complete: end === bytes.length,
     };
     while (!responseFits(result) && end > position) {
-        end -= 256;
+        end = Math.max(position, end - 256);
         while (end > position && (bytes[end] & 0xc0) === 0x80) { end--; }
         result.chunk = bytes.subarray(position, end).toString('utf8');
         result.nextCursor = end;
         result.complete = end === bytes.length;
     }
-    if (end === position && position < bytes.length) {
-        throw new Error('Diff chunk exceeds the response limit');
+    if (!responseFits(result)) {
+        throw new Error('Chunk exceeds the response limit');
     }
     return result;
 }
