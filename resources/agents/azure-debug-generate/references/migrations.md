@@ -1,41 +1,41 @@
 # Database Migrations — Generation
 
-Generate compose migration services from the plan's Migrations table. The plan records WHAT migration tool is in use and which service needs it. This reference covers HOW to generate the compose configuration.
+Generate compose migration services from the plan's Migrations table. The plan records WHAT migration tool each service uses; this reference defines HOW to generate compose configuration.
 
-> The migration service is ordinary compose content and is **identical for Docker or Podman**. Any task or command that drives it (`docker compose up db-migrate`) uses the plan's Orchestrator **Compose Command** — substitute `podman compose` when the plan selected Podman.
+> Migration service is ordinary compose content, identical for Docker or Podman. Any task or command driving it (`docker compose up db-migrate`) uses the plan's Orchestrator **Compose Command**; substitute `podman compose` when the plan selects Podman.
 
 ---
 
 ## Targeted Resolution
 
-The plan's Migrations table provides: `Generate | Service | Migration Tool`. Before generating the docker-compose migration service, perform targeted resolution to fill in the details:
+Plan Migrations table provides `Generate | Service | Migration Tool`. Before docker-compose migration service generation, resolve details:
 
 | Detail | How to Resolve |
 |--------|---------------|
-| **Migration directory** | Scan for tool-specific directories: `prisma/migrations/`, `migrations/`, `Migrations/`, `alembic/` |
-| **Migration command** | Check the project's script runner (e.g., `package.json` scripts) for an existing migration command. If found, use it. If not, construct from the tool name. |
+| **Migration directory** | Scan tool directories: `prisma/migrations/`, `migrations/`, `Migrations/`, `alembic/` |
+| **Migration command** | Check project script runner (e.g., `package.json` scripts). Use existing migration command; otherwise construct from tool name. |
 | **Target database service** | Match against the plan's Emulators table — the database emulator's compose service name |
-| **Connection env var** | Check `local.settings.json`, `.env`, or the migration tool's config file for the variable name |
-| **Compose-network connection string** | Same shape as the local connection string but with the compose service name as host instead of `localhost` |
-| **Existing script** | Check whether a migration script already exists in the project's script runner |
+| **Connection env var** | Find variable name in `local.settings.json`, `.env`, or migration tool config |
+| **Compose-network connection string** | Local connection-string shape, replacing `localhost` host with compose service name |
+| **Existing script** | Check project script runner for migration script |
 
 ### Migration Script Lookup
 
 | Detection Evidence | Instruction |
 |--------------------|-------------|
-| Existing migration script in project (e.g., `npm run db:migrate`) | Use it as-is in the docker-compose service |
-| Migration tool detected but no script | Create a script in the project's native script runner that wraps the tool's CLI command (e.g., `"db:migrate": "npx prisma migrate deploy"` in `package.json`) |
-| Raw SQL files only, no migration tool | Recommend and install a lightweight migration tool as a dev dependency (e.g., `node-pg-migrate` for Node.js). Ask the user before installing. |
+| Existing migration script in project (e.g., `npm run db:migrate`) | Use unchanged in docker-compose service |
+| Migration tool detected but no script | Add native-runner script wrapping tool CLI (e.g., `"db:migrate": "npx prisma migrate deploy"` in `package.json`) |
+| Raw SQL only, no migration tool | Recommend/install lightweight dev dependency (e.g., `node-pg-migrate` for Node.js). Ask before install. |
 
 ---
 
 ## Docker Compose Patterns
 
-Two patterns are needed: a **healthcheck** on the database service and a one-shot **migration service**.
+Need database **healthcheck** + one-shot **migration service**.
 
 ### Healthcheck Pattern
 
-When migrations are present, the target database service **must** have a healthcheck so the migration service can use `depends_on` with `condition: service_healthy`. The healthcheck definition belongs in the emulator's docker-compose config — see the emulator reference files in [emulators/](emulators/).
+With migrations, target database service **must** have healthcheck, enabling migration `depends_on` with `condition: service_healthy`. Define in emulator docker-compose config; see [emulators/](emulators/).
 
 ### Migration Service Pattern
 
@@ -56,15 +56,15 @@ services:
     restart: "no"
 ```
 
-**Filling in the template — use resolved details:**
+**Fill template with resolved details:**
 
 | Placeholder | How to determine |
 |-------------|-----------------|
-| `RUNTIME_IMAGE` | A Docker image that provides the language runtime. See the table below. |
+| `RUNTIME_IMAGE` | Docker image providing language runtime; see below. |
 | `DATABASE_SERVICE` | The compose service name for the target database (from Emulators table) |
-| `CONNECTION_ENV_VAR` | The environment variable the migration tool expects (from targeted resolution) |
-| `CONNECTION_STRING_FOR_COMPOSE_NETWORK` | Same shape as local connection string but with compose service name as host |
-| `EXTRA_VOLUME_MOUNTS` | Additional mounts needed for the ecosystem. See the table below. |
+| `CONNECTION_ENV_VAR` | Migration tool's expected environment variable (from resolution) |
+| `CONNECTION_STRING_FOR_COMPOSE_NETWORK` | Local connection-string shape with compose service host |
+| `EXTRA_VOLUME_MOUNTS` | Ecosystem mounts; see below. |
 | `MIGRATION_SCRIPT` | The project's migration script command (from targeted resolution) |
 
 **Runtime images and extra volume mounts:**
@@ -78,7 +78,7 @@ services:
 | Go | `golang:{version}` | — | Best-effort — emit limited support warning |
 
 > **Key properties:**
-> - `depends_on` with `condition: service_healthy` — waits for the database to accept connections
-> - `volumes` with `:ro` — mounts project files read-only for safety
-> - `restart: "no"` — runs once per `docker compose up`, does not restart after exit
-> - Mount ecosystem-specific dependency directories when the migration tool is installed as a project dependency
+> - `depends_on` with `condition: service_healthy` — waits for database connections
+> - `volumes` with `:ro` — read-only project mounts
+> - `restart: "no"` — once per `docker compose up`; no restart after exit
+> - Mount ecosystem dependency directories when migration tool is project dependency

@@ -1,28 +1,28 @@
 # HTML/CSS Preview — presentation-quality recipes
 
-> **🎨 This preview is a PRESENTATION-QUALITY visual spec — the screen a designer would show a stakeholder to sign off the look.**
+> **🎨 PRESENTATION-QUALITY visual spec for stakeholder design sign-off.**
 >
-> It is the **raw-HTML/CSS rendering** of the shared design-quality contract in [`frontend-quality-bar.md`](.github/agents/shared-references/frontend-quality-bar.md) → "Shared design-quality principles". Read that section first: the preview and the eventual scaffolded app must look like the **same professional product** at two fidelities. This is not a wireframe — a flat, gray, boxy result fails the bar even if it is technically correct.
+> **raw-HTML/CSS rendering** of [`frontend-quality-bar.md`](.github/agents/shared-references/frontend-quality-bar.md) → "Shared design-quality principles". Read it first. Preview and eventual scaffolded app must look like the **same professional product** at two fidelities. Not a wireframe: flat, gray, boxy results fail even when technically correct.
 >
-> It must confirm, at a polished bar:
+> Must confirm at polished quality:
 >
-> 1. **What's on each page** — real regions with real, populated content, in the right order.
-> 2. **The themed look** — brand palette applied through surfaces, badges, buttons, and a real hero; multi-tier elevation; consistent radius; clear type hierarchy.
-> 3. **All four data states** — `data`, `loading` (skeleton), `empty` (icon + CTA), `error` (banner + retry), depicted at least once across the page set.
+> 1. **What's on each page** — ordered real regions with populated content.
+> 2. **Themed look** — brand palette across surfaces, badges, buttons, and real hero; multi-tier elevation; consistent radius; clear type hierarchy.
+> 3. **All four data states** — `data`, `loading` (skeleton), `empty` (icon + CTA), `error` (banner + retry), each depicted at least once across pages.
 >
-> **What this raw-static preview intentionally leaves to the scaffold** (raw-static limits, not a license to look unpolished): real webfonts (use system fonts), JavaScript (no working toggles — states are depicted statically), and real photos (use neutral placeholder blocks — a subtle surface + border with a muted icon or initials, **not** a brand-color gradient). Everything else — real inline-SVG icons, elevation, hover/focus styling, skeleton shimmer — the preview DOES do, and must.
+> **Raw-static preview leaves to scaffold**: real webfonts (use system fonts), JavaScript (depict states statically; toggles need not work), and real photos (use neutral placeholder blocks: subtle surface + border with muted icon or initials, **not** brand-color gradient). These limits do not permit unpolished output. Preview MUST provide everything else: real inline-SVG icons, elevation, hover/focus styling, skeleton shimmer.
 >
-> **Polish is about *treatment*; content is about *the plan*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 6 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
+> **Polish is *treatment*; content is *the plan*.** Replace every `{...}` recipe placeholder with **real, domain-specific Sample Content** from the prompt (page records in plan Section 6 Sample Content). Render the *same* entities, names, numbers, and states as the scaffolded app: faithful preview, not generic stand-in. **Never** use filler such as "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add banners or notes saying the app "will use" another framework or component library; render content directly without disclaimers.
 >
-> **Audience:** the planner sub-agents that fan out from Step 3.5b. Each sub-agent owns one page and writes a single self-contained HTML file linking to the shared `./theme.css`. **No `<script>` tags** — the preview iframe is sandboxed without scripts. **No inline `<style>`** — all styling MUST come from `./theme.css`. Aim high: the scaffold reproduces this look with real primitives, so make it worth reproducing.
+> **Audience:** planner sub-agents from Step 3.5b. Each owns one page and writes one self-contained HTML file linked to shared `./theme.css`. **No `<script>` tags**: preview iframe disallows scripts. **No inline `<style>`**: all styling MUST come from `./theme.css`. Scaffold reproduces this look with real primitives; make it worth reproducing.
 >
-> **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Section 6 Pages table.
+> **Output shape:** each page is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` with per-region markup below in plan Section 6 Pages-table order.
 
 ---
 
 ## Shared CSS (paste into `theme.css`)
 
-The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens **plus base body styles**. Append everything below to the same `theme.css` so the per-region HTML renders at a **presentation-quality** bar — multi-tier elevation, tasteful CSS-only transitions on hover/focus, real inline-SVG icon sizing, skeleton-shimmer loading, and polished empty/error states. All motion is pure CSS (the iframe has no JavaScript); it stays subtle and respects `prefers-reduced-motion`. Keep every class name exactly as defined so the per-page HTML and the parent webview's palette editors line up.
+Step 3.5a writes `:root { ... }` with palette/typography tokens **and base body styles**. Append everything below to that `theme.css` for **presentation-quality** HTML: multi-tier elevation, subtle CSS-only hover/focus transitions, real inline-SVG sizing, skeleton-shimmer loading, polished empty/error states. Motion is pure, subtle CSS respecting `prefers-reduced-motion`; iframe has no JavaScript. Keep every class name exact so page HTML aligns with parent webview palette editors.
 
 ```css
 /* ───── Layout primitives ───── */
@@ -641,21 +641,21 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 
 ## Token → HTML recipes
 
-For each layout token in the plan's Pages table, copy the corresponding snippet into the page's `<body>`. Tokens are **layout intent**, not literal element names.
+For each plan Pages-table layout token, copy its snippet into page `<body>`. Tokens express **layout intent**, not literal element names.
 
-> **Every human-readable label and every count in these snippets is an illustrative placeholder — adapt it to the app, never ship it verbatim.** Source the replacements from the plan:
-> - **Nav / sidebar labels** → the page names from Section 6's Pages table (link to the app's actual pages, not "Overview / Library / Settings").
-> - **Table headers, form field labels, KPI labels** → the real fields of the page's primary entity.
-> - **Rows, cards, values, badge states** → the page's records from Section 6's **Sample Content** block, using the entity's real status values.
-> - **Counts & sizing** → render as many KPI tiles, grid columns, table rows, list cards, tabs, and form fields as the plan's data actually calls for — the `repeat(4, …)` / `repeat(3, …)` and the three-row stubs below are **defaults, not quotas**. A 2-KPI dashboard renders two tiles; a 6-field form renders six fields. See *Adapting sizing to the domain* below.
+> **Every human-readable label and count is illustrative: adapt to the app; never ship verbatim.** Source replacements from plan:
+> - **Nav / sidebar labels** → Section 6 Pages-table names; link actual pages, not "Overview / Library / Settings".
+> - **Table headers, form field labels, KPI labels** → primary entity's real fields.
+> - **Rows, cards, values, badge states** → Section 6 **Sample Content** records with real entity status values.
+> - **Counts & sizing** → match plan data for KPI tiles, grid columns, table rows, list cards, tabs, and form fields. `repeat(4, …)` / `repeat(3, …)` and three-row stubs are **defaults, not quotas**. A 2-KPI dashboard has two tiles; a 6-field form has six fields. See *Adapting sizing to the domain*.
 >
-> The literal strings left in the snippets (e.g. `Active`, `Owner`, `2 min ago`) only show the *shape*. A preview that still reads "Overview / Library / Settings" or "Jane Doe" has not been wired to the plan — that's the bug this contract exists to prevent. Only the **CSS / design tokens** (spacing scale, radii, the `theme.css` classes) stay fixed; all visible text and all counts are plan-driven.
+> Snippet literals (e.g. `Active`, `Owner`, `2 min ago`) show only *shape*. "Overview / Library / Settings" or "Jane Doe" means preview is not plan-wired. Only **CSS / design tokens** (spacing scale, radii, `theme.css` classes) stay fixed; all visible text and counts are plan-driven.
 
-> **State coverage (across the page set, not every page).** The scaffolded app ships all four data states; the preview must **depict** them so the user can sign them off. Across the whole preview set, show the `data` state everywhere, and depict `loading` (the `loading (skeleton)` recipe), `empty` (the `empty` recipe with an icon), and `error` (the `error (inline banner)` recipe) **at least once each** — e.g. one list page rendered as a skeleton, one tab as an empty state, one panel as an error banner. Pick natural spots; do not stack all three on one page.
+> **State coverage (across page set, not each page).** Preview must **depict** all four shipped states for sign-off: `data` everywhere; `loading` via `loading (skeleton)`, `empty` via `empty` with icon, and `error` via `error (inline banner)`, **at least once each**. Use natural spots (e.g. skeleton list page, empty tab, error panel); do not stack all three on one page.
 
 ## Icons (inline SVG)
 
-Every nav item, sidebar item, KPI tile, section-title row, empty state, error banner, and primary CTA carries a **real inline `<svg>` icon** — never emoji, never a Unicode glyph, never a remote icon font. Paste the path data directly. Use a consistent 24×24 `viewBox`, `stroke="currentColor"`, `fill="none"`, `stroke-width="2"`, and round caps/joins so every icon matches. Add `class="preview-icon"` (or `--sm` / `--lg`) for sizing; the icon inherits the surrounding text color.
+Every nav/sidebar item, KPI tile, section-title row, empty state, error banner, and primary CTA needs a **real inline `<svg>` icon**: never emoji, Unicode glyph, or remote icon font. Paste path data. Consistently use 24×24 `viewBox`, `stroke="currentColor"`, `fill="none"`, `stroke-width="2"`, round caps/joins; add `class="preview-icon"` (or `--sm` / `--lg`) for sizing and inherit surrounding text color.
 
 ```html
 <!-- home -->      <svg class="preview-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
@@ -670,7 +670,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 <!-- alert -->     <svg class="preview-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg>
 ```
 
-> Need an icon not listed? Draw any simple 24×24 stroke glyph in the same style, or reuse the closest one above. The goal is a consistent, real icon in every slot — not a specific set.
+> For unlisted icons, draw a simple matching 24×24 stroke glyph or reuse the closest above. Every slot needs a consistent, real icon; exact set is flexible.
 
 ### `header`
 ```html
@@ -687,7 +687,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </header>
 ```
 
-> When `API Login` is `Yes`, show the signed-in app chrome (search, notifications, user avatar). The planning preview still opens on the main authenticated app, never the login screen. When `API Login` is `No`, omit user identity and logout controls; do not imply that the app has accounts.
+> When `API Login` is `Yes`, show signed-in app chrome (search, notifications, user avatar). Planning preview opens on main authenticated app, never login screen. When `API Login` is `No`, omit user identity/logout controls; never imply accounts.
 
 ### `nav` (top horizontal nav)
 ```html
@@ -698,7 +698,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </nav>
 ```
 
-> One link per page in the Pages table — not a fixed three. Give each a matching icon from the `## Icons` set. The current page's link uses `href="#"` and gets `--active`; **every sibling link uses `href="./<sibling-slug>.html"`** (the page's kebab-cased slug) so the host wires it to that page's tab.
+> One link per Pages-table page, not fixed three; each gets matching `## Icons` icon. Current page uses `href="#"` + `--active`; **every sibling uses `href="./<sibling-slug>.html"`** (kebab-cased page slug) for host tab wiring.
 
 ### `sidebar`
 ```html
@@ -712,7 +712,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </aside>
 ```
 
-> Group the app's real pages under however many section headers fit — a small app may need none. Give each item a matching icon from the `## Icons` set. The active item uses `href="#"`; **every other item uses `href="./<sibling-slug>.html"`** so the host wires it to that page's tab. Drop the second group if there's nothing to put in it.
+> Group real pages under any fitting section-header count; small apps may need none. Give each item a matching `## Icons` icon. Active item uses `href="#"`; **every other item uses `href="./<sibling-slug>.html"`** for host tab wiring. Drop empty second group.
 
 ### `hero`
 ```html
@@ -728,7 +728,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </section>
 ```
 
-> The `<span class="preview-hero__mesh">` is a pure-CSS ambient backdrop layered behind the hero content (the `.preview-hero > *` rule lifts the text above it). The `style="color: var(--color-on-primary);"` on the ghost button is an intentional inline-style exception (alongside `modal`) — the ghost variant inherits `--color-text` (dark), illegible on the gradient hero. Primary CTAs **name the action** (`Create project`, not `Submit`).
+> `<span class="preview-hero__mesh">` is pure-CSS ambient backdrop behind hero; `.preview-hero > *` lifts text. Ghost-button `style="color: var(--color-on-primary);"` is an intentional inline-style exception (with `modal`) because inherited `--color-text` is dark and illegible on gradient. Primary CTAs **name the action** (`Create project`, not `Submit`).
 
 ### `kpi-row` (metric tiles, ideal for dashboards)
 ```html
@@ -747,7 +747,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Render **one tile per real metric** from the plan, not a fixed four. The `.preview-kpi-row` grid auto-flows, so 2 or 3 tiles lay out cleanly too. Use `--up` (green) / `--down` (red) on the delta to match the real trend; drop the `__delta` line for metrics with no trend.
+> Render **one tile per real plan metric**, not fixed four. `.preview-kpi-row` auto-flows 2 or 3 tiles cleanly. Match trend with `--up` (green) / `--down` (red); omit `__delta` when no trend.
 
 
 ### `section-title` (in-page heading row with hint)
@@ -801,7 +801,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Render **one card per record** in this page's Sample Content (not a fixed three). Pick the badge variant (`--success` / `--warning` / `--danger` / `--neutral`) whose color fits each record's real state, and replace `{State}` with the entity's actual status word — never the literal "Active / Pending / Draft".
+> Render **one card per Sample Content record**, not fixed three. Choose badge variant (`--success` / `--warning` / `--danger` / `--neutral`) matching real state; replace `{State}` with actual entity status, never literal "Active / Pending / Draft".
 
 ### `grid` (responsive card grid)
 ```html
@@ -817,7 +817,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Render **one card per record**, not a fixed three. The grid auto-fills columns, so any count reflows cleanly. The `.preview-card__media` block is a **neutral placeholder** standing in for the record's image — a subtle surface tint with a border; drop a representative inline-SVG icon (or the entity's initials) inside it. Keep it neutral (surface + border), **not** a brand-color gradient, so it reads as "a photo goes here" rather than a colored panel that shifts every time the palette changes. Never leave it empty.
+> Render **one card per record**, not fixed three; grid auto-fills columns. `.preview-card__media` is a **neutral image placeholder**: subtle surface tint + border, containing representative inline-SVG or entity initials. Keep neutral (surface + border), **not** brand-color gradient, to signal "a photo goes here" without palette-driven shifts. Never leave empty.
 
 
 ### `form`
@@ -843,7 +843,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </form>
 ```
 
-> Render **one field per real field** of this form's entity (from Section 6) — not a fixed three. Use input types that fit (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; tailor the submit label to the action (e.g. "Save", "Create", "Send").
+> Render **one field per real Section 6 entity field**, not fixed three. Use fitting input types (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; name submit action (e.g. "Save", "Create", "Send").
 
 ### `table`
 ```html
@@ -876,7 +876,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Columns are the primary entity's real fields (as many as the entity has — not a fixed four); rows are the page's records from Section 6's Sample Content (one `<tr>` per record).
+> Columns match all primary-entity fields, not fixed four; rows match Section 6 Sample Content, one `<tr>` per record.
 
 ### `actions` / `action-bar`
 ```html
@@ -895,7 +895,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Use the tab names the page's purpose implies — as many as it needs.
+> Use all tab names implied by page purpose.
 
 ### `modal` (rendered inline as a preview — no overlay backdrop in the preview)
 ```html
@@ -921,7 +921,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Depict this on at least one page/tab so the user can sign off the empty state. Swap the icon for one that fits the entity.
+> Depict on at least one page/tab for empty-state sign-off. Use an entity-fitting icon.
 
 ### `loading (skeleton)`
 ```html
@@ -939,7 +939,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Depict the **loading** state once across the page set — e.g. render one list/grid region as skeleton cards instead of data. The shimmer is pure CSS (`preview-shimmer` keyframes); the inline `width` on the last line is a permitted layout shim. For a `grid`, use `<div class="preview-skeleton preview-skeleton--block"></div>` in place of `.preview-card__media`.
+> Depict **loading** once across pages, e.g. one list/grid region as skeleton cards instead of data. Shimmer uses pure CSS (`preview-shimmer` keyframes); last-line inline `width` is permitted layout shim. For a `grid`, replace `.preview-card__media` with `<div class="preview-skeleton preview-skeleton--block"></div>`.
 
 ### `error (inline banner)`
 ```html
@@ -953,7 +953,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Depict the **error** state once across the page set — place this banner above (or in place of) a data region. The `margin-left: auto` is a permitted layout shim to push Retry to the end.
+> Depict **error** once across pages; place banner above or instead of a data region. `margin-left: auto` is permitted layout shim pushing Retry to end.
 
 ### `footer`
 ```html
@@ -983,25 +983,25 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 
 ## Adapting sizing to the domain
 
-The snippets above show a *shape*; the **counts and proportions** must follow the plan's actual data, or every preview collapses back into the same generic four-tile / three-card layout. Match these to the domain:
+Snippets show *shape*; **counts and proportions** must follow actual plan data, avoiding generic four-tile / three-card previews. Match domain:
 
 | Knob | Default in the snippets | Adapt it to… |
 |------|------------------------|--------------|
-| **KPI tiles** | 4 | One per metric the dashboard tracks (a 2-metric app shows 2). The row auto-fits. |
-| **Grid / list cards** | 3 | One per record in this page's Sample Content. The grid auto-fills columns. |
+| **KPI tiles** | 4 | One per tracked dashboard metric (2-metric app shows 2); row auto-fits. |
+| **Grid / list cards** | 3 | One per page Sample Content record; grid auto-fills columns. |
 | **Table rows** | 3 | One `<tr>` per Sample Content record; columns = the entity's real fields. |
-| **Form fields** | 3 | One per real field of the entity (a sign-up form may have 6, a search box 1). |
+| **Form fields** | 3 | One per real entity field (sign-up may have 6; search box 1). |
 | **Nav / sidebar links** | 3 | One per page in Section 6's Pages table. |
-| **Tabs** | 3 | As many as the page's purpose implies. |
-| **Content density** | medium | A list-heavy admin tool packs rows tight; a marketing landing page leans hero + few cards. Let Section 6's Style Direction steer this. |
+| **Tabs** | 3 | Count implied by page purpose. |
+| **Content density** | medium | Tight rows for list-heavy admin; hero + few cards for marketing. Follow Section 6 Style Direction. |
 
-These are the **only** things that should vary per page. The **design tokens** (`--space-*` scale, `--radius-*`, `--text-*`, the `.preview-*` class definitions) stay fixed — they are the shared contract the parent webview's palette/typography editors key off. Customize *what* and *how many*, never the spacing scale or class CSS.
+Only these vary per page. **Design tokens** (`--space-*` scale, `--radius-*`, `--text-*`, `.preview-*` class definitions) stay fixed as parent webview palette/typography editor contract. Customize *what* and *how many*, never spacing scale or class CSS.
 
 ---
 
 ## Wrapping a full page
 
-Wrap the page body in `<div class="preview-root">` so the header → shell → footer flow lays out vertically. When the page uses a `sidebar`, wrap `<aside>` + `<main>` in `<div class="preview-shell">`:
+Wrap page body in `<div class="preview-root">` for vertical header → shell → footer. With `sidebar`, wrap `<aside>` + `<main>` in `<div class="preview-shell">`:
 
 ```html
 <body>
@@ -1019,17 +1019,17 @@ Wrap the page body in `<div class="preview-root">` so the header → shell → f
 </body>
 ```
 
-Pages without a sidebar can put `<section class="preview-main">` directly inside `.preview-root`.
+Without sidebar, put `<section class="preview-main">` directly inside `.preview-root`.
 
-> **Only emit the regions this page's Layout actually lists.** The wrapper above shows the full nesting *order*, not a required set — drop any region the page's Section 6 Layout column doesn't name (no `sidebar` token → no `<aside>`; no `hero` token → no hero block; a bare `form` page is just `header + form`). Never add chrome a page didn't ask for to make it look fuller.
+> **Emit only regions listed by page Layout.** Wrapper shows nesting *order*, not required set. Drop regions absent from Section 6 Layout (no `sidebar` → no `<aside>`; no `hero` → no hero; bare `form` page is `header + form`). Never add unrequested chrome for fullness.
 
 ---
 
 ## Hard rules — read before writing any HTML
 
-1. **One `<link rel="stylesheet" href="./theme.css">` only.** The `ScaffoldPlanViewController` rewrites this exact tag into an inline `<style>` block so the iframe is self-contained. Any other stylesheet reference is dropped.
-2. **No `<script>` tags, no inline `on*=` handlers.** Author JavaScript is stripped before the preview renders — the only script that runs is the host's trusted navigation bridge. Do not rely on any JS behavior. **Cross-page navigation DOES work:** a nav/sidebar link with `href="./<sibling-slug>.html"` is turned into a tab switch by the host, so the preview navigates between pages. Every other control (buttons, inputs, tabs, toggles) is visual only.
-3. **No external assets.** No `<img src="https://…">`, no Google Fonts `<link>`, no Font Awesome CDN. Represent imagery with neutral placeholder blocks (surface + border with a muted icon or initials) — never a remote URL, never a brand-color gradient fill (it overstates the palette's impact), and never an empty tinted box. Icons are **inline `<svg>`** (see the `## Icons` recipe), never emoji or remote icon fonts.
-4. **Inline `style="…"` is allowed only for the small layout shims shown in the recipes above** (flex row wrappers, the hero ghost-button text color, skeleton-line widths, the error-banner Retry `margin-left`). All semantic styling — fonts, palette colors, shadows, spacing scale, elevation, radius — MUST come from `theme.css` so the live palette swatches in the parent webview meaningfully describe what's rendered. Never invent new inline styles to recolor or restyle components.
-5. **File size sanity:** each page HTML should be **< 24 KB**. The richer recipes (KPI rows, status badges, full headers, inline-SVG icons, skeleton/error states) raise the floor; if you're past 24 KB you're inventing content the plan didn't call for.
-6. **Never open these files in a browser or editor tab.** Each `.azure/.preview-temp/*.html` page is consumed *only* by the plan webview's **UI Preview** card, which renders it in a sandboxed iframe. Do not preview it with `simpleBrowser.show`, `vscode.env.openExternal`, a dev/web server, or by opening the `.html` in an editor/preview tab — there is no port or URL, and these files are deleted by the scaffold step.
+1. **Exactly one `<link rel="stylesheet" href="./theme.css">`.** `ScaffoldPlanViewController` rewrites this exact tag to inline `<style>` for self-contained iframe; other stylesheet references are dropped.
+2. **No `<script>` tags or inline `on*=` handlers.** Preview strips author JavaScript; only host's trusted navigation bridge runs. Rely on no JS behavior. **Cross-page navigation works:** host converts nav/sidebar `href="./<sibling-slug>.html"` links to tab switches. All other controls (buttons, inputs, tabs, toggles) are visual only.
+3. **No external assets.** No `<img src="https://…">`, Google Fonts `<link>`, or Font Awesome CDN. Use neutral imagery placeholders (surface + border, muted icon or initials), never remote URL, brand-color gradient fill (overstates palette impact), or empty tinted box. Icons are **inline `<svg>`** (see `## Icons`), never emoji or remote icon fonts.
+4. **Allow inline `style="…"` only for recipe layout shims above** (flex row wrappers, hero ghost-button text color, skeleton-line widths, error-banner Retry `margin-left`). All semantic styling—fonts, palette colors, shadows, spacing scale, elevation, radius—MUST come from `theme.css` so parent-webview live palette swatches describe output. Never invent inline styles for recoloring or restyling.
+5. **File size sanity:** each page HTML **< 24 KB**. Richer recipes (KPI rows, status badges, full headers, inline-SVG icons, skeleton/error states) raise floor; exceeding 24 KB means unplanned content.
+6. **Never open these files in browser or editor tab.** Plan webview **UI Preview** card alone consumes each `.azure/.preview-temp/*.html` in sandboxed iframe. Do not use `simpleBrowser.show`, `vscode.env.openExternal`, dev/web server, or open `.html` in editor/preview tab; no port or URL, and scaffold deletes files.

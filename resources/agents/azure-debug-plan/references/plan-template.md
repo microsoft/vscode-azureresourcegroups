@@ -1,23 +1,22 @@
 # Plan Template
 
-> Generate `.azure/vscode-debug-plan.md` using this template. This file is the
-> **single source of truth** for the generation phase. The generation phase reads this plan and
-> generates all artifacts from it — no re-scanning of the workspace is needed.
+> Generate `.azure/vscode-debug-plan.md` from this template. It is generation's
+> **single source of truth**; generate all artifacts from it without workspace re-scan.
 >
-> The plan is generated directly from the workspace scan. The user reviews the plan,
-> edits it as needed, then approves it before generation proceeds.
+> Generate directly from workspace scan. User reviews, edits as needed, then approves
+> before generation.
 
 ## ⛔ BLOCKING REQUIREMENT
 
-You **MUST** create this plan file and get user approval BEFORE generating any configuration files.
+You **MUST** create this plan and get user approval BEFORE generating config files.
 
 ---
 
 ## Markdown Table Integrity
 
-When editing markdown tables with `replace_string_in_file` or `multi_replace_string_in_file`, always **read the file back** after the edit and verify that each table row is on its own line. Markdown tables require exactly one row per line — a missing newline between `|---|` and `| data |` breaks parsing completely.
+When editing markdown tables with `replace_string_in_file` or `multi_replace_string_in_file`, always **read back** afterward and verify each row has its own line. Tables require exactly one row per line; missing newline between `|---|` and `| data |` breaks parsing.
 
-**Post-edit verification rule:** After any edit to `.azure/vscode-debug-plan.md` that modifies a table, immediately read the affected lines back to confirm the table renders correctly (header, separator, and each data row on separate lines). If rows are concatenated, fix before proceeding.
+**Post-edit verification rule:** After any `.azure/vscode-debug-plan.md` table edit, immediately read affected lines; confirm header, separator, and each data row occupy separate lines. Fix concatenated rows before proceeding.
 
 ---
 

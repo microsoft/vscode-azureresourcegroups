@@ -1,12 +1,12 @@
 # {Type} — Project Type
 
-> **Template** — Copy this file to `project-types/{type}.md` when adding a new server-side project type. For browser-based project types, use `project-types/frontend-spa/` as a reference — the structure differs (Framework Lookup Table replaces Startup Command, debug adapters replace Debugger Properties).
+> **Template** — Copy to `project-types/{type}.md` for a new server-side project type. For browser types, follow `project-types/frontend-spa/`; its Framework Lookup Table replaces Startup Command and debug adapters replace Debugger Properties.
 
 ---
 
 ## Detection Signals
 
-<!-- Files/packages/patterns that identify this project type. Used during the plan phase. -->
+<!-- Files/packages/patterns identifying this project type during planning. -->
 
 | Signal | Notes |
 |--------|-------|
@@ -16,8 +16,8 @@
 
 ## Prerequisites
 
-<!-- Tools or CLIs required by this project type (not the runtime — those go in runtimes/{rt}.md § Prerequisites).
-     Example: Azure Functions Core Tools for functions.md. Omit this section if the project type has no additional tool requirements. -->
+<!-- Project-type tools or CLIs, excluding runtime requirements in runtimes/{rt}.md § Prerequisites.
+     Example: Azure Functions Core Tools for functions.md. Omit if no additional tools are required. -->
 
 | Tool | Detection Command | Required For | Install Link |
 |------|-------------------|-------------|-------------|
@@ -27,8 +27,8 @@
 
 ## Runtime Support Matrix
 
-<!-- Tracks implementation readiness — separate from Runtime Wiring below.
-     Fill in status per runtime: ✅ Full, ⚠️ Emulators only, 🔲 Planned. -->
+<!-- Implementation readiness, separate from Runtime Wiring.
+     Set each runtime: ✅ Full, ⚠️ Emulators only, 🔲 Planned. -->
 
 | Runtime | Status | Reference |
 |---------|--------|-----------|
@@ -43,8 +43,8 @@
 
 ## Dependency Discovery
 
-<!-- How Azure service dependencies are found: bindings, SDK scan, or framework conventions. -->
-<!-- Maps to emulators/{name}.md entries. -->
+<!-- Find Azure dependencies via bindings, SDK scan, or framework conventions. -->
+<!-- Map to emulators/{name}.md. -->
 
 | Dependency Signal | Azure Service | Emulator |
 |------------------|---------------|---------|
@@ -54,9 +54,9 @@
 
 ## Startup Command
 
-<!-- How the app starts locally. E.g.: func host start, docker compose up, npm run dev.
-     For VS Code custom task types (e.g., "type": "func"), the executable prefix is supplied
-     by the extension — omit it from the task JSON command. Show the full CLI equivalent here. -->
+<!-- Local startup. E.g.: func host start, docker compose up, npm run dev.
+     For VS Code custom task types (e.g., "type": "func"), the extension supplies the executable
+     prefix; omit it from task JSON command. Show full CLI equivalent here. -->
 
 ```
 {command}
@@ -66,11 +66,11 @@
 
 ## Runtime Wiring
 
-<!-- Quick-reference index mapping runtimes to project-type-specific task configuration.
-     See § VS Code Task Configuration below for the concrete task JSON per runtime.
-     See generate.md § Source Ownership for how project-type and runtime refs combine. -->
+<!-- Map runtimes to project-type task configuration.
+     See § VS Code Task Configuration for concrete task JSON per runtime.
+     See generate.md § Source Ownership for combining project-type and runtime refs. -->
 
-> See **§ VS Code Task Configuration** below for the concrete task JSON for each runtime.
+> See **§ VS Code Task Configuration** for concrete task JSON per runtime.
 
 | Runtime | Startup task label | Task type | Problem matcher | Request Mode | Status | Reference |
 |---------|--------------------|-----------|-----------------|--------------|--------|-----------|
@@ -83,21 +83,20 @@
 
 ### VS Code Debug Configuration
 
-<!-- Only needed for browser-based project types where the debugger type comes from the project type
-     rather than the runtime (e.g., Frontend SPA uses "chrome").
-     Server-side project types get their debugger type from runtimes/{rt}.md instead — omit this section for those. -->
+<!-- Only browser project types whose debugger comes from project type, not runtime
+     (e.g., Frontend SPA uses "chrome"). Server types use runtimes/{rt}.md; omit for them. -->
 
 ### VS Code Task Configuration
 
-<!-- THE authoritative source for top-level task JSON for this project type.
-     Provide one concrete JSON block per implemented runtime.
-     Include type, label, command, problemMatcher, isBackground, runOptions, and dependsOn.
-     The dependsOn array references task labels from runtimes/{rt}.md § Build Chain.
-     See generate.md § Task runOptions Rules for instanceLimit and instancePolicy guidance. -->
+<!-- Authoritative top-level task JSON for this project type.
+     Give one concrete JSON block per implemented runtime with type, label, command,
+     problemMatcher, isBackground, runOptions, and dependsOn.
+     dependsOn references runtimes/{rt}.md § Build Chain task labels.
+     See generate.md § Task runOptions Rules for instanceLimit and instancePolicy. -->
 
 ### Connection Strings
 
-<!-- Where emulator conn strings are placed. E.g.: local.settings.json, .env, compose env vars -->
+<!-- Emulator connection-string locations. E.g.: local.settings.json, .env, compose env vars -->
 
 | Emulator | Key | Value | File |
 |----------|-----|-------|------|
@@ -107,15 +106,15 @@
 
 ## API Test Collections
 
-<!-- Which test patterns to generate for this project type. Reference api-test-collections.md for the script templates. -->
+<!-- Test patterns to generate. Reference api-test-collections.md for script templates. -->
 
-See [api-test-collections.md](../api-test-collections.md) for all test script patterns.
+See [api-test-collections.md](../api-test-collections.md) for test script patterns.
 
 ---
 
 ## VS Code Extension Recommendations (`.vscode/extensions.json`)
 
-<!-- Extensions required by this project type. Aggregated with runtime extensions into .vscode/extensions.json by generate.md. -->
+<!-- Required project-type extensions. Into .vscode/extensions.json, generate.md aggregates them with runtime extensions. -->
 
 | Extension ID | Why Required |
 |--------------|-------------|
@@ -125,7 +124,7 @@ See [api-test-collections.md](../api-test-collections.md) for all test script pa
 
 ## VS Code Workspace Settings (`.vscode/settings.json`)
 
-<!-- Settings contributed by this project type. Aggregated with runtime settings into .vscode/settings.json by generate.md. -->
+<!-- Project-type settings. Into .vscode/settings.json, generate.md aggregates them with runtime settings. -->
 
 | Setting | Value | Why |
 |---------|-------|-----|
@@ -135,8 +134,8 @@ See [api-test-collections.md](../api-test-collections.md) for all test script pa
 
 ## Validation Signals
 
-<!-- Used by validation.md during Phase 3 to verify the generated debug configuration works.
-     When adding a new project type, you MUST fill in these tables — validation.md references them. -->
+<!-- validation.md uses these in Phase 3 to verify generated debug configuration.
+     New project types MUST complete these tables. -->
 
 ### Ready Signal
 
@@ -154,13 +153,13 @@ See [api-test-collections.md](../api-test-collections.md) for all test script pa
 
 ## Checklist — {Type} Project Validation
 
-<!-- Post-generation self-check for this project type. Verify generated artifacts are correct — do not run or start anything. -->
+<!-- Post-generation artifact check only; do not run or start anything. -->
 
-After generating `launch.json`, `tasks.json`, and `extensions.json`, verify the following were produced correctly:
+After generating `launch.json`, `tasks.json`, and `extensions.json`, verify:
 
-1. ✅ Startup task exists in `tasks.json` with the correct type and problem matcher
-2. ✅ `launch.json` `preLaunchTask` points to the startup task
-3. ✅ `.vscode/extensions.json` includes project-type extensions listed above
-4. ✅ `dependsOn` chain includes runtime build/watch task and `Start Emulators` (when emulators are required)
+1. ✅ Startup task exists in `tasks.json` with correct type and problem matcher
+2. ✅ `launch.json` `preLaunchTask` targets startup task
+3. ✅ `.vscode/extensions.json` includes extensions above
+4. ✅ `dependsOn` includes runtime build/watch task and `Start Emulators` when required
 
-> Runtime-specific checks (e.g., build task, debugger type) are defined in `runtimes/{rt}.md`.
+> Runtime checks (e.g., build task, debugger type) are in `runtimes/{rt}.md`.

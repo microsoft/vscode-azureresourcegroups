@@ -1,12 +1,12 @@
 # API Test Collection Patterns
 
-> Reference for generating `api-test-collections/{service-id}/` scripts, where `{service-id}` is the canonical service ID derived from the plan's **Service Label** column (see [generate.md](generate.md) § Service ID Derivation). Only generate test collections for services whose **Generate** column is checked in the plan. Scripts should be language-agnostic commands that exercise the running app and test its integration with any live emulators.
+> Generates `api-test-collections/{service-id}/` scripts. `{service-id}` is canonical ID from plan **Service Label** (see [generate.md](generate.md) § Service ID Derivation). Generate only for checked **Generate** services. Use language-agnostic commands exercising running app and live-emulator integrations.
 
 ---
 
 ## HTTP
 
- **HTTP patterns** use `{baseUrl}` — the project type supplies the base URL (e.g., `http://localhost:7071/api` for Functions). All other patterns target the emulator directly and are reusable across project types.
+ **HTTP patterns** use project-type `{baseUrl}` (e.g., `http://localhost:7071/api` for Functions). Other patterns directly target emulators and work across project types.
 
 ### GET request
 
@@ -82,7 +82,7 @@ curl -k -X POST "https://localhost:8081/dbs/{database}/colls/{collection}/docs" 
   -d '{"id": "test-001", "partitionKey": "test", "data": "sample"}'
 ```
 
-> `-k` disables TLS verification for the emulator's self-signed cert. Never use in production.
+> `-k` disables TLS verification for emulator self-signed cert. Never use in production.
 
 ---
 
@@ -99,7 +99,7 @@ curl -i -X POST "http://localhost:5672/messages" \
   -d '{"id": "test-001", "data": "sample"}'
 ```
 
-> The Service Bus Emulator's HTTP endpoint and port may vary. Check the emulator documentation and docker-compose configuration for the correct URL. For SDK-based testing, use the Azure Service Bus SDK with the emulator connection string from `emulators/` config.
+> Service Bus Emulator HTTP endpoint/port may vary. Check emulator docs and docker-compose configuration for correct URL. SDK tests use Azure Service Bus SDK with connection string from `emulators/` config.
 
 ### Send a message to a topic
 
@@ -110,7 +110,7 @@ curl -i -X POST "http://localhost:5672/messages" \
   -d '{"id": "test-001", "data": "sample"}'
 ```
 
-> Adjust the URL path for topic-specific endpoints per the emulator's API surface.
+> Adjust URL path for topic endpoints per emulator API surface.
 
 ---
 
@@ -126,13 +126,13 @@ curl -i -X POST "http://localhost:5672/messages" \
   -d '{"id": "test-001", "data": "sample"}'
 ```
 
-> The Event Hubs Emulator's HTTP endpoint and port may vary. Check the emulator documentation and docker-compose configuration for the correct URL. For SDK-based testing, use the Azure Event Hubs SDK with the emulator connection string from `emulators/` config.
+> Event Hubs Emulator HTTP endpoint/port may vary. Check emulator docs and docker-compose configuration for correct URL. SDK tests use Azure Event Hubs SDK with connection string from `emulators/` config.
 
 ---
 
 ## Timer (Azure Functions only)
 
-Timer triggers cannot be fired by an external event — the Functions host fires them on schedule. Use the Functions admin API to trigger them on demand:
+External events cannot fire timer triggers; Functions host runs their schedule. Trigger on demand through Functions admin API:
 
 ```sh
 curl -i -X POST "http://localhost:7071/admin/functions/{FunctionName}" \
@@ -140,29 +140,29 @@ curl -i -X POST "http://localhost:7071/admin/functions/{FunctionName}" \
   -d '{}'
 ```
 
-> This calls the Functions admin endpoint which is only available locally. The `{}` body is required; the timer trigger ignores it.
+> Functions admin endpoint is local-only. `{}` body required but ignored by timer trigger.
 
 ---
 
 ## Generation Rules
 
-When generating API test collections during Phase 2:
+During Phase 2 API test collection generation:
 
-1. Resolve endpoints from the implemented route registrations, not only `.azure/project-plan.md`. The project plan intentionally omits derived authentication routes, so include implemented registration, login, and current-user endpoints when `API Login` is enabled.
-2. Create one top-level subdirectory per service: `api-test-collections/{service-id}/`, where `{service-id}` is derived from the plan's **Service Label** column (see [generate.md](generate.md) § Service ID Derivation). Only generate for services whose **Generate** column is checked in the plan.
-3. Within each service directory, generate one subdirectory per trigger/endpoint found during inventory.
-4. Name the trigger directory after the trigger: `{trigger-type}-{function-or-endpoint-name}` (e.g., `http-GetOrder`, `blob-ProcessUpload`).
-5. Create an `invoke` script (`.sh` on macOS/Linux, `.ps1` on Windows) with the appropriate pattern from this file, substituting discovered values (function name, container name, etc.).
-6. Create a `sample-data.json` or `sample-message.json` next to the invoke script when the test requires a body.
+1. Resolve endpoints from implemented route registrations, not only `.azure/project-plan.md`; the project plan intentionally omits derived authentication routes, so include implemented registration, login, and current-user endpoints when `API Login` is enabled.
+2. Create `api-test-collections/{service-id}/` per service, deriving `{service-id}` from the plan's **Service Label** (see [generate.md](generate.md) § Service ID Derivation). Generate only services whose **Generate** column is checked.
+3. Within each service directory, create one subdirectory per inventoried trigger/endpoint.
+4. Name the trigger directory `{trigger-type}-{function-or-endpoint-name}` (e.g., `http-GetOrder`, `blob-ProcessUpload`).
+5. Create an `invoke` script (`.sh` on macOS/Linux, `.ps1` on Windows) from the appropriate pattern here, substituting discovered values (function name, container name, etc.).
+6. When a body is required, place `sample-data.json` or `sample-message.json` beside the invoke script.
 7. On macOS/Linux, make the script executable (`chmod +x`).
 
-> **Do not generate timer test scripts** unless the user explicitly requests it — they're rarely needed for local debugging.
+> Generate timer test scripts only on explicit user request; rarely needed locally.
 
 ---
 
 ## Plan Section Formatting Rules
 
-When writing the **API Test Collections** section of the plan, the heading format may vary by trigger type. In all cases, the subfolder names under `api-test-collections/{service-id}/` (e.g., `http-register`, `http-createOrder`) should also be referenced in each section's markdown heading when they differ so users can easily see which routes map to each invokable script.
+In plan **API Test Collections**, heading format varies by trigger. Include differing subfolder names under `api-test-collections/{service-id}/` (e.g., `http-register`, `http-createOrder`) in each section heading, exposing route-to-script mapping.
 
 ---
 
@@ -218,4 +218,4 @@ When writing the **API Test Collections** section of the plan, the heading forma
 ### Event Hubs: telemetry `eventhubs-sendTelemetry`
 ```
 
-> The 🔒 indicator does not apply to non-HTTP triggers — they are invoked by pushing data into the resource directly, not via an authenticated HTTP call.
+> 🔒 excludes non-HTTP triggers: direct resource data push, not authenticated HTTP call.

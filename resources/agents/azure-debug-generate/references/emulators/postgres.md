@@ -1,6 +1,6 @@
 # PostgreSQL
 
-> PostgreSQL has no Azure-provided emulator. Use the standard `postgres` Docker image for local development. If the project targets **Azure Cosmos DB for PostgreSQL**, note in the plan that no local emulator is available.
+> PostgreSQL lacks Azure-provided emulator. Use standard `postgres` Docker image locally. For **Azure Cosmos DB for PostgreSQL**, note in plan: no local emulator.
 
 ## Docker Image
 
@@ -10,12 +10,10 @@ postgres:16
 
 ## docker-compose Service Block
 
-Declare the local credentials **once** in a workspace-root `.env`, then reference them everywhere
-else. Compose interpolates `${...}` from `.env` (or the shell environment), so the same values feed
-the database service and every application service.
+Declare local credentials **once** in workspace-root `.env`; reference everywhere.
+Compose interpolates `${...}` from `.env` (or shell), feeding database and every app service.
 
-`.env` is required — without it Compose interpolates `${POSTGRES_USER}` to an empty string and the
-database silently fails to authenticate:
+`.env` required; otherwise Compose makes `${POSTGRES_USER}` empty and database auth silently fails:
 
 ```
 POSTGRES_USER=postgres
@@ -23,15 +21,13 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_DB=localdev
 ```
 
-> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
-> compromised and has to be rotated — deleting it in a later commit leaves the value in history and
-> in every existing clone and fork. Private repositories are no exception. If the project has no
-> `.gitignore`, or has one that omits `.env`, fix that before writing the file.
+> ⛔ **`.gitignore` must list `.env` before you create it.** Committed credentials are
+> compromised and require rotation; later deletion leaves them in history, clones, and forks.
+> Private repositories included. If `.gitignore` is absent or omits `.env`, fix before writing.
 
-> **Never inline a concrete `user:password@host` URL** in a generated file — build it from the
-> variables above. Beyond hard-coding a credential, such literals are rewritten by secret-redaction
-> filters, and a masked value starting with `*` is a fatal YAML parse error: YAML reads a leading
-> `*` as an alias reference.
+> **Never inline a concrete `user:password@host` URL** in generated files; build from variables
+> above. Besides hard-coding credentials, secret-redaction filters rewrite such literals; masked
+> values starting with `*` fatally fail YAML parsing because leading `*` means alias reference.
 
 ```yaml
 services:
@@ -72,7 +68,7 @@ volumes:
 
 ## Connection String
 
-The host depends on where the client runs:
+Host depends on client location:
 
 | Client location | Host |
 |---|---|
@@ -85,28 +81,27 @@ postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
 
 ## Required App Environment Variables
 
-Declare these in the workspace-root **`.env`**, alongside the `POSTGRES_*` values:
+Declare in workspace-root **`.env`** beside `POSTGRES_*` values:
 
 | Variable | Value |
 |----------|-------|
 | `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}` |
 | `POSTGRES_CONNECTION_STRING` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}` |
 
-> Use whichever variable name the project's ORM or SDK expects. Both forms above are shown as reference.
-> When the value is set on a docker-compose service, replace the `localhost` host with `postgres`.
+> Use variable name expected by project ORM/SDK. Above forms are references.
+> For docker-compose service values, replace `localhost` host with `postgres`.
 
-> **`.env` must declare every key `.env.example` declares.** `.env.example` is documentation —
-> nothing loads it, so a key that appears only there is undefined at run time.
+> **`.env` must declare every key `.env.example` declares.** `.env.example` is unloaded
+> documentation; keys only there remain undefined at run time.
 
-> **A runtime settings file does not cover host-run tasks.** `local.settings.json` is read by the
-> Azure Functions host and a compose `environment:` block by its own container; neither reaches a
-> VS Code task that runs a tool directly on the host, such as `npm run db:migrate`. That client
-> fails with "Unable to acquire a connection", which reads like an unready database but is a
-> missing variable — it never opened a socket. Put the value in `.env` so both paths resolve it.
+> **A runtime settings file does not cover host-run tasks.** Azure Functions host reads
+> `local.settings.json`; its container reads compose `environment:`. Neither reaches host VS Code
+> tasks such as `npm run db:migrate`. "Unable to acquire a connection" may mean missing variable,
+> not unready database; no socket opened. Put value in `.env` for both paths.
 
 ## Healthcheck
 
-The healthcheck is included in the docker-compose service block above. It uses `pg_isready` to verify PostgreSQL is accepting connections. The migration service (see [migrations.md](../migrations.md)) depends on `condition: service_healthy` to wait for readiness before running migrations.
+The docker-compose block above uses `pg_isready` to verify PostgreSQL accepts connections. Migration service (see [migrations.md](../migrations.md)) waits through `condition: service_healthy` before migrations.
 
 ```yaml
 healthcheck:
@@ -120,6 +115,6 @@ healthcheck:
 ## Notes
 
 - Port 5432 is the standard PostgreSQL port.
-- Default credentials (`postgres`/`postgres`) are intentionally simple for local dev and are declared in the workspace-root `.env`. Never use in production.
-- Data is persisted to the **named volume `postgres_data`** (managed by the container engine, not a workspace folder). Reset it with `docker compose down -v` / `podman compose down -v`, or `docker volume rm <project>_postgres_data`. Because it is not a workspace directory, it needs no `.vscode/settings.json` `files.exclude` entry and is not part of the workspace stale-**directory** preflight check.
-- **Container runtime:** Certified for both **Docker** and **Podman** — the service block, healthcheck, and named `postgres_data` volume are unchanged for either engine. The named volume (not a bind mount) is what lets `initdb` run under rootless Podman on Windows/macOS. The `condition: service_healthy` gate that migrations depend on is honored by both `docker compose` and `podman compose`.
+- Simple local-dev default credentials (`postgres`/`postgres`) live in workspace-root `.env`. Never use in production.
+- Data persists to container-engine-managed **named volume `postgres_data`**, not a workspace folder. Reset via `docker compose down -v` / `podman compose down -v`, or `docker volume rm <project>_postgres_data`. It needs no `.vscode/settings.json` `files.exclude` entry and is excluded from workspace stale-**directory** preflight checks.
+- **Container runtime:** Certified for **Docker** and **Podman**; service block, healthcheck, and named `postgres_data` volume are unchanged for either engine. This named volume, not a bind mount, lets `initdb` run under rootless Podman on Windows/macOS. Both `docker compose` and `podman compose` honor the migrations' `condition: service_healthy` gate.
