@@ -106,7 +106,8 @@ tools:
 # output limit. Before the agent runs, this trusted step writes snapshot.json
 # under RUNNER_TEMP with the PR's file list, relevant diffs, and proposed file
 # contents. The offline reader mounts it read-only and returns small chunks.
-# See github/github-mcp-server#625 and github/github-mcp-server#3236.
+# This snapshot reader works around the GitHub MCP response-size limits tracked
+# in github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Prepare local PR review snapshot
     uses: actions/github-script@v9
