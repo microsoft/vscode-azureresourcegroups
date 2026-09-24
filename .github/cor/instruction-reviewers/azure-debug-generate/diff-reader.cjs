@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/* eslint-disable @typescript-eslint/no-require-imports -- This stdio entrypoint runs as CommonJS. */
+
 const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { createInterface } = require('node:readline');

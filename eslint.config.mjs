@@ -74,12 +74,6 @@ export default defineConfig([
         },
     },
     {
-        files: ['.github/cor/instruction-reviewers/**/*.cjs'],
-        rules: {
-            '@typescript-eslint/no-require-imports': 'off',
-        },
-    },
-    {
         // The Copilot on Rails React views use display strings as object keys (e.g. "Static Web Apps")
         // for lookup maps and the React-required `__html` property in `dangerouslySetInnerHTML`.
         // These don't fit camelCase/PascalCase but are intentional.

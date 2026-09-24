@@ -251,7 +251,10 @@ pre-agent-steps:
           core.warning('Diff snapshot exceeds the 16 MiB limit');
         }
         fs.writeFileSync(path.join(directory, 'snapshot.json'), serialized, { flag: 'wx', mode: 0o444 });
-# The reader has no token or network; GitHub MCP and the trusted Actions step handle API calls.
+# `cor-review-diffs` is this Node MCP server's name. The mount makes the runner's
+# snapshot directory visible inside its container at /cor-review-diffs, read-only.
+# The reader runs from there without a GitHub token or network access; the agent
+# can call only read_pr_diff.
 mcp-servers:
   cor-review-diffs:
     container: ghcr.io/github/gh-aw-node
@@ -267,7 +270,8 @@ mcp-servers:
       EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     allowed: [read_pr_diff]
-# The agent's GitHub tools are read-only; review publication goes through safe outputs.
+# The reader and GitHub MCP tools are read-only. Safe outputs post the review or
+# diagnostic comment requested by the agent.
 safe-outputs:
   github-token: ${{ secrets.GITHUB_TOKEN }}
   missing-tool: false
