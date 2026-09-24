@@ -7,6 +7,15 @@ and head commits, and compares event SHAs on automatic runs. An
 `.review-head` without persisting credentials. It does not run PR files or
 install their dependencies.
 
+With `checkout: false`, gh-aw does not check out the repository in the agent
+job. An explicit sparse checkout fetches only the reviewer helpers from the
+workflow's pinned commit (`main` for normal PR and comment runs) into
+`.review-trusted`. The scripts are copied to runner temp before the separate
+PR-head checkout and before inference. A branch-scoped `workflow_dispatch`
+used for this prototype deliberately fetches helpers from that test branch;
+remove the temporary dispatch exception before relying on the default-branch
+trust boundary.
+
 `stage-review.mjs` computes the merge base, gets a NUL-delimited Git file
 listing, and checks its count against the PR API's `changed_files`. It stages
 one Git patch per scoped file, including deletions and either side of a

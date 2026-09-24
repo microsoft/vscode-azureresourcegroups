@@ -109,13 +109,30 @@ mcp-servers:
     entrypoint: node
     args:
       - '--mount'
-      - 'type=bind,source=${{ github.workspace }}/.github/cor/instruction-reviewers/azure-debug-generate/review-reader.mjs,target=/review/reader.mjs,readonly'
+      - 'type=bind,source=${{ runner.temp }}/gh-aw/review-helpers/review-reader.mjs,target=/review/reader.mjs,readonly'
       - '--mount'
       - 'type=bind,source=${{ runner.temp }}/gh-aw/review-evidence/bundle.json,target=/review/bundle.json,readonly'
     entrypointArgs: ['/review/reader.mjs']
     env:
       REVIEW_BUNDLE_DIR: /review
     allowed: [review_manifest, review_chunk]
+steps:
+  - name: Fetch trusted reviewer helpers (not the PR head)
+    uses: actions/checkout@v7
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ github.workflow_sha }}
+      fetch-depth: 1
+      persist-credentials: false
+      path: .review-trusted
+      sparse-checkout: .github/cor/instruction-reviewers/azure-debug-generate
+  - name: Preserve trusted review helpers before base-branch restoration
+    env:
+      REVIEW_HELPERS: ${{ runner.temp }}/gh-aw/review-helpers
+    run: |
+      mkdir -p "$REVIEW_HELPERS"
+      cp .review-trusted/.github/cor/instruction-reviewers/azure-debug-generate/stage-review.mjs "$REVIEW_HELPERS/"
+      cp .review-trusted/.github/cor/instruction-reviewers/azure-debug-generate/review-reader.mjs "$REVIEW_HELPERS/"
 pre-agent-steps:
   - name: Pin the open, same-repository pull request
     id: review_identity
@@ -161,7 +178,7 @@ pre-agent-steps:
       REVIEW_HEAD: ${{ steps.review_identity.outputs.head }}
       REVIEW_CHANGED_COUNT: ${{ steps.review_identity.outputs.changed_count }}
       REVIEW_PULL_NUMBER: ${{ steps.review_identity.outputs.pull_number }}
-    run: node .github/cor/instruction-reviewers/azure-debug-generate/stage-review.mjs
+    run: node "${RUNNER_TEMP}/gh-aw/review-helpers/stage-review.mjs"
 safe-outputs:
   github-token: ${{ secrets.GITHUB_TOKEN }}
   missing-tool: false
