@@ -89,7 +89,7 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# Do not check out PR code; the reviewer and reader come from the workflow commit.
+# A PR can edit the reviewer itself; never check out or execute its version.
 checkout: false
 inlined-imports: true
 tools:
@@ -102,12 +102,13 @@ tools:
     toolsets: [pull_requests, repos]
     allowed: [pull_request_read, get_file_contents]
     min-integrity: none
-# GitHub tools return entire patches and head files; oversized responses spill to
-# a temp file the shell-less agent cannot read. A trusted Actions step stages the
-# scoped files; the stdio reader only returns bounded chunks of local data.
+# GitHub tools return whole diffs and file contents, often beyond the agent's
+# output limit. Before the agent runs, this trusted step writes snapshot.json
+# under RUNNER_TEMP with the PR's file list, relevant diffs, and proposed file
+# contents. The offline reader mounts it read-only and returns small chunks.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
-  - name: Stage trusted diff snapshot
+  - name: Prepare local PR review snapshot
     uses: actions/github-script@v9
     env:
       TRUSTED_SHA: ${{ github.workflow_sha }}
@@ -118,7 +119,8 @@ pre-agent-steps:
       script: |
         const fs = require('node:fs');
         const path = require('node:path');
-        // With checkout disabled, fetch code from the workflow commit, never the PR head.
+
+        // Load executable code from this workflow's revision, never the PR branch.
         const { data } = await github.rest.repos.getContent({
           owner: context.repo.owner,
           repo: context.repo.repo,
@@ -128,13 +130,14 @@ pre-agent-steps:
         if (Array.isArray(data) || data.type !== 'file' || data.encoding !== 'base64') {
           throw new Error('Trusted diff reader was not found at the workflow commit');
         }
+
+        // The MCP container sees these files read-only. Never overwrite an existing script.
         const directory = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'cor-review-diffs');
         fs.mkdirSync(directory, { recursive: true });
-        // The gateway mounts this directory read-only into the stdio container.
-        // Refuse to overwrite an existing script in runner temp.
         fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
           flag: 'wx', mode: 0o444,
         });
+
         const { scoped } = require(path.join(directory, 'diff-reader.cjs'));
         const owner = context.repo.owner;
         const repo = context.repo.repo;
@@ -143,31 +146,46 @@ pre-agent-steps:
         if (!Number.isSafeInteger(pr) || pr < 1) {
           throw new Error('Invalid PR number for diff snapshot');
         }
+
+        // Keep only the metadata needed to verify PR identity and every changed file.
         const selectPull = pull => ({
-          state: pull.state, changed_files: pull.changed_files,
-          base: { sha: pull.base?.sha, repo: {
-            id: pull.base?.repo?.id, full_name: pull.base?.repo?.full_name,
-          } },
-          head: { sha: pull.head?.sha, repo: { id: pull.head?.repo?.id } },
+          state: pull.state,
+          changed_files: pull.changed_files,
+          base: {
+            sha: pull.base?.sha,
+            repo: { id: pull.base?.repo?.id, full_name: pull.base?.repo?.full_name },
+          },
+          head: {
+            sha: pull.head?.sha,
+            repo: { id: pull.head?.repo?.id },
+          },
         });
+        // Save diff text only for the agent instructions this workflow reviews.
         const selectFile = file => ({
-          filename: file.filename, previous_filename: file.previous_filename,
-          status: file.status, additions: file.additions,
-          deletions: file.deletions, changes: file.changes,
+          filename: file.filename,
+          previous_filename: file.previous_filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          changes: file.changes,
           ...(scoped(file.filename) || scoped(file.previous_filename) ? { patch: file.patch } : {}),
         });
+
         const getPull = async () => (await github.rest.pulls.get({ owner, repo, pull_number: pr })).data;
         const snapshot = { repository, pr, pages: [], headFiles: [] };
+
         try {
+          // Pin the PR before reading files; the reader rejects closed, forked, or moved PRs.
           const before = await getPull();
           snapshot.before = selectPull(before);
           const base = process.env.EXPECTED_BASE_SHA || before.base?.sha;
           const head = process.env.EXPECTED_HEAD_SHA || before.head?.sha;
+
           if (before.state === 'open' && before.base?.repo?.full_name === repository &&
               before.head?.repo?.id === before.base?.repo?.id &&
               before.base.sha === base && before.head.sha === head &&
               Number.isSafeInteger(before.changed_files) && before.changed_files <= 3000) {
-            // Fetch full patches here, but only stage patches from the reviewed bundle.
+            // Compare the recorded commits so the PR listing can be checked against an immutable diff.
             const comparison = (await github.rest.repos.compareCommitsWithBasehead({
               owner, repo, basehead: `${base}...${head}`,
             })).data;
@@ -175,6 +193,8 @@ pre-agent-steps:
               merge_base_commit: { sha: comparison.merge_base_commit?.sha },
               files: comparison.files?.map(selectFile),
             };
+
+            // Fetch every PR file, but keep diff text only for the reviewed instructions.
             let count = 0;
             for (let page = 1; count < before.changed_files; page++) {
               const entries = (await github.rest.pulls.listFiles({
@@ -186,12 +206,15 @@ pre-agent-steps:
                 break;
               }
             }
+            // A full last page needs one more request to prove pagination ended.
             if (count === before.changed_files && count > 0 && count % 100 === 0) {
               const extra = (await github.rest.pulls.listFiles({
                 owner, repo, pull_number: pr, per_page: 100, page: count / 100 + 1,
               })).data;
               snapshot.pages.push(extra.map(selectFile));
             }
+
+            // Read proposed file contents at the pinned commit, not from a moving branch.
             for (const file of snapshot.pages.flat()) {
               if ((scoped(file.filename) || scoped(file.previous_filename)) && file.status !== 'removed') {
                 const { data: content } = await github.rest.repos.getContent({
@@ -206,17 +229,22 @@ pre-agent-steps:
                 });
               }
             }
+
+            // The offline reader checks that the PR did not move during these API calls.
             snapshot.after = selectPull(await getPull());
           } else {
             snapshot.after = snapshot.before;
           }
         } catch (error) {
+          // Preserve API failures as errors; never serve an incomplete snapshot as a review.
           const status = Number.isSafeInteger(error.status) ? error.status : 'unavailable';
           snapshot.error = status === 'unavailable'
             ? `Snapshot staging failed (${error.name || 'unknown error'})`
             : `GitHub read failed (${status})`;
           core.warning(snapshot.error);
         }
+
+        // The reader rejects an oversized snapshot instead of silently truncating it.
         let serialized = JSON.stringify(snapshot);
         if (Buffer.byteLength(serialized) > 16 * 1024 * 1024) {
           serialized = JSON.stringify({ repository, pr, error: 'Snapshot exceeds 16 MiB' });
