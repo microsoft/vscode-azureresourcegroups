@@ -89,7 +89,9 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# A PR can edit the reviewer itself; never check out or execute its version.
+# Keep the agent on trusted workflow instructions, not the PR branch: a PR
+# could change its own reviewer or rubric. The pre-agent step below fetches
+# PR changes through GitHub's API into a read-only snapshot instead.
 checkout: false
 inlined-imports: true
 tools:
