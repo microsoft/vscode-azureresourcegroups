@@ -64,7 +64,6 @@ export default defineConfig([
                 module: 'writable',
                 process: 'readonly',
                 require: 'readonly',
-                structuredClone: 'readonly',
             },
         },
         rules: {
