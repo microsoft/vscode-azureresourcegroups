@@ -71,7 +71,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     if (data.error) {
         throw new Error(`Diff snapshot preparation failed: ${data.error}`);
     }
-    if (data.repository !== repository || data.pr !== pr || !Array.isArray(data.pages)) {
+    if (data.repository !== repository || data.pr !== pr || !Array.isArray(data.files)) {
         throw new Error('Diff snapshot does not match the requested PR');
     }
 
@@ -97,58 +97,33 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('PR changed-file count exceeds the 3,000-file API limit');
     }
 
-    // Compare uses the merge base, unlike reading a file directly at the base tip.
-    const compare = data.compare;
-    if (!shaPattern.test(compare.merge_base_commit?.sha) || !Array.isArray(compare.files)) {
-        throw new Error('Missing immutable merge-base comparison');
+    // The trusted preparation step diffs the merge base, not the base tip.
+    if (!shaPattern.test(data.mergeBaseSha)) {
+        throw new Error('Missing merge-base commit');
     }
 
-    const files = [];
+    const files = data.files;
     const names = new Set();
-    // Check every staged API page before answering, so a partial listing cannot look complete.
-    for (let page = 1; files.length < count; page++) {
-        const entries = data.pages[page - 1];
-        if (!Array.isArray(entries) || !entries.length || entries.length > 100) {
-            throw new Error('Incomplete PR file pagination');
+    for (const file of files) {
+        if (typeof file.filename !== 'string' || !file.filename ||
+            names.has(file.filename) || typeof file.status !== 'string' ||
+            !Number.isSafeInteger(file.additions) || !Number.isSafeInteger(file.deletions) ||
+            file.changes !== file.additions + file.deletions ||
+            file.status === 'renamed' && !file.previous_filename) {
+            throw new Error('Invalid or duplicated PR file metadata');
         }
-        for (const file of entries) {
-            if (typeof file.filename !== 'string' || !file.filename ||
-                names.has(file.filename) || typeof file.status !== 'string' ||
-                !Number.isSafeInteger(file.additions) || !Number.isSafeInteger(file.deletions) ||
-                file.changes !== file.additions + file.deletions ||
-                file.status === 'renamed' && !file.previous_filename) {
-                throw new Error('Invalid or duplicated PR file metadata');
-            }
-            names.add(file.filename);
-            files.push(file);
-        }
-        if (entries.length < 100 && files.length < count) {
-            throw new Error('Incomplete PR file pagination');
-        }
+        names.add(file.filename);
     }
 
-    if (files.length !== count || count > 0 && count % 100 === 0 &&
-        (!Array.isArray(data.pages[count / 100]) || data.pages[count / 100].length)) {
+    if (files.length !== count) {
         throw new Error('PR file count does not match changed_files');
     }
 
-    // GitHub limits compare.files to 300 entries; later scoped patches fail closed.
-    if (compare.files.length !== Math.min(count, 300) ||
-        compare.files.some(file => {
-            const listed = files.find(entry => entry.filename === file.filename);
-            return !listed || file.status !== listed.status ||
-                file.previous_filename !== listed.previous_filename ||
-                file.additions !== listed.additions || file.deletions !== listed.deletions ||
-                file.changes !== listed.changes;
-        })) {
-        throw new Error('Immutable comparison differs from the PR file listing');
-    }
-
-    // The PR may have moved while the snapshot was being fetched.
+    // The PR may have moved while its Git objects were being prepared.
     checkPull(data.after, base, head);
     // Fingerprint the complete listing so paginated responses can be verified as one consistent snapshot.
-    const metadata = files.map(({ filename, previous_filename, status, additions, deletions, changes }) =>
-        ({ filename, previous_filename, status, additions, deletions, changes }));
+    const metadata = files.map(({ filename, previous_filename, status, additions, deletions, changes, oldMode, newMode }) =>
+        ({ filename, previous_filename, status, additions, deletions, changes, oldMode, newMode }));
     const hash = value => createHash('sha256').update(value).digest('hex');
     const listingSha256 = hash(JSON.stringify(metadata));
 
@@ -161,7 +136,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
             throw new Error('Invalid listing request');
         }
         const result = {
-            baseSha: base, headSha: head, changedFiles: count, listingSha256,
+            baseSha: base, headSha: head, mergeBaseSha: data.mergeBaseSha, changedFiles: count, listingSha256,
             files: [], nextCursor: position, complete: position === count,
         };
         for (let i = position; i < count; i++) {
@@ -186,21 +161,22 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
         throw new Error('Diff request is outside the reviewed files');
     }
 
-    const immutable = compare.files.find(entry => entry.filename === filename);
-    if (!immutable) {
-        throw new Error('Scoped file is beyond the immutable comparison limit');
-    }
-    if (immutable.patch !== file.patch) {
-        throw new Error('PR patch differs from the immutable comparison');
+    if (file.binary || !['000000', '100644', '100755'].includes(file.oldMode) ||
+        !['000000', '100644', '100755'].includes(file.newMode)) {
+        throw new Error('Scoped file has an unsupported binary or object type');
     }
     if (file.changes && (typeof file.patch !== 'string' || !file.patch)) {
-        throw new Error('GitHub omitted a changed file patch');
+        throw new Error('Missing scoped Git patch');
     }
-    if (!file.changes && file.status !== 'renamed' && file.status !== 'copied') {
-        throw new Error('Cannot establish a patch for a changed file');
+    if (!file.changes && file.status !== 'renamed' && file.status !== 'copied' &&
+        file.oldMode === file.newMode) {
+        throw new Error('Cannot establish a diff for a changed file');
     }
 
     const patch = file.patch || '';
+    if (Buffer.byteLength(patch) !== file.patchBytes || hash(patch) !== file.patchSha256) {
+        throw new Error('Scoped Git patch differs from the staged checksum');
+    }
     let additions = 0;
     let deletions = 0;
     let oldRemaining = 0;
@@ -234,7 +210,7 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     }
     if (oldRemaining || newRemaining || additions !== file.additions ||
         deletions !== file.deletions || file.changes && !hunks) {
-        throw new Error('Truncated or inconsistent PR patch');
+        throw new Error('Truncated or inconsistent Git patch');
     }
     const bytes = Buffer.from(patch, 'utf8');
     // Cursor offsets are bytes, but each returned chunk must end on a character.
@@ -244,8 +220,10 @@ async function readPrDiff({ mode, cursor, filename, baseSha, headSha }, { env = 
     let end = Math.min(position + 5500, bytes.length);
     while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) { end--; }
     const result = {
-        baseSha: base, headSha: head, filename, previousFilename: file.previous_filename,
-        status: file.status, offset: position, totalBytes: bytes.length, sha256: hash(bytes),
+        baseSha: base, headSha: head, mergeBaseSha: data.mergeBaseSha,
+        filename, previousFilename: file.previous_filename,
+        status: file.status, oldMode: file.oldMode, newMode: file.newMode,
+        offset: position, totalBytes: bytes.length, sha256: hash(bytes),
         chunk: bytes.subarray(position, end).toString('utf8'), nextCursor: end, complete: end === bytes.length,
     };
     while (!responseFits(result) && end > position) {

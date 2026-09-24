@@ -91,9 +91,9 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# This pull_request_target job reads SHA-pinned PR evidence through tools, not a checkout.
-# Putting untrusted PR-head files in the token-bearing job adds risk without aiding review.
-# Reviewer instructions and the reader come from the workflow commit.
+# A trusted preparation step checks out the exact PR commit without persisting
+# credentials, stages its diff, and deletes the checkout before the agent starts.
+# The agent sees only bounded evidence; reviewer and reader code come from the workflow commit.
 checkout: false
 inlined-imports: true
 tools:
@@ -109,9 +109,42 @@ tools:
 # The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
 # `get_diff` returns the entire PR; `get_files` paginates files but includes each
 # complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# A trusted Actions step stages the API response; the stdio reader only chunks local data.
+# A trusted Actions step stages Git's merge-base diff; the stdio reader only chunks local data.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
+  - name: Pin review commits
+    id: review_commits
+    uses: actions/github-script@v9
+    env:
+      TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    with:
+      script: |
+        core.setOutput('ready', 'false');
+        const pr = Number(process.env.TARGET_PR);
+        if (!Number.isSafeInteger(pr) || pr < 1) {
+          return;
+        }
+        const { data: pull } = await github.rest.pulls.get({
+          owner: context.repo.owner, repo: context.repo.repo, pull_number: pr,
+        });
+        if (pull.state !== 'open' || pull.base?.repo?.id !== pull.head?.repo?.id ||
+            pull.base.repo.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
+            process.env.EXPECTED_BASE_SHA && process.env.EXPECTED_BASE_SHA !== pull.base.sha ||
+            process.env.EXPECTED_HEAD_SHA && process.env.EXPECTED_HEAD_SHA !== pull.head.sha) {
+          return;
+        }
+        core.setOutput('head_sha', pull.head.sha);
+        core.setOutput('ready', 'true');
+  - name: Fetch pinned PR commits
+    if: steps.review_commits.outputs.ready == 'true'
+    uses: actions/checkout@v7
+    with:
+      ref: ${{ steps.review_commits.outputs.head_sha }}
+      fetch-depth: 0
+      persist-credentials: false
+      path: .cor-review-input
   - name: Stage trusted diff snapshot
     uses: actions/github-script@v9
     env:
@@ -119,10 +152,14 @@ pre-agent-steps:
       TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
       EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PINNED_HEAD_SHA: ${{ steps.review_commits.outputs.head_sha }}
+      REVIEW_READY: ${{ steps.review_commits.outputs.ready }}
     with:
       script: |
         const fs = require('node:fs');
         const path = require('node:path');
+        const { execFileSync } = require('node:child_process');
+        const { createHash } = require('node:crypto');
         // With checkout disabled, fetch code from the workflow commit, never the PR head.
         const { data } = await github.rest.repos.getContent({
           owner: context.repo.owner,
@@ -145,6 +182,7 @@ pre-agent-steps:
         const repo = context.repo.repo;
         const repository = `${owner}/${repo}`;
         const pr = Number(process.env.TARGET_PR);
+        const checkout = path.join(process.env.GITHUB_WORKSPACE, '.cor-review-input');
         if (!Number.isSafeInteger(pr) || pr < 1) {
           throw new Error('Invalid PR number for diff snapshot');
         }
@@ -155,48 +193,103 @@ pre-agent-steps:
           } },
           head: { sha: pull.head?.sha, repo: { id: pull.head?.repo?.id } },
         });
-        const selectFile = file => ({
-          filename: file.filename, previous_filename: file.previous_filename,
-          status: file.status, additions: file.additions,
-          deletions: file.deletions, changes: file.changes,
-          ...(scoped(file.filename) || scoped(file.previous_filename) ? { patch: file.patch } : {}),
-        });
         const getPull = async () => (await github.rest.pulls.get({ owner, repo, pull_number: pr })).data;
-        const snapshot = { repository, pr, pages: [] };
+        const snapshot = { repository, pr };
         try {
           const before = await getPull();
           snapshot.before = selectPull(before);
           const base = process.env.EXPECTED_BASE_SHA || before.base?.sha;
           const head = process.env.EXPECTED_HEAD_SHA || before.head?.sha;
-          if (before.state === 'open' && before.base?.repo?.full_name === repository &&
+          if (process.env.REVIEW_READY === 'true' && before.state === 'open' &&
+              before.base?.repo?.full_name === repository &&
               before.head?.repo?.id === before.base?.repo?.id &&
               before.base.sha === base && before.head.sha === head &&
+              before.head.sha === process.env.PINNED_HEAD_SHA &&
               Number.isSafeInteger(before.changed_files) && before.changed_files <= 3000) {
-            // Fetch full patches here, but only stage patches from the reviewed bundle.
-            const comparison = (await github.rest.repos.compareCommitsWithBasehead({
-              owner, repo, basehead: `${base}...${head}`,
-            })).data;
-            snapshot.compare = {
-              merge_base_commit: { sha: comparison.merge_base_commit?.sha },
-              files: comparison.files?.map(selectFile),
-            };
-            let count = 0;
-            for (let page = 1; count < before.changed_files; page++) {
-              const entries = (await github.rest.pulls.listFiles({
-                owner, repo, pull_number: pr, per_page: 100, page,
-              })).data;
-              snapshot.pages.push(entries.map(selectFile));
-              count += entries.length;
-              if (entries.length < 100) {
-                break;
+            const git = (...args) => execFileSync('git', [
+              '-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false',
+              '-c', 'diff.external=', '-C', checkout, ...args,
+            ], {
+              maxBuffer: 18 * 1024 * 1024,
+              env: { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' },
+            });
+            const text = bytes => {
+              const value = bytes.toString('utf8');
+              if (!Buffer.from(value, 'utf8').equals(bytes)) {
+                throw new Error('Git diff contains invalid UTF-8');
               }
+              return value;
+            };
+            const tokens = (...args) => text(git(...args)).split('\0');
+            if (text(git('rev-parse', 'HEAD')).trim() !== head) {
+              throw new Error('Checkout does not match the recorded head SHA');
             }
-            if (count === before.changed_files && count > 0 && count % 100 === 0) {
-              const extra = (await github.rest.pulls.listFiles({
-                owner, repo, pull_number: pr, per_page: 100, page: count / 100 + 1,
-              })).data;
-              snapshot.pages.push(extra.map(selectFile));
+            git('rev-parse', '--verify', `${base}^{commit}`);
+            const mergeBases = text(git('merge-base', '--all', base, head)).trim().split('\n');
+            if (mergeBases.length !== 1 || !/^[a-f0-9]{40}$/.test(mergeBases[0])) {
+              throw new Error('PR does not have a unique merge base');
             }
+            snapshot.mergeBaseSha = mergeBases[0];
+            const range = [snapshot.mergeBaseSha, head];
+            const records = tokens('diff-tree', '-r', '--no-commit-id', '--raw', '-z',
+              '--find-renames', ...range);
+            const stats = tokens('diff', '--numstat', '-z', '--find-renames',
+              '--no-ext-diff', '--no-textconv', ...range);
+            const emptyBlob = text(git('hash-object', '-w', '--stdin')).trim();
+            const hash = value => createHash('sha256').update(value).digest('hex');
+            const files = [];
+            let statIndex = 0;
+            for (let i = 0; records[i];) {
+              const match = /^:([0-7]{6}) ([0-7]{6}) ([a-f0-9]{40}) ([a-f0-9]{40}) ([AMDTRC])(\d*)$/.exec(records[i++]);
+              if (!match) {
+                throw new Error('Invalid Git tree diff record');
+              }
+              const oldName = records[i++];
+              const renamed = match[5] === 'R' || match[5] === 'C';
+              const filename = renamed ? records[i++] : oldName;
+              const stat = /^(\d+|-)\t(\d+|-)\t([\s\S]*)$/.exec(stats[statIndex++]);
+              if (!stat) {
+                throw new Error('Invalid Git numstat record');
+              }
+              let statName = stat[3];
+              if (renamed) {
+                if (statName || stats[statIndex++] !== oldName) {
+                  throw new Error('Git rename paths disagree');
+                }
+                statName = stats[statIndex++];
+              }
+              if (filename !== statName) {
+                throw new Error('Git tree diff and numstat disagree');
+              }
+              const binary = stat[1] === '-' || stat[2] === '-';
+              const additions = binary ? 0 : Number(stat[1]);
+              const deletions = binary ? 0 : Number(stat[2]);
+              const file = {
+                filename, previous_filename: renamed ? oldName : undefined,
+                status: { A: 'added', M: 'modified', D: 'removed', T: 'modified',
+                  R: 'renamed', C: 'copied' }[match[5]],
+                oldMode: match[1], newMode: match[2],
+                additions, deletions, changes: additions + deletions, binary,
+              };
+              if (scoped(filename) || scoped(file.previous_filename)) {
+                const regular = mode => ['000000', '100644', '100755'].includes(mode);
+                if (!binary && regular(file.oldMode) && regular(file.newMode)) {
+                  const oldBlob = match[3] === '0'.repeat(40) ? emptyBlob : match[3];
+                  const newBlob = match[4] === '0'.repeat(40) ? emptyBlob : match[4];
+                  const output = text(git('diff', '--no-ext-diff', '--no-textconv',
+                    '--no-color', '--unified=3', oldBlob, newBlob));
+                  const firstHunk = output.indexOf('@@ -');
+                  file.patch = firstHunk === -1 ? '' : output.slice(firstHunk).replace(/\n$/, '');
+                  file.patchBytes = Buffer.byteLength(file.patch);
+                  file.patchSha256 = hash(file.patch);
+                }
+              }
+              files.push(file);
+            }
+            if (statIndex !== stats.length - 1 || files.length !== before.changed_files) {
+              throw new Error('Git file count does not match PR changed_files');
+            }
+            snapshot.files = files;
             snapshot.after = selectPull(await getPull());
           } else {
             snapshot.after = snapshot.before;
@@ -207,6 +300,9 @@ pre-agent-steps:
             ? `Snapshot staging failed (${error.name || 'unknown error'})`
             : `GitHub read failed (${status})`;
           core.warning(snapshot.error);
+        } finally {
+          // Never leave PR-head files available to the agent.
+          fs.rmSync(checkout, { recursive: true, force: true });
         }
         let serialized = JSON.stringify(snapshot);
         if (Buffer.byteLength(serialized) > 16 * 1024 * 1024) {

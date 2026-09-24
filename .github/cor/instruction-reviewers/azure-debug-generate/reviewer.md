@@ -46,15 +46,16 @@ Stay on the specified PR and repository.
 
 2. **List every changed file.** Call `read_pr_diff` with `mode: files` and
    `cursor: 0`. Require its full base/head SHAs to match the PR commits
-   recorded in step 1, and record `listingSha256`. For a comment or manual
+   recorded in step 1, and record `mergeBaseSha` and `listingSha256`. For a comment or manual
    run, pass those SHAs back as `baseSha` and `headSha` on every subsequent
    call; on automatic runs they must match the event SHAs.
    Follow each `nextCursor` until `complete` is true, checking that cursors
-   advance without gaps, both SHAs and the listing digest stay fixed, and the
+   advance without gaps, all three SHAs and the listing digest stay fixed, and the
    number of unique files equals `changedFiles` and the PR's `changed_files`.
-   The trusted pre-agent step stages the GitHub responses; the offline reader
-   checks every page, the merge-base comparison, and both PR states captured
-   during staging. More than GitHub's 3,000-file limit, a tool error, or any
+   The trusted pre-agent step fetches the pinned commits, uses Git to diff their
+   merge base, and deletes the checkout before agent execution. The offline reader
+   checks the Git file count against the PR and both PR states captured during
+   staging. More than 3,000 changed files, a tool error, or any
    mismatch is `INCOMPLETE`. Match both `filename` and `previous_filename` so
    deletions and renames into or out of scope are covered.
 
@@ -65,9 +66,9 @@ Stay on the specified PR and repository.
    count and SHA-256 digest, and the same recorded commits on every chunk.
    Include renames and deletions even if the patch is empty. Do not treat a
    partial chunk as the full change. The reader rejects missing or inconsistent
-   patches rather than truncating them. GitHub's immutable comparison covers
-   at most 300 files; a scoped file beyond that limit is `INCOMPLETE`, even
-   when the listing is complete. Read full proposed files from the head
+   Git patches rather than truncating them. Git's hunk layout can differ from
+   the GitHub REST patch, but the old and new blobs come from the pinned
+   merge-base comparison. Read full proposed files from the head
    repository at the recorded head SHA with `get_file_contents`; always pass
    `sha` and reject path or ref fallbacks. Use the diff and
    `previous_filename` for rename and deletion evidence. Read additions from
