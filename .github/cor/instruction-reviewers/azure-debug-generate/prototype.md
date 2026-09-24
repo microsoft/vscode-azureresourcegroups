@@ -10,7 +10,7 @@ install their dependencies.
 With `checkout: false`, gh-aw does not check out the repository in the agent
 job. An explicit sparse checkout fetches only the reviewer helpers from the
 workflow's pinned commit (`main` for normal PR and comment runs) into
-`.review-trusted`. The scripts are copied to runner temp before the separate
+the workspace root. The scripts are copied to runner temp before the separate
 PR-head checkout and before inference. A branch-scoped `workflow_dispatch`
 used for this prototype deliberately fetches helpers from that test branch;
 remove the temporary dispatch exception before relying on the default-branch

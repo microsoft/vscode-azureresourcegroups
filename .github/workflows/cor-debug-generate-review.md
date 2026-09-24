@@ -124,15 +124,14 @@ steps:
       ref: ${{ github.workflow_sha }}
       fetch-depth: 1
       persist-credentials: false
-      path: .review-trusted
       sparse-checkout: .github/cor/instruction-reviewers/azure-debug-generate
   - name: Preserve trusted review helpers before base-branch restoration
     env:
       REVIEW_HELPERS: ${{ runner.temp }}/gh-aw/review-helpers
     run: |
       mkdir -p "$REVIEW_HELPERS"
-      cp .review-trusted/.github/cor/instruction-reviewers/azure-debug-generate/stage-review.mjs "$REVIEW_HELPERS/"
-      cp .review-trusted/.github/cor/instruction-reviewers/azure-debug-generate/review-reader.mjs "$REVIEW_HELPERS/"
+      cp .github/cor/instruction-reviewers/azure-debug-generate/stage-review.mjs "$REVIEW_HELPERS/"
+      cp .github/cor/instruction-reviewers/azure-debug-generate/review-reader.mjs "$REVIEW_HELPERS/"
 pre-agent-steps:
   - name: Pin the open, same-repository pull request
     id: review_identity
