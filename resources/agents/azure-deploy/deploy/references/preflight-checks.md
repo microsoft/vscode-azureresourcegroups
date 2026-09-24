@@ -8,6 +8,31 @@ Pre-deployment validation steps. Run after user approval, before deployment exec
 
 Branch on `scaffold-manifest.json.iacFormat`:
 
+### 0. Immutable artifact and runtime contract gate
+
+Run this gate **before what-if, inventory baseline, or any resource-creating command**:
+
+```text
+node .github/agents/azure-deploy/deploy/scripts/validate-deployment-artifacts.mjs --session-path .copilot-azure/sessions/{sessionId} --infra-path infra --subscription {subscriptionId} --tenant {tenantId} --resource-group {resourceGroup} --region {region}
+```
+
+Save the JSON output as `deployment-artifact-validation.json`. Missing target fields identify a legacy artifact and fail closed: return to prepare/scaffold to regenerate
+it. Do not patch strings in deploy. For Bicep, rerun the shipped `scaffold-conformance.ps1` (Windows) or
+`.sh` (macOS/Linux) script against the final IaC and require PASS. For Terraform, require the validated
+`azurerm` provider and exact `subscription_id`/resource-group variable binding plus its recorded passing
+format-specific conformance. This happens before what-if so a stale resource-group binding or old PostgreSQL
+readiness/admin pattern can never become the first live deployment attempt.
+
+For every Node API, run the generated-runtime gate before packaging:
+
+```text
+node .github/agents/azure-deploy/deploy/scripts/validate-node-runtime-contracts.mjs --root {backendRoot} --require-correlation
+```
+
+Append `--require-postgres-mi` for production PostgreSQL and `--require-migration-probe` when the root
+contains a migration controller. Run the component's focused tests and build after this static gate.
+The static gate is not a replacement for tests; it prevents known-bad legacy assets from reaching Azure.
+
 ### 0. Auth Token Verification
 
 ```bash
@@ -117,6 +142,7 @@ Each check runs independently. Collect all results, then present structured repo
 
 | Check | Fail Behavior |
 |-------|---------------|
+| Immutable artifact/runtime contract | Block before what-if. Return to the owning prepare/scaffold/integration phase; never patch during deploy. |
 | Deployment preview | Warn, don't block (can fail on unsupported types) |
 | RBAC | Block. Surface `az role assignment create`. |
 | RG check | Warn on location mismatch. Don't block. |

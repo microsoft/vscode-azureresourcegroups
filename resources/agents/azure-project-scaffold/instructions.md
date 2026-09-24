@@ -467,6 +467,14 @@ For **each** route in plan:
 > header on success and structured validation errors; `Access-Control-Expose-Headers: X-Correlation-ID` for the
 > approved frontend origin; and a captured structured log with the same ID, operation, status, and duration.
 > Middleware/file presence without these assertions does not pass Step 10.
+>
+> For a TypeScript/JavaScript API, use the centralized `withHttpContract` pattern in
+> `shared-references/runtimes/typescript.md`, then run:
+>
+> `node .github/agents/azure-deploy/deploy/scripts/validate-node-runtime-contracts.mjs --root {backendRoot} --require-correlation`
+>
+> Add `--require-postgres-mi` when PostgreSQL is planned. This gate and the focused test suite must both pass
+> before Step 10 is complete; a passwordless production `connectionString` is not managed-identity auth.
 
 ---
 

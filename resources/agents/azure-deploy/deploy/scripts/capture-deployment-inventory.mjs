@@ -6,6 +6,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
+    chmodSync,
     existsSync,
     mkdirSync,
     mkdtempSync,
@@ -18,7 +19,7 @@ import {
     writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, resolve } from "node:path";
+import { basename, delimiter, dirname, extname, isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -209,12 +210,78 @@ function parseJsonArray(text, source) {
     return parsed;
 }
 
-function runAz(args, allowFailure = false) {
-    const result = spawnSync("az", args, {
+function findExecutableOnPath(name, environment = process.env, platform = process.platform) {
+    const pathValue = environment.PATH ?? environment.Path ?? environment.path ?? "";
+    const extensions = platform === "win32"
+        ? (environment.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
+        : [""];
+    const hasExtension = extname(name).length > 0;
+
+    for (const rawDirectory of pathValue.split(delimiter)) {
+        const directory = rawDirectory.trim().replace(/^"(.*)"$/, "$1");
+        if (!directory) {
+            continue;
+        }
+        const candidates = hasExtension
+            ? [resolve(directory, name)]
+            : extensions.map(extension => resolve(directory, `${name}${extension.toLowerCase()}`));
+        for (const candidate of candidates) {
+            if (existsSync(candidate) && statSync(candidate).isFile()) {
+                return candidate;
+            }
+        }
+    }
+    return undefined;
+}
+
+function resolveAzureCli(environment = process.env, platform = process.platform) {
+    const override = environment.AZURE_CLI_PATH;
+    if (override) {
+        if (!isAbsolute(override) || !existsSync(override) || !statSync(override).isFile()) {
+            throw new Error("AZURE_CLI_PATH must name an existing absolute file");
+        }
+        return realpathSync(override);
+    }
+    const executable = findExecutableOnPath("az", environment, platform);
+    if (!executable) {
+        throw new Error("Azure CLI was not found on PATH");
+    }
+    return realpathSync(executable);
+}
+
+function quoteCmdArgument(value) {
+    if (value.length === 0 || /[\0\r\n"%!&|<>^]/.test(value)) {
+        throw new Error("Azure CLI argument contains characters that are unsafe for cmd.exe");
+    }
+    return `"${value}"`;
+}
+
+function executeAzureCli(executable, args, environment = process.env, platform = process.platform) {
+    const options = {
         encoding: "utf8",
+        env: environment,
         maxBuffer: 64 * 1024 * 1024,
         windowsHide: true,
-    });
+    };
+    if (platform !== "win32" || !/\.(?:cmd|bat)$/i.test(executable)) {
+        return spawnSync(executable, args, options);
+    }
+
+    const commandProcessor = environment.ComSpec ?? environment.COMSPEC;
+    if (!commandProcessor || !isAbsolute(commandProcessor)) {
+        throw new Error("ComSpec must name an absolute command processor for Azure CLI");
+    }
+    const commandLine = [executable, ...args].map(quoteCmdArgument).join(" ");
+    return spawnSync(
+        commandProcessor,
+        ["/d", "/s", "/c", `"${commandLine}"`],
+        { ...options, windowsVerbatimArguments: true },
+    );
+}
+
+function runAz(args, allowFailure = false) {
+    const executable = resolveAzureCli();
+    const result = executeAzureCli(executable, args);
     if (result.error) {
         throw new Error(`Azure CLI could not run: ${result.error.message}`);
     }
@@ -546,6 +613,45 @@ function runSelfTest() {
             () => readBaseline(baselinePath, sessionId, subscriptionId),
             "cross-subscription baseline rejection",
         );
+
+        const fakeCliDirectory = resolve(root, "fake-cli");
+        mkdirSync(fakeCliDirectory);
+        const fakeCliScript = resolve(fakeCliDirectory, "fake-az.mjs");
+        writeFileSync(
+            fakeCliScript,
+            "console.log(JSON.stringify(process.argv.slice(2)));\n",
+        );
+        const fakeCli = process.platform === "win32"
+            ? resolve(fakeCliDirectory, "az.cmd")
+            : resolve(fakeCliDirectory, "az");
+        if (process.platform === "win32") {
+            writeFileSync(fakeCli, `@echo off\r\nnode "%~dp0fake-az.mjs" %*\r\n`);
+        } else {
+            writeFileSync(fakeCli, `#!/usr/bin/env node\n${readFileSync(fakeCliScript, "utf8")}`);
+            chmodSync(fakeCli, 0o755);
+        }
+        const environment = {
+            ...process.env,
+            PATH: `${fakeCliDirectory}${delimiter}${process.env.PATH ?? ""}`,
+        };
+        const resolvedCli = resolveAzureCli(environment);
+        assert(pathsEqual(resolvedCli, realpathSync(fakeCli)), "Azure CLI PATH resolution");
+        const fakeResult = executeAzureCli(
+            resolvedCli,
+            ["resource", "list", "--query", "[].{id:id,name:name}"],
+            environment,
+        );
+        assert(fakeResult.status === 0, "cross-platform Azure CLI launch");
+        assert(
+            JSON.parse(fakeResult.stdout).at(-1) === "[].{id:id,name:name}",
+            "Azure CLI argument preservation",
+        );
+        if (process.platform === "win32") {
+            expectFailure(
+                () => executeAzureCli(resolvedCli, ["resource", "list", "unsafe&value"], environment),
+                "cmd.exe metacharacter rejection",
+            );
+        }
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

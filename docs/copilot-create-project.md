@@ -327,6 +327,9 @@ active default; the agent verifies it with a scoped account lookup and never cha
 A mismatch stops before planning, inventory, or provisioning. The session also records the exact selected
 model, and every nested planning, scaffold, build, repair, and verification task is explicitly dispatched
 with that same model rather than falling back to a task-agent default.
+The extension also marks every `azure-deploy` launch and continuation as already running inside the selected
+custom agent. The root executes inline and rejects a request to start another `azure-deploy`; only the
+workflow's named generic child tasks are delegated.
 
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
 
@@ -350,10 +353,17 @@ it closes automatically as the Deployment results view opens.
 Azure reporting a resource or revision as ready is necessary, but it is not enough to mark the application
 healthy. The deploy agent now applies these release gates when they are relevant:
 
+- **Immutable preflight artifacts.** Before what-if, the agent compares `context.json`,
+  `prepare-plan.json`, `scaffold-manifest.json`, the deploy command, and final IaC against the locked
+  subscription, tenant, resource group, and region. Legacy or stale bindings return to prepare/scaffold
+  instead of being patched during deploy. The final scaffold conformance gate and generated Node runtime
+  contract gate also run before the first Azure preview.
 - **PostgreSQL provider readiness.** Generated Bicep creates the server, then a managed-identity deployment
   script polls the exact subscription/resource group until the server reports `Ready`, successfully reads the
   `microsoft-entra-admin` child-provider endpoint, and waits for provider stabilization. Only that script's
-  output can feed the serialized administrator, extension, and database child resources.
+  output can feed the serialized administrator, extension, and database child resources. Production
+  `node-postgres` clients use discrete host/port/database/user/TLS fields and an async Entra token callback;
+  passwordless connection URLs remain local-development-only.
 - **TypeScript Functions on Flex Consumption.** The agent clean-builds a self-contained package locally,
   verifies its Node major, production dependencies, compiled shared-import closure, and exact Function
   modules, and deploys it with remote build disabled. It then requires the registered Function set to match
@@ -361,9 +371,13 @@ healthy. The deploy agent now applies these release gates when they are relevant
 - **Database migrations.** The migration entrypoint must exist in the immutable package or image. The
   selected live controller must exist and pass a side-effect-free reachability probe before one execution;
   controller state, process exit, stdout/stderr, migration history, tables, principal identity, and row/seed
-  state are recorded separately. Platform readiness cannot hide an unreachable migration controller.
+  state are recorded separately. Node controllers require an explicit case-insensitive `true`/`false` probe
+  value; missing or ambiguous values abort before database initialization, so a reachability probe cannot
+  become the real migration. Platform readiness cannot hide an unreachable migration controller.
 - **Correlation.** APIs are probed live for valid incoming `X-Correlation-ID` preservation, generation or
-  replacement, success and structured-error response headers, and exact-origin CORS exposure.
+  replacement, success and structured-error response headers, and exact-origin CORS exposure. Generated
+  Node APIs centralize both `X-Correlation-ID` and `Access-Control-Expose-Headers` in one response wrapper,
+  with focused success/error/origin tests before packaging.
 
 ### Knowing what was created (and cleaning up after a failure)
 
@@ -388,8 +402,10 @@ view. In the VS Code host, the preferred `capture_deployment_inventory` provider
 memory. If a direct CLI/plugin host does not expose that in-process provider, the same shipped agent uses its
 portable product provider instead; it writes `deployment-inventory-baseline.json` and
 `deployment-inventory-capture.json` atomically in the active session folder and records
-`inventorySource: "portable-cli"`. It never substitutes an ad-hoc CLI inventory. Both providers use the same
-classifications and never delete anything. See
+`inventorySource: "portable-cli"`. It resolves and launches the real Azure CLI directly on macOS/Linux and
+through a safely quoted command processor for the Windows `az.cmd` shim, so no session-local launcher bridge
+is needed. It never substitutes an ad-hoc CLI inventory. Both providers use the same classifications and
+never delete anything. See
 [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy).
 
 When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
@@ -555,6 +571,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current/completed phases, exact execution-model lock, and locked Azure target (subscription, tenant, resource group, and region). Drives the Deployment progress view. |
+| `.copilot-azure/sessions/{id}/deployment-artifact-validation.json` | deploy agent | Read-only pre-what-if proof that the session, deploy command, final IaC, and generated runtime contracts match the immutable Azure target and current release gates. |
 | `.copilot-azure/sessions/{id}/deployment-inventory-baseline.json` | deploy agent's portable inventory provider | Atomic pre-deployment resource-ID snapshot for the exact session and subscription. Written only when the in-process inventory provider is unavailable. |
 | `.copilot-azure/sessions/{id}/deployment-inventory-capture.json` | deploy agent's portable inventory provider | Atomic post-attempt diff, ARM-operation attribution, verification status, and resource classifications. Written only when the portable provider is selected. |
 | `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, inventory source/evidence, migration-controller proof, correlation gate, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |

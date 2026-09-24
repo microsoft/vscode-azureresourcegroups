@@ -429,6 +429,51 @@ export type UpdateItemRequest = z.infer<typeof updateItemSchema>;
 
 ## Structured Logging — pino
 
+### Central HTTP correlation and CORS contract
+
+Every success and structured-error response passes through one helper. Do not set the correlation header in
+individual handlers: that leaves error paths and CORS exposure inconsistent.
+
+```typescript
+// middleware/httpContract.ts
+import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { randomUUID } from 'node:crypto';
+
+const correlationPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+function correlationId(request: HttpRequest, context: InvocationContext): string {
+  const incoming = request.headers.get('x-correlation-id');
+  return incoming && correlationPattern.test(incoming) ? incoming : (context.invocationId || randomUUID());
+}
+
+function responseHeaders(headers: HttpResponseInit['headers']): Record<string, string> {
+  if (!headers) return {};
+  if (headers instanceof Headers) return Object.fromEntries(headers.entries());
+  if (Array.isArray(headers)) return Object.fromEntries(headers);
+  return Object.fromEntries(Object.entries(headers).map(([key, value]) => [key, String(value)]));
+}
+
+export function withHttpContract(
+  request: HttpRequest,
+  context: InvocationContext,
+  response: HttpResponseInit,
+  approvedOrigins: ReadonlySet<string>,
+): HttpResponseInit {
+  const headers = responseHeaders(response.headers);
+  headers['X-Correlation-ID'] = correlationId(request, context);
+  const origin = request.headers.get('origin');
+  if (origin && approvedOrigins.has(origin)) {
+    headers['Access-Control-Expose-Headers'] = 'X-Correlation-ID';
+  }
+  return { ...response, headers };
+}
+```
+
+Wrap the normal return and `handleError(...)` result with `withHttpContract(...)`. The CORS layer separately
+sets `Access-Control-Allow-Origin` only for an exact configured origin; never reflect arbitrary origins.
+Focused tests must prove preservation, generation, invalid/oversized replacement, success and structured
+error headers, exact-origin exposure, and no allow/expose headers for a disallowed origin.
+
 ### Logger Setup
 
 ```typescript

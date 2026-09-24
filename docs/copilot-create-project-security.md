@@ -62,8 +62,11 @@ artifacts written only when a CLI/plugin host cannot access the extension's in-p
 - Confine `--session-path` to the real (symlink-resolved) current workspace path
   `.copilot-azure/sessions/{uuid}` before any read, temporary-file creation, rename, or write. A path that
   merely ends with those segments is not sufficient.
-- Require a GUID session directory and subscription ID. Invoke Azure CLI with an argument array and an
-  explicit `--subscription`; never construct a shell command from artifact or prompt text.
+- Require a GUID session directory and subscription ID. Resolve the Azure CLI executable from `PATH` (or a
+  validated absolute `AZURE_CLI_PATH`) and use an argument array with explicit `--subscription`. On Windows,
+  only `.cmd`/`.bat` shims go through absolute `ComSpec`; quote every argument, reject command metacharacters,
+  and use verbatim argument passing. Never interpolate artifact or prompt text into an unchecked shell
+  command.
 - Write only the two fixed filenames. Use exclusive temporary-file creation in the same directory followed
   by an atomic rename, and remove a leftover temporary file on failure.
 - Before consuming a baseline, bound its size and resource count; parse with one-argument `JSON.parse`; then
@@ -75,6 +78,18 @@ artifacts written only when a CLI/plugin host cannot access the extension's in-p
 - Consumers must runtime-validate the capture again before copying fields into `deploy-result.json` or
   rendering them. `inventorySource` identifies `extension-mcp` versus `portable-cli`; it is evidence
   provenance, not a trust marker.
+
+## Deployment artifact preflight
+
+`validate-deployment-artifacts.mjs` treats `context.json`, `prepare-plan.json`,
+`scaffold-manifest.json`, and deployable IaC as untrusted workspace input. It symlink-resolves and confines
+the session and infrastructure roots to the current workspace, bounds file counts and byte sizes, parses
+JSON to unknown object roots, and narrows every required target field. It rejects stale subscription/resource
+group references and missing legacy target fields; it never rewrites artifacts or adopts the active Azure
+CLI target. `validate-node-runtime-contracts.mjs` applies the same confinement and bounded-scan rules to
+generated JavaScript/TypeScript source and skips symlinks and generated/dependency directories.
+The emitted `deployment-artifact-validation.json` is evidence, not a trust marker; any consumer must still
+validate its schema, exact session ID, and locked target before rendering or copying its fields.
 
 ## Markdown, HTML, and SVG
 

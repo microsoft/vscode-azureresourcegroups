@@ -129,6 +129,12 @@ export interface InstrumentationConfig {
 export interface DeploymentVariables {
   /** MUST equal naming.resourcePrefix (e.g., "myapp-dev-a1d5"), NOT the env label ("dev") */
   environmentName: string;
+  /** Immutable target copied from context.json.azure. Deploy rejects missing or different values. */
+  subscriptionId: string;
+  /** Immutable tenant copied from context.json.azure when present. */
+  tenantId?: string;
+  /** Immutable resource group copied from context.json.azure. */
+  resourceGroup: string;
   location: string;
   sessionId: string;
   deployedBy: string;

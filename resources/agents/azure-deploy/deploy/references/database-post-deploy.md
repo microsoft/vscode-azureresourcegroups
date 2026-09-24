@@ -23,11 +23,16 @@ Complete these in order and record them in `deploy-result.json.migration`:
    available SSH/command surface. A migration file with no runnable platform controller is a release defect.
 3. **Live reachability probe:** invoke a side-effect-free controller probe (for example `--help`, a
    migration-status command, or an artifact existence check) and require the controller to start the intended
-   runtime. Record `reachabilityProbeCommand`, its exit code, and evidence separately from application output;
-   set `controllerReachable: true` only on a successful probe.
+   runtime. For a Node controller, copy/import the shipped `migration-probe-mode.mjs` parser and pass
+   `MIGRATION_PROBE_ONLY=true` explicitly. The parser accepts case-insensitive `true`/`false` only; a missing,
+   empty, or aliased value (`1`, `yes`) aborts before database initialization. Before packaging, run
+   `migration-probe-mode.mjs --self-test` and the runtime-contract validator with
+   `--require-migration-probe`. Record `reachabilityProbeCommand`, its exit code, and evidence separately from
+   application output; set `controllerReachable: true` only on a successful probe whose before/after migration
+   history is unchanged.
 4. **Single migration execution:** invoke once. Capture controller/ARM status, application process exit,
-   stdout, and stderr as separate evidence. Controller `Succeeded` with a missing/nonzero process exit is not
-   success.
+   stdout, and stderr as separate evidence. Pass `MIGRATION_PROBE_ONLY=false` explicitly; missing does not mean
+   "migrate." Controller `Succeeded` with a missing/nonzero process exit is not success.
 5. **Post-state proof:** query migration history, expected tables/schema, mapped principal/OID, and unexpected
    row/seed state. Only then set `postStateVerified: true`.
 

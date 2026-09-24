@@ -187,6 +187,10 @@ Provider constructors or factories call `requireSetting` for the selected implem
 > **Important**: Includes camelCase↔snake_case key conversion and `collectionToTable()` mapping. See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete implementation.
 
 **Key requirements for concrete implementation**:
+- Local development may construct `pg.Pool` from `DATABASE_URL`; production MUST use discrete `host`,
+  `port`, `database`, `user`, and `ssl` fields plus an async `password` callback that calls
+  `DefaultAzureCredential.getToken("https://ossrdbms-aad.database.windows.net/.default")`. Never put an
+  empty password in a production URL or combine `connectionString` with the token callback.
 - `toSnake()`/`toCamel()`/`keysToSnake()`/`keysToCamel()` conversion utilities
 - `collectionToTable()` mapping singular collection names to plural SQL table names (e.g., `user` → `users`)
 - `create()` and `update()` strip auto-managed fields (`createdAt`, `updatedAt`, `id`) before building SQL

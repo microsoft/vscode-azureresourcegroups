@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { guardSelectedAgentQuery } from '../../utils/copilotOnRails/selectedAgentQuery';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
@@ -121,7 +122,8 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
 }
 
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
-    setCorProp(context, 'chatQueryLength', query.length);
+    const guardedQuery = guardSelectedAgentQuery(agentName, query);
+    setCorProp(context, 'chatQueryLength', guardedQuery.length);
 
     const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     if (agentLaunchInProgress) {
@@ -152,7 +154,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         // that (see requireWorkspaceTrustReload).
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: agentName,
-            query,
+            query: guardedQuery,
             ...(selector ? { modelSelector: selector } : {}),
         });
     } catch (err) {
@@ -288,7 +290,11 @@ async function promptReloadForAgentDiscovery(context: CopilotOnRailsContext): Pr
  * automatically including the session's model selection when one is stored.
  */
 export async function buildChatOpenOptions(context: CopilotOnRailsContext, options: { mode?: string; query: string }): Promise<{ mode?: string; query: string; modelSelector?: { id?: string; vendor?: string } }> {
-    setCorProp(context, 'chatQueryLength', options.query.length);
+    const guardedOptions = {
+        ...options,
+        query: guardSelectedAgentQuery(options.mode, options.query),
+    };
+    setCorProp(context, 'chatQueryLength', guardedOptions.query.length);
     if (options.mode) {
         setCorProp(context, 'chatAgentName', options.mode);
     }
@@ -298,7 +304,7 @@ export async function buildChatOpenOptions(context: CopilotOnRailsContext, optio
     if (model) {
         const selector = await resolveModelSelector(model);
         setCorProp(context, 'chatModelResolved', !!selector);
-        return selector ? { ...options, modelSelector: selector } : options;
+        return selector ? { ...guardedOptions, modelSelector: selector } : guardedOptions;
     }
-    return options;
+    return guardedOptions;
 }

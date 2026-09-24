@@ -217,6 +217,12 @@ const contracts: Contract[] = [
         grader: "nested generic task dispatches stay on the top-level model",
     },
     {
+        file: "azure-deploy.agent.md",
+        name: "selected-agent-no-self-delegation",
+        pattern: /selected `azure-deploy` root executes this workflow inline[\s\S]*MUST NOT launch another `azure-deploy`[\s\S]*agent_type: "task"/,
+        grader: "an already-selected deployment root cannot recurse into the same custom agent",
+    },
+    {
         file: "azure-deploy/prereq/references/zero-code-path.md",
         name: "zero-code-task-model-lock",
         pattern: /`task` call with `model: context\.json\.execution\.modelId`/,
@@ -253,6 +259,12 @@ const contracts: Contract[] = [
         grader: "deployment preflight verifies rather than adopts the active Azure CLI target",
     },
     {
+        file: "azure-deploy/deploy/references/preflight-checks.md",
+        name: "legacy-artifacts-rejected-before-what-if",
+        pattern: /(?=[\s\S]*validate-deployment-artifacts\.mjs)(?=[\s\S]*before what-if)(?=[\s\S]*scaffold-conformance)(?=[\s\S]*validate-node-runtime-contracts\.mjs)/i,
+        grader: "legacy target/readiness/runtime artifacts fail before the first Azure preview",
+    },
+    {
         file: "azure-deploy/deploy/instructions.md",
         name: "portable-product-inventory",
         pattern: /(?=[\s\S]*capture-deployment-inventory\.mjs)(?=[\s\S]*Do not substitute hand-written[\s\S]*az resource list)(?=[\s\S]*inventorySource)(?=[\s\S]*unverified[\s\S]*no cleanup list)/i,
@@ -271,6 +283,24 @@ const contracts: Contract[] = [
         grader: "migration controllers must be reachable before application health acceptance",
     },
     {
+        file: "azure-deploy/deploy/references/database-post-deploy.md",
+        name: "migration-probe-fail-closed",
+        pattern: /migration-probe-mode\.mjs[\s\S]*case-insensitive `true`\/`false` only[\s\S]*missing,[\s\S]*aborts before database initialization[\s\S]*MIGRATION_PROBE_ONLY=false/,
+        grader: "reachability probes cannot fall through into a real migration",
+    },
+    {
+        file: "shared-references/examples/service-abstraction-examples.md",
+        name: "postgres-managed-identity-pool",
+        pattern: /DefaultAzureCredential[\s\S]*ossrdbms-aad\.database\.windows\.net\/\.default[\s\S]*host:[\s\S]*port,[\s\S]*database:[\s\S]*user:[\s\S]*password: async[\s\S]*token\.token/,
+        grader: "production node-postgres invokes the managed-identity token callback",
+    },
+    {
+        file: "shared-references/runtimes/typescript.md",
+        name: "central-correlation-response-contract",
+        pattern: /(?=[\s\S]*withHttpContract)(?=[\s\S]*X-Correlation-ID)(?=[\s\S]*Access-Control-Expose-Headers)(?=[\s\S]*structured-error response)/,
+        grader: "generated success and error responses expose the correlation header",
+    },
+    {
         file: "azure-deploy/deploy/instructions.md",
         name: "live-correlation-gate",
         pattern: /verify-correlation-contract\.mjs[\s\S]*correlation-verification\.json[\s\S]*blocks healthy\/succeeded/,
@@ -283,7 +313,25 @@ const executableContracts: ExecutableContract[] = [
         name: "portable-product-inventory-self-test",
         file: "azure-deploy/deploy/scripts/capture-deployment-inventory.mjs",
         args: ["--self-test"],
-        grader: "portable inventory path/schema/attribution behavior",
+        grader: "portable inventory path/schema/attribution and cross-platform Azure CLI launch behavior",
+    },
+    {
+        name: "deployment-artifact-validation-self-test",
+        file: "azure-deploy/deploy/scripts/validate-deployment-artifacts.mjs",
+        args: ["--self-test"],
+        grader: "locked-target artifact validation and stale binding rejection",
+    },
+    {
+        name: "node-runtime-contract-self-test",
+        file: "azure-deploy/deploy/scripts/validate-node-runtime-contracts.mjs",
+        args: ["--self-test"],
+        grader: "generated correlation/PostgreSQL/migration runtime contract rejection",
+    },
+    {
+        name: "migration-probe-mode-self-test",
+        file: "azure-deploy/deploy/scripts/migration-probe-mode.mjs",
+        args: ["--self-test"],
+        grader: "strict probe parsing cannot mutate migration history",
     },
     {
         name: "functions-flex-package-self-test",

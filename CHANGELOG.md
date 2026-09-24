@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+* Harden **Create New Project with Copilot** deployments to reject stale target/runtime artifacts before Azure preview, keep migration probes side-effect free, generate managed-identity PostgreSQL and correlation contracts correctly, prevent deployment-agent self-recursion, and run portable inventory capture through the Windows Azure CLI shim without a custom launcher.
+
 ## 0.13.1 - 2026-09-18
 
 ### Added
