@@ -89,6 +89,9 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
+# Keep the agent on trusted workflow instructions, not the PR branch: a PR
+# could change its own reviewer or rubric. The pre-agent step below fetches
+# PR changes through GitHub's API into a read-only snapshot instead.
 checkout: false
 inlined-imports: true
 tools:
@@ -101,8 +104,182 @@ tools:
     toolsets: [pull_requests, repos]
     allowed: [pull_request_read, get_file_contents]
     min-integrity: none
+# GitHub tools return whole diffs and file contents, often beyond the agent's
+# output limit. Before the agent runs, this trusted step writes snapshot.json
+# under RUNNER_TEMP with the PR's file list, relevant diffs, and proposed file
+# contents. The offline reader mounts it read-only and returns small chunks.
+# This snapshot reader works around the GitHub MCP response-size limits tracked
+# in github/github-mcp-server#625 and github/github-mcp-server#3236.
+pre-agent-steps:
+  - name: Prepare local PR review snapshot
+    uses: actions/github-script@v9
+    env:
+      TRUSTED_SHA: ${{ github.workflow_sha }}
+      TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    with:
+      script: |
+        const fs = require('node:fs');
+        const path = require('node:path');
+
+        // Load executable code from this workflow's revision, never the PR branch.
+        const { data } = await github.rest.repos.getContent({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          path: '.github/cor/instruction-reviewers/azure-debug-generate/diff-reader.cjs',
+          ref: process.env.TRUSTED_SHA,
+        });
+        if (Array.isArray(data) || data.type !== 'file' || data.encoding !== 'base64') {
+          throw new Error('Trusted diff reader was not found at the workflow commit');
+        }
+
+        // The MCP container sees these files read-only. Never overwrite an existing script.
+        const directory = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'cor-review-diffs');
+        fs.mkdirSync(directory, { recursive: true });
+        fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
+          flag: 'wx', mode: 0o444,
+        });
+
+        const { scoped } = require(path.join(directory, 'diff-reader.cjs'));
+        const owner = context.repo.owner;
+        const repo = context.repo.repo;
+        const repository = `${owner}/${repo}`;
+        const pr = Number(process.env.TARGET_PR);
+        if (!Number.isSafeInteger(pr) || pr < 1) {
+          throw new Error('Invalid PR number for diff snapshot');
+        }
+
+        // Keep only the metadata needed to verify PR identity and every changed file.
+        const selectPull = pull => ({
+          state: pull.state,
+          changed_files: pull.changed_files,
+          base: {
+            sha: pull.base?.sha,
+            repo: { id: pull.base?.repo?.id, full_name: pull.base?.repo?.full_name },
+          },
+          head: {
+            sha: pull.head?.sha,
+            repo: { id: pull.head?.repo?.id },
+          },
+        });
+        // Save diff text only for the agent instructions this workflow reviews.
+        const selectFile = file => ({
+          filename: file.filename,
+          previous_filename: file.previous_filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          changes: file.changes,
+          ...(scoped(file.filename) || scoped(file.previous_filename) ? { patch: file.patch } : {}),
+        });
+
+        const getPull = async () => (await github.rest.pulls.get({ owner, repo, pull_number: pr })).data;
+        const snapshot = { repository, pr, pages: [], headFiles: [] };
+
+        try {
+          // Pin the PR before reading files; the reader rejects closed, forked, or moved PRs.
+          const before = await getPull();
+          snapshot.before = selectPull(before);
+          const base = process.env.EXPECTED_BASE_SHA || before.base?.sha;
+          const head = process.env.EXPECTED_HEAD_SHA || before.head?.sha;
+
+          if (before.state === 'open' && before.base?.repo?.full_name === repository &&
+              before.head?.repo?.id === before.base?.repo?.id &&
+              before.base.sha === base && before.head.sha === head &&
+              Number.isSafeInteger(before.changed_files) && before.changed_files <= 3000) {
+            // Compare the recorded commits so the PR listing can be checked against an immutable diff.
+            const comparison = (await github.rest.repos.compareCommitsWithBasehead({
+              owner, repo, basehead: `${base}...${head}`,
+            })).data;
+            snapshot.compare = {
+              merge_base_commit: { sha: comparison.merge_base_commit?.sha },
+              files: comparison.files?.map(selectFile),
+            };
+
+            // Fetch every PR file, but keep diff text only for the reviewed instructions.
+            let count = 0;
+            for (let page = 1; count < before.changed_files; page++) {
+              const entries = (await github.rest.pulls.listFiles({
+                owner, repo, pull_number: pr, per_page: 100, page,
+              })).data;
+              snapshot.pages.push(entries.map(selectFile));
+              count += entries.length;
+              if (entries.length < 100) {
+                break;
+              }
+            }
+            // A full last page needs one more request to prove pagination ended.
+            if (count === before.changed_files && count > 0 && count % 100 === 0) {
+              const extra = (await github.rest.pulls.listFiles({
+                owner, repo, pull_number: pr, per_page: 100, page: count / 100 + 1,
+              })).data;
+              snapshot.pages.push(extra.map(selectFile));
+            }
+
+            // Read proposed file contents at the pinned commit, not from a moving branch.
+            for (const file of snapshot.pages.flat()) {
+              if ((scoped(file.filename) || scoped(file.previous_filename)) && file.status !== 'removed') {
+                const { data: content } = await github.rest.repos.getContent({
+                  owner, repo, path: file.filename, ref: head,
+                });
+                if (Array.isArray(content) || content.type !== 'file' || content.encoding !== 'base64') {
+                  throw new Error('Scoped head file is not available as UTF-8 content');
+                }
+                snapshot.headFiles.push({
+                  filename: file.filename,
+                  content: new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(content.content, 'base64')),
+                });
+              }
+            }
+
+            // The offline reader checks that the PR did not move during these API calls.
+            snapshot.after = selectPull(await getPull());
+          } else {
+            snapshot.after = snapshot.before;
+          }
+        } catch (error) {
+          // Preserve API failures as errors; never serve an incomplete snapshot as a review.
+          const status = Number.isSafeInteger(error.status) ? error.status : 'unavailable';
+          snapshot.error = status === 'unavailable'
+            ? `Snapshot staging failed (${error.name || 'unknown error'})`
+            : `GitHub read failed (${status})`;
+          core.warning(snapshot.error);
+        }
+
+        // The reader rejects an oversized snapshot instead of silently truncating it.
+        let serialized = JSON.stringify(snapshot);
+        if (Buffer.byteLength(serialized) > 16 * 1024 * 1024) {
+          serialized = JSON.stringify({ repository, pr, error: 'Snapshot exceeds 16 MiB' });
+          core.warning('Diff snapshot exceeds the 16 MiB limit');
+        }
+        fs.writeFileSync(path.join(directory, 'snapshot.json'), serialized, { flag: 'wx', mode: 0o444 });
+# `cor-review-diffs` is this Node MCP server's name. The mount makes the runner's
+# snapshot directory visible inside its container at /cor-review-diffs, read-only.
+# The reader runs from there without a GitHub token or network access; the agent
+# can call only read_pr_diff.
+mcp-servers:
+  cor-review-diffs:
+    container: ghcr.io/github/gh-aw-node
+    args: [--network, none]
+    entrypoint: node
+    entrypointArgs: [/cor-review-diffs/diff-reader.cjs]
+    mounts:
+      - "${RUNNER_TEMP}/gh-aw/cor-review-diffs:/cor-review-diffs:ro"
+    env:
+      SNAPSHOT_PATH: /cor-review-diffs/snapshot.json
+      TARGET_REPOSITORY: ${{ github.repository }}
+      TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
+      EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    allowed: [read_pr_diff]
+# The reader and GitHub MCP tools are read-only. Safe outputs post the review or
+# diagnostic comment requested by the agent.
 safe-outputs:
   github-token: ${{ secrets.GITHUB_TOKEN }}
+  threat-detection:
+    # Keep detection active; report warnings and failures in Actions, not the shared issue tracker.
+    report-as-issue: false
   missing-tool: false
   missing-data: false
   report-incomplete:
@@ -121,6 +298,7 @@ post-steps:
     env:
       REVIEW_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
     run: |
+      # CLI success without a safe-output request is not a completed review.
       # A stale or closed PR can legitimately end with noop.
       if ! jq -se 'any(.[]; .type == "submit_pull_request_review" or .type == "add_comment" or .type == "noop")' "$REVIEW_OUTPUTS" >/dev/null; then
         echo "::error::The agent reviewer finished without requesting a review, diagnostic comment, or noop."
@@ -166,7 +344,7 @@ concurrency:
     github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
   job-discriminator: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
   cancel-in-progress: true
-timeout-minutes: 15
+timeout-minutes: 30
 ---
 
 Review pull request #${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
