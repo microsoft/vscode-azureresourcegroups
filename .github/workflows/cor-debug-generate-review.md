@@ -275,6 +275,9 @@ mcp-servers:
 # diagnostic comment requested by the agent.
 safe-outputs:
   github-token: ${{ secrets.GITHUB_TOKEN }}
+  threat-detection:
+    # Keep detection active; report warnings and failures in Actions, not the shared issue tracker.
+    report-as-issue: false
   missing-tool: false
   missing-data: false
   report-incomplete:
