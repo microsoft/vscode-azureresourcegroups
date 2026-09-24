@@ -52,10 +52,10 @@ Stay on the specified PR and repository.
    Follow each `nextCursor` until `complete` is true, checking that cursors
    advance without gaps, all three SHAs and the listing digest stay fixed, and the
    number of unique files equals `changedFiles` and the PR's `changed_files`.
-   The trusted pre-agent step fetches the pinned commits, uses Git to diff their
-   merge base, and deletes the checkout before agent execution. The offline reader
-   checks the Git file count against the PR and both PR states captured during
-   staging. More than 3,000 changed files, a tool error, or any
+   Trusted pre-agent steps fetch the pinned commits and record the PR state.
+   The offline reader diffs the merge base from a read-only Git mount and
+   checks the file count against the PR and both states recorded during preparation.
+   More than 3,000 changed files, a tool error, or any
    mismatch is `INCOMPLETE`. Match both `filename` and `previous_filename` so
    deletions and renames into or out of scope are covered.
 

@@ -91,9 +91,8 @@ sandbox:
     id: awf
     version: 'v0.28.14'
 network: defaults
-# Only trusted steps need the PR checkout: they diff the merge base and delete
-# it before the agent starts. An agent checkout plus shell would let PR text
-# steer commands; `checkout: false` does not disable the pinned fetch below.
+# Move the pinned PR checkout out of the agent workspace before it starts.
+# Only the offline reader sees it through a read-only mount; the agent has no shell.
 checkout: false
 inlined-imports: true
 tools:
@@ -109,8 +108,8 @@ tools:
 # The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
 # `get_diff` returns the entire PR; `get_files` paginates files but includes each
 # complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# GitHub's compare response stops at 300 files. Trusted Git gives a complete
-# merge-base comparison; the offline stdio reader verifies and bounds responses.
+# GitHub's compare response stops at 300 files. The offline reader computes
+# the pinned merge-base diff with Git and returns only verified, bounded evidence.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Pin review commits
@@ -147,7 +146,7 @@ pre-agent-steps:
       fetch-depth: 0
       persist-credentials: false
       path: .cor-review-input
-  - name: Stage trusted diff snapshot
+  - name: Stage trusted reader and PR identity
     uses: actions/github-script@v9
     env:
       TRUSTED_SHA: ${{ github.workflow_sha }}
@@ -161,7 +160,6 @@ pre-agent-steps:
         const fs = require('node:fs');
         const path = require('node:path');
         const { execFileSync } = require('node:child_process');
-        const { createHash } = require('node:crypto');
         // With checkout disabled, fetch code from the workflow commit, never the PR head.
         const { data } = await github.rest.repos.getContent({
           owner: context.repo.owner,
@@ -179,12 +177,23 @@ pre-agent-steps:
         fs.writeFileSync(path.join(directory, 'diff-reader.cjs'), Buffer.from(data.content, 'base64'), {
           flag: 'wx', mode: 0o444,
         });
-        const { scoped } = require(path.join(directory, 'diff-reader.cjs'));
         const owner = context.repo.owner;
         const repo = context.repo.repo;
         const repository = `${owner}/${repo}`;
         const pr = Number(process.env.TARGET_PR);
         const checkout = path.join(process.env.GITHUB_WORKSPACE, '.cor-review-input');
+        const isolatedCheckout = path.join(directory, 'checkout');
+        if (fs.existsSync(checkout)) {
+          const entry = fs.lstatSync(checkout);
+          if (!entry.isDirectory() || entry.isSymbolicLink()) {
+            throw new Error('PR checkout is not a directory');
+          }
+          fs.renameSync(checkout, isolatedCheckout);
+          const gitConfig = fs.readFileSync(path.join(isolatedCheckout, '.git', 'config'), 'utf8');
+          if (/^\s*(extraheader|helper)\s*=/im.test(gitConfig) || /x-access-token:/i.test(gitConfig)) {
+            throw new Error('PR checkout retains GitHub credentials');
+          }
+        }
         if (!Number.isSafeInteger(pr) || pr < 1) {
           throw new Error('Invalid PR number for diff snapshot');
         }
@@ -208,90 +217,13 @@ pre-agent-steps:
               before.base.sha === base && before.head.sha === head &&
               before.head.sha === process.env.PINNED_HEAD_SHA &&
               Number.isSafeInteger(before.changed_files) && before.changed_files <= 3000) {
-            const git = (...args) => execFileSync('git', [
-              '-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false',
-              '-c', 'diff.external=', '-C', checkout, ...args,
-            ], {
-              maxBuffer: 18 * 1024 * 1024,
-              env: { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' },
-            });
-            const text = bytes => {
-              const value = bytes.toString('utf8');
-              if (!Buffer.from(value, 'utf8').equals(bytes)) {
-                throw new Error('Git diff contains invalid UTF-8');
-              }
-              return value;
-            };
-            const tokens = (...args) => text(git(...args)).split('\0');
-            if (text(git('rev-parse', 'HEAD')).trim() !== head) {
-              throw new Error('Checkout does not match the recorded head SHA');
+            // The MCP container mounts Git objects read-only, so add the empty blob here.
+            const emptyBlob = execFileSync('git', ['-C', isolatedCheckout, 'hash-object', '-w', '--stdin'], {
+              input: '', encoding: 'utf8',
+            }).trim();
+            if (emptyBlob !== 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391') {
+              throw new Error('Unable to prepare the empty Git blob');
             }
-            git('rev-parse', '--verify', `${base}^{commit}`);
-            const mergeBases = text(git('merge-base', '--all', base, head)).trim().split('\n');
-            if (mergeBases.length !== 1 || !/^[a-f0-9]{40}$/.test(mergeBases[0])) {
-              throw new Error('PR does not have a unique merge base');
-            }
-            snapshot.mergeBaseSha = mergeBases[0];
-            const range = [snapshot.mergeBaseSha, head];
-            const records = tokens('diff-tree', '-r', '--no-commit-id', '--raw', '-z',
-              '--find-renames', ...range);
-            const stats = tokens('diff', '--numstat', '-z', '--find-renames',
-              '--no-ext-diff', '--no-textconv', ...range);
-            const emptyBlob = text(git('hash-object', '-w', '--stdin')).trim();
-            const hash = value => createHash('sha256').update(value).digest('hex');
-            const files = [];
-            let statIndex = 0;
-            for (let i = 0; records[i];) {
-              const match = /^:([0-7]{6}) ([0-7]{6}) ([a-f0-9]{40}) ([a-f0-9]{40}) ([AMDTRC])(\d*)$/.exec(records[i++]);
-              if (!match) {
-                throw new Error('Invalid Git tree diff record');
-              }
-              const oldName = records[i++];
-              const renamed = match[5] === 'R' || match[5] === 'C';
-              const filename = renamed ? records[i++] : oldName;
-              const stat = /^(\d+|-)\t(\d+|-)\t([\s\S]*)$/.exec(stats[statIndex++]);
-              if (!stat) {
-                throw new Error('Invalid Git numstat record');
-              }
-              let statName = stat[3];
-              if (renamed) {
-                if (statName || stats[statIndex++] !== oldName) {
-                  throw new Error('Git rename paths disagree');
-                }
-                statName = stats[statIndex++];
-              }
-              if (filename !== statName) {
-                throw new Error('Git tree diff and numstat disagree');
-              }
-              const binary = stat[1] === '-' || stat[2] === '-';
-              const additions = binary ? 0 : Number(stat[1]);
-              const deletions = binary ? 0 : Number(stat[2]);
-              const file = {
-                filename, previous_filename: renamed ? oldName : undefined,
-                status: { A: 'added', M: 'modified', D: 'removed', T: 'modified',
-                  R: 'renamed', C: 'copied' }[match[5]],
-                oldMode: match[1], newMode: match[2],
-                additions, deletions, changes: additions + deletions, binary,
-              };
-              if (scoped(filename) || scoped(file.previous_filename)) {
-                const regular = mode => ['000000', '100644', '100755'].includes(mode);
-                if (!binary && regular(file.oldMode) && regular(file.newMode)) {
-                  const oldBlob = match[3] === '0'.repeat(40) ? emptyBlob : match[3];
-                  const newBlob = match[4] === '0'.repeat(40) ? emptyBlob : match[4];
-                  const output = text(git('diff', '--no-ext-diff', '--no-textconv',
-                    '--no-color', '--unified=3', oldBlob, newBlob));
-                  const firstHunk = output.indexOf('@@ -');
-                  file.patch = firstHunk === -1 ? '' : output.slice(firstHunk).replace(/\n$/, '');
-                  file.patchBytes = Buffer.byteLength(file.patch);
-                  file.patchSha256 = hash(file.patch);
-                }
-              }
-              files.push(file);
-            }
-            if (statIndex !== stats.length - 1 || files.length !== before.changed_files) {
-              throw new Error('Git file count does not match PR changed_files');
-            }
-            snapshot.files = files;
             snapshot.after = selectPull(await getPull());
           } else {
             snapshot.after = snapshot.before;
@@ -302,27 +234,20 @@ pre-agent-steps:
             ? `Snapshot staging failed (${error.name || 'unknown error'})`
             : `GitHub read failed (${status})`;
           core.warning(snapshot.error);
-        } finally {
-          // Never leave PR-head files available to the agent.
-          fs.rmSync(checkout, { recursive: true, force: true });
         }
-        let serialized = JSON.stringify(snapshot);
-        if (Buffer.byteLength(serialized) > 16 * 1024 * 1024) {
-          serialized = JSON.stringify({ repository, pr, error: 'Snapshot exceeds 16 MiB' });
-          core.warning('Diff snapshot exceeds the 16 MiB limit');
-        }
-        fs.writeFileSync(path.join(directory, 'snapshot.json'), serialized, { flag: 'wx', mode: 0o444 });
-# The reader has no token or network; GitHub MCP and the trusted Actions step handle API calls.
+        fs.writeFileSync(path.join(directory, 'snapshot.json'), JSON.stringify(snapshot), { flag: 'wx', mode: 0o444 });
+# GitHub MCP and trusted Actions steps use tokens; the Git-backed reader has none.
 mcp-servers:
   cor-review-diffs:
     container: ghcr.io/github/gh-aw-node
-    args: [--network, none]
+    args: [--network, none, --read-only, --cap-drop, ALL, --security-opt, no-new-privileges]
     entrypoint: node
     entrypointArgs: [/cor-review-diffs/diff-reader.cjs]
     mounts:
       - "${RUNNER_TEMP}/gh-aw/cor-review-diffs:/cor-review-diffs:ro"
     env:
       SNAPSHOT_PATH: /cor-review-diffs/snapshot.json
+      CHECKOUT_PATH: /cor-review-diffs/checkout
       TARGET_REPOSITORY: ${{ github.repository }}
       TARGET_PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request_number }}
       EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
