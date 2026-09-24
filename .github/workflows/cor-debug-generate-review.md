@@ -64,8 +64,7 @@ if: >-
   github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id) ||
   (github.event_name == 'issue_comment' && github.event.action == 'created') ||
   (github.event_name == 'workflow_dispatch' &&
-  (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
-  github.ref == 'refs/heads/microfish91-chunked-cor-review-diffs')))
+  github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
 jobs:
   pre-activation:
     outputs:
@@ -103,10 +102,9 @@ tools:
     toolsets: [pull_requests, repos]
     allowed: [pull_request_read, get_file_contents]
     min-integrity: none
-# The GitHub tools can fetch diffs but cannot deliver a large file patch in bounded pieces.
-# `get_diff` returns the entire PR; `get_files` paginates files but includes each
-# complete patch. Oversized results spill to a temp file the shell-less agent cannot read.
-# A trusted Actions step stages the API responses; the stdio reader only chunks local data.
+# GitHub tools return entire patches and head files; oversized responses spill to
+# a temp file the shell-less agent cannot read. A trusted Actions step stages the
+# scoped files; the stdio reader only returns bounded chunks of local data.
 # See github/github-mcp-server#625 and github/github-mcp-server#3236.
 pre-agent-steps:
   - name: Stage trusted diff snapshot
