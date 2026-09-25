@@ -10,6 +10,11 @@ metadata:
 # Azure App Onboard
 
 > ⛔ **Every repo goes through the full pipeline (Steps 1–10). No exceptions.** Do not skip steps, refuse, or short-circuit based on what you recognize. Follow the Workflow table below sequentially — read each step's references before acting.
+>
+> ⛔ **You are already the selected `azure-deploy` custom agent. Execute this pipeline inline.** Never call
+> `agent`/`task` with `agent_type: "azure-deploy"`—not at startup, after compaction, or after a generic
+> continuation turn. Only the explicitly named generic `task` templates in these instructions may be
+> delegated, always with `agent_type: "task"` and the persisted root model.
 
 ## Quick Reference
 

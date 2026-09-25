@@ -31,6 +31,17 @@ Three error categories for deploy-time failures.
 
 After 3 failures → escalate to user.
 
+### Migration job failures — evidence before classification
+
+For a one-shot migration job, the job-controller reason is not the application cause.
+`BackoffLimitExceeded` with `replicaRetryLimit: 0` proves only that one process exited nonzero and no retry
+was permitted. Before choosing `IAC_ERROR`, `INFRA_TRANSIENT`, or `ENVIRONMENT_BLOCKING`, follow
+[`migration-access.md` § Tier-2 execution evidence and retry gate](../../cor-references/migration-access.md):
+persist application stdout/stderr and exit code, controller/replica status, migration-history and expected
+table state, and the migration principal/OID plus token connectivity. Missing application logs means
+`UNKNOWN` and blocks an unchanged retry. A logged transient with coherent unapplied state permits at most
+one unchanged retry; a deterministic code/package/configuration cause requires repair and revalidation.
+
 ### `ENVIRONMENT_BLOCKING` — Surface to User
 
 | Example | Action |
@@ -44,7 +55,7 @@ After 3 failures → escalate to user.
 | MI sidecar OOM on F1/B1 | Upgrade SKU, remove MI, or switch to Container Apps |
 | AADSTS530084 / TF auth failure | Re-scaffold as Bicep + `az deployment group create`. Never fall back to imperative CLI |
 
-> ⛔ **During ALL healing: NEVER run `az group delete`, `az postgres flexible-server delete`, `az redis delete`, `az webapp delete`, or any destructive resource deletion.** Track failed RGs in `deploy-result.json.orphanedResourceGroups[]` instead. The user deletes at handoff. If you need a clean region retry, use a NEW RG name (append `-2`) — do NOT delete-and-recreate. ⛔ **After each failed/healing `az deployment`, call `capture_deployment_inventory` (`phase: "capture"`, passing every `resourceGroups[]` including the abandoned one)** so orphaned resources from the healing retry are recorded deterministically rather than left for you to remember.
+> ⛔ **During ALL healing: NEVER run `az group delete`, `az postgres flexible-server delete`, `az redis delete`, `az webapp delete`, or any destructive resource deletion.** Track failed RGs in `deploy-result.json.orphanedResourceGroups[]` instead. The user deletes at handoff. If you need a clean region retry, use a NEW RG name (append `-2`) — do NOT delete-and-recreate. ⛔ **After each failed/healing `az deployment`, run the selected product inventory provider in `capture` mode, passing every resource-group scope including the abandoned one,** so orphaned resources from the healing retry are recorded deterministically rather than left for you to remember.
 
 ## Healing Trace
 

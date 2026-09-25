@@ -41,14 +41,16 @@ Phases are **strictly ordered**. Start later phase only after earlier phase comp
 
 1. **Step 0** — read hand-off artifact `.azure/integration-plan.md` + plan `.azure/project-plan.md`. Mandatory first workflow action after startup report.
 2. **Migrations** — create the SQL / PostgreSQL schema migrations.
-3. **Backend smoke test** — start backend; verify every endpoint responds.
-4. **Wire frontend to live data** — replace every mock source with real API calls.
-5. **End-to-end integration** — run frontend + backend together; confirm wiring.
-6. **Stop** — announce completion and **stop**. Do not prompt for next steps.
+3. **Backend smoke test** — start the backend, verify every endpoint responds.
+4. **Wire frontend to live data** — replace every mock data source with real API calls.
+5. **End-to-end integration** — run frontend + backend together and confirm they are wired.
+6. **Workload quality verification** — run every validation in the integration plan's Application Controls
+   table and preserve the approved timeout, retry, authorization, redaction, correlation, and bounds.
+7. **Stop** — announce completion and **stop**. Do not prompt for next steps.
 
 ### Read the hand-off artifact first (MANDATORY)
 
-**Trigger:** immediately after startup report. Before project work, read **`.azure/integration-plan.md`**—scaffold briefing with backend run command, frontend folder, API routes, database type + migration tool, mock-data files to remove, and shared-types location. If missing, use `.azure/project-plan.md` + scan workspace, but do **not** skip looking.
+**Trigger:** immediately after the startup report. Before doing any project work, read **`.azure/integration-plan.md`** — the scaffold agent wrote it specifically to brief you. It lists the backend run command, the frontend folder, the API routes, the database type and migration tool, the mock-data files to remove, the shared-types location, and the **Workload Quality Contract** with evidence and executable validations. Then read `.github/agents/shared-references/workload-quality.md`. If the artifact is missing, fall back to `.azure/project-plan.md` and scan the workspace, but do **not** skip looking for it.
 
 ### Never create seed data (LOAD-BEARING)
 
@@ -94,10 +96,12 @@ That file is canonical, mandatory phase source. Follow it; never improvise or su
 
 Scaffolded project running end-to-end:
 
-- Frontend uses **live** backend data—no mock data layer remains in use.
-- Backend smoke-tested—every endpoint registers + responds.
-- SQL / PostgreSQL **schema migrations** exist + apply cleanly (no seed data).
-- Frontend + backend run **together** and verified communicating.
+- The frontend is wired to **live** backend data — no mock data layer remains in use.
+- The backend has been smoke-tested — every endpoint registers and responds.
+- SQL / PostgreSQL **schema migrations** exist and apply cleanly (no seed data).
+- The frontend and backend have been run **together** and verified to communicate.
+- Every application control in the Workload Quality Contract has been re-verified after the live-data swap;
+  results and residual risks are appended to `.azure/integration-plan.md`.
 
 ## Interruption recovery
 

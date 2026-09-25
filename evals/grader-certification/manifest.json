@@ -16,6 +16,7 @@
       "description": "Workspace as the planning and scaffold agents leave it — the artifacts those phases are contracted to produce.",
       "offlineValidators": [
         "requirements",
+        "requirements-workload",
         "project-plan",
         "plan-gate",
         "preview",
@@ -192,9 +193,75 @@
       "validator": "requirements",
       "file": ".azure/requirements.json",
       "operation": "replace",
-      "search": "\"schemaVersion\": \"2\"",
-      "replacement": "\"schemaVersion\": \"1\"",
+      "search": "\"schemaVersion\": \"3\"",
+      "replacement": "\"schemaVersion\": \"2\"",
       "expectedCode": "schemaVersion"
+    },
+    {
+      "id": "requirements-operating-profile-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"id\": \"operatingProfile\"",
+      "replacement": "\"id\": \"removedOperatingProfile\"",
+      "expectedCode": "missingOperatingProfile"
+    },
+    {
+      "id": "requirements-data-classification-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"id\": \"dataClassification\"",
+      "replacement": "\"id\": \"removedDataClassification\"",
+      "expectedCode": "missingDataClassification"
+    },
+    {
+      "id": "requirements-traffic-profile-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"id\": \"trafficProfile\"",
+      "replacement": "\"id\": \"removedTrafficProfile\"",
+      "expectedCode": "missingTrafficProfile"
+    },
+    {
+      "id": "requirements-optimization-priority-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"id\": \"optimizationPriority\"",
+      "replacement": "\"id\": \"removedOptimizationPriority\"",
+      "expectedCode": "missingOptimizationPriority"
+    },
+    {
+      "id": "requirements-rejects-arbitrary-workload-value",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"answer\": \"Development / Demo\"",
+      "replacement": "\"answer\": \"Secret customer launch\"",
+      "expectedCode": "invalidWorkloadChoice"
+    },
+    {
+      "id": "requirements-workload-expectation-is-live",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements-workload",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"answer\": \"Development / Demo\"",
+      "replacement": "\"answer\": \"Standard Production\"",
+      "expectedCode": "workloadChoiceMismatch"
     },
     {
       "id": "project-plan-numbering",
@@ -203,9 +270,42 @@
       "validator": "project-plan",
       "file": ".azure/project-plan.md",
       "operation": "replace",
-      "search": "## 3. Prerequisites",
-      "replacement": "## 4. Prerequisites",
+      "search": "## 4. Prerequisites",
+      "replacement": "## 5. Prerequisites",
       "expectedCode": "nonSequentialHeading"
+    },
+    {
+      "id": "project-plan-quality-contract-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "file": ".azure/project-plan.md",
+      "operation": "replace",
+      "search": "## 3. Quality Attributes & Tradeoffs",
+      "replacement": "## 3. Architecture Notes",
+      "expectedCode": "missingSection"
+    },
+    {
+      "id": "project-plan-all-pillars-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "file": ".azure/project-plan.md",
+      "operation": "replace",
+      "search": "| Performance Efficiency | Support the small deterministic fixture workload |",
+      "replacement": "| Fast Responses | Support the small deterministic fixture workload |",
+      "expectedCode": "missingQualityPillar"
+    },
+    {
+      "id": "project-plan-rejects-false-waf-claim",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "file": ".azure/project-plan.md",
+      "operation": "replace",
+      "search": "## 3. Quality Attributes & Tradeoffs",
+      "replacement": "## 3. Quality Attributes & Tradeoffs\n\nThis architecture is WAF compliant.",
+      "expectedCode": "falseWellArchitectedClaim"
     },
     {
       "id": "plan-gate-frontend-dropped",
@@ -281,6 +381,72 @@
       "search": "from '../api'",
       "replacement": "from '../api/mockClient'",
       "expectedCode": "apiSeamBypassed"
+    },
+    {
+      "id": "integration-plan-quality-contract-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "## Workload Quality Contract",
+      "replacement": "## Implementation Notes",
+      "expectedCode": "missingQualityContract"
+    },
+    {
+      "id": "integration-plan-quality-evidence-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "`src/server.js`; `test/server.test.js`",
+      "replacement": "TBD",
+      "expectedCode": "incompleteQualityControl"
+    },
+    {
+      "id": "integration-plan-dependency-access-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "### Dependency Access",
+      "replacement": "### Implementation Notes",
+      "expectedCode": "missingDependencyAccess"
+    },
+    {
+      "id": "integration-plan-dependency-access-permission-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "Storage Blob Data Contributor (`containers/read` is a `dataAction`)",
+      "replacement": "TBD",
+      "expectedCode": "incompleteDependencyAccess"
+    },
+    {
+      "id": "integration-plan-rejects-false-waf-claim",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "## Workload Quality Contract",
+      "replacement": "## Workload Quality Contract\n\nThis application is WAF certified.",
+      "expectedCode": "falseWellArchitectedClaim"
+    },
+    {
+      "id": "integration-plan-rejects-arbitrary-workload-value",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "file": ".azure/integration-plan.md",
+      "operation": "replace",
+      "search": "| Data Classification | Public |",
+      "replacement": "| Data Classification | Secret customer launch |",
+      "expectedCode": "invalidQualityProfileField"
     },
     {
       "id": "integration-plan-missing-no-seed-rule",

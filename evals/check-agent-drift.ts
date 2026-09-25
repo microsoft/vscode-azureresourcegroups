@@ -21,6 +21,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
@@ -51,6 +52,14 @@ interface ConsistencyRule {
     name: string;
     pattern: RegExp;
     message: string;
+}
+
+/** An executable invariant whose shipped self-test must pass. */
+interface ExecutableContract {
+    name: string;
+    file: string;
+    args: string[];
+    grader: string;
 }
 
 /** The `agent-assets.lock.json` baseline. */
@@ -182,6 +191,159 @@ const contracts: Contract[] = [
         name: "compound-task-run-options",
         pattern: /"dependsOrder":\s*"sequence",\s*\n\s*"runOptions":\s*\{\s*"instanceLimit":\s*1,\s*"instancePolicy":\s*"silent"\s*\}/,
         grader: "debug-config-structurally-sound (invalidTaskRunOptions)",
+    },
+    {
+        file: "azure-deploy/scaffold/references/subagent-iac-gen.md",
+        name: "postgres-admin-id-and-readiness-barrier",
+        pattern: /(?=[\s\S]*name: entraAdminObjectId)(?=[\s\S]*postgres-readiness\.bicep)(?=[\s\S]*--subscription)(?=[\s\S]*state `Ready`)(?=[\s\S]*microsoft-entra-admin)(?=[\s\S]*pgName: postgresReadiness\.outputs\.serverName)/,
+        grader: "scaffold-conformance PG-ENTRA-ADMIN-ID / PG-ADMIN-READY-BARRIER",
+    },
+    {
+        file: "azure-deploy/cor-references/migration-access.md",
+        name: "tier2-migration-state-aware-retry",
+        pattern: /(?=[\s\S]*BackoffLimitExceeded)(?=[\s\S]*pgmigrations)(?=[\s\S]*principal\/OID)(?=[\s\S]*one unchanged retry)/,
+        grader: "Tier-2 deployment recovery evidence contract",
+    },
+    {
+        file: "azure-deploy/references/session-protocol.md",
+        name: "explicit-azure-target-lock",
+        pattern: /(?=[\s\S]*explicit user target → environment target → saved locked target → active[\s\S]*CLI default)(?=[\s\S]*az account show --subscription \{requestedSubscriptionIdOrName\})(?=[\s\S]*do not call[\s\S]*az account set)(?=[\s\S]*hard stop before session planning,[\s\S]*what-if, inventory, or provisioning)/i,
+        grader: "deployment target selection cannot be replaced by active Azure CLI state",
+    },
+    {
+        file: "azure-deploy/references/session-protocol.md",
+        name: "nested-model-lock",
+        pattern: /Every `task` or `runSubagent` call MUST pass `model: context\.json\.execution\.modelId` explicitly/,
+        grader: "nested generic task dispatches stay on the top-level model",
+    },
+    {
+        file: "azure-deploy.agent.md",
+        name: "selected-agent-no-self-delegation",
+        pattern: /selected `azure-deploy` root executes this workflow inline[\s\S]*MUST NOT launch another `azure-deploy`[\s\S]*agent_type: "task"/,
+        grader: "an already-selected deployment root cannot recurse into the same custom agent",
+    },
+    {
+        file: "azure-deploy/prereq/references/zero-code-path.md",
+        name: "zero-code-task-model-lock",
+        pattern: /`task` call with `model: context\.json\.execution\.modelId`/,
+        grader: "zero-code starter scaffolding cannot fall back to the task-agent model",
+    },
+    {
+        file: "azure-deploy/prepare/instructions.md",
+        name: "prepare-task-model-lock",
+        pattern: /(?=[\s\S]*subagent-quota\.md[\s\S]*model: context\.json\.execution\.modelId)(?=[\s\S]*subagent-pricing\.md[\s\S]*model: context\.json\.execution\.modelId)/,
+        grader: "quota and pricing fallback tasks retain the session model",
+    },
+    {
+        file: "azure-project-plan/plan.md",
+        name: "plan-preview-task-model-lock",
+        pattern: /copilot-on-rails-model-contract:v1[\s\S]*extension-resolved-selector[\s\S]*taskModel[\s\S]*Do not use `tool_search`[\s\S]*model: parentModelId/,
+        grader: "page-preview tasks use the extension-resolved parent model without rediscovery",
+    },
+    {
+        file: "azure-project-scaffold/instructions.md",
+        name: "scaffold-task-model-lock",
+        pattern: /copilot-on-rails-model-contract:v1[\s\S]*extension-resolved-selector[\s\S]*taskModel[\s\S]*Never use `tool_search`[\s\S]*MUST pass `model: parentModelId`/,
+        grader: "frontend/backend/build/repair/verification tasks use the extension-resolved parent model",
+    },
+    {
+        file: "azure-deploy/prereq/instructions.md",
+        name: "prereq-canonical-target-lock",
+        pattern: /\[`session-protocol\.md`\]\(\.\.\/references\/session-protocol\.md\)[\s\S]*unscoped Azure CLI default[\s\S]*names a target/,
+        grader: "direct prereq entry uses the same explicit Azure target precedence as orchestration",
+    },
+    {
+        file: "azure-deploy/deploy/references/preflight-checks.md",
+        name: "preflight-target-binding",
+        pattern: /az account show --subscription \{subscriptionId\}[\s\S]*exact locked subscription \+ tenant/,
+        grader: "deployment preflight verifies rather than adopts the active Azure CLI target",
+    },
+    {
+        file: "azure-deploy/deploy/references/preflight-checks.md",
+        name: "legacy-artifacts-rejected-before-what-if",
+        pattern: /(?=[\s\S]*validate-deployment-artifacts\.mjs)(?=[\s\S]*before what-if)(?=[\s\S]*scaffold-conformance)(?=[\s\S]*validate-node-runtime-contracts\.mjs)/i,
+        grader: "legacy target/readiness/runtime artifacts fail before the first Azure preview",
+    },
+    {
+        file: "azure-deploy/deploy/instructions.md",
+        name: "portable-product-inventory",
+        pattern: /(?=[\s\S]*capture-deployment-inventory\.mjs)(?=[\s\S]*Do not substitute hand-written[\s\S]*az resource list)(?=[\s\S]*inventorySource)(?=[\s\S]*unverified[\s\S]*no cleanup list)/i,
+        grader: "CLI-hosted deployments retain product-owned inventory attribution",
+    },
+    {
+        file: "azure-deploy/deploy/references/code-deployment-functions-flex.md",
+        name: "typescript-flex-prebuilt-package",
+        pattern: /(?=[\s\S]*validate-functions-flex-package\.mjs)(?=[\s\S]*--build-remote false)(?=[\s\S]*registered Functions to equal the expected set)(?=[\s\S]*dependency-aware)/,
+        grader: "Flex Node runtime/package closure and post-upload registration gates",
+    },
+    {
+        file: "azure-deploy/deploy/references/database-post-deploy.md",
+        name: "migration-controller-reachability",
+        pattern: /(?=[\s\S]*Pre-deploy artifact proof)(?=[\s\S]*Controller proof)(?=[\s\S]*Live reachability probe)(?=[\s\S]*process exit)(?=[\s\S]*Post-state proof)/,
+        grader: "migration controllers must be reachable before application health acceptance",
+    },
+    {
+        file: "azure-deploy/deploy/references/database-post-deploy.md",
+        name: "migration-probe-fail-closed",
+        pattern: /migration-probe-mode\.mjs[\s\S]*case-insensitive `true`\/`false` only[\s\S]*missing,[\s\S]*aborts before database initialization[\s\S]*MIGRATION_PROBE_ONLY=false/,
+        grader: "reachability probes cannot fall through into a real migration",
+    },
+    {
+        file: "shared-references/examples/service-abstraction-examples.md",
+        name: "postgres-managed-identity-pool",
+        pattern: /DefaultAzureCredential[\s\S]*ossrdbms-aad\.database\.windows\.net\/\.default[\s\S]*host:[\s\S]*port,[\s\S]*database:[\s\S]*user:[\s\S]*password: async[\s\S]*token\.token/,
+        grader: "production node-postgres invokes the managed-identity token callback",
+    },
+    {
+        file: "shared-references/runtimes/typescript.md",
+        name: "central-correlation-response-contract",
+        pattern: /(?=[\s\S]*withHttpContract)(?=[\s\S]*X-Correlation-ID)(?=[\s\S]*Access-Control-Expose-Headers)(?=[\s\S]*structured-error response)/,
+        grader: "generated success and error responses expose the correlation header",
+    },
+    {
+        file: "azure-deploy/deploy/instructions.md",
+        name: "live-correlation-gate",
+        pattern: /verify-correlation-contract\.mjs[\s\S]*correlation-verification\.json[\s\S]*blocks healthy\/succeeded/,
+        grader: "OE-CORRELATION-01 live success/error/CORS acceptance",
+    },
+];
+
+const executableContracts: ExecutableContract[] = [
+    {
+        name: "portable-product-inventory-self-test",
+        file: "azure-deploy/deploy/scripts/capture-deployment-inventory.mjs",
+        args: ["--self-test"],
+        grader: "portable inventory path/schema/attribution and cross-platform Azure CLI launch behavior",
+    },
+    {
+        name: "deployment-artifact-validation-self-test",
+        file: "azure-deploy/deploy/scripts/validate-deployment-artifacts.mjs",
+        args: ["--self-test"],
+        grader: "locked-target artifact validation and stale binding rejection",
+    },
+    {
+        name: "node-runtime-contract-self-test",
+        file: "azure-deploy/deploy/scripts/validate-node-runtime-contracts.mjs",
+        args: ["--self-test"],
+        grader: "generated correlation/PostgreSQL/migration runtime contract rejection",
+    },
+    {
+        name: "migration-probe-mode-self-test",
+        file: "azure-deploy/deploy/scripts/migration-probe-mode.mjs",
+        args: ["--self-test"],
+        grader: "strict probe parsing cannot mutate migration history",
+    },
+    {
+        name: "functions-flex-package-self-test",
+        file: "azure-deploy/deploy/scripts/validate-functions-flex-package.mjs",
+        args: ["--self-test"],
+        grader: "Flex package Node/function/import-closure rejection behavior",
+    },
+    {
+        name: "correlation-contract-self-test",
+        file: "azure-deploy/deploy/scripts/verify-correlation-contract.mjs",
+        args: ["--self-test"],
+        grader: "live correlation preservation/generation/error/CORS behavior",
     },
 ];
 
@@ -338,6 +500,40 @@ for (const contract of contracts) {
     }
 }
 
+for (const contract of executableContracts) {
+    const filePath = path.join(agentsRoot, contract.file);
+    if (!fs.existsSync(filePath)) {
+        failures.push(`${contract.name}: ${contract.file} is missing (needed by ${contract.grader})`);
+        continue;
+    }
+    const result = spawnSync(process.execPath, [filePath, ...contract.args], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        maxBuffer: 10 * 1024 * 1024,
+    });
+    const stdout = result.stdout.trim();
+    const stderr = result.stderr.trim();
+    let passed = false;
+    if (result.status === 0) {
+        try {
+            const lastLine = stdout.split(/\r?\n/).filter(Boolean).at(-1) ?? "";
+            passed = (JSON.parse(lastLine) as { passed?: unknown }).passed === true;
+        } catch {
+            passed = false;
+        }
+    }
+    if (passed) {
+        checked.push(`${contract.name} (${contract.file})`);
+    } else {
+        failures.push(
+            `${contract.name}: ${contract.file} self-test failed (needed by ${contract.grader}).\n`
+            + `    exit: ${String(result.status)}\n`
+            + `    stdout: ${stdout || "(empty)"}\n`
+            + `    stderr: ${stderr || "(empty)"}`,
+        );
+    }
+}
+
 const agentFiles = listFiles(agentsRoot).filter(f => f.endsWith(".md") && f.includes(PLAN));
 for (const rule of consistencyRules) {
     const offenders = agentFiles.filter(f => rule.pattern.test(fs.readFileSync(f, "utf8")));
@@ -349,6 +545,38 @@ for (const rule of consistencyRules) {
     } else {
         checked.push(rule.name);
     }
+}
+
+const attributesPath = path.join(repoRoot, ".gitattributes");
+try {
+    const attributes = fs.readFileSync(attributesPath, "utf8");
+    const requiredLfPolicies = [
+        /^evals\/\*\*\s+text=auto\s+eol=lf\s*$/m,
+        /^resources\/agents\/\*\*\s+text=auto\s+eol=lf\s*$/m,
+    ];
+    if (requiredLfPolicies.every(policy => policy.test(attributes))) {
+        checked.push("agent-assets-lf-checkout-policy");
+    } else {
+        failures.push(
+            "agent-assets-lf-checkout-policy: .gitattributes must force LF for both evals/** and "
+            + "resources/agents/** so byte-exact asset hashes are portable.",
+        );
+    }
+} catch (err) {
+    failures.push(`agent-assets-lf-checkout-policy: ${err instanceof Error ? err.message : String(err)}`);
+}
+
+const crlfAssets = trackedFiles().filter(name =>
+    fs.readFileSync(path.join(agentsRoot, name)).includes(Buffer.from("\r\n")),
+);
+if (crlfAssets.length) {
+    failures.push(
+        "agent-assets-noncanonical-eol: tracked agent assets contain CRLF bytes despite the LF checkout policy.\n"
+        + crlfAssets.map(name => `    ${name}`).join("\n")
+        + "\n    Normalize these files to LF before recording the byte-exact baseline.",
+    );
+} else {
+    checked.push("agent-assets-canonical-lf");
 }
 
 const currentHash = hashAgentAssets();
@@ -429,7 +657,7 @@ const previous: AssetBaseline | null = fs.existsSync(lockPath)
     ? JSON.parse(fs.readFileSync(lockPath, "utf8")) as AssetBaseline
     : null;
 
-if (update) {
+if (update && failures.length === 0) {
     fs.writeFileSync(lockPath, `${JSON.stringify({
         agentAssetsHash: currentHash,
         scope: SCOPE,

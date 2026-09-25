@@ -57,7 +57,24 @@
 
 ---
 
-## 5. Prerequisites
+## 5. Quality Attributes & Tradeoffs
+
+**Operating Profile**: Standard Production
+**Data Classification**: Confidential / Personal
+**Traffic Profile**: Small / Steady
+**Optimization Priority**: Balanced
+
+| Pillar | Workload Target | Scaffold Response | Planned Validation | Deferred Risk |
+|--------|-----------------|-------------------|--------------------|---------------|
+| Reliability | Preserve attendance entries and degrade clearly when a dependency is unavailable | Health checks, bounded retries, and transactional policy/entry writes | Dependency-failure and transaction tests | Recovery targets are resolved during deployment planning |
+| Security | Protect private employee attendance records | Login-required routes, input validation, managed-identity client boundary, and redacted logs | Negative authorization and sensitive-log tests | Organization compliance review remains external |
+| Cost Optimization | Balance recurring business use with moderate cost | Avoid unneeded caches and background services | Dependency inventory and deployment cost estimate | Premium redundancy is deferred pending deployment targets |
+| Operational Excellence | Support business-hours diagnosis | Structured logs, correlation IDs, actionable errors, and health signals | Telemetry and diagnostic smoke tests | Alert routing is configured during deployment |
+| Performance Efficiency | Support predictable internal traffic | Pagination, pooling, and bounded payloads | Boundary tests for list endpoints | Numeric latency target is not specified |
+
+---
+
+## 6. Prerequisites
 
 ### Run
 
@@ -78,7 +95,7 @@
 
 ---
 
-## 6. Design System & UI
+## 7. Design System & UI
 
 **Component Library**: Fluent UI v9
 **Style Direction**: A calm, trustworthy workplace-compliance console — generous whitespace, soft elevation, rounded 8px corners, and a blue/teal palette that reads "on track" rather than punitive.
@@ -129,7 +146,7 @@ Settings — policy form (shown with an error banner: "Couldn't load your saved 
 
 ---
 
-## 7. Project Structure
+## 8. Project Structure
 
 ```
 project-root/
@@ -177,7 +194,7 @@ project-root/
 
 ---
 
-## 8. Route Definitions
+## 9. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Status Codes |
 |---|--------|------|-------------|-------------|--------------|-------------|
@@ -194,7 +211,7 @@ project-root/
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations

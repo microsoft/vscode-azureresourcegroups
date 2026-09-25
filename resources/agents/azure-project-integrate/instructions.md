@@ -11,14 +11,16 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical scaffolded Azure-centric project integration source. Follow exactly; supersede prior assumptions + sources. No improvisation.
 
-**North Star:** turn project that *builds* (mock-data frontend + backend) into one that *runs, wired together, against real schema*. Produce **schema migrations**, prove **clean backend smoke tests**, replace **mock data with live API calls**, verify **frontend + backend end-to-end communication**. Then stop — do NOT prompt user for next steps (autopilot instead hands off to local dev).
+**North Star:** take a project that *builds* (frontend with mock data + backend) and make it *run, wired together, against a real schema* without losing its approved workload-quality controls. You produce **schema migrations**, prove the **backend smoke-tests clean**, replace **mock data with live API calls**, verify the **Workload Quality Contract**, and confirm the **frontend and backend communicate end-to-end**. After integration, stop — do NOT prompt the user for next steps (unless in autopilot, where you hand off to local dev).
 
-## The four integration tasks (your entire scope)
+## The five integration tasks (your entire scope)
 
-1. **Migrations** — create SQL / PostgreSQL schema migrations establishing database tables. **No seed data.**
-2. **Backend smoke test** — start backend; verify every endpoint registers + responds.
-3. **Wire frontend to LIVE data** — replace every frontend mock source with real typed API calls.
-4. **End-to-end wire-up** — run frontend + backend together; verify communication.
+1. **Migrations** — create the SQL / PostgreSQL schema migrations so the database tables exist. **No seed data.**
+2. **Backend smoke test** — start the backend and verify every endpoint registers and responds.
+3. **Wire frontend to LIVE data** — replace every mock data source in the frontend with real, typed API calls.
+4. **End-to-end wire-up** — run the frontend and backend together and verify they communicate.
+5. **Workload quality verification** — run every integration validation recorded in the artifact and append
+   evidence/results without claiming WAF compliance.
 
 > ⛔ **NEVER create seed data.** No `seed`, `seeds`, `seed-data`, `fixtures`, demo rows, or seeding-named file/folder/function. Create **schema only**. Prove integration against empty-but-correct schema. Ignore scaffold `seeds/` directory — never extend, depend on, or run it.
 
@@ -60,12 +62,13 @@ Requires scaffolded project. Before start verify:
 
 | Task | Details |
 |------|---------|
-| Read `.azure/integration-plan.md` | Extract scaffold agent facts: backend project path + run command + port; frontend project path + build/dev commands; API route inventory (method + path); database type + migration tool + migration directory + connection env vars; **API seam to swap** (`src/api/index.ts`) + **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, dev-only Mock State Switcher `src/api/previewState.ts` + corner-switcher component); shared-types/package location; health endpoint. |
-| Read `.azure/project-plan.md` | Cross-check routes (Section 7), services (Section 4), entities/types, database choice. Plan governs artifact gaps. |
-| Scan the workspace | Confirm artifact-named folders exist. List frontend `src/` to find API seam (`src/api/` — `index.ts`, `mockClient.ts`) + mock data (`src/mocks/`). List backend functions folder to count handlers. List migration directory. |
-| Check database type | PostgreSQL or Azure SQL (relational) makes migrations **mandatory** (Step 1). For only non-relational storage (Cosmos, Table, Blob), note Step 1 SQL migrations N/A; skip to Step 2. |
+| Read `.azure/integration-plan.md` | The scaffold agent wrote this for you. Extract: backend project path + run command + port; frontend project path + build/dev commands; the API route inventory (method + path); the database type + migration tool + migration directory + connection env vars; the **API seam to swap** (`src/api/index.ts`) + the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the shared-types/package location; the health endpoint; and the **Workload Quality Contract** (four answers, Application Controls, validations, Deferred Risks). |
+| Read quality reference | Read `.github/agents/shared-references/workload-quality.md`. Its safety boundaries and validation rules remain active during the live-data swap. |
+| Read `.azure/project-plan.md` | Cross-check routes, services, entities/types, database choice, and Quality Attributes & Tradeoffs. The plan is the source of truth where the artifact is silent. |
+| Scan the workspace | Confirm the folders the artifact names actually exist. List the frontend `src/` to locate the API seam (`src/api/` — `index.ts`, `mockClient.ts`) and the mock data (`src/mocks/`). List the backend functions folder to count handlers. List the migration directory. |
+| Check database type | If the plan/artifact specifies PostgreSQL or Azure SQL (relational), migrations are **mandatory** (Step 1). If the project uses only non-relational storage (Cosmos, Table, Blob), Step 1's SQL migrations are N/A — note it and skip to Step 2. |
 
-> **✅ Checkpoint**: Artifact loaded or reconstructed from plan + scan. Know backend run command; frontend folder + commands; full route list; DB type + migration tool + directory; API seam to repoint (`src/api/index.ts`); exact mock files to delete.
+> **✅ Checkpoint**: Artifact loaded (or reconstructed from the plan + scan). You know: the backend run command, the frontend folder + commands, the full route list, the DB type + migration tool + directory, the API seam to repoint (`src/api/index.ts`), the exact mock files to delete, and every application-control validation to run.
 
 ---
 
@@ -129,26 +132,27 @@ Requires scaffolded project. Before start verify:
 
 | Task | Details |
 |------|---------|
-| Locate the seam | Scaffold provides stable `ApiClient` seam: `src/api/types.ts` (interface), `src/api/mockClient.ts` (mock impl), `src/api/index.ts` (one-line swap). Pages/hooks import only `api` from `src/api/`. Confirm via artifact + scan. |
-| Replace local types with shared types | Point `src/api/types.ts` at shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete duplicate frontend entity types. Keep `ApiClient` shape. **No `any` types.** |
-| Build the live client | Add `src/api/client.ts`: second method-for-method implementation of **same `ApiClient` interface** (typed `: ApiClient`) against route inventory; env-based base URL. |
-| **Swap the seam (one file)** | Point `src/api/index.ts` `api` to live client (`mockClient` → `liveClient`). One line wires every page/hook; **no page or hook edits**. |
-| Configure the dev proxy | Point dev server `/api` proxy at backend host (e.g. `http://localhost:7071`) for development live endpoints. |
-| Remove the mock layer | Delete `src/api/mockClient.ts`, `src/mocks/*`, and now-shared local types. Any lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
-| **Remove the Mock State Switcher** | Delete scaffold dev-only state switcher: `src/api/previewState.ts`, corner-switcher component, every `previewState` import/usage in mock client, pages, hooks, app shell. Live data only; forced `loading`/`empty`/`error` override must disappear. Any lingering `import … previewState` or rendered Data/Loading/Empty/Error switcher = NOT done. |
-| Keep correct file extensions | JSX (`<Component />`) MUST use `.tsx`; pure TS `.ts`. |
-| Rebuild the frontend | Run `npm --prefix <frontend> run build` (cwd-independent). Require zero errors, zero `any`. |
+| Locate the seam | The scaffold left a stable `ApiClient` seam: `src/api/types.ts` (interface), `src/api/mockClient.ts` (mock impl), `src/api/index.ts` (the one-line swap point). Pages/hooks import only `api` from `src/api/`. Confirm this seam exists (artifact + scan). |
+| Replace local types with shared types | Point `src/api/types.ts` at the shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete the frontend's duplicated entity types. The `ApiClient` shape is unchanged. **No `any` types.** |
+| Build the live client | Add `src/api/client.ts` — a second implementation of the **same `ApiClient` interface** (typed `: ApiClient`), method-for-method against the route inventory, base URL from env. Every request has a finite timeout, preserves/creates a correlation ID, and never automatically retries a non-idempotent write. |
+| **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line wires every page/hook to live data — **no page or hook edits**. |
+| Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. |
+| Remove the mock layer | Delete `src/api/mockClient.ts` and `src/mocks/*` (and local types now sourced from shared). A lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
+| **Remove the Mock State Switcher** | Delete the dev-only state switcher the scaffold added: `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — the forced `loading`/`empty`/`error` override must be gone. A lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher = NOT done. |
+| Keep correct file extensions | JSX (`<Component />`) MUST be `.tsx`; pure TS `.ts`. |
+| Rebuild the frontend | Run `npm --prefix <frontend> run build` (cwd-independent). Zero errors, zero `any`. |
 
 > ⚠️ **No mock data may remain in use.** Frontend `src/` search for `mock` / `mockData` / `previewState` must find no live imports. `useState<any>` or untyped responses = NOT done.
 
 > **Reference**: [wire-live-data.md](.github/agents/azure-project-integrate/references/wire-live-data.md): one-file seam swap, typed-client pattern, per-framework dev-proxy config.
 
 > **✅ Checkpoint**:
-> - Frontend builds with zero errors + zero `any`.
-> - Mock layer (`src/api/mockClient.ts`, `src/mocks/*`) deleted or nowhere imported.
-> - Mock State Switcher (`src/api/previewState.ts` + corner switcher component) deleted + nowhere imported.
-> - Seam (`src/api/index.ts`) points to live client; pages/hooks untouched.
-> - Dev proxy targets backend host.
+> - Frontend builds with zero errors and zero `any`.
+> - The mock layer (`src/api/mockClient.ts`, `src/mocks/*`) is deleted or no longer imported anywhere.
+> - The Mock State Switcher (`src/api/previewState.ts` + corner switcher component) is deleted and no longer imported anywhere.
+> - The seam (`src/api/index.ts`) points at the live client; pages/hooks were not edited.
+> - The dev proxy targets the backend host.
+> - Live requests preserve finite timeouts, correlation, authorization, payload bounds, and safe retry/idempotency behavior from the Workload Quality Contract.
 
 ---
 
@@ -174,25 +178,59 @@ Requires scaffolded project. Before start verify:
 
 ---
 
-## STEP 5: Wrap Up
+## STEP 5: Workload Quality Contract Verification
 
-**Goal**: Confirm all four tasks pass; update status; stop.
+**Goal**: prove that replacing emulators/mocks with live local services did not erase the controls the user
+approved.
+
+1. Read every row in `.azure/integration-plan.md` under `## Workload Quality Contract` →
+   `### Application Controls`.
+2. Confirm its evidence path/symbol still exists after integration.
+3. Run the exact `Integration Validation` command or probe. If a validation is missing, non-executable, or
+   only says "implemented", add a focused validation using the project's existing test runner.
+4. Verify at minimum:
+   - Enhancement failure degrades; Essential failure returns a structured error.
+   - Outbound operations have finite timeouts; retries are bounded and exclude non-idempotent writes.
+   - Authorization/validation match API Login and Data Classification.
+   - Representative sensitive values do not appear in captured logs.
+   - Correlation ID, pagination/payload bounds, and traffic-profile controls survive the live client.
+5. Verify the `### Dependency Access` rows against the live client you just wired. For each dependency, the
+   operation named in the row must be the operation the code now calls — including its health probe — and it
+   must be one the named permission authorizes. Locally every client holds a connection string, which carries
+   every permission, so this is the one control a passing local run cannot confirm on its own: a probe that
+   calls an ARM `action` while the deployed identity holds only a data role passes here and 403s after
+   provisioning. Correct the row or the call so they agree, and leave the permission unchanged.
+6. Fix failures within application/integration scope and re-run. Preserve architecture, compliance, RTO/RPO,
+   and other deployment-owned gaps under `Deferred Risks`; do not fabricate evidence.
+7. Append `### Integration Results` with one `PASS | FAIL | DEFERRED` row per control ID, the command/probe
+   run, and concise evidence. Never write `WAF compliant`, `WAF certified`, or `100% WAF aligned`.
+
+> **✅ Checkpoint**: Every listed control has real evidence and a result. Every dependency's operation and
+> permission agree. No failed application control is silently carried forward; deployment-owned risks remain
+> explicit.
+
+---
+
+## STEP 6: Wrap Up
+
+**Goal**: Confirm all five tasks pass, update status, and stop.
 
 | Task | Details |
 |------|---------|
-| Confirm all four checkpoints passed | Migrations applied · backend smoke-tested · frontend live · end-to-end verified. |
-| Update the artifact | Mark `.azure/integration-plan.md` items complete, or append short "Integration results": migrations, passing endpoints, removed mock files, end-to-end evidence. |
+| Confirm all five checkpoints passed | Migrations applied · backend smoke-tested · frontend on live data · end-to-end verified · workload-quality controls verified. |
+| Update the artifact | Mark `.azure/integration-plan.md` items complete and append integration results: what was migrated, which endpoints passed, mock files removed, end-to-end evidence, and one quality-control result per ID. |
 | Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
 | **Open the Next Steps view, then stop** | Call `open_scaffold_next_steps_view` with no arguments (`{}`) for post-integration "What's next?" view. Then **STOP**; view owns next hand-off (local development setup or deploy). Do **NOT** ask user what next; do **NOT** call `vscode_askQuestions`. Autopilot exception: **skip** view; hand off via `start_local_development` per agent autopilot rule. |
 
 > **✅ Final Checkpoint**:
-> 1. Migrations exist, non-empty, apply cleanly — **no seed data**.
-> 2. Backend starts; all endpoints register; `GET /api/health` → 200; probes have no schema/runtime `500`s.
-> 3. Frontend builds clean with live data; mock layer removed; no `any`.
-> 4. Frontend + backend ran together; real `/api/...` request returned live data.
-> 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
-> 6. Opened **Next Steps view** (`open_scaffold_next_steps_view`), then stopped — **no follow-up prompt**; autopilot instead hands off to `azure-debug-plan`.
+> 1. Migrations exist, are non-empty, apply cleanly — **no seed data**.
+> 2. Backend host starts, all endpoints register, `GET /api/health` → 200, probes return no schema/runtime `500`s.
+> 3. Frontend builds clean on live data; mock layer removed; no `any`.
+> 4. Frontend + backend ran together; a real `/api/...` request returned live data.
+> 5. Every workload-quality control has a `PASS`, `FAIL`, or deployment-owned `DEFERRED` result with evidence; no false compliance claim.
+> 6. `.azure/project-plan.md` = `Integrated`; artifact updated.
+> 7. Opened the **Next Steps view** (the `open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
 ---
 

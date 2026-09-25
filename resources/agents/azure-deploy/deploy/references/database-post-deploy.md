@@ -1,8 +1,45 @@
 # Database Post-Deploy Verification (Managed-Identity / Entra-Only)
 
-Run schema migrations on AppOnboard-created databases (listed in `prepare-plan.json.services[]`) before health checks. The app must be running first — if it's crashing, fix that before attempting migrations.
+Run schema migrations on AppOnboard-created databases (listed in `prepare-plan.json.services[]`) before
+application-health acceptance. The platform may need to be running enough to expose its execution surface,
+but a ready revision or HTTP 200 is only **platform readiness** until the migration controller runs and
+post-state is verified.
 
 > ⛔ **No passwords anywhere.** Databases are provisioned Entra-only (no `administratorLogin`/`administratorLoginPassword`, no access keys). Admin operations (create DB, grant the app's managed identity a role, run migrations) authenticate with an **Entra access token** minted for the deploying principal, which the Bicep set as the server's Entra administrator. There is no `deploy-secrets.env` DB password and no `pgAdminPassword` parameter.
+
+## Hard gate: prove the migration controller before acceptance
+
+Complete these in order and record them in `deploy-result.json.migration`:
+
+1. **Pre-deploy artifact proof:** locate the exact migration entrypoint and command, then inspect the immutable
+   package/image that will be released. The entrypoint, migration files, runtime, and production dependencies
+   must exist inside that artifact. Checking the source tree is not evidence. For a container, probe the built
+   image; for a ZIP, extract it into an empty directory and probe there. Record the artifact path/digest and set
+   `artifactVerified: true` only after all four checks pass.
+2. **Controller proof:** name the selected tier and execution surface. Verify it exists before invocation:
+   Container Apps exec requires a running revision and the command inside the image; a Container Apps job
+   requires `az containerapp job show --subscription {sub}`; a temporary Flex migration Function requires
+   `az functionapp function list --subscription {sub}` to include its exact trigger; App Service requires an
+   available SSH/command surface. A migration file with no runnable platform controller is a release defect.
+3. **Live reachability probe:** invoke a side-effect-free controller probe (for example `--help`, a
+   migration-status command, or an artifact existence check) and require the controller to start the intended
+   runtime. For a Node controller, copy/import the shipped `migration-probe-mode.mjs` parser and pass
+   `MIGRATION_PROBE_ONLY=true` explicitly. The parser accepts case-insensitive `true`/`false` only; a missing,
+   empty, or aliased value (`1`, `yes`) aborts before database initialization. Before packaging, run
+   `migration-probe-mode.mjs --self-test` and the runtime-contract validator with
+   `--require-migration-probe`. Record `reachabilityProbeCommand`, its exit code, and evidence separately from
+   application output; set `controllerReachable: true` only on a successful probe whose before/after migration
+   history is unchanged.
+4. **Single migration execution:** invoke once. Capture controller/ARM status, application process exit,
+   stdout, and stderr as separate evidence. Pass `MIGRATION_PROBE_ONLY=false` explicitly; missing does not mean
+   "migrate." Controller `Succeeded` with a missing/nonzero process exit is not success.
+5. **Post-state proof:** query migration history, expected tables/schema, mapped principal/OID, and unexpected
+   row/seed state. Only then set `postStateVerified: true`.
+
+If any pre-deploy or live controller probe fails, repair and rebuild the package/image or controller
+specification before another invocation. Do not perform an unchanged migration retry, and do not continue to
+application health. For a temporary migration Function, remove its source, run a clean rebuild so no stale
+compiled module remains, publish the final package, and prove the final registered Function set excludes it.
 
 ## 0. Mint an Entra token for the deploying principal
 
@@ -10,9 +47,9 @@ The deployer is the Entra admin on the server (set by the DB module's `administr
 
 ```powershell
 # PostgreSQL / MySQL Flexible Server (OSS RDBMS audience)
-$dbToken = az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
+$dbToken = az account get-access-token --subscription {sub} --resource-type oss-rdbms --query accessToken -o tsv
 # Azure SQL (SQL audience)
-$sqlToken = az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv
+$sqlToken = az account get-access-token --subscription {sub} --resource https://database.windows.net/ --query accessToken -o tsv
 ```
 
 ## 1. Create the app database (if needed)
@@ -20,7 +57,7 @@ $sqlToken = az account get-access-token --resource https://database.windows.net/
 > ⛔ **Azure PostgreSQL/MySQL Flexible Server only creates the system `postgres`/`mysql` database by default.** If the app's config references a named database (e.g., `car_sale_db`, `myapp_production`), create it BEFORE the container starts — using token auth, never a password:
 >
 > ```powershell
-> az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken `
+> az postgres flexible-server execute --subscription {sub} -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken `
 >   -d postgres --querytext "CREATE DATABASE {dbName};"
 > ```
 >
@@ -34,14 +71,14 @@ The app authenticates with its **managed identity**, which must exist as a datab
 
 ```powershell
 # 2a. Create the Entra principal for the app MI — MUST run on the `postgres` database.
-az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext @"
+az postgres flexible-server execute --subscription {sub} -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext @"
 SELECT * FROM pgaadauth_create_principal_with_oid('{appMiName}', '{appMiObjectId}', 'service', false, false);
 "@
 
 # 2b. Grant privileges — run on the app database {dbName} (the role already exists cluster-wide).
 # NOTE: a PowerShell here-string does NOT treat "" as an escape — use a single " around the identifier
 # (doubling it emits `TO ""myapp"";` → Postgres `zero-length delimited identifier`).
-az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d {dbName} --querytext @"
+az postgres flexible-server execute --subscription {sub} -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d {dbName} --querytext @"
 GRANT ALL PRIVILEGES ON DATABASE {dbName} TO "{appMiName}";
 GRANT ALL ON SCHEMA public TO "{appMiName}";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "{appMiName}";
@@ -102,11 +139,22 @@ az containerapp exec -n {ca} -g {rg} --subscription {sub} --command 'sh -lc "exp
 
 ## Error Handling
 
-If the migration command fails, classify as `IAC_ERROR` and check based on the database type:
+If the migration command fails, preserve its application output and inspect state before classifying it.
+For a tier-2 job, follow
+[`migration-access.md` § Tier-2 execution evidence and retry gate](../../cor-references/migration-access.md):
+capture stdout/stderr and process exit separately from the job-controller reason, then query migration
+history, expected tables, and principal/OID state. `BackoffLimitExceeded` is not a root-cause classification,
+and missing application logs means the cause is `UNKNOWN`, not automatically `IAC_ERROR`.
+
+Classify only after that evidence, then check based on the database type:
 - **AAD token / auth failure** (`password authentication failed`, `Login failed for token-identified principal`) → the app MI was not granted a DB role (§2), or Entra-admin/RBAC propagation hasn't completed. Verify the app MI principal exists, wait 60s, retry.
 - DB unreachable → check firewall rules (PostgreSQL: `AllowAllAzureServicesAndResourcesWithinAzureIps`, SQL: server firewall, MySQL: similar)
 - Extension/feature missing → check DB-specific config (PostgreSQL: `azure.extensions`, SQL: compatibility level, MySQL: `require_secure_transport`)
 - Module not found → verify the runtime includes the migration tool
+
+Do not retry while the migration-history or expected-table state is unknown. An unchanged tier-2 retry is
+limited to one and requires a logged transient cause plus proof that no applied-but-untracked migration
+remains. Code/package/configuration failures require a repaired and revalidated image/spec.
 
 > ⛔ **Never weaken auth to unblock.** Do NOT set `passwordAuth: 'Enabled'`, add an `administratorLoginPassword`, or re-enable access keys to make a failing migration pass. Fix the grant (§2) or the client token config.
 
@@ -114,20 +162,20 @@ If the migration command fails, classify as `IAC_ERROR` and check based on the d
 
 Run BEFORE migrations when `services[]` includes PostgreSQL Flexible Server:
 
-1. **Token connectivity:** `az postgres flexible-server execute -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext "SELECT 1"` — if this fails, the firewall rule is missing, the deployer is not the Entra admin, or AAD propagation hasn't completed. Check `AllowAllAzureServicesAndResourcesWithinAzureIps` exists and the `administrators` child deployed, wait 60s, retry
-2. **Extension availability:** `az postgres flexible-server parameter show -g {rg} -n {pg} --name azure.extensions --query value -o tsv` — verify the extensions the app needs (e.g., `uuid-ossp` for Alembic/Django UUID fields) are in the allow-list. If missing, the Bicep module should have set them — check `infra/modules/postgresql.bicep`
+1. **Token connectivity:** `az postgres flexible-server execute --subscription {sub} -n {pg} -g {rg} -u "{entraAdminName}" -p $dbToken -d postgres --querytext "SELECT 1"` — if this fails, the firewall rule is missing, the deployer is not the Entra admin, or AAD propagation hasn't completed. Check `AllowAllAzureServicesAndResourcesWithinAzureIps` exists and the `administrators` child deployed, wait 60s, retry
+2. **Extension availability:** `az postgres flexible-server parameter show --subscription {sub} -g {rg} -n {pg} --name azure.extensions --query value -o tsv` — verify the extensions the app needs (e.g., `uuid-ossp` for Alembic/Django UUID fields) are in the allow-list. If missing, the Bicep module should have set them — check `infra/modules/postgresql.bicep`
 
 ## MySQL Flexible Server Checks
 
 Run BEFORE migrations when `services[]` includes MySQL Flexible Server:
 
-1. **Token connectivity:** `az mysql flexible-server execute -n {mysql} -u "{entraAdminName}" -p $dbToken -d mysql -q "SELECT 1"` — if this fails, check the firewall rule, that the Entra admin is set, and AAD propagation. Note: `execute` resolves by server name (no `-g` needed)
-2. **SSL enforcement:** `az mysql flexible-server parameter show -g {rg} -n {mysql} --name require_secure_transport --query value -o tsv` — verify matches the app's connection SSL mode
+1. **Token connectivity:** `az mysql flexible-server execute --subscription {sub} -n {mysql} -u "{entraAdminName}" -p $dbToken -d mysql -q "SELECT 1"` — if this fails, check the firewall rule, that the Entra admin is set, and AAD propagation. Note: `execute` resolves by server name (no `-g` needed)
+2. **SSL enforcement:** `az mysql flexible-server parameter show --subscription {sub} -g {rg} -n {mysql} --name require_secure_transport --query value -o tsv` — verify matches the app's connection SSL mode
 
 ## Azure SQL Checks
 
 Run BEFORE migrations when `services[]` includes Azure SQL:
 
-1. **Database online:** `az sql db show -g {rg} -s {sqlServer} -n {dbName} --query status -o tsv` — verify the database is `Online`
-2. **Server firewall:** `az sql server firewall-rule list -g {rg} -s {sqlServer} -o table` — verify `AllowAllWindowsAzureIps` (0.0.0.0 → 0.0.0.0) exists for Azure-internal access
+1. **Database online:** `az sql db show --subscription {sub} -g {rg} -s {sqlServer} -n {dbName} --query status -o tsv` — verify the database is `Online`
+2. **Server firewall:** `az sql server firewall-rule list --subscription {sub} -g {rg} -s {sqlServer} -o table` — verify `AllowAllWindowsAzureIps` (0.0.0.0 → 0.0.0.0) exists for Azure-internal access
 3. **Entra-only auth:** verify `azureADOnlyAuthentication` is `true` and the app MI has a contained user (§2)

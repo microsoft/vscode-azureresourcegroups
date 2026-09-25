@@ -6,7 +6,14 @@
 
 ## Execution Model
 
-> ⚠️ **PIPELINING**: **Frontend sub-agent** (Step 1) and backend track start **immediately after Step 0** (plan validation), **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from plan, not frontend; neither track blocks the other. For API-only projects (no frontend), skip Frontend sub-agent and start backend scaffolding immediately after Step 0.
+> ⛔ **Model propagation is part of every hand-off.** The parent reads the final
+> `copilot-on-rails-model-contract:v1` block in the current query, requires
+> `authority: "extension-resolved-selector"`, sets `parentModelId` to its `taskModel` value exactly, and
+> includes `model: parentModelId` on every frontend/backend/build/repair/verification `task` or
+> `runSubagent` call. Never rediscover or substitute this value: the generic task agent's definition default
+> is not guaranteed to match the parent session. A missing, malformed, or rejected contract stops delegation.
+
+> ⚠️ **PIPELINING**: The **Frontend sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
 >
 > **Execution timeline for SPA + API projects:**
 > ```
@@ -27,15 +34,15 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 
 | Sub-Agent | Responsibility | Scope |
 |-----------|---------------|-------|
-| **Frontend Agent** (general-purpose) | Generate `services/web/`: the `ApiClient` seam (`src/api/` — interface + mock impl + one-line `index.ts` swap point) backed by a mock data layer with real images (F1–F2), pages + shared components that import only the seam `api` object (F3), login UI plus locally seeded identity when `API Login` is `Yes`, and all four data states. Login-enabled frontends MUST include a visible **Create account** button on the login page and a dedicated create-account page wired through `api.createAccount(...)`. When `API Login` is `No`, generate no auth UI or state. **The `ApiClient` interface must cover every entity the UI renders, including reference data the plan has no route for (assignee lookups, the signed-in user) — nothing outside `src/api/` may import `src/mocks/`.** Apply the Rule 13 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
+| **Frontend Agent** (general-purpose) | Generate `services/web/`: the `ApiClient` seam (`src/api/` — interface + mock impl + one-line `index.ts` swap point) backed by a mock data layer with real images (F1–F2), pages + shared components that import only the seam `api` object (F3), login UI plus locally seeded identity when `API Login` is `Yes`, and all four data states. Login-enabled frontends MUST include a visible **Create account** button on the login page and a dedicated create-account page wired through `api.createAccount(...)`. When `API Login` is `No`, generate no auth UI or state. **The `ApiClient` interface must cover every entity the UI renders, including reference data the plan has no route for (assignee lookups, the signed-in user) — nothing outside `src/api/` may import `src/mocks/`.** Apply the frontend quality bar and the approved Workload Quality Contract: bounded inputs/results, no sensitive values in browser logs, and error/retry UI that preserves correlation IDs where the API exposes them. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
 
 **Brief handed to the sub-agent** (full context it receives):
-- The approved plan, especially **Section 6 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
+- The approved plan, especially **Design System & UI** and **Quality Attributes & Tradeoffs**.
 - The approved HTML preview under `.azure/.preview-temp/` (manifest + per-page `<slug>.html` + `theme.css`) as the presentation-quality visual spec.
-- The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
+- The frontend references plus `shared-references/workload-quality.md`.
 
 **Hand-back contract** (what the sub-agent returns):
-- `services/web/` generated and **building cleanly** (it ran the F1–F4 checkpoints: build passes, no `any`, API Login behavior matches the plan, login-enabled apps have the required create-account button and page, four states present, Rule 13 satisfied).
+- `services/web/` generated and **building cleanly** (it ran the F1–F4 checkpoints: build passes, no `any`, API Login behavior matches the plan, login-enabled apps have the required create-account button and page, four states present, Rule 14 satisfied).
 - A short report listing the pages generated and any caveats.
 - It MUST NOT call `ask_user` for UX approval — the design was already approved during planning.
 
@@ -60,9 +67,13 @@ Once contracts exist on disk, launch backend sub-agent:
 
 | Sub-Agent | Responsibility | Scope |
 |-----------|---------------|-------|
-| **Backend API Agent** (general-purpose) | Concrete service implementations, service registry, function handlers, OpenAPI spec, structured logging | Steps 3–10 implementation files |
+| **Backend API Agent** (general-purpose) | Concrete service implementations, service registry, function handlers, OpenAPI spec, and the application controls from `workload-quality.md`: health/degradation, finite outbound timeouts, safe retry/idempotency boundaries, validation/authorization, correlation, log redaction, payload/pagination bounds, and profile-specific controls | Steps 3–10 implementation files + focused control tests/evidence |
 
-> **NOTE**: Testing is NOT part of the scaffold phase. Test infrastructure, mocks, fixtures, and unit tests are out of scope — the scaffold produces correct, buildable production code only. Keeping tests out of scaffold ensures the production code stays focused and is not buried under test scaffolding.
+> **Testing boundary:** Broad feature-test generation remains out of scope. Focused tests required to prove
+> the Workload Quality Contract are in scope (for example timeout/retry exhaustion, enhancement degradation,
+> deny-by-default authorization, log redaction, and pagination/payload bounds). Reuse the selected test
+> runner; do not add a second framework. The integration session runs the executable validations recorded in
+> `.azure/integration-plan.md`.
 
 ---
 
@@ -70,6 +81,9 @@ Once contracts exist on disk, launch backend sub-agent:
 
 - The **Frontend Agent** and the backend track (Phase A → Phase B) launch together after Step 0 and run concurrently.
 - The **Backend API Agent** receives the full project plan and the contracts created in Phase A as context.
+- Both sub-agents receive the four workload answers, five pillar rows, and the complete
+  `workload-quality.md` contract. Their hand-back reports list concrete evidence paths and unresolved
+  validations for the integration artifact.
 - After the Backend agent completes, run the final build gate (`npm run build` in all workspaces).
 - The scaffold does **not** start a dev server or open Simple Browser — the frontend is generated and built only; running it locally is out of scope for scaffolding.
 - **Completion gate**: Step 11 (Wrap Up) writes the hand-off artifact only after BOTH: (a) frontend generated and building cleanly — the Frontend sub-agent returned — AND (b) Phase B backend agent completed. If one track finishes first, wait for the other.

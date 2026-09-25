@@ -33,10 +33,11 @@ $mainPath   = Join-Path $InfraPath 'main.bicep'
 $paramsPath = Join-Path $InfraPath 'main.parameters.json'
 $mainBicep  = if (Test-Path $mainPath)   { Get-Content $mainPath -Raw }   else { '' }
 $paramsRaw  = if (Test-Path $paramsPath) { Get-Content $paramsPath -Raw } else { '' }
+$bicepFiles = @()
 $iac = ''
 if (Test-Path $InfraPath) {
-  $iac = (Get-ChildItem $InfraPath -Recurse -Filter *.bicep -ErrorAction SilentlyContinue |
-          ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+  $bicepFiles = @(Get-ChildItem $InfraPath -Recurse -Filter *.bicep -ErrorAction SilentlyContinue)
+  $iac = ($bicepFiles | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
 }
 
 $svcNames = @()
@@ -151,6 +152,108 @@ if (($hasMysql -or $hasPg) -and $iac) {
   # 11b. DB-ENTRA-ADMIN — PG/MySQL must set an Entra administrator so migrations run token-based.
   if (($hasPg -or $hasMysql) -and ($iac -notmatch 'flexibleServers/administrators')) {
     Add-Fail 'DB-ENTRA-ADMIN' 'PostgreSQL/MySQL module missing an administrators (Entra admin) child resource — required for Entra-only auth + token-based migrations' 'infra/modules'
+  }
+  # 11b2. PG-ENTRA-ADMIN-ID — API 2025-08-01 uses the child resource name as the
+  # administrator object ID. A display label such as 'activeDirectory' compiles and
+  # passes what-if, then ARM rejects the PUT because the URL segment is not a GUID.
+  # Enforce the canonical parameter directly so a literal or alias cannot drift from it.
+  $pgAdminBlocks = New-Object System.Collections.Generic.List[object]
+  foreach ($file in $bicepFiles) {
+    $content = Get-Content $file.FullName -Raw
+    $blocks = [regex]::Matches(
+      $content,
+      "(?ims)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers/administrators@[^']+'\s*=\s*\{(?<body>.*?)(?=^\s*(?:resource|module|param|var|output)\s+|\z)"
+    )
+    foreach ($block in $blocks) {
+      $pgAdminBlocks.Add([ordered]@{ file = $file; content = $content; body = $block.Groups['body'].Value })
+    }
+  }
+  if ($hasPg -and $pgAdminBlocks.Count -gt 0) {
+    $adminIdInvalid = $false
+    foreach ($block in $pgAdminBlocks) {
+      if (($block.content -notmatch '(?im)^\s*param\s+entraAdminObjectId\s+string(?:\s|$)') -or
+          ($block.body -notmatch '(?im)^\s*name\s*:\s*entraAdminObjectId\s*(?://.*)?$')) {
+        $adminIdInvalid = $true
+      }
+    }
+    if ($adminIdInvalid) {
+      Add-Fail 'PG-ENTRA-ADMIN-ID' "PostgreSQL administrator child name must be the entraAdminObjectId parameter — the name is the ARM URL object-ID segment, so labels or literals such as 'activeDirectory' fail at runtime" 'infra/modules'
+    }
+
+    # 11b3. PG-ADMIN-READY-BARRIER — ARM output/dependsOn ordering only proves the
+    # server PUT completed. Require a managed-identity deployment script that polls
+    # the exact server to Ready, probes the admin child endpoint, stabilizes, and
+    # fails closed before child resources.
+    $serverAndAdminTogether = $false
+    foreach ($file in $bicepFiles) {
+      $content = Get-Content $file.FullName -Raw
+      if (($content -match "(?im)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers@[^']+'\s*=") -and
+          ($content -match "Microsoft\.DBforPostgreSQL/flexibleServers/administrators@")) {
+        $serverAndAdminTogether = $true
+      }
+    }
+    $hasServerOutput = $iac -match '(?im)^\s*output\s+serverName\s+string\s*=\s*\w+\.name\s*(?://.*)?$'
+    $hasExistingServerTarget = $false
+    foreach ($file in $bicepFiles) {
+      $content = Get-Content $file.FullName -Raw
+      $existingBlocks = [regex]::Matches(
+        $content,
+        "(?ims)^\s*resource\s+\w+\s+'Microsoft\.DBforPostgreSQL/flexibleServers@[^']+'\s+existing\s*=\s*\{(?<body>.*?)(?=^\s*(?:resource|module|param|var|output)\s+|\z)"
+      )
+      foreach ($block in $existingBlocks) {
+        if ($block.Groups['body'].Value -match '(?im)^\s*name\s*:\s*pgName\s*(?://.*)?$') {
+          $hasExistingServerTarget = $true
+        }
+      }
+    }
+
+    $readinessModuleMatch = [regex]::Match(
+      $mainBicep,
+      "(?im)^\s*module\s+(?<name>\w+)\s+'[^']*postgres-readiness\.bicep'\s*="
+    )
+    $readinessModuleName = if ($readinessModuleMatch.Success) { $readinessModuleMatch.Groups['name'].Value } else { '' }
+    $hasServerToReadinessLink = $mainBicep -match '(?im)^\s*serverName\s*:\s*\w+\.outputs\.serverName\s*(?://.*)?$'
+    $hasReadinessToChildrenLink = $readinessModuleName -and
+      ($mainBicep -match "(?im)^\s*pgName\s*:\s*$([regex]::Escape($readinessModuleName))\.outputs\.serverName\s*(?://.*)?$")
+
+    $hasExecutableReadiness = $false
+    foreach ($file in $bicepFiles) {
+      $content = Get-Content $file.FullName -Raw
+      if ($content -notmatch 'Microsoft\.Resources/deploymentScripts@') {
+        continue
+      }
+      $hasExecutableReadiness =
+        ($content -match "(?im)^\s*kind\s*:\s*'AzureCLI'\s*$") -and
+        ($content -match "(?im)^\s*type\s*:\s*'UserAssigned'\s*$") -and
+        ($content -match '(?im)^[^\r\n]*az\s+postgres\s+flexible-server\s+show(?=[^\r\n]*--subscription)(?=[^\r\n]*--resource-group)(?=[^\r\n]*--name(?:\s|=))[^\r\n]*$') -and
+        ($content -match '(?im)^[^\r\n]*az\s+postgres\s+flexible-server\s+microsoft-entra-admin\s+list(?=[^\r\n]*--subscription)(?=[^\r\n]*--resource-group)(?=[^\r\n]*--server-name(?:\s|=))[^\r\n]*$') -and
+        ($content -match "(?is)name\s*:\s*'SUBSCRIPTION_ID'.*?value\s*:\s*subscriptionId") -and
+        ($content -match "(?is)name\s*:\s*'RESOURCE_GROUP'.*?value\s*:\s*resourceGroup\(\)\.name") -and
+        ($content -match "(?is)name\s*:\s*'SERVER_NAME'.*?value\s*:\s*serverName") -and
+        ($content -match '--query\s+state') -and
+        ($content -match '(?i)["'']Ready["'']') -and
+        ($content -match '(?i)(?:seq\s+1\s+\d+|\{1\.\.\d+\})') -and
+        ($content -match '(?im)^\s*sleep\s+(?:6\d|[7-9]\d|[1-9]\d{2,})\s*$') -and
+        ($content -match 'AZ_SCRIPTS_OUTPUT_PATH') -and
+        ($content -match '(?im)^\s*exit\s+1\s*$') -and
+        ($content -match '(?im)^\s*output\s+serverName\s+string\s*=\s*serverName\s*$') -and
+        ($content -notmatch '(?i)\bjq\b')
+      if ($hasExecutableReadiness) {
+        break
+      }
+    }
+    $hasReadinessReader = $iac -match 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
+
+    if ($serverAndAdminTogether -or
+        -not $hasServerOutput -or
+        -not $hasExistingServerTarget -or
+        -not $readinessModuleMatch.Success -or
+        -not $hasServerToReadinessLink -or
+        -not $hasReadinessToChildrenLink -or
+        -not $hasExecutableReadiness -or
+        -not $hasReadinessReader) {
+      Add-Fail 'PG-ADMIN-READY-BARRIER' 'PostgreSQL children must be gated by a UAMI deployment script chained server output -> bounded Ready poll + Microsoft Entra admin child-provider probe with explicit subscription/RG/server environment -> >=60s stabilization -> readiness output -> serialized children; jq, bypasses, and success-on-timeout are forbidden' 'infra/main.bicep + infra/modules/postgres*.bicep'
+    }
   }
   # 11c. PG-ENTRA-ONLY — PostgreSQL must explicitly disable password auth.
   if ($hasPg -and ($iac -notmatch "passwordAuth\s*:\s*'Disabled'")) {

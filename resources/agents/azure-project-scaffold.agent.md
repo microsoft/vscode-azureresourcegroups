@@ -47,8 +47,12 @@ Phases **strictly ordered**; start later phase only after prior completes:
 
 **After startup report and before user response, read `.azure/project-plan.md` with `read` tool.** Invoking hand-off query (e.g. *"The project plan has been approved. Execute the approved `.azure/project-plan.md`…"*) means plan exists on disk. Do **not** assume empty workspace or claim missing file before actual read attempt.
 
-- Plan path: `<workspace-root>/.azure/project-plan.md`. For relative resolution, use workspace-root-relative `.azure/project-plan.md`. "not found" may mean another editor or different workspace root: re-check folder + retry. If direct read fails, locate `**/.azure/project-plan.md` via `search`/`list`.
-- Verify `Status: Approved`, API routes (Section 7), Azure services (Section 4). `Status` still `Planning` means not yet approved.
+- The plan lives at `<workspace-root>/.azure/project-plan.md`. If your read tool resolves relative paths, use the workspace-root-relative path `.azure/project-plan.md`. If a read returns "not found", the file may be open in another editor or the workspace root may differ — re-check the workspace folder and retry before concluding it is absent. Use `search`/`list` to locate `**/.azure/project-plan.md` if the direct read fails.
+- Once read, verify `Status: Approved`, API routes, Azure services, and the `Quality Attributes & Tradeoffs`
+  section. If `Status` is still `Planning`, treat the plan as not-yet-approved. A legacy approved plan may
+  lack Quality Attributes; apply the baseline in
+  `.github/agents/shared-references/workload-quality.md` and record the missing workload targets as a
+  deferred risk rather than refusing to scaffold.
 
 > **Only after actual read + search confirm plan genuinely absent:** **STOP**—tell user _"No approved project plan found. Create and approve a project plan first with the `azure-project-plan` agent."_ Do **NOT** gather requirements, ask "what kind of app would you like to build?", or write plan; planning belongs to `azure-project-plan` agent.
 
@@ -72,12 +76,16 @@ After scaffolding:
 
 Integrate agent starts fresh without chat history; relies entirely on artifact. Write before hand-off with everything needed for four tasks: wire frontend to live data, smoke-test backend, create migrations, verify end-to-end.
 
-- **Backend**: project folder; run command (e.g. `func start`); port; build command; health endpoint path.
-- **Frontend**: project folder; build + dev commands; **API seam to swap** (`src/api/index.ts`—repoint mock client to live client); exact **mock files to delete** (`src/api/mockClient.ts`, mock datasets under `src/mocks/`, locally-duplicated types, dev-only Mock State Switcher `src/api/previewState.ts` + corner-switcher component). Live-data wiring = one-file seam swap, not call-site rewrite.
-- **API routes**: full inventory—every endpoint method + path, enabling probes.
-- **Database**: type (PostgreSQL / Azure SQL / etc.); migration tool + directory; connection env vars. **Explicitly require NO seed data.**
-- **Shared types**: shared package/location + typed-client import alias (e.g. `@app/shared`).
-- **Services**: service list; Essential vs Enhancement classification.
+- **Backend**: project folder, run command (e.g. `func start`), port, build command, health endpoint path.
+- **Frontend**: project folder, build command, dev command, the **API seam to swap** (`src/api/index.ts` — repoint from the mock client to the live client) and the exact **mock files to delete** (`src/api/mockClient.ts`, mock datasets under `src/mocks/`, locally-duplicated types, and the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component). The live-data wire-up is a one-file swap at the seam, not a call-site rewrite.
+- **API routes**: the full inventory — method + path for every endpoint, so the integrate agent can probe each.
+- **Database**: type (PostgreSQL / Azure SQL / etc.), migration tool, migration directory, and the connection env vars. **Note explicitly that NO seed data is to be created.**
+- **Shared types**: the shared package/location and import alias (e.g. `@app/shared`) for the typed client.
+- **Services**: the service list and which are Essential vs Enhancement.
+- **Workload quality contract**: copy the four workload answers from the plan; list at least one concrete
+  application control for each WAF pillar with its stable control ID, generated evidence path/symbol, and
+  executable integration validation; preserve every deferred production, compliance, recovery, or numerical
+  target. Follow `.github/agents/shared-references/workload-quality.md`. Never claim WAF compliance.
 
 Keep concise + factual: paths + commands checklist, not prose.
 

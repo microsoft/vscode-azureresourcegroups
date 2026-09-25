@@ -2,7 +2,7 @@
 
 > Standalone frontend sub-steps. Read during **Step 1** (Frontend).
 
-> **Companion contract**: Before JSX, read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It links plan Section 5 (Design System & UI) to shipped JSX: per-library region-token → primitive mapping, brand-ramp theming, real icons, four-state gate. Steps below define *how* to generate/build (working directory, build, verify); quality bar defines *what* it contains. Planning approved `.azure/.preview-temp/`; Step 1 does **not** re-prompt UX approval.
+> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Design System & UI section and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to generate and build the frontend (working directory, build, verify); the quality bar covers *what* the frontend must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval.
 
 ---
 
@@ -41,10 +41,10 @@ After scaffolding, `open_frontend_preview_view` opens **Approve UI**, **starts t
 | Task | Details |
 |------|---------|
 | Initialize frontend project | React + Vite / Vue + Vite / Angular / Svelte (per plan) |
-| **Make the dev server preview-embeddable** | In `vite.config`, set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). Keep `dev` a plain server (`vite`); exclude `X-Frame-Options` / `frame-ancestors` CSP from `index.html`. This enables **Approve UI** webview iframe (`/api` proxy added later by integrate). See **Preview compatibility** above. |
-| Create the frontend folder | Use plan path (e.g. `services/web/`) and existing structure; match planned frontend framework |
-| Create local type definitions | Define standalone mock entity types in frontend types folder (e.g. `services/web/src/types/`) |
-| **Define the `ApiClient` interface** | In seam `services/web/src/api/types.ts`, declare `ApiClient` with **one named, typed method per plan API route (Section 7)** (e.g. `listItems(): Promise<Item[]>`, `getItem(id: string): Promise<Item>`, `createItem(input: CreateItemRequest): Promise<Item>`). Add methods for every *other* entity any page, component, or provider renders, even without plan route: assignee/author lookups, signed-in user, category/status reference lists (e.g. `listUsers(): Promise<User[]>`, `getCurrentUser(): Promise<User>`). When `API Login` is `Yes`, include needed auth methods, including `createAccount(input)`, though plan omits auth routes. Reference data still uses seam; mock backs it during scaffold, then integrate maps it to real route/static list. **Interface must cover everything UI renders**; otherwise page must illegally bypass seam. Both mock and future live client implement this **stable seam**, enabling one-file integration swap. |
+| **Make the dev server preview-embeddable** | In `vite.config` set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). Keep the `dev` script a plain server (`vite`), and keep `X-Frame-Options` / `frame-ancestors` CSP out of `index.html`. This is what lets the **Approve UI** preview load your app in its webview iframe (the `/api` proxy is added later by the integrate agent). See the **Preview compatibility** callout above. |
+| Create the frontend folder | Use the path the plan specifies (e.g. `services/web/`); follow the user's existing structure when one exists. Standard structure matching plan's frontend framework |
+| Create local type definitions | Define entity types locally in the frontend's types folder (e.g. `services/web/src/types/`) — standalone mock types for now |
+| **Define the `ApiClient` interface** | In the seam folder `services/web/src/api/types.ts`, declare an `ApiClient` interface with **one method per endpoint in the plan's Route Definitions**, named and typed from the route contract (e.g. `listItems(): Promise<Item[]>`, `getItem(id: string): Promise<Item>`, `createItem(input: CreateItemRequest): Promise<Item>`). **Then add a method for every *other* entity any page, component, or provider renders, even when the plan has no route for it** — assignee/author lookups, the signed-in user, category or status reference lists (e.g. `listUsers(): Promise<User[]>`, `getCurrentUser(): Promise<User>`). When `API Login` is `Yes`, include the auth methods the UI needs, including `createAccount(input)`, even though the plan omits auth routes. Reference data still goes through the seam; the mock backs it at scaffold time and the integrate agent maps it to a real route or a static list later. **The interface must cover everything the UI renders** — a page that needs data the interface does not expose has no legal way to get it and will be forced to reach around the seam. This interface is the **stable seam** both the mock and the future live client implement — it is what makes integration a one-file swap. |
 
 ---
 
@@ -104,9 +104,9 @@ After scaffolding, `open_frontend_preview_view` opens **Approve UI**, **starts t
 
 `.azure/.preview-temp/*.html` files are **layout + tonal reference**, not shipped source. Per page:
 
-- Plan Pages table specifies page **regions** (`header + hero + grid + footer` etc.).
-- HTML mock-up specifies **approved arrangement, density, palette**.
-- Reproduce visual feel with **real `Component Library:` primitives** from Section 6; see [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) mappings.
+- The plan's Pages table tells you which **regions** belong on the page (`header + hero + grid + footer` etc.).
+- The HTML mock-up shows the **approved arrangement, density, and palette** of those regions.
+- Your job in Step 1 is to reproduce that visual feel using the **real `Component Library:` primitives** from the Design System & UI section (see [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library token → primitive mapping).
 
 Do not import mock-up, embed via `<iframe>`, or copy its CSS classes into JSX. `.azure/.preview-temp/` is deleted in Step 11; only visual intent (regions, palette, density) carries into real components.
 
@@ -120,8 +120,8 @@ Before backend wiring, frontend MUST meet these standards. Read full per-library
 - Hooks catch errors; handle loading/error states
 - Destructive actions (delete, etc.) require `window.confirm()` before executing
 - `.tsx` for files containing JSX, `.ts` for pure TypeScript
-- Handle all 4 data states: loading, error, empty, data (quality-bar State Coverage primitives—`<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data); expose all live via **Mock State Switcher** (dev-only `?previewState=` override; see standard)
-- **Auto-authenticated preview**: When `API Login` is `Yes`, local auth MUST auto-login on first load so user immediately sees main content, not login
-- **Render layout tokens with real library primitives**, never raw `<div className="card">` placeholders. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for per-library region-token mapping.
-- **Wrap the app shell in the library's theme provider** with a brand ramp derived from plan Section 6's `primary` color. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) → Theming contract.
-- **Use real library icons** (Fluent: `@fluentui/react-icons` Regular; Vuetify: `mdi-*`; Material: `<mat-icon>` real names; Skeleton/Pico: Lucide/Tabler). No emoji/SVG placeholders.
+- All 4 data states handled: loading, error, empty, data (see quality-bar's State Coverage Contract for per-library primitives — `<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data), and all four reachable live via the **Mock State Switcher** (dev-only `?previewState=` override — see quality-bar's Mock State Switcher standard)
+- **Auto-authenticated preview**: When `API Login` is `Yes`, local auth state MUST auto-login on first load so the user sees main content immediately, not a login page
+- **Render layout tokens with real library primitives** — never raw `<div className="card">` placeholders. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the region-token → primitive mapping per library.
+- **Wrap the app shell in the library's theme provider** with a brand ramp derived from the plan's Design System `primary` color. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) → Theming contract.
+- **Use real icons** from the library's icon set (Fluent: `@fluentui/react-icons` Regular variants; Vuetify: `mdi-*`; Material: `<mat-icon>` real names; Skeleton/Pico: Lucide/Tabler). No emoji, no SVG placeholders.

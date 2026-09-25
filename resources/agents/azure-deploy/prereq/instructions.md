@@ -47,11 +47,10 @@ Phase 1 of 4 in AppOnboard pipeline. Session: `.copilot-azure/sessions/{session-
 
 **Orchestrator entry:** Session exists — read `context.json`, proceed to Step 2.
 
-**Direct entry:** Check `.copilot-azure/sessions/active-session.json`:
-- **Exists** → ⛔ read [session-protocol.md](references/session-protocol.md) for resume/fresh gate. Do NOT proceed until user answers.
-- **Missing** → create session: generate UUID, `New-Item -ItemType Directory -Path ".copilot-azure/sessions/{uuid}" -Force`, write `context.json` + `active-session.json` via `create` tool.
-
-Then: `az account show` → merge `{id, name, tenantId}` into `context.json.azure`. ⛔ Session MUST exist on disk before any scanning.
+**Direct entry:** ⛔ Read and execute the canonical
+[`session-protocol.md`](../references/session-protocol.md) session check, execution-model lock, and Azure
+login/target-lock gate. Do not use an unscoped Azure CLI default when the prompt, environment, or saved
+session names a target. The session and locked target MUST exist on disk before any scanning.
 
 ### Step 2: Scan Workspace
 

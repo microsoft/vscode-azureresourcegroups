@@ -8,19 +8,49 @@ Pre-deployment validation steps. Run after user approval, before deployment exec
 
 Branch on `scaffold-manifest.json.iacFormat`:
 
+### 0. Immutable artifact and runtime contract gate
+
+Run this gate **before what-if, inventory baseline, or any resource-creating command**:
+
+```text
+node .github/agents/azure-deploy/deploy/scripts/validate-deployment-artifacts.mjs --session-path .copilot-azure/sessions/{sessionId} --infra-path infra --subscription {subscriptionId} --tenant {tenantId} --resource-group {resourceGroup} --region {region}
+```
+
+Save the JSON output as `deployment-artifact-validation.json`. Missing target fields identify a legacy artifact and fail closed: return to prepare/scaffold to regenerate
+it. Do not patch strings in deploy. For Bicep, rerun the shipped `scaffold-conformance.ps1` (Windows) or
+`.sh` (macOS/Linux) script against the final IaC and require PASS. For Terraform, require the validated
+`azurerm` provider and exact `subscription_id`/resource-group variable binding plus its recorded passing
+format-specific conformance. This happens before what-if so a stale resource-group binding or old PostgreSQL
+readiness/admin pattern can never become the first live deployment attempt.
+
+For every Node API, run the generated-runtime gate before packaging:
+
+```text
+node .github/agents/azure-deploy/deploy/scripts/validate-node-runtime-contracts.mjs --root {backendRoot} --require-correlation
+```
+
+Append `--require-postgres-mi` for production PostgreSQL and `--require-migration-probe` when the root
+contains a migration controller. Run the component's focused tests and build after this static gate.
+The static gate is not a replacement for tests; it prevents known-bad legacy assets from reaching Azure.
+
 ### 0. Auth Token Verification
 
 ```bash
-az account show
+az account show --subscription {subscriptionId}
 ```
 
-- Success → proceed. Active subscription + tenant confirmed.
+- Success with the exact locked subscription + tenant → proceed.
 - Failure → `ENVIRONMENT_BLOCKING`. Suggest `az login` (plain, no scope).
 - ⛔ NEVER suggest `az login --scope https://graph.microsoft.com/.default` — Graph scope is irrelevant for ARM deployments.
 
 ### 0b. Resource Name Availability
 
-Check globally-unique names before deploy: `az acr check-name`, `az storage account check-name`, `az webapp show`, `az keyvault show`. Name taken → suggest alternate from `prepare-plan.json.naming.suffix`: "Name `{name}` taken. Use `{altName}`?"
+Check globally-unique names before deploy with explicit subscription scope on every Azure CLI call:
+`az acr check-name --subscription {subscriptionId} --name {name}`,
+`az storage account check-name --subscription {subscriptionId} --name {name}`,
+`az webapp show --subscription {subscriptionId} --resource-group {resourceGroup} --name {name}`, and
+`az keyvault show --subscription {subscriptionId} --name {name}`. Name taken → suggest alternate from
+`prepare-plan.json.naming.suffix`: "Name `{name}` taken. Use `{altName}`?"
 
 ### 0c. F1/Free Tier Warning
 
@@ -30,7 +60,7 @@ If plan includes F1/D1/free SKUs, surface at deploy gate (do NOT block):
 ### 0d. RBAC Scope Pre-Check
 
 ```bash
-az role assignment list --assignee {userId} --scope /subscriptions/{sub} --query "[].roleDefinitionName" -o tsv
+az role assignment list --subscription {subscriptionId} --assignee {userId} --scope /subscriptions/{sub} --query "[].roleDefinitionName" -o tsv
 ```
 
 Subscription-scope deploy requires `Contributor`/`Owner` on subscription. Missing → `ENVIRONMENT_BLOCKING` with `az role assignment create` command.
@@ -79,6 +109,7 @@ terraform plan -out=tfplan -detailed-exitcode
 
 ```bash
 az role assignment list \
+  --subscription {subscriptionId} \
   --assignee {currentUserObjectId} \
   --scope /subscriptions/{sub}/resourceGroups/{rg} \
   --query "[].roleDefinitionName" -o tsv
@@ -99,7 +130,7 @@ Otherwise → **read [sku-quota-validation.md](../../prepare/references/sku-quot
 ### 5. Resource Group Existence
 
 ```bash
-az group show --name {rg} --query "location" -o tsv 2>/dev/null
+az group show --subscription {subscriptionId} --name {rg} --query "location" -o tsv 2>/dev/null
 ```
 
 - Exists → verify location matches `prepare-plan.json` region. Mismatch → warn.
@@ -111,6 +142,7 @@ Each check runs independently. Collect all results, then present structured repo
 
 | Check | Fail Behavior |
 |-------|---------------|
+| Immutable artifact/runtime contract | Block before what-if. Return to the owning prepare/scaffold/integration phase; never patch during deploy. |
 | Deployment preview | Warn, don't block (can fail on unsupported types) |
 | RBAC | Block. Surface `az role assignment create`. |
 | RG check | Warn on location mismatch. Don't block. |

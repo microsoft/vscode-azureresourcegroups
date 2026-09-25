@@ -28,15 +28,18 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Append 2 lines to `deploy-audit.log`: `{timestamp} | {command} | started` then `{timestamp} | {command} | succeeded/failed`
 
 ## After IaC deployment (Step 6)
-- ⛔ Call `capture_deployment_inventory` (`phase: "capture"`) after the deployment command returns — records created resources via a before/after `resources.list()` diff and flags orphans
-- Verify 5 tags: `az group show -n {rgName} --query tags`
+- ⛔ Run the selected product inventory provider in `capture` mode after the deployment command returns. Prefer `capture_deployment_inventory`; use the shipped portable script only when the CLI host lacks the in-process provider. Never synthesize inventory from raw `az resource list`.
+- Verify 5 tags: `az group show --subscription {subscriptionId} -n {rgName} --query tags`
 - ⛔ Do NOT set startup command or app settings via CLI — they are already in Bicep from scaffold. If `az webapp show` doesn't reflect them yet, wait 30s and re-check (ARM propagation delay). Do NOT run `az webapp config` imperatively.
   Required: app-onboard-skill, app-onboard-session-id, created-at, environment, deployed-by
 - Verify portal link is still correct if healing changed the deployment name
 
 ## Code deploy — Functions (Flex Consumption) (delete if not using Flex Functions)
 - ⛔ **Read [`code-deployment-functions-flex.md`](code-deployment-functions-flex.md).** Flex is NOT App Service: no SCM/Kudu, no `basicPublishingCredentialsPolicies`, no `SCM_DO_BUILD_DURING_DEPLOYMENT`/`ENABLE_ORYX_BUILD`.
-- Deploy the package: `az functionapp deployment source config-zip --subscription {sub} -g {rgName} -n {appName} --src {zip} [--build-remote true]` (remote build for Python/Node) — or `func azure functionapp publish {appName}`.
+- TypeScript/Node: clean local compile, production-dependency prune, self-contained staging root, then run `validate-functions-flex-package.mjs` against the staging root AND final ZIP with Node major + exact expected Function names.
+- Preserve ZIP bytes + SHA-256 from validation. Deploy once with `az functionapp deployment source config-zip --subscription {sub} -g {rgName} -n {appName} --src {zip} --build-remote false`. Do not use Oryx/Core Tools remote build for TypeScript.
+- Immediately require `az functionapp function list --subscription {sub} -g {rgName} -n {appName}` to equal the expected Function set and `/api/health` to be non-404 + dependency-aware. Upload success alone is not release health.
+- Python may use `--build-remote true` when Linux-native wheels require it. Other compiled runtimes use `--build-remote false`.
 - ⛔ **Local (non-CI) deploy warning — say it to the user:** hardening network access can block publishing from your machine. Deploy with access OPEN, verify health, THEN harden. An ipify-derived `/32` SCM allow rule will NOT match Flex egress (platform gateway pool) — do not try it.
 - ⛔ A trailing `Deny all` rule (priority `2147483647`) in `ipSecurityRestrictions`/`scmIpSecurityRestrictions` is the expected platform sentinel — NOT an error.
 - The app identity needs a Storage Blob Data role on the deployment storage (shared-key is disabled).
@@ -78,31 +81,40 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - ⛔ IaC-only: NEVER use `az containerapp update --image`, `az webapp update`, `az appservice plan delete`, or `az group create` — fix the Bicep and redeploy via `az deployment sub create`
 - ⛔ IaC-only for app-managed roles: NEVER `az role assignment create` for AcrPull or KV Secrets User — Bicep-managed (deterministic GUID), so an imperative grant collides on redeploy (`RoleAssignmentExists`). Missing app role = fix the Bicep module and redeploy. (Deployer/subscription-scope 403s are the ONLY exception — see [`error-classification.md`](error-classification.md).)
 - ⛔ **On error: read [`error-classification.md`](error-classification.md)** to classify the failure and follow the prescribed remediation. Do NOT ad-hoc heal without reading the classification.
+- ⛔ **Tier-2 migration failure:** preserve stdout/stderr before the replica disappears; record application exit separately from controller reason; query migration history, expected tables, and principal/OID state before classification or retry. `BackoffLimitExceeded` alone is not a cause. No blind restart.
 - ⛔ **Never weaken a security control to unblock** — do NOT flip `require_secure_transport`/TLS, HTTPS-only, KV purge protection, or auth OFF to make a failing deploy pass. A DB TLS handshake failure = fix the client SSL config (prereq `W-MYSQL-SSL`) or ask the user; never downgrade the server.
 - Count ALL attempts in deploy-result.json.healingAttempts[]
   After 3: STOP and ask user ("Yes / I have a suggestion / Stop")
-- NEVER run `az group delete` — track in orphanedResourceGroups[] (run `capture_deployment_inventory` after the healing attempt so the abandoned RG's resources are recorded deterministically)
+- NEVER run `az group delete` — track in orphanedResourceGroups[] (run the selected product inventory capture after the healing attempt so the abandoned RG's resources are recorded deterministically)
 - ⛔ **RG deletion timeout:** If you ran `az group delete --no-wait`, wait max 2 minutes then `ask_user`: "Resource group deletion is slow. Wait longer / Proceed without cleanup / Cancel." Do NOT poll indefinitely.
 - Region/SKU/service changes require re-approval gate
 
+## Migration controller + application quality (before health acceptance)
+- ⛔ For every relational DB/migration framework, prove the entrypoint exists in the immutable package/image (`artifactVerified: true`), then record a successful probe command/exit proving the selected live controller can launch that runtime.
+- Execute the migration once. Record controller status separately from process exit, stdout, and stderr; verify migration history, expected tables, mapped principal/OID, and unexpected row/seed state.
+- Missing/unreachable controller = package/spec defect. Rebuild and revalidate; no unchanged retry and no platform-healthy acceptance.
+- ⛔ Run `verify-correlation-contract.mjs` against one safe success route and one structured validation-error route; add the exact frontend origin when present. Preserve its JSON as `correlation-verification.json`.
+
 ## Before handoff (Step 8)
 - ⛔ Read [`deploy-schemas.ts`](deploy-schemas.ts) for exact DeployResult field names
-- ⛔ Run a final `capture_deployment_inventory` (`phase: "capture"`) — then populate `createdResources[]` and `orphanedResourceGroups[]` from its returned output (do NOT hand-author them)
-- Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list`, createdResources + orphanedResourceGroups from the inventory. Read back to verify.
+- ⛔ Run a final product inventory capture — then runtime-validate schema/session/subscription/source and populate `createdResources[]`, `orphanedResourceGroups[]`, verification fields, `inventorySource`, and fixed in-session portable evidence paths when used (do NOT hand-author them or treat malformed evidence as empty).
+- Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list --subscription {sub}`, migration evidence, correlation quality gate, and inventory output. Read back to verify.
 - ⛔ `deployment-summary.md` — generate from `deploy-result.json` fields (Status, Health, Portal Links, Cleanup). NOT a separate data source.
 - ⛔ `context.json` — add "deploy" to completedPhases, set currentPhase to null, update lastModifiedUtc. VERIFY by reading back.
 - SCM re-disabled (App Service) or image param set (Container Apps)
-- If prereq found migration frameworks: run migrations before declaring healthy
+- If prereq found migrations or a relational DB: controller reachable + process exit 0 + verified post-state before declaring healthy.
+- Every API: correlation live gate passed before declaring healthy.
 
 ## Artifact verification (Step 8 — MANDATORY)
 ⛔ Before returning to orchestrator, verify ALL artifacts exist by reading each one back:
-1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`, `createdResources[]`, `orphanedResourceGroups[]`. `createdResources[]`/`orphanedResourceGroups[]` come from a final `capture_deployment_inventory` (`phase: "capture"`) — if empty or missing, run it NOW and write its output. Missing/renamed fields → rewrite with real values NOW
+1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`, `createdResources[]`, `orphanedResourceGroups[]`, and `inventorySource`. Inventory arrays come from a final product capture. DB-backed releases also require complete `migration`; APIs require `qualityGates.correlation`. Missing/renamed fields → rewrite with real values NOW.
 2. `deploy-audit.log` — MUST exist with ≥2 entries (started + result for at least 1 command). Missing → reconstruct from memory
 3. `deployment-summary.md` — MUST contain Status, Health, Portal Links sections. Missing → generate from deploy-result.json
 4. `context.json` — MUST have `"deploy"` in `completedPhases`, `currentPhase: null`, updated `lastModifiedUtc`
 5. ⛔ **Endpoint completeness** — EVERY service in `prepare-plan.json.services[]` that hosts application code MUST have a corresponding entry in `deploy-result.json.endpoints[]` with code deployed and a valid `healthStatus` (`healthy`, `degraded`, `unreachable`, `unknown`). If ANY compute endpoint is missing or has code not deployed, set `partial: true` and `status: "failed"`. A deployment with undeployed user components is NOT `"succeeded"`.
+6. ⛔ **Application acceptance** — A DB-backed release cannot be `succeeded`/`healthy` unless the immutable artifact was verified, the migration controller probe succeeded, process exit is 0, and post-state is verified. An API cannot be `succeeded`/`healthy` unless the live correlation gate passed.
 
-If ANY artifact is missing or incomplete, write it NOW — do NOT return to orchestrator without all 5 checks passing.
+If ANY artifact is missing or incomplete, write it NOW — do NOT return to orchestrator without all 6 checks passing.
 
 ⛔ **Then STOP — return to orchestrator. No further CLI commands or agent invocations.**
 ```

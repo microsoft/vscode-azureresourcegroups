@@ -528,12 +528,14 @@ public class Health(AppDbContext db, BlobServiceClient blobs, IConnectionMultipl
 >
 > | Service | ✅ Service-level probe | ❌ Resource-level probe (lazy-created) |
 > |---------|-----------------------|----------------------------------------|
-> | Blob Storage | `BlobServiceClient.GetPropertiesAsync` / `GetBlobContainersAsync().Take(1)` | `BlobContainerClient.GetPropertiesAsync` |
+> | Blob Storage | `GetBlobContainersAsync().Take(1)` | `BlobContainerClient.GetPropertiesAsync` |
 > | Service Bus | `ServiceBusAdministrationClient.QueueExistsAsync(knownQueue)` | sending to a topic the app creates on first publish |
 > | Cosmos DB | `CosmosClient.ReadAccountAsync` | `Container.ReadContainerAsync` |
 > | Event Hubs | `EventHubProducerClient.GetEventHubPropertiesAsync` (only if hub is pre-provisioned) | reading from an instance the app creates lazily |
 >
 > Probe the namespace/account; never the per-resource child unless the resource is provisioned out-of-band by IaC and is guaranteed to exist before the app starts.
+>
+> ⛔ **Service-level is necessary but not sufficient — the probe must also be authorized by the role you assign.** `BlobServiceClient.GetPropertiesAsync` is service-level and still wrong here: *Get Blob Service Properties* needs `Microsoft.Storage/storageAccounts/blobServices/read`, an ARM `action`, while `Storage Blob Data Contributor`/`Reader` grant `dataActions` only. Against a connection string it passes; against the managed identity it returns 403 and the health endpoint reports the dependency down on a correctly-provisioned deployment. Enumerating containers maps to `containers/read`, which the data role does carry. See `shared-references/workload-quality.md` § Dependency access contract.
 
 ---
 
@@ -809,15 +811,24 @@ No Serilog. Inject `ILogger<T>` and log via structured parameters — Applicatio
 public class CreateItem(ILogger<CreateItem> logger)
 {
     [Function("CreateItem")]
-    public async Task<IResult> Run(...)
+    public async Task<IResult> Run(HttpRequest request, FunctionContext context)
     {
-        logger.LogInformation("Creating item {ItemName} in category {Category}", body.Name, body.Category);
+        var correlationId = request.Headers.TryGetValue("x-correlation-id", out var incoming)
+            ? incoming.ToString()
+            : context.InvocationId;
+        using var scope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["CorrelationId"] = correlationId,
+        });
+        logger.LogInformation("Handling {Operation}", "CreateItem");
         // ...
     }
 }
 ```
 
 Use `ILogger.BeginScope(...)` for request correlation; Application Insights ingests it automatically.
+Log only allowlisted operational fields. Never log request/response bodies, authorization/cookie headers,
+uploaded filenames, user-entered values, or personal identifiers.
 
 ---
 

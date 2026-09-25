@@ -7,6 +7,7 @@ import type { RequirementsAnswer } from '../../../src/webviews/copilotOnRails/vi
 import {
     isAnswerEmpty,
     parseRequirementsJson,
+    WORKLOAD_QUESTION_CONTRACT,
 } from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
 import { createValidationResult } from './validationTypes.ts';
@@ -22,13 +23,14 @@ export function validateRequirementsArtifact(
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
             return createValidationResult([issue('invalidRoot', '$', 'Requirements must be a JSON object.')]);
         }
+
         raw = parsed as Record<string, unknown>;
     } catch (error) {
         return createValidationResult([issue('invalidJson', '$', getErrorMessage(error))]);
     }
 
-    if (raw.schemaVersion !== '2') {
-        issues.push(issue('schemaVersion', '$.schemaVersion', 'Expected requirements schemaVersion "2".'));
+    if (raw.schemaVersion !== '3') {
+        issues.push(issue('schemaVersion', '$.schemaVersion', 'Expected requirements schemaVersion "3".'));
     }
     const requirements = parseRequirementsJson(content);
     if (!requirements.services?.length) {
@@ -106,8 +108,87 @@ export function validateRequirementsArtifact(
     if (!requirements.questions.some(question => question.id === 'auth' && !question.serviceId)) {
         issues.push(issue('missingAuth', '$.questions', 'Shared auth question is required.'));
     }
+    validateWorkloadQuestions(requirements.questions, rawQuestions, issues);
 
     return createValidationResult(issues);
+}
+
+export function validateWorkloadChoice(
+    content: string,
+    questionId: string,
+    expectedNormalizedChoice: string,
+): ArtifactValidationResult {
+    let requirements: ReturnType<typeof parseRequirementsJson>;
+    try {
+        requirements = parseRequirementsJson(content);
+    } catch (error) {
+        return createValidationResult([issue('invalidJson', '$', getErrorMessage(error))]);
+    }
+    const question = requirements.questions.find(value => value.id === questionId && !value.serviceId);
+    const effectiveChoice = typeof question?.answer === 'string'
+        ? question.answer
+        : typeof question?.recommendedChoice === 'string'
+            ? question.recommendedChoice
+            : '';
+    if (normalizeChoice(effectiveChoice) !== expectedNormalizedChoice) {
+        return createValidationResult([issue(
+            'workloadChoiceMismatch',
+            `$.questions.${questionId}`,
+            `Expected ${questionId} to recommend "${expectedNormalizedChoice}", got "${effectiveChoice || '(none)'}".`,
+        )]);
+    }
+    return createValidationResult([]);
+}
+
+function validateWorkloadQuestions(
+    parsedQuestions: ReturnType<typeof parseRequirementsJson>['questions'],
+    rawQuestions: unknown[],
+    issues: ArtifactValidationIssue[],
+): void {
+    for (const [id, contract] of Object.entries(WORKLOAD_QUESTION_CONTRACT)) {
+        const parsed = parsedQuestions.find(question => question.id === id && !question.serviceId);
+        if (!parsed) {
+            issues.push(issue(`missing${capitalize(id)}`, '$.questions', `Shared ${id} question is required.`));
+            continue;
+        }
+
+        const index = rawQuestions.findIndex(value => value
+            && typeof value === 'object'
+            && !Array.isArray(value)
+            && (value as Record<string, unknown>).id === id);
+        const path = index >= 0 ? `$.questions[${index}]` : '$.questions';
+        const raw = index >= 0 ? rawQuestions[index] as Record<string, unknown> : {};
+
+        if (parsed.category !== contract.category) {
+            issues.push(issue('invalidWorkloadCategory', `${path}.category`, `${id} must use category "${contract.category}".`));
+        }
+        if (raw.multiSelect !== false) {
+            issues.push(issue('invalidWorkloadMultiSelect', `${path}.multiSelect`, `${id} must be single-select.`));
+        }
+        if (raw.allowFreeformInput !== false) {
+            issues.push(issue('invalidWorkloadFreeform', `${path}.allowFreeformInput`, `${id} must use the fixed option set.`));
+        }
+
+        const labels = Array.isArray(raw.options)
+            ? raw.options
+                .filter((value): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value))
+                .map(value => value.label)
+                .filter((value): value is string => typeof value === 'string')
+            : [];
+        if (labels.length !== contract.options.length || contract.options.some(option => !labels.includes(option))) {
+            issues.push(issue('invalidWorkloadOptions', `${path}.options`, `${id} must offer exactly: ${contract.options.join(', ')}.`));
+        }
+
+        for (const [field, value] of [
+            ['answer', parsed.answer],
+            ['recommendedChoice', parsed.recommendedChoice],
+        ] as const) {
+            if (value !== null && value !== undefined
+                && (typeof value !== 'string' || !(contract.options as readonly string[]).includes(value))) {
+                issues.push(issue('invalidWorkloadChoice', `${path}.${field}`, `${id}.${field} must be one of its declared options.`));
+            }
+        }
+    }
 }
 
 export function confirmRequirementsArtifact(
@@ -180,4 +261,12 @@ function issue(code: string, path: string, message: string): ArtifactValidationI
 
 function getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+function capitalize(value: string): string {
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeChoice(value: string): string {
+    return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }

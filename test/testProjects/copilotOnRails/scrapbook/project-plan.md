@@ -70,7 +70,24 @@
 
 ---
 
-## 6. Prerequisites
+## 6. Quality Attributes & Tradeoffs
+
+**Operating Profile**: Standard Production
+**Data Classification**: Confidential / Personal
+**Traffic Profile**: Bursty
+**Optimization Priority**: Balanced
+
+| Pillar | Workload Target | Scaffold Response | Planned Validation | Deferred Risk |
+|--------|-----------------|-------------------|--------------------|---------------|
+| Reliability | Preserve private photos and pair metadata through upload bursts | Essential/enhancement classification, bounded retries, transactional metadata writes, and idempotent cleanup | Upload failure, dependency degradation, and cleanup replay tests | Recovery targets are resolved during deployment planning |
+| Security | Protect private photos and relationship data | Authorization by default, validation, managed-identity client boundary, and sensitive-log redaction | Cross-pair authorization and log-redaction tests | Private networking and compliance review remain deployment decisions |
+| Cost Optimization | Balance durable storage and AI labeling cost | Keep AI labeling an enhancement and avoid unjustified always-on services | Enhancement fallback and dependency inventory checks | Premium redundancy is deferred pending deployment targets |
+| Operational Excellence | Diagnose failed uploads and cleanup jobs | Correlation IDs, structured logs, health signals, and actionable errors | Telemetry and scheduled-job smoke tests | Alert routing is configured during deployment |
+| Performance Efficiency | Absorb short photo-upload bursts without unbounded work | Bounded payloads/concurrency, pagination, pooling, and parallel independent calls | Upload-boundary and burst smoke tests | Numeric throughput target is not specified |
+
+---
+
+## 7. Prerequisites
 
 ### Run
 
@@ -91,7 +108,7 @@
 
 ---
 
-## 7. Design System & UI
+## 8. Design System & UI
 
 **Component Library**: Fluent UI v9
 **Style Direction**: Warm, friendly photo-sharing app with soft shadows, rounded 12px corners, and emphasis on photo content — approachable and intimate for personal scrapbook moments.
@@ -144,7 +161,7 @@ Timeline — moments:
 
 ---
 
-## 8. Project Structure
+## 9. Project Structure
 
 ```
 project-root/
@@ -207,7 +224,7 @@ project-root/
 
 ---
 
-## 9. Route Definitions
+## 10. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Status Codes |
 |---|--------|------|-------------|-------------|--------------|-------------|
@@ -225,7 +242,7 @@ project-root/
 
 ---
 
-## 10. Next Steps
+## 11. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations

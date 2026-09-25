@@ -21,7 +21,7 @@ See [deploy-checklist-template.md § Deployment Summary](../deploy/references/de
 
 > ⛔ **Artifact self-check — MANDATORY before handoff.** Verify these exist before presenting cleanup or next steps:
 > 1. `deploy-result.json` in session folder — if missing, read [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts) and write it NOW with status, endpoints, health, `createdResources[]`, `orphanedResourceGroups[]`
-> 2. `deploy-result.json.createdResources[]` populated — the deterministic before/after `resources.list()` diff from `capture_deployment_inventory`. If empty/missing, run `capture_deployment_inventory` (`phase: "capture"`) NOW and write its output into `deploy-result.json` so the cleanup section below is derived from data, not memory.
+> 2. `deploy-result.json.createdResources[]` populated — the deterministic before/after diff from the selected product inventory provider. If empty/missing, run the final product capture NOW and write its output plus `inventorySource` into `deploy-result.json` so cleanup is derived from data, not memory.
 > 3. Portal deployment link printed in chat — if missing, generate from `$resId` pattern (see deploy/instructions.md Step 6) and print now
 > 4. `deployment-summary.md` in session folder — if missing, `create` it NOW with the same content you are about to present in chat (status, subscription, RG, region, services table, endpoints, cleanup commands). One `create` call — do NOT skip.
 
@@ -60,19 +60,19 @@ See [deploy-checklist-template.md § Deployment Summary](../deploy/references/de
 **Primary cleanup (always print):**
 ```
 🗑️ Delete this deployment's resources:
-  → az group delete -n {rg} --yes --no-wait
+  → az group delete --subscription {subscriptionId} -n {rg} --yes --no-wait
 ```
 
 **Tag-based bulk cleanup (always print — catches orphans from healing):**
 ```
 🏷️ Delete ALL resources from this AppOnboard session:
-  → az group list --tag app-onboard-session-id={sessionId} --query "[].name" -o tsv | ForEach-Object { az group delete -n $_ --yes --no-wait }
+  → az group list --subscription {subscriptionId} --tag app-onboard-session-id={sessionId} --query "[].name" -o tsv | ForEach-Object { az group delete --subscription {subscriptionId} -n $_ --yes --no-wait }
 ```
 This catches orphaned RGs from region fallback or naming conflict healing. For Terraform: `cd infra && terraform destroy`.
 
 **Deterministic orphan cleanup (from `deploy-result.json.createdResources[]`):**
 
-> ⛔ **Prefer the inventory over memory.** `deploy-result.json.createdResources[]` and `orphanedResourceGroups[]` are computed by `capture_deployment_inventory` from a before/after `resources.list()` diff, so they catch orphans the tag filter misses (imperative `az create` fallbacks and resources that never received the session tag). If they are empty/missing, run `capture_deployment_inventory` (`phase: "capture"`) and write its output into `deploy-result.json` before writing this section.
+> ⛔ **Prefer the inventory over memory.** `deploy-result.json.createdResources[]` and `orphanedResourceGroups[]` are computed by the selected product inventory provider from a before/after diff, so they catch orphans the tag filter misses (imperative `az create` fallbacks and resources that never received the session tag). If they are empty/missing, run the final product capture and write its output plus `inventorySource` into `deploy-result.json` before writing this section.
 
 **If `deploy-result.json.orphanedResourceGroups[]` is non-empty**, list each explicitly with delete commands. For orphans with a `subscription` field, include `--subscription {subscription}`.
 
@@ -101,7 +101,7 @@ Include this in the chat handoff AND in `deployment-summary.md`.
 **Cross-session cleanup (optional — show if user asks):**
 ```
 🔍 Find ALL AppOnboard resources across all sessions:
-  → az group list --tag app-onboard-skill=true -o table
+  → az group list --subscription {subscriptionId} --tag app-onboard-skill=true -o table
 ```
 
 ## Agent-Based Next Steps

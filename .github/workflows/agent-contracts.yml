@@ -119,6 +119,14 @@ jobs:
         run: npm run seed:contract
         working-directory: evals
 
+      # Bicep accepts a PostgreSQL administrator display label as a resource name,
+      # but ARM treats that URL segment as the administrator object ID and rejects
+      # it at runtime. Prove both shipped shell implementations block that mutation
+      # and require the nested-deployment readiness barrier.
+      - name: Self-test scaffold conformance
+        run: npm run scaffold-conformance:self-test
+        working-directory: evals
+
       # Run through the evals package so the spec is actually linted: a bare
       # `vally lint` at the repo root discovers no skills and silently passes.
       - name: Lint eval specs
