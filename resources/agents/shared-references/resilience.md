@@ -1,33 +1,33 @@
 # Resilience & Graceful Degradation
 
-> Patterns for handling external service failures without crashing requests. Every external call must have a failure plan.
+> Handle external service failures without crashing requests. Every external call needs a failure plan.
 
 ---
 
 ## Core Principle
 
-**External service failures MUST NEVER crash the request unless the service is essential to the operation.** Every external dependency gets classified as **Essential** or **Enhancement**, and code must handle each accordingly.
+**External service failures MUST NEVER crash requests unless essential to the operation.** Classify every external dependency as **Essential** or **Enhancement** and handle accordingly.
 
 ---
 
 ## Service Dependency Classification
 
-During Phase 1 planning, classify every external service:
+During Phase 1 planning, classify all external services:
 
 | Type | Definition | Failure Behavior | Example |
 |------|-----------|-----------------|---------|
 | **Essential** | Request cannot produce meaningful result without this service | Propagate error to client (4xx/5xx) | Database, auth provider |
 | **Enhancement** | Request can succeed with degraded output if unavailable | Catch error, use fallback, log warning | AI captions, email notifications, thumbnail generation, analytics |
 
-This classification **MUST appear in the project plan** under "Service Dependency Classification".
+Classification **MUST appear in the project plan** under "Service Dependency Classification".
 
 ---
 
 ## Rule: Enhancement Service Constructors Must Not Throw
 
-> ⚠️ **#1 cause of "all tests pass but app doesn't start" failures** (identified across multiple benchmark runs).
+> ⚠️ **#1 cause of "all tests pass but app doesn't start" failures** across multiple benchmark runs.
 
-Enhancement services must be safe to instantiate even when config is missing. Service registry's `initializeServices()` constructs ALL services at once — if any constructor throws, it cascades to crash every handler.
+Enhancement services must instantiate safely without config. Service registry's `initializeServices()` constructs ALL services together; any constructor throw crashes every handler.
 
 ### The Problem
 
@@ -45,9 +45,9 @@ class AzureAICaptionService implements IAICaptionService {
 }
 ```
 
-When `initializeServices()` calls `new AzureAICaptionService()`, the throw prevents registry from initializing. Every subsequent `getServices()` call fails — crashing ALL handlers, even those that never use AI service.
+When `initializeServices()` calls `new AzureAICaptionService()`, the throw blocks registry initialization. Every later `getServices()` fails, crashing ALL handlers, including those not using AI service.
 
-Tests don't catch this because they call `registerServices()` with mocks, bypassing `initializeServices()` entirely.
+Tests miss this by calling `registerServices()` with mocks and bypassing `initializeServices()` entirely.
 
 ### Solution A: Defer validation to method calls (Recommended)
 
@@ -99,7 +99,7 @@ function initializeServices(): void {
 
 ### Testing: Auto-initialization Test (Mandatory)
 
-Every test suite MUST include a test verifying auto-initialization works without pre-registered mocks:
+Every test suite MUST verify auto-initialization without pre-registered mocks:
 
 ```typescript
 describe('auto-initialization', () => {
@@ -121,7 +121,7 @@ describe('auto-initialization', () => {
 
 ## Pattern: Try/Fallback Wrapper
 
-When a feature depends on Enhancement service, wrap call in try/catch with sensible default.
+Wrap Enhancement service calls in try/catch with sensible defaults.
 
 ### TypeScript
 
@@ -139,13 +139,13 @@ try {
 }
 ```
 
-For Python and C# try/fallback patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+See Python and C# try/fallback patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
 ## Pattern: Timeouts
 
-Every external HTTP/SDK call should have timeout to prevent hanging requests.
+Give every external HTTP/SDK call a timeout to prevent hanging requests.
 
 ### TypeScript
 
@@ -172,15 +172,13 @@ const caption = await withTimeout(
 > controller that the operation never sees only stops local waiting (or does nothing); it does not bound the
 > network call. Azure SDKs generally accept `abortSignal` in request options.
 
-For Python, use `asyncio.timeout()` / the SDK's timeout argument. For C#, create a linked
-`CancellationTokenSource`, call `CancelAfter`, and pass its token to the SDK method. Never create a timeout
-token and then call an overload that does not accept it.
+See Python and C# timeout patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
 ## Pattern: Retry with Exponential Backoff
 
-For transient failures (429 Too Many Requests, 503 Service Unavailable, network timeouts), retry with increasing delays.
+Retry transient failures (429 Too Many Requests, 503 Service Unavailable, network timeouts) with increasing delays.
 
 ### TypeScript
 
@@ -226,11 +224,13 @@ application-level idempotency key. Python (`tenacity` or a bounded loop) and C# 
 bounded resilience pipeline) follow the same rule: retry only classified transient failures, cap attempts
 and total delay, add jitter, and never retry an unprotected mutation.
 
+See Python and C# retry patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+
 ---
 
 ## Pattern: Parallel Independent Calls
 
-When multiple independent external calls are needed for a single request, run them in parallel. Combine with try/fallback for Enhancement services.
+Run independent external calls for one request in parallel. Add try/fallback for Enhancement services.
 
 ### TypeScript
 
@@ -250,15 +250,15 @@ const [blobUrl, caption] = await Promise.all([
 ]);
 ```
 
-For Python and C# parallel call patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+See Python and C# parallel-call patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
 ## Testing Resilience
 
-> ⚠️ **MANDATORY for every handler using Enhancement service.** Absence consistently flagged during scaffold benchmarking. Every Enhancement service wrapper must verify graceful degradation with a typed test.
+> ⚠️ **MANDATORY for every handler using Enhancement service.** Scaffold benchmarking consistently flags absence. Every Enhancement service wrapper needs a typed graceful-degradation test.
 
-Every Enhancement service wrapper must have tests verifying graceful degradation:
+Test every Enhancement service wrapper's graceful degradation:
 
 ```typescript
 describe('uploadPhoto', () => {
@@ -291,7 +291,7 @@ describe('uploadPhoto', () => {
 
 ## Checklist
 
-When implementing a function handler that calls external services:
+For function handlers calling external services:
 
 - [ ] Classify each service call as Essential or Enhancement
 - [ ] Enhancement services wrapped in try/catch with fallback

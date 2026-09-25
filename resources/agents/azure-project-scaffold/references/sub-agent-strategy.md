@@ -1,6 +1,6 @@
 # Sub-Agent Strategy for Backend Scaffolding
 
-> Parallelization strategy for backend scaffold execution. Read when transitioning from **Step 1** to backend implementation.
+> Backend-scaffold parallelization. Read between **Step 1** and backend implementation.
 
 ---
 

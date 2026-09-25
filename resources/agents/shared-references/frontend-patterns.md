@@ -1,20 +1,20 @@
 # Frontend Architecture Patterns
 
-> Frontend has same quality bar as backend: typed, tested, structured.
+> Frontend matches backend quality: typed, tested, structured.
 
-> **Companion contract**: For the **visual** quality bar — how to render Section 6's layout tokens with real library primitives, how to theme the app from the plan's palette, and the four-state coverage gate — read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). This file covers structural patterns (types, hooks, services, error handling); the quality bar covers what each region must actually render.
+> **Companion contract**: For **visual** quality—rendering Section 6 layout tokens with real library primitives, theming from plan palette, and four-state coverage—read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). This file covers structure (types, hooks, services, error handling); quality bar defines each region's rendering.
 
 ---
 
 ## Core Principle
 
-**Frontend is not second-class.** Consumes shared types package, has own test gate, follows consistent patterns for data fetching, error handling, component structure. **Layout tokens from the plan are intent, not literal `<div>`s** — see [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md).
+**Frontend is not second-class.** Consume shared types, enforce its own test gate, and use consistent data-fetching, error-handling, component patterns. **Plan layout tokens are intent, not literal `<div>`s**—see [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md).
 
 ---
 
 ## Rule: Consume Shared Types — No `any`
 
-Shared package exists so frontend doesn't reinvent types. Every entity, request, response MUST use shared type.
+Shared package prevents reinvented types. Every entity, request, and response MUST use shared types.
 
 ```typescript
 // ❌ BAD — defeats the purpose of the shared types package
@@ -30,13 +30,13 @@ const [photos, setPhotos] = useState<Photo[]>([]);
 const [error, setError] = useState<string | null>(null);
 ```
 
-**Enforcement**: If shared package defines a type for an entity or API response, frontend MUST import and use it. No inline `any` or ad-hoc interfaces duplicating shared definitions.
+**Enforcement**: Frontend MUST import any shared entity or API response type. No inline `any` or ad-hoc duplicate interfaces.
 
 ---
 
 ## Rule: API Client Must Be Fully Typed
 
-API client module MUST use shared request/response types for every endpoint. Client is contract boundary between frontend and backend.
+API client MUST use shared request/response types for every endpoint. It is frontend and backend contract boundary.
 
 ```typescript
 // api/client.ts
@@ -100,7 +100,7 @@ export const api = {
 
 ## Rule: Error Handling in Custom Hooks
 
-Every async op in custom hook MUST catch errors and update error state. Optimistic updates MUST roll back on failure.
+Every custom-hook async op MUST catch errors and update error state. Optimistic updates MUST roll back on failure.
 
 ```typescript
 // ❌ BAD — if API call fails, UI state is inconsistent
@@ -151,7 +151,7 @@ useEffect(() => {
 
 ## Rule: No Destructive Actions Without Confirmation
 
-Any action that permanently deletes or irreversibly modifies data MUST require user confirmation before executing.
+Any permanent deletion or irreversible modification MUST require pre-execution confirmation.
 
 ```typescript
 // ❌ BAD — one mis-click deletes a photo permanently
@@ -165,13 +165,13 @@ Any action that permanently deletes or irreversibly modifies data MUST require u
 }}>Delete</button>
 ```
 
-For better UX, consider custom confirmation dialog instead of `window.confirm`.
+For better UX, prefer custom confirmation dialog over `window.confirm`.
 
 ---
 
 ## Pattern: Extract Shared Form Components
 
-When 2+ pages share >50% structure, extract shared component. Common with auth forms.
+When 2+ pages share >50% structure, extract a shared component; common for auth forms.
 
 ```typescript
 // ❌ BAD — LoginPage and RegisterPage are 90% identical
@@ -229,7 +229,7 @@ function AuthForm({ title, fields, onSubmit, submitLabel, altLink }: AuthFormPro
 
 ## Pattern: File Upload Validation (Client-Side)
 
-File uploads MUST validate client-side before sending to server. Provides immediate feedback, prevents wasted bandwidth.
+File uploads MUST validate client-side before sending. This gives immediate feedback and avoids wasted bandwidth.
 
 ```typescript
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -256,13 +256,13 @@ const handleUpload = async (file: File) => {
 };
 ```
 
-**Server MUST also validate** — client-side validation is for UX, not security. Backend upload handler MUST independently check file size and type.
+**Server MUST also validate**: client validation serves UX, not security. Backend upload handler MUST independently check file size and type.
 
 ---
 
 ## Pattern: Four-State Data Pages
 
-Every page fetching data MUST handle exactly four states:
+Every data-fetching page MUST handle exactly four states:
 
 ```typescript
 function PhotoGallery() {
@@ -306,7 +306,7 @@ function PhotoGallery() {
 
 ## Pattern: Consistent Styling Approach
 
-Choose ONE styling approach and use it consistently. Do not mix inline styles with CSS classes.
+Choose ONE styling approach consistently. Never mix inline styles with CSS classes.
 
 | Approach | When to Use | How |
 |----------|------------|-----|
@@ -321,7 +321,7 @@ Choose ONE styling approach and use it consistently. Do not mix inline styles wi
 
 ## Frontend Test Requirements
 
-The frontend test gate (Step 12) requires the following minimum tests:
+Frontend test gate (Step 12) requires these minimum tests:
 
 ### Minimum Test Coverage
 

@@ -1,6 +1,6 @@
 # Frontend Steps
 
-> Detailed sub-steps for generating the standalone frontend. Read during **Step 1** (Frontend).
+> Standalone frontend sub-steps. Read during **Step 1** (Frontend).
 
 > **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Design System & UI section and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to generate and build the frontend (working directory, build, verify); the quality bar covers *what* the frontend must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval.
 
@@ -8,31 +8,31 @@
 
 ## ⚠️ ️ WORKING DIRECTORY — READ BEFORE RUNNING ANY COMMAND
 
-**Every frontend command (scaffolder, `npm install`, `npx vite build`, `npm run build`, etc.) MUST be invoked with `cwd` set to the frontend project folder — the directory that contains the frontend's `package.json` and `index.html` (typically `services/web/`). Running these commands from the workspace root is the #1 cause of build failures.**
+**Every frontend command (scaffolder, `npm install`, `npx vite build`, `npm run build`, etc.) MUST use `cwd` = frontend folder containing `package.json` and `index.html` (typically `services/web/`). Workspace-root execution is the #1 build-failure cause.**
 
 | ✅ Correct | ❌ Wrong |
 |----------|---------|
-| `run_in_terminal` with `cwd: "services/web"` and command `npx vite build` | `run_in_terminal` from workspace root running `npx vite build` |
-| `run_in_terminal` with `cwd: "services/web"` and command `npm install` | `cd services/web && npx vite build` chained from another shell that was launched at root, then forgotten on the next command |
-| Pass the folder explicitly every time (don't rely on a previous `cd`) | Assume the terminal is still in `services/web/` from an earlier command — the agent runs each command in a fresh shell |
+| `run_in_terminal`, `cwd: "services/web"`, command `npx vite build` | Workspace-root `run_in_terminal` running `npx vite build` |
+| `run_in_terminal`, `cwd: "services/web"`, command `npm install` | `cd services/web && npx vite build` from root, then assuming it persists |
+| Pass folder every time; never rely on previous `cd` | Assume terminal remains in `services/web/`; each command gets fresh shell |
 
 **Rules:**
 
-1. **Prefer a working-directory-independent command** for the frontend's own npm scripts: `npm --prefix <frontend-folder> run <script>` (e.g. `npm --prefix services/web run build`). `--prefix` loads the frontend's `package.json` from that folder no matter where the shell starts, so it cannot accidentally run from the workspace root.
-2. When you must use a tool/binary directly (e.g. `npx vite build`), pass the frontend folder via the `cwd` parameter of `run_in_terminal` on the **same** call. Do **not** rely on a previous `cd` — each terminal invocation may start at the workspace root.
-3. If the tool doesn't take a `cwd` parameter, prefix every command with `cd <frontend-folder> &&` and put it on the *same* shell call as the build command. Never split `cd` and `npx vite build` across two separate `run_in_terminal` calls.
-4. The frontend folder is whatever the plan specifies — usually `services/web/`. Confirm by checking that the folder contains both `package.json` and `index.html` (or `vite.config.*`).
+1. **Prefer cwd-independent npm scripts**: `npm --prefix <frontend-folder> run <script>` (e.g. `npm --prefix services/web run build`). `--prefix` loads frontend `package.json` regardless of shell start.
+2. For direct tools/binaries (e.g. `npx vite build`), pass frontend `cwd` to `run_in_terminal` in the **same** call. Never rely on previous `cd`; invocations may start at root.
+3. Without `cwd` support, prefix the build's same shell call with `cd <frontend-folder> &&`. Never split `cd` and `npx vite build` across `run_in_terminal` calls.
+4. Use plan's frontend folder, usually `services/web/`. Confirm it contains `package.json` and `index.html` (or `vite.config.*`).
 
 ---
 
 ## ⚠️ Preview compatibility — the "Approve UI" iframe MUST be able to load your dev server
 
-After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_preview_view` tool). That tool **starts your frontend's dev server for you** and renders it inside a **VS Code webview iframe**; the user clicks **Approve UI** there to continue to integration. If that iframe can't load the running app, the user is **stuck** — the app can be "live" in a normal browser window yet the preview shows a blank surface or never leaves "Starting…", and **Approve UI never enables**. Scaffold the frontend so the preview can always load it:
+After scaffolding, `open_frontend_preview_view` opens **Approve UI**, **starts the frontend dev server**, and renders a **VS Code webview iframe**. User clicks **Approve UI** to integrate. If iframe cannot load app, user is **stuck**: normal browser may work while preview is blank/"Starting…" and **Approve UI never enables**. Ensure preview loads:
 
-- **Make the dev server embeddable + reachable.** In `vite.config` set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). `host: true` lets the webview / forwarded port (remote, Codespaces, Dev Container, SSH) reach it; `allowedHosts: true` stops the dev server 403-blocking the forwarded/webview origin; `strictPort: false` lets the preview bind a free port instead of erroring when the default is taken. See [architecture.md](.github/agents/shared-references/architecture.md) → Frontend Dev Server Configuration.
-- **Keep the `dev`/`start` script a real server.** It must launch a server that prints `http://localhost:<port>/` (plain `vite`, `next dev`, `ng serve`) — never `vite build --watch` or a build-only script. The preview waits for that URL before it enables **Approve UI**; a script that never serves leaves it on "Starting…" until it times out.
-- **Never frame-bust the dev server.** No `X-Frame-Options` header from the dev server and no `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` in `index.html`. Those let a top-level browser tab load the app but block embedding in the webview iframe — the exact "works in my browser, blank in the preview" trap.
-- **Do not run a competing dev server.** The `open_frontend_preview_view` tool owns the single dev server; the scaffold only *builds* (`npm run build`, per F4). Do **not** start your own `npm run dev`, and do **not** scaffold a VS Code task that auto-starts the dev server on folder open — a second server contends for the port, so the preview's own server can fail to bind and error out while the other server is what shows "live" in the browser.
+- **Embeddable, reachable dev server.** In `vite.config`, set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). `host: true` enables webview/forwarded-port access (remote, Codespaces, Dev Container, SSH); `allowedHosts: true` prevents forwarded/webview-origin 403; `strictPort: false` allows free port if default is busy. See [architecture.md](.github/agents/shared-references/architecture.md) → Frontend Dev Server Configuration.
+- **Keep `dev`/`start` a real server.** It prints `http://localhost:<port>/` (plain `vite`, `next dev`, `ng serve`), never `vite build --watch` or build-only script. Preview waits for URL before enabling **Approve UI**; non-serving scripts time out on "Starting…".
+- **Never frame-bust dev server.** No `X-Frame-Options` header or `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` in `index.html`. Either blocks webview iframe while browser tab works.
+- **No competing dev server.** `open_frontend_preview_view` owns one server; scaffold only *builds* (`npm run build`, per F4). Do **not** run `npm run dev` or scaffold folder-open auto-start VS Code task. Second server creates port contention and preview bind failure.
 
 ---
 
@@ -50,18 +50,18 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 
 ## Sub-step F2: Create the Mock Data Layer Behind the `src/api/` Seam
 
-> **Load-bearing seam rule.** **No file outside `services/web/src/api/` imports the mock** — not pages, not hooks, not shared components, not the auth provider. They all import a single `api` object from `services/web/src/api/` (the seam). At scaffold time that `api` is backed by the mock implementation; at integrate time the integrate agent swaps **one file** (`src/api/index.ts`) to point at the live client and deletes the mock impl — **with no edits anywhere outside `src/api/`**. Anything that imported `src/mocks/` directly stops compiling the moment the mock is deleted, which is exactly what turns the one-file swap into a rewrite.
+> **Load-bearing seam rule.** **No file outside `services/web/src/api/` imports mock**—not pages, hooks, shared components, or auth provider. All import one `api` object from `services/web/src/api/`. Scaffold backs `api` with mock; integrate swaps **one file** (`src/api/index.ts`) to live client and deletes mock—**no edits outside `src/api/`**. Direct `src/mocks/` imports stop compiling after deletion, turning one-file swap into rewrite.
 >
-> **If a file needs data the `ApiClient` interface does not expose — including reference data the plan has no route for — add a method to the interface (F1) and back it with the mock. Never import the fixture.** This case is not an exemption from the rule and it is not a judgement call: extend the seam. Wire the seam exactly as below so the swap stays a single-file edit.
+> **If `ApiClient` lacks needed data—including reference data without plan route—add interface method (F1) + mock backing. Never import fixture.** No exemption: extend seam. Wire exactly below for single-file swap.
 
 | Task | Details |
 |------|---------|
-| Create mock data files | `services/web/src/mocks/data.ts` — realistic sample data matching plan entities. **Any entity field that represents an image — `image`/`photo`/`avatar`/`cover`/`thumbnail`/`banner`/`url` on a media entity — MUST be populated with a real, loadable image URL**, never left blank, `null`, or pointing at a solid-color placeholder. Use `https://picsum.photos/seed/<stable-id>/<w>/<h>` for generic media, curated `https://images.unsplash.com/...` URLs for domain-specific imagery, and `https://i.pravatar.cc/<size>?u=<id>` for avatars. Empty media surfaces render as flat color blocks and fail the quality bar. |
-| Create the mock client (an `ApiClient` impl) | `services/web/src/api/mockClient.ts` — `export const mockClient: ApiClient = { … }` implementing **every** method of the `ApiClient` interface from F1 (including the reference-data methods), returning data from `src/mocks/data.ts` with small simulated delays. It MUST satisfy the interface so it is type-interchangeable with the future live client. **Declare the mock as `ApiClient`; never derive the interface from the mock.** `export type ApiClient = typeof mockClient` inverts the seam — integrate deletes the mock, which deletes the interface with it and leaves the live client nothing to implement. |
-| **Create the seam entry (the one file that swaps)** | `services/web/src/api/index.ts` — the single swap point. It contains exactly:<br>`import type { ApiClient } from './types';`<br>`import { mockClient } from './mockClient';`<br>`export const api: ApiClient = mockClient;`<br>`export type { ApiClient } from './types';`<br>At integrate time only this file changes (mock → live). Keep it this small — no logic, just the wiring line. |
-| **Auto-seed auth state** | When the plan says `API Login: Yes`, the local auth state MUST auto-login with local credentials on first load (no token in storage). Preview boots directly into the main authenticated view, not a login page. Login/logout MUST still work if the user manually logs out. **Get the signed-in user from the seam (`api.getCurrentUser()`, added to the interface in F1). The auth provider follows the seam rule exactly like a page, so `import { currentUser } from '../mocks/data'` is a violation.** When `API Login: No`, do not scaffold auth state or login UI. |
-| **Build the Mock State Switcher (STANDARD — always)** | Create `services/web/src/api/previewState.ts` exposing the forced `PreviewDataState` (`'data' \| 'loading' \| 'empty' \| 'error'`), initialized from the `?previewState=` query param → `localStorage['previewState']` → `'data'`. The **mock client must honor it on every method**: `loading` → never/slowly resolves; `error` → rejects with a realistic `Error`; `empty` → returns `[]` / `null`; `data` → normal fixtures. Render a small fixed-corner Data/Loading/Empty/Error switcher gated by `import.meta.env.DEV` (forced to `'data'`, no UI, in PROD). This is a fixed contract — scaffold it the same way every time. See the Mock State Switcher standard in [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). |
-| Handle all 4 data states | Loading (skeleton/spinner), Error (retry button), Empty (call-to-action), Data (populated) — all four reachable live via the Mock State Switcher above |
+| Create mock data files | `services/web/src/mocks/data.ts` — realistic planned entities. **Media fields — `image`/`photo`/`avatar`/`cover`/`thumbnail`/`banner`/`url` on media entities — MUST contain real loadable image URL**, never blank, `null`, or solid-color placeholder. Use `https://picsum.photos/seed/<stable-id>/<w>/<h>` for generic media, curated `https://images.unsplash.com/...` URLs for domain imagery, and `https://i.pravatar.cc/<size>?u=<id>` for avatars. Empty media becomes flat blocks and fails quality. |
+| Create the mock client (an `ApiClient` impl) | `services/web/src/api/mockClient.ts` — `export const mockClient: ApiClient = { … }` implements **every** F1 `ApiClient` method (including reference-data methods), returns `src/mocks/data.ts` with small delays, and satisfies interface for future live-client interchangeability. **Declare mock as `ApiClient`; never derive interface from mock.** `export type ApiClient = typeof mockClient` inverts seam: integrate deletes mock, interface disappears, live client has nothing to implement. |
+| **Create the seam entry (the one file that swaps)** | `services/web/src/api/index.ts` — single swap point containing exactly:<br>`import type { ApiClient } from './types';`<br>`import { mockClient } from './mockClient';`<br>`export const api: ApiClient = mockClient;`<br>`export type { ApiClient } from './types';`<br>Integrate changes only this file (mock → live). No logic, only wiring. |
+| **Auto-seed auth state** | When plan says `API Login: Yes`, local auth MUST auto-login with local credentials on first load (no token in storage), showing authenticated main view, not login. Login/logout still work after manual logout. Get signed-in user through seam (`api.getCurrentUser()`, added in F1); auth provider follows same seam, so `import { currentUser } from '../mocks/data'` violates. When `API Login: No`, scaffold no auth state/login UI. |
+| **Build the Mock State Switcher (STANDARD — always)** | Create `services/web/src/api/previewState.ts` exposing forced `PreviewDataState` (`'data' \| 'loading' \| 'empty' \| 'error'`), initialized `?previewState=` → `localStorage['previewState']` → `'data'`. **Every mock method honors it**: `loading` → never/slow resolve; `error` → realistic `Error`; `empty` → `[]` / `null`; `data` → fixtures. Render fixed-corner Data/Loading/Empty/Error switcher gated by `import.meta.env.DEV` (PROD forced `'data'`, no UI). Fixed contract; see Mock State Switcher in [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). |
+| Handle all 4 data states | Loading (skeleton/spinner), Error (retry), Empty (CTA), Data (populated), all live-reachable via Mock State Switcher |
 
 ---
 
@@ -69,55 +69,55 @@ After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_
 
 | Task | Details |
 |------|---------|
-| Create pages | One page per major feature, wired to the `api` object from the seam — `import { api } from '@/api'` (or the relative `../api`). **Never import from `src/mocks/` or `src/api/mockClient.ts` in ANY file outside `src/api/`** — not a page, not a hook, not a shared component, not the auth provider. Need an assignee name, the signed-in user, or any other reference data? Add an `ApiClient` method for it (F1) and call it through the seam. This is what keeps integration a one-file swap. |
+| Create pages | One per major feature, wired to seam `api` — `import { api } from '@/api'` (or relative `../api`). **Never import `src/mocks/` or `src/api/mockClient.ts` outside `src/api/`**—including pages, hooks, shared components, auth provider. For assignee name, signed-in user, or other reference data, add F1 `ApiClient` method + call through seam. This preserves one-file integration swap. |
 | Create shared components | Reusable UI components (layout, nav, forms, cards) |
-| Error handling in hooks | Every async hook catches errors, handles loading/error states |
+| Error handling in hooks | Every async hook catches errors and handles loading/error |
 | Destructive action confirmations | Delete and irreversible actions require user confirmation |
-| Auth context auto-login | When `API Login` is `Yes`, AuthProvider/auth context MUST auto-login on mount when no token exists, so preview opens to main authenticated content |
-| Account creation | When `API Login` is `Yes`, the login page MUST show a visible **Create account** button that routes to a dedicated create-account page. The page calls `api.createAccount(...)` through the seam and displays validation, duplicate-account, loading, and success states. This is required even though local auto-login makes the main authenticated content the initial preview. |
+| Auth context auto-login | When `API Login` is `Yes`, AuthProvider/context MUST auto-login on mount without token so preview opens authenticated main content |
+| Account creation | When `API Login` is `Yes`, login page MUST show visible **Create account** button routing to dedicated create-account page. Page calls `api.createAccount(...)` through seam and shows validation, duplicate-account, loading, success states. Required though local auto-login initially shows main content. |
 | Use correct file extensions | `.tsx` for JSX, `.ts` for pure TypeScript |
 
 ---
 
 ## Sub-step F4: Build & Verify the Frontend
 
-> ⚠️ **PARALLEL STEP**: Frontend generation + build (F1–F4, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not the frontend — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while the Frontend sub-agent generates and builds `services/web/`.
+> ⚠️ **PARALLEL STEP**: Frontend generation + build (F1–F4, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan routes and entity types**, not frontend. Begin Phase A/B after Step 0 while Frontend sub-agent builds `services/web/`.
 >
-> The Frontend sub-agent only needs to **generate and build** `services/web/` with mock data — it does **not** wire to the real backend. The verify agent, in a later session, swaps the seam (`src/api/index.ts`) from the mock client to the live client and replaces the local mock types with shared imports — a one-file swap at the seam, no page or hook edits.
+> Frontend sub-agent only **generates and builds** mock-backed `services/web/`; it does **not** wire backend. Later verify swaps seam (`src/api/index.ts`) mock → live and local types → shared imports, without page/hook edits.
 >
-> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend uses standalone mock types (`services/web/src/types/`) independent of `services/shared/`, behind the `ApiClient` seam (`src/api/`). Frontend UI changes (layout, styling, components) don't affect backend contracts. The verify agent merges both streams later by repointing the seam at the live client and replacing mock types with shared imports.
+> **Why safe**: Approved plan supplies entities, routes, interfaces. Frontend uses standalone mocks (`services/web/src/types/`) independent of `services/shared/`, behind `ApiClient` seam (`src/api/`). UI changes do not affect backend contracts. Verify later repoints seam and replaces mock types.
 
-> ⚠️ ️ **WORKING DIRECTORY** (see also the top of this file): every `npx vite build`, `npm run build`, `npm install`, etc. **MUST run against the frontend folder** (e.g. `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** (e.g. `npm --prefix services/web run build`) — it loads the frontend's `package.json` regardless of where the shell starts. When invoking a binary directly (`npx vite build`), pass `cwd: services/web` on the same terminal call; do **not** assume a previous `cd` carried over.
+> ⚠️ ️ **WORKING DIRECTORY**: every `npx vite build`, `npm run build`, `npm install`, etc. **MUST target frontend folder** (e.g. `services/web/`), never root. Prefer cwd-independent `npm --prefix services/web run <script>` (e.g. `npm --prefix services/web run build`), which loads frontend `package.json`. For direct `npx vite build`, pass `cwd: services/web` on same call; previous `cd` does not persist.
 
-> ⚠️ **NO UX APPROVAL PROMPT.** The user already approved the design during planning via the HTML/CSS mock-up at `.azure/.preview-temp/`. **Do NOT call `ask_user` for "do you approve this UI?"** during scaffolding. The only legitimate user prompt during Step 1 is a hard build failure that requires their input to resolve.
+> ⚠️ **NO UX APPROVAL PROMPT.** Planning approved HTML/CSS mock-up at `.azure/.preview-temp/`. **Do NOT call `ask_user` for "do you approve this UI?"** during scaffolding. Only prompt in Step 1 for hard build failure requiring user input.
 
 ### Procedure
 
-1. **Frontend builds with zero errors.** Build with a **working-directory-independent** command so it can't accidentally run from the workspace root: `npm --prefix <frontend-folder> run build` (e.g. `npm --prefix services/web run build`). `--prefix` resolves the frontend's `package.json` regardless of where the shell starts, so it's immune to the root-launch bug. Only fall back to `npx vite build` with `cwd: <frontend-folder>` if there is no `build` script. **Never run a bare `npx vite build` from the project root.**
+1. **Frontend builds with zero errors.** Use cwd-independent `npm --prefix <frontend-folder> run build` (e.g. `npm --prefix services/web run build`); `--prefix` resolves frontend `package.json` from any shell start. Without `build` script, use `npx vite build` with `cwd: <frontend-folder>`. **Never run bare `npx vite build` from project root.**
 2. No `any` types in `.ts`/`.tsx` files.
-3. When `API Login` is `Yes`, local identity state is seeded so the app lands on main content, not a login page, on first load. Logging out exposes a login page with a visible **Create account** button and a working dedicated create-account page. When it is `No`, the frontend contains no auth UI or state.
-4. **Briefly note** that the frontend was generated and builds cleanly, and that backend work continues in parallel — one short sentence. **Then keep working** — no approval question, no waiting loop.
+3. When `API Login` is `Yes`, seed local identity so first load lands on main content, not login. Logout reveals login page with visible **Create account** button + working dedicated create-account page. When `No`, frontend has no auth UI/state.
+4. **Briefly note** frontend generated/builds cleanly and backend continues in parallel—one sentence. **Keep working**; no approval question/wait.
 
-> **CRITICAL**: Do NOT prompt "Would you like to preview?" or "Do you approve this UI?" during scaffolding — design approval already happened during planning via the HTML mock-up.
+> **CRITICAL**: Do NOT prompt "Would you like to preview?" or "Do you approve this UI?" during scaffolding; planning HTML mock-up already approved.
 
 ### Translating the planning mock-up into real framework code
 
-The `.azure/.preview-temp/*.html` files are a **layout + tonal reference**, not source code to ship. For each page:
+`.azure/.preview-temp/*.html` files are **layout + tonal reference**, not shipped source. Per page:
 
 - The plan's Pages table tells you which **regions** belong on the page (`header + hero + grid + footer` etc.).
 - The HTML mock-up shows the **approved arrangement, density, and palette** of those regions.
 - Your job in Step 1 is to reproduce that visual feel using the **real `Component Library:` primitives** from the Design System & UI section (see [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library token → primitive mapping).
 
-Do not import the HTML mock-up, embed it via `<iframe>`, or copy CSS class names from it into your JSX — the mock-up is throwaway and `.azure/.preview-temp/` is deleted in Step 11. Only the visual intent (regions, palette, density) carries forward into real components.
+Do not import mock-up, embed via `<iframe>`, or copy its CSS classes into JSX. `.azure/.preview-temp/` is deleted in Step 11; only visual intent (regions, palette, density) carries into real components.
 
 ---
 
 ## Frontend Quality Bar
 
-Even before it's wired to the backend, the frontend MUST meet these standards. The full per-library contract lives in [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) — read it before writing any JSX. Baseline rules enforced here:
+Before backend wiring, frontend MUST meet these standards. Read full per-library [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) before JSX. Baseline:
 
 - No `any` types (use local type definitions in `services/web/src/types/`)
-- Hooks catch errors and handle loading/error states
+- Hooks catch errors; handle loading/error states
 - Destructive actions (delete, etc.) require `window.confirm()` before executing
 - `.tsx` for files containing JSX, `.ts` for pure TypeScript
 - All 4 data states handled: loading, error, empty, data (see quality-bar's State Coverage Contract for per-library primitives — `<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data), and all four reachable live via the **Mock State Switcher** (dev-only `?previewState=` override — see quality-bar's Mock State Switcher standard)

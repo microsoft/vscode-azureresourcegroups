@@ -1,12 +1,12 @@
 # Service Abstraction — Full Code Examples
 
-> Complete implementation examples referenced by [service-abstraction.md](.github/agents/shared-references/service-abstraction.md). Read this file ONLY during Step 3 (Service Abstraction Layer).
+> Complete examples for [service-abstraction.md](.github/agents/shared-references/service-abstraction.md). Read ONLY during Step 3 (Service Abstraction Layer).
 
 ---
 
 ## Concrete Implementation (PostgreSQL)
 
-> Includes camelCase↔snake_case key conversion. TypeScript entities use camelCase but PostgreSQL columns are snake_case. Conversion handled transparently — function handlers never deal with snake_case.
+> Includes transparent camelCase↔snake_case key conversion: TypeScript entities use camelCase; PostgreSQL columns use snake_case; handlers never handle snake_case.
 
 ```typescript
 // services/database.ts
@@ -286,7 +286,7 @@ export class MockDatabaseService implements IDatabaseService {
 
 ## Service Registry (DI)
 
-> **Critical**: Auto-initializes at runtime. Enhancement services wrapped in try/catch.
+> **Critical**: Auto-initializes at runtime. Wrap enhancement services in try/catch.
 
 ```typescript
 // services/registry.ts

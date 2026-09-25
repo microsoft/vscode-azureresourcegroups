@@ -1,35 +1,35 @@
 # Wire Frontend to Live Data
 
-> Read at **Step 3**. The scaffold built the frontend behind a stable `ApiClient` seam (`src/api/`), so wiring to live data is a **one-file swap** at the seam plus a types switch — not a call-site rewrite.
+> Read at **Step 3**. Scaffold frontend has stable `ApiClient` seam (`src/api/`): live wiring = seam **one-file swap** + types switch, not call-site rewrite.
 
 ---
 
 ## The seam the scaffold left you
 
-The scaffold wired the frontend so **no page or hook imports the mock directly**. They all import a single `api` object from `services/web/src/api/`:
+Scaffold wiring ensures **no page or hook imports mock directly**. All import one `api` object from `services/web/src/api/`:
 
-- `src/api/types.ts` — the `ApiClient` interface (one method per endpoint in the route inventory).
-- `src/api/mockClient.ts` — the mock implementation of `ApiClient` (reads `src/mocks/data.ts`).
-- `src/api/index.ts` — the **single swap point**: `export const api: ApiClient = mockClient;`
+- `src/api/types.ts` — `ApiClient` interface, one method per route-inventory endpoint.
+- `src/api/mockClient.ts` — mock `ApiClient` implementation reading `src/mocks/data.ts`.
+- `src/api/index.ts` — **single swap point**: `export const api: ApiClient = mockClient;`
 
-Your job is to add the live implementation and repoint that one file. Because pages/hooks import only `api` from the seam, **you do not touch them**.
+Add live implementation; repoint that one file. Pages/hooks import only seam `api`; **do not touch them**.
 
 ---
 
 ## Goal: no mock data remains in use
 
-After this step, a search of the frontend `src/` for `mock` / `mockData` / `previewState` must find nothing that is still imported. The app fetches everything from the live backend.
+Afterward, frontend `src/` search for `mock` / `mockData` / `previewState` finds no remaining imports. App fetches everything from live backend.
 
 ---
 
 ## Replacement recipe (one-file swap)
 
-1. **Adopt shared types.** Point `src/api/types.ts` (or the local entity types it references) at the shared package instead of the duplicated local types:
+1. **Adopt shared types.** Point `src/api/types.ts` (or referenced local entity types) to shared package, replacing duplicate local types:
    ```ts
    import type { PublicUser, CreateUserRequest } from '@app/shared';
    ```
-   No `any`. The `ApiClient` interface stays the same shape — only the types it references come from the shared contract.
-2. **Build the live client** at `src/api/client.ts` — a second implementation of the **same `ApiClient` interface**, method-for-method, so it drops into the seam without touching callers:
+   No `any`. Keep `ApiClient` interface shape; source referenced types from shared contract.
+2. **Build the live client** at `src/api/client.ts` — second, method-for-method implementation of **same `ApiClient` interface**, replacing seam implementation without caller edits:
    ```ts
    import type { ApiClient } from './types';
    import type { PublicUser, CreateUserRequest } from '@app/shared';
@@ -72,19 +72,19 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
    export const api: ApiClient = liveClient;
    export type { ApiClient } from './types';
    ```
-   That single line (`mockClient` → `liveClient`) is the entire wire-up for the call sites. **No page or hook edits.**
-4. **Remove the mock layer.** Delete `src/api/mockClient.ts` and `src/mocks/*` (and any local duplicated types now sourced from shared). A lingering `import … from './mockClient'` or `from '../mocks'` means the step is not done.
-5. **Remove the Mock State Switcher.** The scaffold always adds a dev-only state switcher (`src/api/previewState.ts` + a fixed-corner Data/Loading/Empty/Error component) that forces the mock client into `loading` / `empty` / `error`. Delete `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — a lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher means the step is not done.
-6. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix any `.ts`/`.tsx` extension mismatch (JSX must be `.tsx`).
+   Single line (`mockClient` → `liveClient`) wires all call sites. **No page or hook edits.**
+4. **Remove the mock layer.** Delete `src/api/mockClient.ts`, `src/mocks/*`, and local duplicate types now shared. Any lingering `import … from './mockClient'` or `from '../mocks'` means incomplete.
+5. **Remove the Mock State Switcher.** Scaffold adds dev-only switcher (`src/api/previewState.ts` + fixed-corner Data/Loading/Empty/Error component) forcing mock client to `loading` / `empty` / `error`. Delete `src/api/previewState.ts`, corner-switcher component, and every `previewState` import/usage in mock client, pages, hooks, app shell. Live data only; any lingering `import … previewState` or rendered Data/Loading/Empty/Error switcher means incomplete.
+6. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix `.ts`/`.tsx` mismatch; JSX requires `.tsx`.
 
-> **If the scaffold did NOT leave a `src/api/` seam** (older scaffold, or a hand-written frontend): fall back to the call-site approach — find every `import … from '.../mocks'`, replace with a real `api.*` call, preserve the four data states. But first establish the seam (`src/api/index.ts`) so any future change stays a one-file swap.
+> **If scaffold did NOT leave a `src/api/` seam** (older scaffold or hand-written frontend): use call-site approach — replace every `import … from '.../mocks'` with real `api.*` call; preserve four data states. First establish seam (`src/api/index.ts`) so future changes remain one-file swap.
 
 
 ---
 
 ## Dev proxy (so `/api` reaches the backend)
 
-Point the dev server's `/api` proxy at the backend host from Step 2.
+Point dev server `/api` proxy at Step 2 backend host.
 
 **Vite** (`vite.config.ts`):
 ```ts
@@ -98,4 +98,4 @@ export default defineConfig({
 });
 ```
 
-**Keep** the `host` / `allowedHosts` / `strictPort` settings the scaffold added — they let the frontend load inside a webview iframe and forwarded (remote / Codespaces) hosts; only add the `proxy` entry. For other frameworks use their equivalent proxy config (Next.js `rewrites`, Angular `proxy.conf.json`). Keep the target in sync with the backend port the artifact documents.
+**Keep** scaffold `host` / `allowedHosts` / `strictPort` settings; they support webview iframe + forwarded (remote / Codespaces) hosts. Add only `proxy`. For other frameworks use equivalent proxy config (Next.js `rewrites`, Angular `proxy.conf.json`). Match target to artifact backend port.

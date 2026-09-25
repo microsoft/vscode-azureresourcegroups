@@ -454,7 +454,9 @@ the existing `deploy-result.json` inventory, so cleanup evidence from earlier de
 </p>
 
 Progress is also visible in the **Azure Project** view, which shows the pipeline stages (Create → Local
-Development → Deploy) and their status.
+Development → Deploy → CI/CD) and their status. CI/CD is marked **Provide Feedback**; its **Take survey**
+action opens the [CI/CD Expectations for Azure Tools in VS Code](https://aka.ms/CICDSurvey)
+form so users can share what they need from the future feature.
 
 <p align="center">
   <img src="images/copilot-create-project/12-azure-project-progress-tree.png" alt="Azure Project progress tree" />
@@ -491,7 +493,7 @@ new subfolder or an empty folder so unattended generation cannot write over exis
 | **Deployment plan** view | `copilotOnRails.openDeploymentPlanView` | `open_deploy_plan_view` | Review the deployment plan; approve. |
 | **Deployment progress** view | `copilotOnRails.showProgressView` | — (opened after plan approval) | Follow deployment phases and Azure resource provisioning. Closes when results open. |
 | **Deployment results** view | `copilotOnRails.openDeployResultView` | `open_deploy_result_view` | Read-only report of a finished deploy: status, endpoints, resources, cleanup. |
-| **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline. |
+| **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline, including a CI/CD placeholder that links to the expectations survey. |
 
 > The `openScaffoldPlanView`, `openFrontendPreviewView`, `openScaffoldNextStepsView`, `openDebugPlanView`,
 > `openDebugNextStepsView`, `openDeploymentPlanView`, and `openDeployResultView` commands are also available from the Command

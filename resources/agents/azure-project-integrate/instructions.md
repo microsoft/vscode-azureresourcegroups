@@ -9,7 +9,7 @@ metadata:
 
 # Azure Project Integrate
 
-> **AUTHORITATIVE — MANDATORY.** Canonical source for integrating a scaffolded Azure-centric project. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
+> **AUTHORITATIVE — MANDATORY.** Canonical scaffolded Azure-centric project integration source. Follow exactly; supersede prior assumptions + sources. No improvisation.
 
 **North Star:** take a project that *builds* (frontend with mock data + backend) and make it *run, wired together, against a real schema* without losing its approved workload-quality controls. You produce **schema migrations**, prove the **backend smoke-tests clean**, replace **mock data with live API calls**, verify the **Workload Quality Contract**, and confirm the **frontend and backend communicate end-to-end**. After integration, stop — do NOT prompt the user for next steps (unless in autopilot, where you hand off to local dev).
 
@@ -22,21 +22,21 @@ metadata:
 5. **Workload quality verification** — run every integration validation recorded in the artifact and append
    evidence/results without claiming WAF compliance.
 
-> ⛔ **NEVER create seed data.** No `seed`, `seeds`, `seed-data`, `fixtures`, demo rows, or any file/folder/function named after seeding. You create **schema only**. Integration is proven by the app running against an empty-but-correct schema. If the scaffold left a `seeds/` directory, ignore it — do not extend it, do not depend on it, do not run it.
+> ⛔ **NEVER create seed data.** No `seed`, `seeds`, `seed-data`, `fixtures`, demo rows, or seeding-named file/folder/function. Create **schema only**. Prove integration against empty-but-correct schema. Ignore scaffold `seeds/` directory — never extend, depend on, or run it.
 
 ## Triggers
 
-Activate when the user (or the scaffold hand-off) wants to:
-- Wire the scaffolded frontend to live backend data / remove mock data
-- Smoke-test the backend and confirm endpoints work
-- Create the database schema migrations
-- Verify the frontend and backend run together
+Activate when user (or scaffold hand-off) requests:
+- Wire scaffold frontend to live backend data / remove mock data
+- Smoke-test backend; confirm endpoints work
+- Create database schema migrations
+- Verify frontend + backend run together
 
 ## ❌ DO NOT activate when
 
 | User intent | Correct agent |
 |-------------|---------------|
-| Plan a new project / gather requirements | **azure-project-plan** |
+| Plan new project / gather requirements | **azure-project-plan** |
 | Scaffold backend + frontend from approved plan | **azure-project-scaffold** |
 | Set up Docker emulators / VS Code F5 debugging | **azure-debug-plan** → **azure-debug-generate** |
 | Deploy to Azure | **azure-deploy** |
@@ -45,20 +45,20 @@ Activate when the user (or the scaffold hand-off) wants to:
 
 ## Prerequisites
 
-Requires a scaffolded project. Verify before starting:
-- `.azure/integration-plan.md` exists (the scaffold hand-off artifact). **This is your primary brief.**
-- `.azure/project-plan.md` exists (the original plan — source of truth for routes, services, entities). Its `Status:` should be `Integrating` — the signal that the user approved the UI preview and integration is the next required step. (Legacy runs may still read `Awaiting Integration`; treat it the same. If it already reads `Integrated`, integration has run before — re-verify rather than redo blindly.)
-- Production code builds (the scaffold's final gate passed).
+Requires scaffolded project. Before start verify:
+- `.azure/integration-plan.md` exists (scaffold hand-off artifact). **Primary brief.**
+- `.azure/project-plan.md` exists (original plan; route/service/entity source of truth). `Status:` should be `Integrating`, signaling approved UI preview + required integration next. Treat legacy `Awaiting Integration` identically. If `Integrated`, re-verify previous integration; do not blindly redo.
+- Production code builds; scaffold final gate passed.
 
-> If `.azure/integration-plan.md` is missing: do **not** fail. Fall back to `.azure/project-plan.md` plus a workspace scan to reconstruct the same facts (backend run command, frontend folder, routes, DB type, mock-data files, shared-types location). But always look for the artifact first.
+> If `.azure/integration-plan.md` missing, do **not** fail. First seek artifact; then reconstruct same facts from `.azure/project-plan.md` + workspace scan (backend run command, frontend folder, routes, DB type, mock-data files, shared-types location).
 
-> **📁 Paths are examples, not assumptions.** Every directory shown below (`services/web/`, `services/functions/`, `services/shared/`, …) is an illustrative default. Read the actual layout from `.azure/integration-plan.md` (or the plan's Project Structure section) and map these roles onto the real folders. Never assume or impose a path.
+> **📁 Paths are examples, not assumptions.** Each directory below (`services/web/`, `services/functions/`, `services/shared/`, …) is illustrative default. Read actual layout from `.azure/integration-plan.md` (or plan Project Structure); map roles to real folders. Never assume/impose path.
 
 ---
 
 ## STEP 0: Read the hand-off artifact & validate — MANDATORY FIRST ACTION
 
-**BEFORE doing anything else**, read and internalize the brief:
+**BEFORE anything else**, read + internalize brief:
 
 | Task | Details |
 |------|---------|
@@ -74,61 +74,61 @@ Requires a scaffolded project. Verify before starting:
 
 ## STEP 1: Database Schema Migrations (NO SEED DATA)
 
-> ⛛ **MANDATORY for relational databases (PostgreSQL / Azure SQL).** Skip only if the project has no relational database. Without migrations, every handler fails with `relation "X" does not exist` — the smoke test in Step 2 cannot pass.
+> ⛛ **MANDATORY for relational databases (PostgreSQL / Azure SQL).** Skip only without relational database. Without migrations, every handler fails with `relation "X" does not exist`; Step 2 smoke test cannot pass.
 
-**Goal**: Repeatable schema management — every table the handlers read/write exists, with full constraints. **Schema only. No data.**
+**Goal**: Repeatable schema management: every handler-read/written table exists with full constraints. **Schema only. No data.**
 
 | Task | Details |
 |------|---------|
-| Identify the migration tool | From the artifact/plan: Knex (Node.js) / Alembic (Python) / EF Core (.NET). If none configured, add the conventional one for the stack and wire its config. |
-| Derive the schema from the entities + handlers | For each entity type / collection the handlers use, define a table. Read the handler data-access patterns so columns and types match what the code actually reads/writes. |
-| Write the migration(s) | Each migration MUST contain a complete `up()` with `CREATE TABLE` (all columns, types) and a `down()` that reverses it. **Empty migration files do NOT satisfy this step.** After writing, list the directory and verify each file is non-zero size. |
-| Add constraints | `UNIQUE` on business-unique fields, `FOREIGN KEY` with `ON DELETE`, `CHECK` for enums, `INDEX` on queried columns. (See [migrations.md](.github/agents/azure-project-integrate/references/migrations.md).) |
-| Create / confirm the migration runner | A script or command to apply migrations forward and roll back. Add an npm/poetry/dotnet script if missing (e.g. `"migrate"`, `"migrate:rollback"`). |
-| Verify table names match handlers | Cross-reference every table against the collection/table names the handlers use. Document the mapping if a `collectionToTable` map exists. |
-| Apply the migrations | Run the migrate command against the local database (start the local DB / emulator if the artifact documents one). Confirm it applies with **zero errors** and the tables now exist. |
+| Identify the migration tool | From artifact/plan: Knex (Node.js) / Alembic (Python) / EF Core (.NET). If absent, add stack convention + config. |
+| Derive the schema from the entities + handlers | Define table per handler-used entity type / collection. Read data-access patterns; match actual read/written columns + types. |
+| Write the migration(s) | Each migration MUST have complete `up()` with `CREATE TABLE` (all columns, types) + reversing `down()`. **Empty migration files do NOT satisfy this step.** List directory afterward; verify every file non-zero. |
+| Add constraints | `UNIQUE` on business-unique fields, `FOREIGN KEY` with `ON DELETE`, `CHECK` for enums, `INDEX` on queried columns. See [migrations.md](.github/agents/azure-project-integrate/references/migrations.md). |
+| Create / confirm the migration runner | Script/command for forward apply + rollback. Add missing npm/poetry/dotnet script (e.g. `"migrate"`, `"migrate:rollback"`). |
+| Verify table names match handlers | Cross-reference every table with handler collection/table names. Document mapping when `collectionToTable` map exists. |
+| Apply the migrations | Run migrate command against local database; start documented local DB / emulator. Require **zero errors** + existing tables. |
 
-> ⛔ **DO NOT** create `seeds/`, `seed.ts`, `seed-data.json`, fixtures, or insert demo rows. If the scaffold created any, leave them untouched and do not invoke them. The schema must stand on its own.
+> ⛔ **DO NOT** create `seeds/`, `seed.ts`, `seed-data.json`, fixtures, or insert demo rows. Leave scaffold-created ones untouched + uninvoked. Schema must stand alone.
 
 > **✅ Checkpoint**:
-> - Migration files exist and each is non-empty (list the directory, verify > 0 bytes).
-> - Migrations apply cleanly against the local database — tables created, zero errors.
-> - Every plan/handler table has a corresponding `CREATE TABLE` with constraints.
-> - **No seed/fixture/demo-data files were created or run.**
+> - Migration files exist, each non-empty; list directory, verify > 0 bytes.
+> - Migrations apply cleanly to local database; tables created, zero errors.
+> - Every plan/handler table has constrained `CREATE TABLE`.
+> - **No seed/fixture/demo-data files created or run.**
 
 ---
 
 ## STEP 2: Backend Smoke Test
 
-**Goal**: Prove the backend actually starts and every endpoint registers and responds — catching the runtime errors (broken imports, constructor crashes, missing tables) that a compile-time build never surfaces.
+**Goal**: Prove backend starts + every endpoint registers/responds; catch runtime errors (broken imports, constructor crashes, missing tables) missed by compile-time build.
 
 | Task | Details |
 |------|---------|
-| Ensure config/env is present | Confirm `.env` / `local.settings.json` has the values the backend needs (DB connection string pointing at the local DB from Step 1, required service vars). Use the scaffold's `.env.example` as the template. **Do not** commit secrets. |
-| Build the backend | Run the backend build (`npm run build` / `tsc` / `dotnet build` / `python -m py_compile`). Zero errors. If `TS2307` import errors appear, the shared package exports are broken — fix before continuing. |
-| Verify the `main`/entry field | For Azure Functions Node v4, list `dist/` and confirm the `main` glob matches the compiled handlers (a parent `rootDir` nests output deeper). Fix before starting the host. |
-| Start the backend host | Run the run command from the artifact (e.g. `func start`, `npm start`, `dotnet run`). It MUST actually execute — do not skip. |
-| Verify all functions register | Read the host console output. **Every** route from the inventory must register. `No job functions found` or `ERR_MODULE_NOT_FOUND` = an import/build bug — fix and restart. |
-| Hit the health endpoint | `GET /api/health` (or the artifact's health path) → expect `200`. Confirms the app serves. |
-| Probe representative endpoints | For each entity area, exercise at least one endpoint (a `GET` list/read, and ideally one write). Expect a structured response or a well-formed validation/`4xx` error — **not** a `500` from a missing table or crashed service. A clean `4xx` for missing auth/body is a PASS; a `500` is a FAIL to investigate. |
-| Stop the host when done | Stop the backend process after probing (leave it running only if Step 4 needs it concurrently). |
+| Ensure config/env is present | Confirm `.env` / `local.settings.json` has backend values: Step 1 local DB connection string + required service vars. Use scaffold `.env.example` template. **Do not** commit secrets. |
+| Build the backend | Run backend build (`npm run build` / `tsc` / `dotnet build` / `python -m py_compile`). Require zero errors. `TS2307` import errors mean broken shared package exports; fix before continuing. |
+| Verify the `main`/entry field | Azure Functions Node v4: list `dist/`; confirm `main` glob matches compiled handlers (parent `rootDir` nests output deeper). Fix before host start. |
+| Start the backend host | Actually execute artifact run command (e.g. `func start`, `npm start`, `dotnet run`); never skip. |
+| Verify all functions register | Read host console. **Every** inventory route must register. `No job functions found` or `ERR_MODULE_NOT_FOUND` means import/build bug; fix + restart. |
+| Hit the health endpoint | `GET /api/health` (or artifact health path) → expect `200`, proving app serves. |
+| Probe representative endpoints | Exercise at least one endpoint per entity area: `GET` list/read, ideally one write. Require structured response or well-formed validation/`4xx`, **not** `500` from missing table/crashed service. Clean missing-auth/body `4xx` = PASS; `500` = investigate FAIL. |
+| Stop the host when done | Stop backend after probes; leave running only for concurrent Step 4 use. |
 
-**Reference**: [smoke-test.md](.github/agents/azure-project-integrate/references/smoke-test.md) for the per-runtime start commands, how to read host output, and the pass/fail matrix.
+**Reference**: [smoke-test.md](.github/agents/azure-project-integrate/references/smoke-test.md): per-runtime start commands, host-output reading, pass/fail matrix.
 
 > **✅ Checkpoint**:
-> - Backend builds with zero errors and the host starts.
+> - Backend builds with zero errors; host starts.
 > - Every endpoint in the inventory registers.
 > - `GET /api/health` → `200`.
-> - Probed endpoints return structured responses or clean `4xx` — **no `500`s from schema/runtime bugs**.
-> - Any failure found here was fixed and re-verified, not deferred.
+> - Probed endpoints return structured responses or clean `4xx`; **no schema/runtime-bug `500`s**.
+> - Fix + re-verify every failure; never defer.
 
 ---
 
 ## STEP 3: Wire the Frontend to LIVE Data
 
-**Goal**: Replace every mock data source in the frontend with real, typed calls to the backend verified in Step 2. After this step, **no mock data layer is in use**.
+**Goal**: Replace every frontend mock source with real typed calls to Step 2-verified backend. Afterward, **no mock data layer is in use**.
 
-> **Skip** only if the project has no frontend.
+> **Skip** only without frontend.
 
 | Task | Details |
 |------|---------|
@@ -142,9 +142,9 @@ Requires a scaffolded project. Verify before starting:
 | Keep correct file extensions | JSX (`<Component />`) MUST be `.tsx`; pure TS `.ts`. |
 | Rebuild the frontend | Run `npm --prefix <frontend> run build` (cwd-independent). Zero errors, zero `any`. |
 
-> ⚠️ **No mock data may remain in use.** Searching the frontend `src/` for `mock` / `mockData` / `previewState` must turn up nothing that is still imported. `useState<any>` or untyped responses = NOT done.
+> ⚠️ **No mock data may remain in use.** Frontend `src/` search for `mock` / `mockData` / `previewState` must find no live imports. `useState<any>` or untyped responses = NOT done.
 
-> **Reference**: [wire-live-data.md](.github/agents/azure-project-integrate/references/wire-live-data.md) for the one-file seam swap, the typed-client pattern, and the dev-proxy config per framework.
+> **Reference**: [wire-live-data.md](.github/agents/azure-project-integrate/references/wire-live-data.md): one-file seam swap, typed-client pattern, per-framework dev-proxy config.
 
 > **✅ Checkpoint**:
 > - Frontend builds with zero errors and zero `any`.
@@ -158,23 +158,23 @@ Requires a scaffolded project. Verify before starting:
 
 ## STEP 4: End-to-End Wire-Up Verification
 
-**Goal**: Run the frontend and backend **together** and confirm they actually communicate over the wire.
+**Goal**: Run frontend + backend **together**; confirm real wire communication.
 
 | Task | Details |
 |------|---------|
-| Start the backend | Start the backend host (from Step 2) so it is listening. |
-| Start the frontend dev server | Start the frontend dev server (`npm --prefix <frontend> run dev`) with the dev proxy pointing at the backend. |
-| Verify a live request path | Confirm the frontend successfully fetches from the backend — inspect the dev-server/host logs for a real `/api/...` request returning `200` (or load a page via the browser tool and confirm live data renders, not a mock placeholder). At least one page MUST display data that came from the running backend. |
-| Verify a write path (if applicable) | If the app has a create/update flow, exercise one and confirm the backend receives it and the frontend reflects the result. |
-| Capture evidence | Record the request/response (path, status) that proves frontend → backend wiring works. |
-| Shut down cleanly | Stop both processes after verifying. |
+| Start the backend | Start listening Step 2 backend host. |
+| Start the frontend dev server | Start frontend dev server (`npm --prefix <frontend> run dev`) with backend-targeting dev proxy. |
+| Verify a live request path | Confirm successful frontend fetch: dev-server/host logs show real `/api/...` returning `200`, or browser-loaded page renders live rather than mock data. At least one page MUST display data from running backend. |
+| Verify a write path (if applicable) | Exercise create/update flow; confirm backend receipt + frontend result. |
+| Capture evidence | Record request/response path + status proving frontend → backend wiring. |
+| Shut down cleanly | Stop both processes after verification. |
 
-**Reference**: [end-to-end.md](.github/agents/azure-project-integrate/references/end-to-end.md) for running both processes concurrently cross-platform and reading the evidence.
+**Reference**: [end-to-end.md](.github/agents/azure-project-integrate/references/end-to-end.md): cross-platform concurrent processes + evidence reading.
 
 > **✅ Checkpoint**:
-> - Frontend and backend ran concurrently.
-> - At least one real `/api/...` request from the frontend hit the backend and returned `200` with live data (no mock).
-> - Evidence captured. Both processes stopped cleanly.
+> - Frontend + backend ran concurrently.
+> - At least one real frontend `/api/...` request hit backend, returning `200` + live data (no mock).
+> - Evidence captured; both processes stopped cleanly.
 
 ---
 
@@ -221,7 +221,7 @@ approved.
 | Update the artifact | Mark `.azure/integration-plan.md` items complete and append integration results: what was migrated, which endpoints passed, mock files removed, end-to-end evidence, and one quality-control result per ID. |
 | Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
-| **Open the Next Steps view, then stop** | Call the `open_scaffold_next_steps_view` tool with no arguments (`{}`) to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off via the `start_local_development` tool per the agent's autopilot rule.) |
+| **Open the Next Steps view, then stop** | Call `open_scaffold_next_steps_view` with no arguments (`{}`) for post-integration "What's next?" view. Then **STOP**; view owns next hand-off (local development setup or deploy). Do **NOT** ask user what next; do **NOT** call `vscode_askQuestions`. Autopilot exception: **skip** view; hand off via `start_local_development` per agent autopilot rule. |
 
 > **✅ Final Checkpoint**:
 > 1. Migrations exist, are non-empty, apply cleanly — **no seed data**.
@@ -238,15 +238,15 @@ approved.
 
 | Artifact | Location |
 |----------|----------|
-| Schema migrations | The project's migration directory (e.g. `services/functions/migrations/`) — **schema only, no seeds** |
-| Real typed API client | `services/web/src/api/client.ts` + seam repoint in `services/web/src/api/index.ts` (or the project's frontend) |
-| Dev proxy config | The frontend dev-server config (e.g. `vite.config.ts`) |
-| Updated artifact | `.azure/integration-plan.md` (results appended) |
+| Schema migrations | Project migration directory (e.g. `services/functions/migrations/`) — **schema only, no seeds** |
+| Real typed API client | `services/web/src/api/client.ts` + `services/web/src/api/index.ts` seam repoint (or project frontend) |
+| Dev proxy config | Frontend dev-server config (e.g. `vite.config.ts`) |
+| Updated artifact | `.azure/integration-plan.md` with appended results |
 | Plan status | `.azure/project-plan.md` → `Integrated` |
-| **Next step** | Open the Next Steps view via the `open_scaffold_next_steps_view` tool (autopilot instead hands off to `azure-debug-plan`) |
+| **Next step** | Open Next Steps view via `open_scaffold_next_steps_view`; autopilot instead hands off to `azure-debug-plan` |
 
 ---
 
 ## Next
 
-> After integration completes, announce **"Integration complete!"**, then open the post-integration **Next Steps view** by calling the `open_scaffold_next_steps_view` tool (no arguments). After opening it, **stop** — the view drives the next hand-off (local development or deploy). Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` or print plain-text follow-up suggestions. (Autopilot exception: **skip** the view and hand off via the `start_local_development` tool with the `[AUTOPILOT MODE]` marker.)
+> After integration, announce **"Integration complete!"**, then open post-integration **Next Steps view** via `open_scaffold_next_steps_view` (no arguments). Then **stop**; view drives local-development/deploy hand-off. Do NOT ask user what next; do NOT call `vscode_askQuestions` or print plain-text suggestions. Autopilot exception: **skip** view; hand off via `start_local_development` with `[AUTOPILOT MODE]` marker.

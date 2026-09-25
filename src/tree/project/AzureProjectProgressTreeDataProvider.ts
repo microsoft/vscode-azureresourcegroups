@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { CiCdStageItem } from './CiCdStageItem';
 import { DeploymentStageItem } from './DeploymentStageItem';
 import { LocalDevelopmentStageItem } from './LocalDevelopmentStageItem';
 import { ProgressNode } from './ProgressNode';
@@ -84,6 +85,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             new ProjectCreationStageItem(effectiveStage, files.hasProjectPlan),
             new LocalDevelopmentStageItem(effectiveStage, files.hasLocalDevelopmentPlan),
             new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan, files.hasAppOnboardSession, files.hasDeployResult),
+            new CiCdStageItem(effectiveStage),
         ];
     }
 }

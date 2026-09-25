@@ -9,27 +9,27 @@ metadata:
 
 # Azure Project Scaffold
 
-> **AUTHORITATIVE — MANDATORY.** Canonical source for scaffolding Azure-centric backends from approved plans. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
+> **AUTHORITATIVE — MANDATORY.** Canonical Azure-centric backend scaffolding source for approved plans. Follow exactly; ignore prior assumptions and other sources. Do not improvise.
 
-**North Star:** produce a working, buildable Azure backend fast from the approved plan. If the plan has a frontend, generate it via a dedicated **Frontend sub-agent that runs in parallel with the backend sub-agents**. After scaffolding, write the `.azure/integration-plan.md` hand-off artifact and hand off to the `azure-project-integrate` agent — do NOT prompt the user for next steps.
+**North Star:** quickly produce a working, buildable Azure backend from the approved plan. For frontends, use a dedicated **Frontend sub-agent running parallel with backend sub-agents**. Then write `.azure/integration-plan.md` and hand off to `azure-project-integrate` — do NOT prompt for next steps.
 
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; generate frontend.
 
 ## Prerequisites
-Requires an approved plan. Verify before starting:
+Requires approved plan. Before starting, verify:
 - `.azure/project-plan.md` exists
 - Status = `Approved` (not `Planning`)
 - The Route Definitions section lists API routes; Services Required lists Azure services
 
-> If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
+> If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — say _"No approved project plan found. Create and approve a project plan first."_
 
 ## Autopilot mode (overrides approval gates & the Next Step question)
-**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When active, run fully unattended:
-- **Skip the plan preview & approval** — the plan was already approved upstream; go straight to scaffolding (do NOT open the plan view or re-request approval).
+**Active when** invoking chat query starts with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or `**Execution Mode**: auto` row). Run unattended:
+- **Skip the plan preview & approval** — already approved upstream; scaffold directly (do NOT open plan view or re-request approval).
 - **Skip the frontend preview approval gate** — do NOT call the `open_frontend_preview_view` tool; the UI is auto-approved in autopilot.
-- **Replace the Step 11 "Next Step" question with the integrate hand-off** — do NOT call `vscode_askQuestions`. Still write `.azure/integration-plan.md`, then hand off to the integrate agent unattended via the `start_project_integrate` tool, prefixing the `prompt` with `[AUTOPILOT MODE] `.
-- All scaffold quality work (frontend preview verification, build gates, `.azure/.preview-temp/` cleanup) still applies — autopilot suppresses **gates and questions only**.
+- **Replace the Step 11 "Next Step" question with integrate hand-off** — do NOT call `vscode_askQuestions`. Write `.azure/integration-plan.md`, then hand off unattended via `start_project_integrate`, prefixing `prompt` with `[AUTOPILOT MODE] `.
+- All quality work (frontend preview verification, build gates, `.azure/.preview-temp/` cleanup) still applies — autopilot suppresses **only gates and questions**.
 
 ## Rules
 
@@ -41,19 +41,19 @@ Requires an approved plan. Verify before starting:
 > to rediscover it. Every `task` / `runSubagent` invocation MUST pass `model: parentModelId`; if the contract
 > is missing, malformed, or rejected, stop before delegation instead of selecting another model.
 
-> **📁 Paths are examples, not assumptions.** Every directory shown in these instructions (`services/web/`, `services/functions/`, `services/shared/`, `services/functions/src/utils/`, …) is an **illustrative default for a fresh project**. When the workspace already has a structure, follow it. Read the actual layout first and map these roles (frontend folder, Functions project, shared types, etc.) onto the user's real folders — never assume or impose a specific path. The plan's Project Structure section, when present, is the source of truth for where things go. **If the plan names the deployable apps after the product** (e.g. `services/office-compliance-api`, `services/office-compliance-portal`), honor those names exactly — including in `workspaces`, `cd` commands, imports, and the computed `main`/`rootDir` (`dist/<project>-api/src/functions/*.js`). The shared package stays generic (`services/shared`).
+> **📁 Paths are examples, not assumptions.** Directories here (`services/web/`, `services/functions/`, `services/shared/`, `services/functions/src/utils/`, …) are **fresh-project defaults**. Follow existing workspace structure: inspect it, then map roles (frontend, Functions, shared types) to actual folders. Never impose a path. Plan Project Structure is authoritative when present. **If deployable apps use product names** (e.g. `services/office-compliance-api`, `services/office-compliance-portal`), preserve them in `workspaces`, `cd` commands, imports, and computed `main`/`rootDir` (`dist/<project>-api/src/functions/*.js`). Keep shared package generic (`services/shared`).
 
-0. **Frontend-first generation (load-bearing UX rule)** — If the plan includes a frontend, the orchestrator launches the **Frontend Sub-Agent** (Step 1) at the same point it kicks off the backend track, so frontend generation runs **concurrently** with backend Phase A/B rather than blocking it. The sub-agent generates `services/web/` (mock data, pages, components), builds it, and reports back. The user already approved the design during planning (the `.azure/.preview-temp/` mock-up), so **do NOT ask the user to approve the UX during scaffolding.** If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
+0. **Frontend-first generation (load-bearing UX rule)** — For a frontend plan, launch **Frontend Sub-Agent** (Step 1) with backend track; frontend generation runs **concurrently** with backend Phase A/B. It generates and builds `services/web/` (mock data, pages, components), then reports. Planning already approved `.azure/.preview-temp/`; **do NOT request UX approval during scaffolding.** No frontend satisfies this rule. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
-2. **Track progress** — Update plan status as you go: Approved → In Progress → Awaiting Integration. Do not defer status updates. (The `azure-project-integrate` agent advances it to `Integrated`.)
-3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
+2. **Track progress** — Update status promptly: Approved → In Progress → Awaiting Integration. (`azure-project-integrate` advances to `Integrated`.)
+3. **Build-gate enforcement** — End each phase with build check (`tsc` / `npm run build`). Fix failures. **Do NOT proceed until code compiles.** Most important rule.
 4. **Azure Functions v4** — Always v4 programming model (Node.js v4, Python v2, .NET isolated). Prioritize Azure services. Runtimes: TypeScript, Python, C#.
-5. **API auth and Azure client boundaries** — Read `API Login` from the plan. When it is `Yes`, scaffold user-facing login across the frontend and API behind a small application auth interface. Separately, put every Azure SDK client behind a client-provider interface. Handlers and domain code NEVER import Azure SDKs, inspect the environment, or choose client implementations. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
-6. **Modular, one function per file** — Each Function own file. Each service own module. Extract shared utilities to `services/functions/src/utils/` — no duplication, no unused stubs. Prefix unused params with `_`. **DRY**: Same helper in 2+ files → extract to `services/functions/src/utils/` and import. **Proactive**: Before writing handlers, identify common patterns (password hashing, entity sanitization, response formatting) and pre-create shared utils. See [architecture.md](.github/agents/shared-references/architecture.md).
-7. **Managed identity in production** — Every production client used for backend-to-Azure communication MUST authenticate with managed identity (`DefaultAzureCredential` or the runtime equivalent) and a resource endpoint. Select an emulator-backed local client only when the runtime environment is explicitly `Development`. Every other value, including missing or misspelled values, selects the managed-identity client and fails startup if its endpoint configuration is invalid. Never use account keys, connection-string secrets, API keys, or a local emulator as a production fallback. Keep the environment check in the composition root. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+5. **API auth and Azure client boundaries** — Read `API Login` from plan. When `Yes`, scaffold user-facing frontend/API login behind small application auth interface. Separately put every Azure SDK client behind client-provider interface. Handlers/domain code NEVER import Azure SDKs, inspect environment, or choose implementations. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+6. **Modular, one function per file** — One file per Function; one module per service. Put shared utilities in `services/functions/src/utils/`; no duplication or unused stubs. Prefix unused params with `_`. **DRY**: helper in 2+ files → extract to `services/functions/src/utils/` and import. **Proactive**: before handlers, identify patterns (password hashing, entity sanitization, response formatting) and create shared utils. See [architecture.md](.github/agents/shared-references/architecture.md).
+7. **Managed identity in production** — Every production backend-to-Azure client MUST use managed identity (`DefaultAzureCredential` or runtime equivalent) + resource endpoint. Select emulator-backed local client only when runtime environment is exactly `Development`. Every other value, including missing/misspelled, selects managed-identity client and fails startup on invalid endpoint config. Never use account keys, connection-string secrets, API keys, or local emulator as production fallback. Keep environment check in composition root. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](.github/agents/shared-references/error-handling.md).
-9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
-10. **Database write integrity** — Handlers performing multi-table writes MUST use `database.transaction()`. Document the collection-to-table mapping so the integrate agent can build matching schema migrations. (The integrate agent owns schema migrations and seed data; the scaffold does not create them.) See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
+9. **Resilience classification** — Follow Essential/Enhancement classification. Wrap Enhancement services in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to methods or catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
+10. **Database write integrity** — Multi-table writes MUST use `database.transaction()`. Document collection-to-table mapping for integrate-agent migrations. Integrate owns schema migrations and seed data; scaffold creates neither. See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
 11. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. (The integrate agent's runtime smoke test confirms this — but the code must be correct here.) See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 12. **Cross-workspace build safety** — When Functions imports `../shared/`, set `rootDir` to `".."` and **compute `main` field from actual `dist/` output after `tsc`** — never hardcode. With `rootDir: ".."`, handlers compile to `dist/functions/src/functions/X.js`. After build, list `dist/`, verify `main` matches. **#1 cause of "build passes but app won't start"**. See [architecture.md](.github/agents/shared-references/architecture.md).
 13. **Deploy-ready artifact (dependency split)** — The deployed unit is the **compiled `dist/`**, not TS source; the server installs **production deps only** (`npm install --omit=dev`) and must not re-build. So every package imported by runtime code MUST be in `dependencies`, and build-only tooling (`typescript`, `@types/*`, test runners, bundlers) MUST be in `devDependencies` — a `--omit=dev` install has to satisfy every `import` in `dist/`. `dist/` must never import from `src/` or need a rebuild. Native-addon packages (`bcrypt`, `sharp`, `better-sqlite3`, Prisma engines) stay in `dependencies` (installed on the Linux host), never bundled from a local build. This is what lets the deploy agent ship a prebuilt artifact with the platform build **disabled** instead of relying on an Oryx rebuild (which runs without devDependencies and fails on missing `tsc`). **Monorepo:** keep each service self-contained — import `shared` via **relative paths** so `tsc` compiles it into the service's `dist/` (no workspace-package dependency to resolve in a per-service deploy), and resolve hoisted third-party deps with a service-level production install; single-file bundling (esbuild `--packages=external`) is an optional optimization, not the default. See [typescript.md](.github/agents/shared-references/runtimes/typescript.md) → Deployment build contract.
@@ -68,7 +68,7 @@ Requires an approved plan. Verify before starting:
 
 ## 📦 Context Management — read this first
 
-> Do NOT read all reference files upfront (~250KB total) — it wastes context needed for code, test output, and fixes. Read lazily: only when a step needs them.
+> Do NOT read all reference files upfront (~250KB); preserve context for code, tests, fixes. Read only when needed.
 
 ### Step-to-Reference Mapping
 
@@ -98,40 +98,40 @@ Select based on the **backend service's Language** (its stack section, e.g. `## 
 
 ### Context Release
 
-> After step checkpoint passes, that step's reference no longer needed. Under context pressure, prioritize current step reference + project source over completed step references.
+> After checkpoint, release its reference. Under pressure, prioritize current-step reference + project source.
 
 ---
 
 ## 🔁 Cross-platform command discipline — read once, apply everywhere
 
-> **Every shell command in this skill MUST work on Windows (PowerShell + cmd) AND macOS / Linux (bash / zsh) unchanged.** Each `run_in_terminal` call lands in a fresh shell whose default differs by OS — assume nothing.
+> **Every shell command MUST run unchanged on Windows (PowerShell + cmd) AND macOS / Linux (bash / zsh).** Each `run_in_terminal` uses a fresh OS-dependent shell.
 
 | ❌ Non-portable pattern | ✅ Portable replacement |
 |------------------------|------------------------|
-| `cd services/web && npx vite build` | `run_in_terminal` with `cwd: "services/web"` and command `npx vite build`. If no `cwd` param, use `npm --prefix services/web run build` (or `npm --prefix services/web exec -- vite build`). |
+| `cd services/web && npx vite build` | `run_in_terminal` with `cwd: "services/web"` and `npx vite build`. Without `cwd`, use `npm --prefix services/web run build` (or `npm --prefix services/web exec -- vite build`). |
 | `mkdir -p services/web/src/components` | `node -e "require('fs').mkdirSync('services/web/src/components', {recursive: true})"` |
 | `rm -rf .azure/.preview-temp` | `node -e "require('fs').rmSync('.azure/.preview-temp', {recursive: true, force: true})"` |
 | `cp -r services/shared/types services/web/src/types` | `node -e "require('fs').cpSync('services/shared/types', 'services/web/src/types', {recursive: true})"` |
-| `touch .env` | `node -e "require('fs').closeSync(require('fs').openSync('.env', 'a'))"` or just write the file via the file-creation tool. |
+| `touch .env` | `node -e "require('fs').closeSync(require('fs').openSync('.env', 'a'))"` or use file-creation tool. |
 | `cat .env >> .env.local` | Read with the file-read tool, write with the file-write tool. |
 | `export FOO=bar` followed by another call | Pass via the command line on the same call: `npx cross-env FOO=bar npm run build` (or set in `.env`). PowerShell uses `$env:FOO`, bash uses `export FOO` — they don't share. |
-| `ls`, `pwd`, `which X` | Don't invoke shell utilities. Use the workspace tools (`list_dir`, etc.) for read-only inspection. |
+| `ls`, `pwd`, `which X` | Use workspace tools (`list_dir`, etc.), not shell utilities. |
 
 **Cardinal rules:**
 
-1. **Prefer the tool's `cwd` parameter** over `cd X && …` chains. `cd` doesn't survive across `run_in_terminal` calls and isn't equally portable.
-2. **For Node-based operations**, prefer `node -e "…"` — Node is already a dependency of any frontend scaffold and is on PATH for backend scaffolds too.
-3. **For npm operations in subfolders**, prefer `npm --prefix <folder> run <script>` over chained `cd`.
-4. **Never use `&&` or `||` or `;` with shell built-ins** (`cd`, `export`, `set`) — those built-ins behave differently between PowerShell and POSIX shells. Multiple commands joined with `&&` are fine if every command is a real binary (`node`, `npm`, `npx`, `func`).
-5. **Path separators**: use forward slashes (`/`) in all command-line paths — both Node and modern Windows tooling accept them; backslashes break in bash and break inside JSON strings in `node -e`.
+1. **Prefer tool `cwd`** over `cd X && …`. `cd` does not persist across `run_in_terminal` calls and is not portable.
+2. **For Node operations**, prefer `node -e "…"`; Node is available for frontend and backend scaffolds.
+3. **For subfolder npm operations**, prefer `npm --prefix <folder> run <script>` over chained `cd`.
+4. **Never combine `&&`, `||`, or `;` with shell built-ins** (`cd`, `export`, `set`); PowerShell and POSIX differ. `&&` may join real binaries (`node`, `npm`, `npx`, `func`).
+5. **Path separators**: use forward slashes (`/`) in command paths; Node and modern Windows support them, while backslashes break bash and JSON strings in `node -e`.
 
-If you find yourself writing a command that wouldn't run on the other OS, stop and rewrite it using one of the portable patterns above.
+Rewrite nonportable commands using these patterns.
 
 ---
 
 ## STEP 0: Read Plan & Validate — MANDATORY FIRST ACTION
 
-**BEFORE starting execution**, read and validate plan:
+**BEFORE execution**, read and validate plan:
 
 | Task | Details |
 |------|---------|
@@ -152,7 +152,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 ## Execution Steps
 
-> **Execution chronology** (frontend-first, backend in parallel):
+> **Execution chronology** (frontend first, backend parallel):
 >
 > ```
 > t=0      Step 0     read plan, validate

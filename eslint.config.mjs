@@ -45,10 +45,13 @@ export default defineConfig([
         },
     },
     {
-        // The eval harness and shipped agent utilities are plain Node JS run directly by
-        // node. They are not part of the extension's TypeScript program, so lint them
-        // without type information, against Node globals.
-        files: ['evals/**/*.{js,cjs,mjs}', 'resources/agents/**/*.mjs'],
+        // Node-run scripts outside the extension's TypeScript program need
+        // linting without the type-aware project service.
+        files: [
+            'evals/**/*.{js,cjs,mjs}',
+            'resources/agents/**/*.mjs',
+            '.github/cor/instruction-reviewers/**/*.cjs',
+        ],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: {
             parserOptions: {

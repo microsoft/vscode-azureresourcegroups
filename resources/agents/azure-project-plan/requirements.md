@@ -9,19 +9,19 @@ metadata:
 
 # Azure Project Plan — Requirements
 
-> **AUTHORITATIVE — MANDATORY** for the **requirements-gathering** phase of the `azure-project-plan` agent. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
+> **AUTHORITATIVE — MANDATORY** during the `azure-project-plan` agent's **requirements-gathering** phase. Follow exactly; ignore prior assumptions; supersedes all other sources. Never improvise.
 
-> **Scope:** this file covers **Phase A only** — detect the workspace (Step 1) and gather requirements into `.azure/requirements.json` (Step 2). Once the user submits the requirements form, switch to [`plan.md`](plan.md) for plan generation (Step 3 onward). Shared rules, triggers, and autopilot behavior live in [`instructions.md`](instructions.md).
+> **Scope:** **Phase A only** — detect workspace (Step 1), then gather requirements in `.azure/requirements.json` (Step 2). After form submission, switch to [`plan.md`](plan.md) for plan generation (Step 3 onward). Shared rules, triggers, and autopilot behavior: [`instructions.md`](instructions.md).
 
 ## ═══════════════════════════════════════════════════
 ## PHASE 1: PLANNING — Requirements
 ## ═══════════════════════════════════════════════════
 
-> On re-entry (the query begins *"Requirements submitted at .azure/requirements.json…"*, or `.azure/requirements.json` is already fully answered), skip Steps 1–2 and switch to [`plan.md`](plan.md) for plan generation (Step 3 onward) — see Step 2f.
+> On re-entry (query begins *"Requirements submitted at .azure/requirements.json…"*, or `.azure/requirements.json` is fully answered), skip Steps 1–2; switch to [`plan.md`](plan.md) Step 3 onward. See Step 2f.
 
 ### Step 1: Detect Workspace
 
-**BEFORE gathering requirements**, scan workspace:
+Scan workspace **BEFORE gathering requirements**:
 
 #### 1a. Scan for Existing Project Files
 
@@ -34,14 +34,14 @@ metadata:
 | Test files or config | Scan for `*.test.*`, `*.spec.*`, `vitest.config.*`, `jest.config.*` | Detect test infra — respect it |
 | `docker-compose.yml` | Scan root | Emulators may be configured |
 
-> ⚠️ Check actual **workspace files** — not user prompt.
+> ⚠️ Check actual **workspace files**, not user prompt.
 
 #### 1b. Check for `.azure/plan.md` (Deployment Plan)
 
 | Check | Action |
 |-------|--------|
-| `.azure/plan.md` exists | **Read it.** Extract Architecture → service mapping. Use these — do NOT re-ask user. |
-| `.azure/plan.md` does not exist | Proceed normally — detect from code, ask user as needed. |
+| `.azure/plan.md` exists | **Read it.** Extract Architecture → service mapping. Use it; do NOT re-ask user. |
+| `.azure/plan.md` does not exist | Detect from code; ask user as needed. |
 
 > **✅ Checkpoint**: Workspace scanned. Mode determined (NEW / AUGMENT). Tech stack detected.
 
@@ -49,21 +49,21 @@ metadata:
 
 ### Step 2: Gather Requirements
 
-Infer everything possible from the Step 1 scan; gather the rest through the requirements webview — never in chat.
+Infer all possible from Step 1; gather the rest only through requirements webview, never chat.
 
-> 🚫 **DO NOT call `vscode_askQuestions`.** All user input comes through the `.azure/requirements.json` file rendered by the requirements webview. Asking in chat (via `vscode_askQuestions` or plain text) breaks the flow.
+> 🚫 **DO NOT call `vscode_askQuestions`.** All input comes through `.azure/requirements.json`, rendered by requirements webview. Chat questions via `vscode_askQuestions` or plain text break flow.
 
 #### 2a. Inference — pick the most likely answer for every question
 
-For each question (shared + per-service), use the Step 1 scan + the user's prompt to fill:
+For each shared and per-service question, use Step 1 + user prompt to fill:
 
-- **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`). When the app needs no datastore, use `["No datastore required"]`, not an empty array.
-- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`. For `dataStores`, recommend **every** store the app needs, not just one — it is a subset and often has more than one entry. Recommend `["No datastore required"]` when the app needs no datastore. The webview shows a Recommended badge on each selected recommendation (including the `Blob Storage` cases required by the `dataStores` MUST rules below).
+- **`answer`** — inferred value when confident; otherwise `null` (`[]` for array-typed `dataStores`). No datastore: use `["No datastore required"]`, never empty array.
+- **`recommendedChoice`** — always set: string for single-select, `string[]` for `dataStores`. Webview **pre-selects** it, including for `needs_input`. For `dataStores`, recommend **every** needed store; often multiple. If none, recommend `["No datastore required"]`. Webview gives each recommendation a Recommended badge, including `Blob Storage` cases mandated by `dataStores` rules below.
 
-Then set **`status`**:
+Set **`status`**:
 
-- **`inferred`** — confidently known from workspace signals or an explicit user statement. Set `answer` + `rationale`; the webview pre-selects the inferred value for review/override.
-- **`needs_input`** — not confidently known. Leave `answer` `null` (`[]` for `dataStores`); the webview pre-selects your `recommendedChoice` to confirm or change.
+- **`inferred`** — confidently known from workspace or explicit user statement. Set `answer` + `rationale`; webview pre-selects value for review/override.
+- **`needs_input`** — uncertain. Leave `answer` `null` (`[]` for `dataStores`); webview pre-selects `recommendedChoice` for confirmation/change.
 
 | If you detect... | Then infer... |
 |-----------------|---------------|
@@ -95,18 +95,18 @@ Then set **`status`**:
 | User gives a response-time target or says latency is critical | Traffic Profile = `Latency Sensitive` |
 | User explicitly prioritizes cost, reliability, or latency | Optimization Priority = `Lowest Cost`, `Highest Reliability`, or `Lowest Latency` respectively |
 
-Anything the user stated explicitly in their prompt ("build me a TypeScript Functions API with PostgreSQL") is also `inferred` — don't re-ask.
+Explicit prompt statements ("build me a TypeScript Functions API with PostgreSQL") are `inferred`; don't re-ask.
 
 #### 2b. Services and questions
 
-The requirements JSON has two top-level concepts:
+Requirements JSON has two top-level concepts:
 
-1. **`services[]`** — detected service roots (backends, frontends, workers). Each gets a per-service question section in the webview.
-2. **`questions[]`** — questions, either scoped to a service (`serviceId` set) or shared/cross-cutting (`serviceId` omitted).
+1. **`services[]`** — detected service roots (backends, frontends, workers), each with a webview per-service question section.
+2. **`questions[]`** — service-scoped (`serviceId` set) or shared/cross-cutting (`serviceId` omitted).
 
 ##### Services
 
-For each runnable service root detected in the workspace (or planned from the user's prompt), emit a service entry:
+Emit an entry for each runnable service root detected in workspace or planned by user prompt:
 
 ```json
 {
@@ -117,13 +117,13 @@ For each runnable service root detected in the workspace (or planned from the us
 }
 ```
 
-- **`role`** — `backend` for APIs/Azure Functions, `frontend` for SPAs/web apps, `worker` for background/queue processors.
-- **`root`** — workspace-relative path to the service directory. Omit for NEW-mode when no directories exist yet.
-- Derive `id` from the project manifest name (e.g. `package.json` → `"name"`) when available, else from the directory name.
+- **`role`** — `backend` for APIs/Azure Functions; `frontend` for SPAs/web apps; `worker` for background/queue processors.
+- **`root`** — workspace-relative service directory. Omit in NEW-mode before directories exist.
+- Derive `id` from project manifest name (e.g. `package.json` → `"name"`), otherwise directory name.
 
 ##### Per-service questions
 
-For **each service**, emit these questions with `"serviceId": "{service.id}"`:
+For **each service**, emit these with `"serviceId": "{service.id}"`:
 
 | `id` pattern | `header` | `question` | Options / Type | Notes |
 |---|---|---|---|---|
@@ -131,7 +131,7 @@ For **each service**, emit these questions with `"serviceId": "{service.id}"`:
 | `{serviceId}:framework` | Framework | Which framework for {label}? | Frontends: `React + Vite`, `Vue + Vite`, `Angular`, `Svelte`; Backends: `Azure Functions`, etc. | `allowFreeformInput: true`; omit for backends when Azure Functions is the only option |
 | `{serviceId}:features` | Features | Describe the features or API routes for {label}. | Free text (omit `options`) | |
 
-Use `category: "service"` for all per-service questions. The webview groups them under the service card, not by category.
+Use `category: "service"` for every per-service question. Webview groups them by service card, not category.
 
 ##### Shared questions (no `serviceId`)
 
@@ -160,7 +160,7 @@ The four workload questions establish a lightweight, requirements-driven Azure W
 
 ##### App Type is derived, not asked
 
-Do **not** emit an `appType` question. Instead, derive the plan's App Type from the `services` array:
+Do **not** emit an `appType` question. Derive plan App Type from `services`:
 
 | Detected services | Derived App Type |
 |---|---|
@@ -170,13 +170,13 @@ Do **not** emit an `appType` question. Instead, derive the plan's App Type from 
 | `frontend` that is server-rendered (Next.js SSR, etc.) | `Full-stack SSR` |
 | Static `frontend` + `backend` | `Static site + API` |
 
-Use this derived value to fill Section 1 of the plan and to decide whether to emit the Frontend / Design System sections.
+Use derived value for plan Section 1 and whether to emit Frontend / Design System sections.
 
-Each option is `{ label, description, exclusive? }`. Set `exclusive: true` only on an option that cannot be combined with any other selection. Include `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale` on every question.
+Each option is `{ label, description, exclusive? }`. Set `exclusive: true` only when incompatible with every other selection. Every question includes `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale`.
 
 #### 2c. Write `.azure/requirements.json`
 
-Write the file at `.azure/requirements.json` (no leading dot on the filename — this is the path the extension's file watcher matches). Use this exact top-level shape:
+Write `.azure/requirements.json` (filename has no leading dot; extension file watcher matches this path) using this exact top-level shape:
 
 ```json
 {
@@ -321,9 +321,9 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 }
 ```
 
-**Rules for the JSON** (the worked example above is the contract — these call out only the non-obvious constraints):
+**JSON rules** (example above is contract; these highlight non-obvious constraints):
 
-- **Services & IDs:** one `services` entry per detected/planned service; per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`), with `serviceId` matching the service.
+- **Services & IDs:** one `services` entry per detected/planned service. Per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`); `serviceId` matches service.
 - **Language options:** frontend services offer only `TypeScript` / `JavaScript`; backend/worker services offer `TypeScript`, `Python`, `C# (.NET)`.
 - **Always emit all six shared questions** (`dataStores`, `auth`, `operatingProfile`, `dataClassification`, `trafficProfile`, `optimizationPriority`), and **never emit an `appType`, identity-provider, Azure credential, or WAF-pillar question**. App Type is derived from `services` (see the derivation table above).
 - **`auth` is strictly binary:** its only options, answer values, and recommendation values are `Yes` and `No`. Never put a provider, protocol, token type, or Azure credential in this question.
@@ -332,23 +332,23 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 - **Answers:** `inferred` → fill `answer`; `needs_input` → `answer: null` (`[]` for `dataStores`). Always provide `recommendedChoice`.
 - **No datastore:** `No datastore required` is an exclusive option. When selected or inferred, it must be the only value in `answer` and `recommendedChoice`. Never combine it with a concrete datastore.
 - Use the field name **`rationale`** (not `reason`). Strict JSON — no comments, no trailing commas.
-- **`dataStores` Blob Storage rule (MUST):** include `Blob Storage` in `recommendedChoice` — and in `answer` when the question is `inferred` — alongside any database whenever **either** (a) any service stores or serves files, photos, images, uploads, documents, or media, **or** (b) any backend service uses Azure Functions (which requires an associated storage account, `AzureWebJobsStorage`). A file/photo app — or a Functions app — whose recommendation is only a database is wrong.
+- **`dataStores` Blob Storage rule (MUST):** include `Blob Storage` in `recommendedChoice`, plus `answer` when `inferred`, alongside any database when **either** (a) any service stores/serves files, photos, images, uploads, documents, or media, **or** (b) any backend uses Azure Functions, which requires associated storage account `AzureWebJobsStorage`. Database-only recommendations are wrong for file/photo or Functions apps.
 
-> ❌ **DO NOT** ask the user which .NET version to target. If a service's language = `C# (.NET)`, the target framework is **always `net10.0`**. Only downgrade when the user explicitly states an older version.
+> ❌ **DO NOT** ask which .NET version to target. For service language `C# (.NET)`, target **always `net10.0`**; downgrade only when user explicitly names an older version.
 
 #### 2d. Hand off to the webview — then stop
 
-Once the file is written, **stop**. Do NOT print the JSON, summarize inferences, ask anything in chat, or proceed to plan generation. The agent's workflow rules open the requirements webview after this write; the user fills the `needs_input` questions and clicks **Submit**. The requirements controller writes the file back (statuses → `confirmed`) and re-invokes this agent saying the requirements are ready.
+After writing file, **stop**. Do NOT print JSON, summarize inferences, ask in chat, or generate plan. Workflow opens requirements webview; user answers `needs_input` and clicks **Submit**. Controller writes back statuses → `confirmed`, then re-invokes agent with ready requirements.
 
 #### 2e. Requirements review is mandatory
 
-Always write `.azure/requirements.json` and hand it off to the requirements webview, even when the prompt is fully unambiguous and every question is `inferred` in Step 2a. Inferred answers are pre-selected so review remains quick, but the user must still have an opportunity to confirm or change them before plan generation.
+Always write `.azure/requirements.json` and hand off to requirements webview, even if prompt is unambiguous and every Step 2a question is `inferred`. Pre-select inferred answers, but user must be able to confirm/change them before plan generation.
 
-This holds for **small, frontend-only projects too**. A prompt like *"a simple unit converter web app — nothing needs to be saved, no accounts, no backend, just a clean little frontend tool"* is a complete, valid project: emit exactly one `services` entry with `role: "frontend"`, its `language`/`framework`/`features` questions, `dataStores` set to `["No datastore required"]`, and `auth` set to `No`. Do **not** shortcut this by writing `index.html` or any other app code, and do **not** skip the webview because "there is nothing to ask".
+This includes **small, frontend-only projects**. For *"a simple unit converter web app — nothing needs to be saved, no accounts, no backend, just a clean little frontend tool"*, emit exactly one `services` entry with `role: "frontend"`, its `language`/`framework`/`features` questions, `dataStores` set to `["No datastore required"]`, and `auth` set to `No`. Do **not** write `index.html` or other app code, nor skip webview because "there is nothing to ask".
 
 #### 2f. Re-entry — reading the answered file
 
-When re-invoked with a query mentioning submitted requirements (e.g. *"Requirements submitted at .azure/requirements.json..."*), or whenever `.azure/requirements.json` has all questions `confirmed`/`inferred`:
+When re-invoked about submitted requirements (e.g. *"Requirements submitted at .azure/requirements.json..."*), or whenever all `.azure/requirements.json` questions are `confirmed`/`inferred`:
 
 1. Read `.azure/requirements.json`.
 2. **Upgrade before planning:** schema version `3` adds the four workload-quality questions. If the file has

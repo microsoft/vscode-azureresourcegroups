@@ -1,30 +1,30 @@
 # Classify Workspace
 
-Determine the project type(s) and runtime(s) for each service root in the workspace. Classification produces an array of service contexts — even single-service workspaces produce a one-item list so the rest of the flow is uniform.
+Determine each workspace service root's project type and runtime. Produce service-context array; single-service workspaces still produce one item for uniform flow.
 
-> **Always scan the full directory tree** — not just the workspace root. Service roots nested in subdirectories (e.g. `./api/`, `./web/`) must be found regardless of project layout.
+> **Always scan full directory tree**, not only workspace root. Find nested service roots (e.g. `./api/`, `./web/`) regardless of layout.
 > Ignore: `node_modules/`, `.git/`, `dist/`, `build/`, `bin/`, `obj/`.
 
 ### ⚠️ Exclude Non-Service Directories
 
-Only include directories that represent **runnable services** (APIs, web apps, functions, workers, etc.). Exclude directories that are **shared libraries, utility packages, or common modules** — these are consumed by services but are not independently launchable and should never appear as a service.
+Include only **runnable services** (APIs, web apps, functions, workers, etc.). Exclude **shared libraries, utility packages, and common modules** consumed by services but not independently launchable.
 
 Common exclusion signals:
-- Directory name or `package.json` name contains `shared`, `common`, `utils`, `lib`, or `helpers`
-- No entry point (no `main`, `start` script, `host.json`, `server.*`, or framework config)
-- Used as a dependency by other service roots (e.g. via workspace references or `file:` dependencies)
-- Project type is `library` — a package that exports modules but is not runnable on its own
+- Directory or `package.json` name contains `shared`, `common`, `utils`, `lib`, or `helpers`
+- No entry point: no `main`, `start` script, `host.json`, `server.*`, or framework config
+- Dependency of other service roots, e.g. workspace references or `file:` dependencies
+- Project type `library`: exports modules, not independently runnable
 
 ---
 
 ## Step 1: Detect Project Types
 
-Scan every subdirectory and classify each service root by project type. See [project-types.md](project-types.md) for the detection table and per-type nuances.
+Scan every subdirectory; classify each service root by project type using [project-types.md](project-types.md)'s detection table and nuances.
 
 ## Step 2: Detect Runtimes
 
-For each service root, determine the language/runtime and version. See [runtimes.md](runtimes.md) for the detection table and per-runtime nuances.
+Determine each service root's language/runtime and version using [runtimes.md](runtimes.md)'s detection table and nuances.
 
 ## Output
 
-Classification produces a `services[]` list of `{ root, projectType, runtime, ... }` entries. Even single-service workspaces produce a one-item list. This information will be used in follow-up sections.
+Output `services[]` list of `{ root, projectType, runtime, ... }` entries; use one item even for single-service workspaces. Follow-up sections consume it.

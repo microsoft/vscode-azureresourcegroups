@@ -1,27 +1,27 @@
 # Prerequisites
 
-Instructions for detecting which developer tools and VS Code extensions a user has installed, plus a catalog of the tools commonly required to build, run, and debug Azure projects.
+Detect installed developer tools and VS Code extensions; catalog common tools for building, running, and debugging Azure projects.
 
 There are two phases:
 
-1. **Identify required tools** — derive the required tool set from a set of service criteria (runtime, package manager, project type, orchestrator, etc.).
-2. **Inventory what's installed** — check the user's machine to see which of those tools are already installed and ready, recording the install status and version.
+1. **Identify required tools** — derive tools from service criteria (runtime, package manager, project type, orchestrator, etc.).
+2. **Inventory what's installed** — check the user's machine; record each tool's install status and version.
 
 ---
 
 ## Phase 1: Identify required tools
 
-The calling custom agent is responsible for gathering its inputs during this phase — the inputs that describe each service of the project (runtime(s), package manager(s), project type(s), Azure dependencies, orchestrator, execution mode, and so on). How those inputs are obtained is up to the agent, but the agent should come with those in hand.
+Calling custom agent gathers inputs describing each project service: runtime(s), package manager(s), project type(s), Azure dependencies, orchestrator, execution mode, etc. Input acquisition is agent-defined; gather them before this phase.
 
-Those inputs are then used to identify which tools the user should have installed. Phase 1 always derives **both** sets — Run and Debug. The calling custom agent then decides which set(s) to surface — e.g. show only Run, or both — according to its workflow.
+Use inputs to identify required tools. Phase 1 always derives **both** Run and Debug sets. Calling custom agent chooses which set(s) to surface—e.g. Run only or both—per workflow.
 
-These catalogs are not meant to be exhaustive, but illustrative - map any stack/runtime or Azure dependency to the tool that builds or runs it, and assign it to the set that fits.
+Catalogs are illustrative, not exhaustive. Map every stack/runtime or Azure dependency to its build or run tool and appropriate set.
 
-When the calling agent writes its output table, it should also record **which planned service(s)** require each tool (e.g. `api`, `worker`), using `*` for global toolchain shared by all services (or listing each service explicitly). For a container runtime or Compose provider (Docker or Podman, plus Docker Compose or Podman Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
+In output table, record **which planned service(s)** require each tool (e.g. `api`, `worker`). Use `*` for global toolchain shared by all services, or list each service. For container runtime/Compose provider (Docker or Podman, plus Docker Compose or Podman Compose), list services whose Azure dependencies their emulators replace, not `*`.
 
 ### Run Tools
 
-Dependencies that are required to run the project locally. If a run tool is missing the project cannot start.  These are a list of illustrative examples, they are not exhaustive:
+Dependencies required for local runs; a missing run tool prevents startup. Examples are illustrative, not exhaustive:
 
 | Tool | Category | Detect with | Needed for |
 |------|----------|-------------|------------|
@@ -36,11 +36,11 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 ### Debug Tools
 
-Tooling needed to debug the project locally, not just to run it through the terminal. Three independent kinds of entries belong here and all must be evaluated every time: container tooling (a container runtime — **Docker or Podman** — plus its Compose provider) for any Azure-dependency emulators; a Chromium-based browser (Chrome or Edge) for any frontend project type that debugs in a browser; and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
+Local debugging needs three independent entry types; evaluate all every time: container tooling (runtime—**Docker or Podman**—plus Compose provider) for Azure-dependency emulators; Chromium browser (Chrome or Edge) for frontend types debugging in browser; and each matching VS Code debug-integration extension below. Extensions provide task types, problem matchers, and launch integration; required even without Azure emulator dependencies and when matching CLI/runtime already appears in Run group.
 
-This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
+This table is the **authoritative list**: include every row whose trigger matches. Maintainers must add new debug tools or extensions here. Some project types require a specific VS Code extension (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers); use this table, not memory.
 
-Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via the chosen container runtime (Docker or Podman) and its Compose provider, not as extensions.
+Prefer listed debug tools. Never list VS Code itself; plan already runs inside it. Never list emulator VS Code extension (e.g. an "Azurite Extension"); emulators run as containers via chosen runtime (Docker or Podman) + Compose provider, not extensions.
 
 | Tool / Extension | Category | Trigger When | Detect with |
 |------------------|----------|----------------------|-------------|
@@ -49,42 +49,42 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 
-**Container runtime is Docker _or_ Podman — pick one, don't list both.** Docker Desktop and Podman are interchangeable engines for the emulator containers, and the generated `docker-compose.yml` is identical for either. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit prerequisite rows for the **one** the plan will use — Docker + Docker Compose, or Podman + Podman Compose (or Podman via Docker's socket — see below). **Prefer the Podman engine whenever it's ready** — select native Podman if the `podman` CLI is ready (even when Docker is also ready), or Podman-in-Docker-compatibility mode when the `docker` CLI is backed by Podman, unless the user explicitly asked for Docker; fall back to Docker when Podman isn't ready, and default to Docker only when neither can be confirmed. Record the chosen runtime and its Compose command in the plan's Orchestrator table so the generation phase emits matching task commands.
+**Container runtime is Docker _or_ Podman—pick one, never both.** Docker Desktop and Podman are interchangeable emulator-container engines; generated `docker-compose.yml` is identical. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit rows for **one** chosen runtime: Docker + Docker Compose, Podman + Podman Compose, or Podman via Docker's socket—see below. **Prefer ready Podman engine**: native Podman when `podman` CLI ready, even if Docker also ready; or Podman-in-Docker-compatibility mode when `docker` CLI is Podman-backed; unless user explicitly asks Docker. Fall back to Docker when Podman isn't ready; default Docker only when neither confirmed. Record chosen runtime + Compose command in plan Orchestrator table so generation emits matching task commands.
 
-For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
+For frontend projects debugging in browser, include one browser row (Chrome or Edge). Put **specific browser chosen** in row name; generate phase uses it for frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
 
-Always emit a Debug row for every VS Code extension whose project type is present. Run the Phase 2 filesystem check: if the extension folder is found, record it installed (`✅`); otherwise record it unknown (`❓`). Never drop the row just because the extension wasn't found, and never treat it as already covered by a Run tool. For example, an Azure Functions project must include a `ms-azuretools.vscode-azurefunctions` row even though Azure Functions Core Tools already appears under Run — the Core Tools CLI and the extension are separate prerequisites.
+Always emit a Debug row for every VS Code extension matching a present project type. Run Phase 2 filesystem check: folder found means installed (`✅`); otherwise unknown (`❓`). Never drop an unfound row or treat a Run tool as coverage. An Azure Functions project needs a `ms-azuretools.vscode-azurefunctions` row even when Azure Functions Core Tools is under Run; CLI and extension are separate prerequisites.
 
 ---
 
 ## Phase 2: Inventory what's installed
 
-For each needed tool, run its detection and record whether it is installed and at what version. Mind any details in the sections below.
+Detect every needed tool; record install state and version per details below.
 
 Every prerequisite resolves to exactly **two** states:
 
-- **installed (`✅`)** — a detection positively found the tool (a version command returned, or an app/extension folder exists). Record the version when you have it.
-- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational; it just tells the user to double-check the tool is installed and, for CLI tools, to run a recheck.
+- **installed (`✅`)** — detection found the tool via returned version or existing app/extension folder. Record available version.
+- **unknown (`❓`)** — detection found nothing. This does **not** prove absence: version managers or restricted/sandboxed shells can hide installed tools, and extension/Compose lookups can fail silently. Failed probes are inconclusive. `❓` tells users to verify installation and, for CLI tools, run a recheck.
 
-There is no "not-installed" state — never mark a prerequisite with `❌`. When you cannot positively confirm a tool, it is `❓`.
+No "not-installed" state exists. Never mark prerequisites `❌`; anything unconfirmed is `❓`.
 
-Re-run this inventory whenever the calling agent builds the plan from scratch or regenerates the whole plan, and whenever the tool set itself changes (a runtime edit, or an added/removed service). Do **not** re-run it for a partial regeneration that doesn't touch the tool set — unless the user explicitly asks to recheck prerequisites. Never carry a stale result across a full rebuild.
+Re-run inventory when building from scratch, regenerating the whole plan, or changing the tool set (runtime edit or added/removed service). Do **not** re-run for partial regeneration that leaves tools unchanged unless user requests a recheck. Never carry stale results across full rebuilds.
 
 ### Shell environment caveats
 
-The agent's `bash` probes often run in a **non-interactive or sandboxed** shell that never sourced the user's startup files (`~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, …). Many users expose Node.js, Python, and other runtimes only through a shell version manager — fnm, nvm, asdf, mise, or Volta — that adds its shims to PATH from those startup files. So a tool the user has installed can be invisible to the first probe.
+Agent `bash` probes often use a **non-interactive or sandboxed** shell without user startup files (`~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, …). Version managers—fnm, nvm, asdf, mise, or Volta—may expose Node.js, Python, and other runtimes by adding shims to PATH there, hiding installed tools from the first probe.
 
-Do **not** work around this by sourcing another shell's rc file from bash — those files can contain shell-specific syntax bash can't parse. Instead retry through the user's own default shell, initialized (see CLI tool detection). And because a failed probe can't tell "genuinely absent" from "hidden by the environment," a tool that fails detection is `❓`, never `❌`.
+Do **not** source another shell's rc file from bash; shell-specific syntax may fail. Retry through the initialized user default shell (see CLI tool detection). Because failure cannot distinguish absence from environment hiding, record `❓`, never `❌`.
 
-On **Windows** this rarely applies: PATH is set at the system/user level via the registry, so tools installed with `winget`, `choco`, etc. are visible in every shell without sourcing a profile.
+On **Windows**, registry system/user PATH usually exposes tools installed with `winget`, `choco`, etc. in every shell without profile sourcing.
 
 ---
 
 ### CLI tool detection
 
-Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, and any other CLI in the catalog) in two stages, and **stop at the first success**. Record `✅` with the detected version as soon as either stage returns a version. Only if **both** stages fail do you record `❓`.
+Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, and all other catalog CLIs) in two stages; **stop at first success**. Any returned version means `✅` plus version. Only both failures mean `❓`.
 
-**Stage 1 — direct check.** Run the catalog's version command directly in the current shell.
+**Stage 1 — direct check.** Run catalog version command in current shell.
 
 ```bash
 # macOS/Linux — direct probe in the current and likely non-interactive shell.
@@ -95,11 +95,11 @@ Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, an
 command -v node >/dev/null 2>&1 && echo "node:" && node --version 2>&1
 ```
 
-Reproduce for any tool by substituting its name in all three spots — the `command -v <tool>` gate, the `echo "<tool>:"` label, and the version command. The version flag varies by tool (`--version`, `-v`, `-V`, `version`); use the one from its catalog entry.
+For each tool, substitute its name in all three spots: `command -v <tool>` gate, `echo "<tool>:"` label, and version command. Use its catalog version flag (`--version`, `-v`, `-V`, `version`).
 
-**Stage 2 — retry through the user's initialized shell.** If Stage 1 returns nothing, re-run the *same* version command, but this time launch the user's configured default shell (`$SHELL`) as a **login + interactive** shell. This is a single invocation — the `-l` (login) and `-i` (interactive) flags make the shell source the user's startup files as part of starting up, and `-c '<command>'` runs your version command inside that now-initialized environment. There is no separate "start the shell, then send a second command" step; the initialization and the version command happen in one call. That startup is what puts a version manager's shims (fnm, nvm, asdf, mise, Volta) on PATH so the tool becomes visible.
+**Stage 2 — retry through the user's initialized shell.** If Stage 1 returns nothing, rerun the *same* version command in configured default shell (`$SHELL`) as **login + interactive**. One invocation uses `-l` and `-i` to source startup files, then `-c '<command>'` to run inside that environment; do not start shell and send a second command. Startup exposes version-manager shims (fnm, nvm, asdf, mise, Volta) on PATH.
 
-Two guards make this reliable: check `$SHELL` is set and executable first, and gate the version command behind `command -v <tool>` so a shell greeting or startup banner can't be mistaken for a version. Wrap the real output in unique markers and read only the line between them.
+For reliability, first require executable `$SHELL`; gate version command with `command -v <tool>` so greetings or banners cannot mimic versions. Wrap output in unique markers and read only between them.
 
 ```bash
 # macOS/Linux — retry through the user's own default shell, initialized.
@@ -113,21 +113,21 @@ Two guards make this reliable: check `$SHELL` is set and executable first, and g
   "$SHELL" -l -i -c 'command -v node >/dev/null 2>&1 && echo __COR_START__ && node --version 2>&1 && echo __COR_END__'
 ```
 
-For example, to confirm Python the same way, swap the tool name in the `command -v` gate and version command (keep the markers as-is):
+For Python, swap the tool name in the `command -v` gate and version command; keep markers unchanged:
 
 ```bash
 [ -n "$SHELL" ] && [ -x "$SHELL" ] && \
   "$SHELL" -l -i -c 'command -v python >/dev/null 2>&1 && echo __COR_START__ && python --version 2>&1 && echo __COR_END__'
 ```
 
-Run Stage 2 for every CLI tool that failed Stage 1. On **Windows**, registry-level PATH means Stage 1 is normally enough:
+Run Stage 2 for every Stage 1 CLI failure. On **Windows**, registry PATH normally makes Stage 1 sufficient:
 
 ```powershell
 # Windows PowerShell
 Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 ```
 
-When the inventory produces any `❓` CLI results, tell the user those tools couldn't be confirmed and to run a recheck. The recheck retries detection through the host default shell and can confirm version-manager-provided runtimes the initial sandboxed scan couldn't see; a tool confirmed there flips to `✅`.
+For any `❓` CLI result, tell user it was unconfirmed and request a recheck. Recheck uses host default shell and may find version-manager runtimes hidden from initial sandboxed scan; confirmation changes it to `✅`.
 
 ---
 
@@ -204,7 +204,7 @@ Emit prerequisite rows for the **selected** runtime only (Docker + Docker Compos
 
 ### VS Code extension detection
 
-Check the extensions filesystem — do **NOT** use `code --list-extensions` (it launches a new VS Code instance). Users may have VS Code, VS Code Insiders, or both — always check all possible locations using `find` (more reliable than piping `ls` through `grep`):
+Check extension filesystems; do **NOT** use `code --list-extensions` because it launches another VS Code instance. Users may have VS Code, VS Code Insiders, or both; always check all locations with `find`, more reliably than piping `ls` through `grep`:
 
 ```bash
 # macOS/Linux
@@ -216,20 +216,20 @@ find ~/.vscode/extensions ~/.vscode-insiders/extensions -maxdepth 1 -name "<exte
 Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Filter "<extension-id-prefix>*" -ErrorAction SilentlyContinue
 ```
 
-The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above. If the check finds the extension folder, record it installed (`✅`); if it finds nothing, record it unknown (`❓`) — the scan can come up empty in restricted shells even when the extension is installed.
+Check extensions from Phase 1's authoritative **VS Code debug-integration extensions** table. Folder found means installed (`✅`); nothing means unknown (`❓`) because restricted shells can hide installed extensions.
 
 ---
 
 ### Browser detection
 
-Only when the project has a frontend/SPA project type that debugs in a browser. Frontend debugging launches a Chromium-based browser — Chrome or Edge — so detect which one is already installed and record **that** browser. The chosen browser drives the generated debug config `type`: Chrome → `chrome`, Edge → `msedge`.
+Apply only to frontend/SPA project types debugging in a browser. Detect installed Chromium-based Chrome or Edge and record **that** browser. Choice sets generated debug config `type`: Chrome → `chrome`, Edge → `msedge`.
 
 Detect both, then choose in this order:
 
-1. If **Chrome** is installed, choose Chrome and record it installed (`✅`) with its version if available.
-2. Otherwise if **Edge** is installed, choose Edge and record it installed (`✅`) with its version if available.
-3. If **neither** is detected, fall back by operating system and record the fallback as unknown (`❓`):
-   - **Windows** → Edge (`msedge`). Edge ships with Windows and is normally detected as installed in step 2, so this fallback rarely triggers.
+1. Installed **Chrome**: choose Chrome; record installed (`✅`) and available version.
+2. Otherwise, installed **Edge**: choose Edge; record installed (`✅`) and available version.
+3. If **neither** is detected, choose OS fallback and record unknown (`❓`):
+   - **Windows** → Edge (`msedge`). Edge ships with Windows and normally appears in step 2, so fallback is rare.
    - **macOS / Linux** → Chrome (`chrome`).
 
 ```bash
@@ -254,4 +254,4 @@ Test-Path "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe", "${env:Prog
 
 ## Never author install links
 
-Do **not** add an `Install` column, and never emit an install link or URL for any tool — not in the tables, the browser fallback, or anywhere else. The plan webviews append a deterministic Install link resolved from a built-in catalog keyed on the tool name, so any link authored here is ignored, and keeping install URLs out of the plan avoids surfacing an untrusted, model-authored link to the user. Just name the tool accurately (matching the catalog labels above) so the webview can resolve its link.
+Do **not** add an `Install` column or emit tool install links or URLs in tables, browser fallback, or elsewhere. Plan webviews append deterministic Install links from a built-in tool-name catalog; authored links are ignored and could expose untrusted model-authored URLs. Name tools exactly as catalog labels so webview resolves links.

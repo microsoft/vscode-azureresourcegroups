@@ -1,50 +1,50 @@
 # Multi-Service Orchestration — Generation
 
-> Applies when the plan's Services table has **2+ rows** (excluding the compound config row). Governs compound debug configuration, working directory rules, startup ordering, and partial configuration handling.
+> Applies when plan Services table has **2+ rows**, excluding compound config row. Governs compound debug configuration, working directories, startup ordering, and partial configurations.
 
 ---
 
 ## Port Assignment
 
-When two or more services share the same runtime, each needs a unique debug port. Look up the `Base debug port` from `runtimes/{rt}.md` and assign ports sequentially: first service gets the base port, second gets base + 1, third gets base + 2, etc.
+Services sharing runtime need unique debug ports. From `runtimes/{rt}.md` `Base debug port`, assign sequentially: base, base + 1, base + 2, etc.
 
-> Browser-based project types (e.g., Frontend SPA) do not use debug ports — they connect via the dev server URL instead.
+> Browser project types (e.g., Frontend SPA) use dev server URL, not debug ports.
 
 ---
 
 ## Partial Configuration Handling
 
-Check each service root for existing VS Code debug config before generating anything. A service is considered already configured if it has an existing debug configuration entry in `.vscode/launch.json` matching its service ID or Launch Config Name.
+Before generation, check each service root for VS Code debug config. Existing `.vscode/launch.json` entry matching service ID or Launch Config Name means configured.
 
 | State | Action |
 |-------|--------|
-| **Fully configured service** | Skip all artifact generation for that service; carry its existing config into the compound configuration unchanged |
-| **Partially configured service** | Generate only what is missing (e.g. tasks but no debug config → generate debug config only) |
+| **Fully configured service** | Skip its artifact generation; carry existing config unchanged into compound |
+| **Partially configured service** | Generate only missing parts (e.g. tasks but no debug config → debug config only) |
 | **Unconfigured service** | Generate all artifacts as normal |
 
-Adding a second service to an existing single-service repo is safe — the original service's config is preserved and the new service is added alongside it.
+Adding second service to existing single-service repo preserves original config and adds new service beside it.
 
 ---
 
 ## Compound Debug Configuration
 
-> ⛔ **MANDATORY:** When 2+ service roots are detected (including Frontend SPA projects), a compound debug configuration **must** be generated. A frontend SPA counts as a service root — it does not need emulators, but it does need a debug config entry and inclusion in the compound.
+> ⛔ **MANDATORY:** With 2+ service roots, including Frontend SPA, generate compound debug configuration. Frontend SPA counts: no emulator needed, but requires debug entry and compound membership.
 
-> ⚠️ **Working directory:** Multi-service task chains require correct `cwd` on every per-service task. See [generate.md § Working Directory (`cwd`) Rules](generate.md) — without it, commands like `npm install` or `func host start` run from the workspace root and fail.
+> ⚠️ **Working directory:** Every multi-service per-service task needs correct `cwd`. See [generate.md § Working Directory (`cwd`) Rules](generate.md). Otherwise `npm install` or `func host start` runs from workspace root and fails.
 
-Use the plan's Services table to assemble the compound config. The compound config row in the plan specifies the Launch Config Name (e.g., "Debug All Services").
+Assemble compound from plan Services table. Compound row supplies Launch Config Name (e.g., "Debug All Services").
 
 ### Startup Ordering
 
-VS Code compound launch configurations always start their listed configurations **in parallel**. There is no `dependsOrder` property for compounds — only individual tasks support sequenced dependencies. This means you cannot directly tell a compound to "start the backend before the frontend."
+VS Code compounds start listed configs **in parallel**. Compounds lack `dependsOrder`; only tasks sequence dependencies. Thus compound cannot directly start backend before frontend.
 
-When a frontend service proxies to a local backend (e.g., a dev server proxy for API calls), the backend must be ready before the frontend starts. Otherwise the frontend proxy may produce `ECONNREFUSED` errors on startup. Since compounds cannot enforce this ordering, the workaround is to push the sequencing into a **compound task** that uses `dependsOrder: "sequence"`, and set that task as the compound's `preLaunchTask`.
+When frontend proxies local backend (e.g., API dev-server proxy), backend must become ready first or proxy may emit `ECONNREFUSED`. Since compounds cannot order, sequence through **compound task** using `dependsOrder: "sequence"`; set it as compound `preLaunchTask`.
 
-> The plan may include a note like "ℹ️ **Proxy detected:**" indicating this dependency. Check the frontend's config files (e.g., `vite.config.ts` `server.proxy`) to confirm.
+> Plan may say "ℹ️ **Proxy detected:**". Confirm in frontend config (e.g., `vite.config.ts` `server.proxy`).
 
 #### Pattern
 
-**1. Generate a sequenced compound task** that starts services in order. Give it any descriptive label (referred to below as `{sequenced-compound-task}`):
+**1. Generate sequenced compound task** starting services in order. Use descriptive label, below `{sequenced-compound-task}`:
 
 ```json
 {
@@ -58,9 +58,9 @@ When a frontend service proxies to a local backend (e.g., a dev server proxy for
 }
 ```
 
-The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md`) signals "ready" before the frontend task starts.
+List backend first. Its `problemMatcher` from `project-types/{type}.md` signals ready before frontend starts.
 
-**2. Set the compound config's `preLaunchTask`** to the sequenced task:
+**2. Set compound `preLaunchTask`** to sequenced task:
 
 ```json
 {
@@ -71,7 +71,7 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 }
 ```
 
-**3. Individual configs keep their own `preLaunchTask`** so they work standalone:
+**3. Keep each config's `preLaunchTask`** for standalone use:
 
 ```json
 {
@@ -87,30 +87,30 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 }
 ```
 
-**4. Set `instanceLimit: 1` and `instancePolicy: "silent"` on background tasks** to prevent duplicate instances.
+**4. On background tasks, set `instanceLimit: 1` and `instancePolicy: "silent"`** to prevent duplicates.
 
-When the compound runs, the sequenced compound task starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
+Compound task starts both services via `dependsOrder: "sequence"`. Individual `preLaunchTask` then fires again against running services. `instanceLimit: 1` + `instancePolicy: "silent"` skips duplicates while existing instances continue.
 
 #### Why This Pattern Is Necessary
 
 | Concern | How it's solved |
 |---------|----------------|
-| Compounds can't sequence configurations | The sequenced compound **task** (`dependsOrder: "sequence"`) handles ordering instead |
-| Backend must be ready before frontend starts | Backend is listed first in `dependsOn`; its problem matcher signals readiness |
-| Debuggers must not attach before services are running | The compound's `preLaunchTask` ensures all services are started before any debugger attaches |
-| Individual configs must still work standalone | Each config has its own `preLaunchTask` pointing to its service's top-level task |
-| Duplicate task invocations from compound + individual preLaunchTasks | `instanceLimit: 1` + `instancePolicy: "silent"` silently skips the duplicate — the first instance keeps running |
+| Compounds can't sequence configurations | Sequenced compound **task** (`dependsOrder: "sequence"`) owns ordering |
+| Backend must be ready before frontend starts | Backend first in `dependsOn`; problem matcher signals readiness |
+| Debuggers must not attach before services are running | Compound `preLaunchTask` starts all services before debugger attachment |
+| Individual configs must still work standalone | Each config `preLaunchTask` points to service top-level task |
+| Duplicate task invocations from compound + individual preLaunchTasks | `instanceLimit: 1` + `instancePolicy: "silent"` skips duplicate; first continues |
 
 ---
 
 ### Deduplicated Startup Graph
 
-Any generated compound configuration MUST satisfy **all** of the following. Each rule is checkable against `tasks.json` / `launch.json`:
+Every generated compound MUST satisfy **all** rules, checkable in `tasks.json` / `launch.json`:
 
 | # | Rule | How to check |
 |---|------|--------------|
-| 1 | **Each service's top-level task appears exactly once** across the compound's effective task graph (the transitive `dependsOn` closure of the sequenced compound task). No service's start task is reachable via two different paths. | Expand the `dependsOn` closure of the sequenced compound task; every service's top-level task label occurs exactly once. |
-| 2 | **The sequenced compound task is the single owner of startup ordering.** No per-service task re-declares a `dependsOn` on another service's start task; ordering lives only in the sequenced compound task. | No service start task lists another service's start task in its own `dependsOn`. |
-| 3 | **Every background task sets `instanceLimit: 1` and `instancePolicy: "silent"`.** | Every long-running task in the chain carries both properties. |
+| 1 | **Each service top-level task appears once** in compound effective task graph (transitive `dependsOn` closure of sequenced compound task). No start task reachable by two paths. | Expand sequenced compound task `dependsOn` closure; each service top-level label occurs once. |
+| 2 | **Sequenced compound task solely owns startup ordering.** No per-service task redeclares `dependsOn` another service start; ordering exists only in sequenced compound task. | No service start task has another service start task in `dependsOn`. |
+| 3 | **Every background task sets `instanceLimit: 1` and `instancePolicy: "silent"`.** | Every long-running chain task has both. |
 
-Because the individual configs keep their own `preLaunchTask` (so they work standalone), the compound WILL invoke each service's start task a second time. Rule 3 makes that second invocation a silent no-op instead of a duplicate process, while Rules 1 and 2 ensure the *first* pass never double-starts a service either.
+Because individual configs retain `preLaunchTask` for standalone use, compound invokes each start task twice. Rule 3 makes second invocation silent no-op; Rules 1–2 prevent first-pass double starts.

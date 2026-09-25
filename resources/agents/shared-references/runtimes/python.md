@@ -55,11 +55,10 @@ pip install -r requirements.txt
 }
 ```
 
-> `local.settings.json` is plain JSON and does **not** support `${...}` interpolation.
-> Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with the same discrete values declared in the
-> workspace-root `.env` used by docker-compose. Never leave the angle-bracket placeholders in the
-> generated file, and never paste a credential value copied out of tool output — redaction filters
-> rewrite concrete credential URLs, and a masked value beginning with `*` corrupts YAML/JSON config.
+> `local.settings.json`: plain JSON; **no** `${...}` interpolation.
+> Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with matching discrete values from docker-compose's
+> workspace-root `.env`. Never leave placeholders or paste credentials from tool output: redaction
+> rewrites concrete credential URLs; masked values starting with `*` corrupt YAML/JSON config.
 
 ### pyproject.toml
 
@@ -575,8 +574,8 @@ class HealthResponse(BaseModel):
 | Package | Purpose |
 |---------|---------|
 | `azure-functions` | Azure Functions v2 runtime |
-| `pydantic` | Input validation & shared types |
-| `structlog` | Structured logging |
+| `pydantic` | Input validation + shared types |
+| `structlog` | Structured logs |
 
 ### Per Service
 
@@ -592,8 +591,8 @@ class HealthResponse(BaseModel):
 
 | Package | Purpose |
 |---------|---------|
-| `pytest` | Test runner |
-| `pytest-asyncio` | Async test support |
-| `pytest-cov` | Coverage reporting |
-| `ruff` | Linting + formatting |
-| `httpx` | HTTP client for request-level tests |
+| `pytest` | Tests |
+| `pytest-asyncio` | Async tests |
+| `pytest-cov` | Coverage |
+| `ruff` | Lint + format |
+| `httpx` | Request-level test HTTP client |
