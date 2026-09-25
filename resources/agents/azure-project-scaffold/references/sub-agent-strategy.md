@@ -6,10 +6,12 @@
 
 ## Execution Model
 
-> ⛔ **Model propagation is part of every hand-off.** The parent resolves its exact current runtime model as
-> `parentModelId` and includes `model: parentModelId` on every frontend/backend/build/repair/verification
-> `task` or `runSubagent` call. Never omit it: the generic task agent's definition default is not guaranteed
-> to match the parent session.
+> ⛔ **Model propagation is part of every hand-off.** The parent reads the final
+> `copilot-on-rails-model-contract:v1` block in the current query, requires
+> `authority: "extension-resolved-selector"`, sets `parentModelId` to its `taskModel` value exactly, and
+> includes `model: parentModelId` on every frontend/backend/build/repair/verification `task` or
+> `runSubagent` call. Never rediscover or substitute this value: the generic task agent's definition default
+> is not guaranteed to match the parent session. A missing, malformed, or rejected contract stops delegation.
 
 > ⚠️ **PIPELINING**: The **Frontend sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
 >

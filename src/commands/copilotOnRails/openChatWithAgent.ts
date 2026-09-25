@@ -8,7 +8,8 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { guardSelectedAgentQuery } from '../../utils/copilotOnRails/selectedAgentQuery';
+import { resolveAvailableChatModel, type AvailableChatModel } from '../../utils/copilotOnRails/modelSelection';
+import { appendSelectedModelContract, guardSelectedAgentQuery } from '../../utils/copilotOnRails/selectedAgentQuery';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
@@ -23,6 +24,8 @@ const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
 let agentLaunchInProgress = false;
 let requireWorkspaceTrustReload = false;
 
+class SelectedModelUnavailableError extends Error {}
+
 export function registerWorkspaceTrustTracking(): void {
     ext.context.subscriptions.push(
         vscode.workspace.onDidGrantWorkspaceTrust(() => {
@@ -33,36 +36,50 @@ export function registerWorkspaceTrustTracking(): void {
 
 /**
  * Resolves a user-facing model name (e.g. "Claude Opus 4.7 (copilot)") to a
- * modelSelector object that VS Code's chat commands expect.
+ * exact model object that VS Code's chat commands expect.
  */
-async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+async function resolveSelectedModel(displayName: string): Promise<AvailableChatModel | undefined> {
     try {
         const models = await vscode.lm.selectChatModels();
-        // Try matching by "Name (vendor)" format: e.g. "Claude Opus 4.7 (copilot)"
-        const vendorMatch = displayName.match(/^(.+?)\s*\((\w+)\)\s*$/);
-        if (vendorMatch) {
-            const [, name, vendor] = vendorMatch;
-            const match = models.find(
-                (m) => m.name === name.trim() && m.vendor === vendor,
-            );
-            if (match) {
-                return { id: match.id, vendor: match.vendor };
-            }
-        }
-        // Try matching by name alone
-        const byName = models.find((m) => m.name === displayName);
-        if (byName) {
-            return { id: byName.id, vendor: byName.vendor };
-        }
-        // Try matching by id (in case the caller already has the id)
-        const byId = models.find((m) => m.id === displayName);
-        if (byId) {
-            return { id: byId.id, vendor: byId.vendor };
-        }
+        return resolveAvailableChatModel(displayName, models);
     } catch {
         // If the lm API isn't available, fall through
     }
     return undefined;
+}
+
+async function resolveRequiredSelectedModel(context: CopilotOnRailsContext, displayName: string): Promise<AvailableChatModel> {
+    const selectedModel = await resolveSelectedModel(displayName);
+    setCorProp(context, 'chatModelResolved', !!selectedModel);
+    if (selectedModel) {
+        return selectedModel;
+    }
+
+    const message = vscode.l10n.t(
+        'The selected Copilot model "{0}" is unavailable. Reload VS Code or choose an available model in Create with Copilot, then try again.',
+        displayName,
+    );
+    setCorProp(context, 'chatModelResolutionFailure', 'selectedModelUnavailable');
+    void vscode.window.showErrorMessage(message);
+    throw new SelectedModelUnavailableError(message);
+}
+
+interface ChatOpenOptions {
+    mode?: string;
+    query: string;
+    modelSelector?: { id: string; vendor: string };
+}
+
+function createChatOpenOptions(
+    options: { mode?: string; query: string },
+    selectedModel: AvailableChatModel | undefined,
+): ChatOpenOptions {
+    const guardedQuery = guardSelectedAgentQuery(options.mode, options.query);
+    return {
+        ...options,
+        query: selectedModel ? appendSelectedModelContract(guardedQuery, selectedModel) : guardedQuery,
+        ...(selectedModel ? { modelSelector: { id: selectedModel.id, vendor: selectedModel.vendor } } : {}),
+    };
 }
 
 /**
@@ -122,9 +139,6 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
 }
 
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
-    const guardedQuery = guardSelectedAgentQuery(agentName, query);
-    setCorProp(context, 'chatQueryLength', guardedQuery.length);
-
     const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     if (agentLaunchInProgress) {
         setCorProp(context, chatLaunchOutcomeKey, 'alreadyInProgress');
@@ -138,27 +152,30 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     try {
         await ensureLocalHarnessOn();
 
+        const sessionModel = getSessionModel();
+        const selectedModelName = model ?? sessionModel;
+        setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (sessionModel ? 'previouslySelected' : 'default'));
+        const selectedModel = selectedModelName
+            ? await resolveRequiredSelectedModel(context, selectedModelName)
+            : undefined;
+        const chatOptions = createChatOpenOptions({ mode: agentName, query }, selectedModel);
+        setCorProp(context, 'chatQueryLength', chatOptions.query.length);
+
         // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
         // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
-
-        const resolvedModel = model ?? getSessionModel();
-        setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
-
-        const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
-        setCorProp(context, 'chatModelResolved', !!selector);
 
         // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
         // command is the supported way to launch one. If the mode hasn't been discovered yet this
         // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
         // that (see requireWorkspaceTrustReload).
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: agentName,
-            query: guardedQuery,
-            ...(selector ? { modelSelector: selector } : {}),
-        });
+        await vscode.commands.executeCommand('workbench.action.chat.open', chatOptions);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        if (err instanceof SelectedModelUnavailableError) {
+            setCorProp(context, chatLaunchOutcomeKey, 'selectedModelUnavailable');
+            return false;
+        }
         setCorProp(context, chatLaunchOutcomeKey, 'error');
         setCorErrorProp(context, 'chatLaunchError', message);
         void vscode.window.showErrorMessage(
@@ -289,22 +306,17 @@ async function promptReloadForAgentDiscovery(context: CopilotOnRailsContext): Pr
  * Builds the options object for a direct `workbench.action.chat.open` call,
  * automatically including the session's model selection when one is stored.
  */
-export async function buildChatOpenOptions(context: CopilotOnRailsContext, options: { mode?: string; query: string }): Promise<{ mode?: string; query: string; modelSelector?: { id?: string; vendor?: string } }> {
-    const guardedOptions = {
-        ...options,
-        query: guardSelectedAgentQuery(options.mode, options.query),
-    };
-    setCorProp(context, 'chatQueryLength', guardedOptions.query.length);
+export async function buildChatOpenOptions(context: CopilotOnRailsContext, options: { mode?: string; query: string }): Promise<ChatOpenOptions> {
     if (options.mode) {
         setCorProp(context, 'chatAgentName', options.mode);
     }
 
     const model = getSessionModel();
     setCorProp(context, 'chatModelSelectionSource', model ? 'previouslySelected' : 'default');
-    if (model) {
-        const selector = await resolveModelSelector(model);
-        setCorProp(context, 'chatModelResolved', !!selector);
-        return selector ? { ...guardedOptions, modelSelector: selector } : guardedOptions;
-    }
-    return guardedOptions;
+    const selectedModel = model
+        ? await resolveRequiredSelectedModel(context, model)
+        : undefined;
+    const chatOptions = createChatOpenOptions(options, selectedModel);
+    setCorProp(context, 'chatQueryLength', chatOptions.query.length);
+    return chatOptions;
 }

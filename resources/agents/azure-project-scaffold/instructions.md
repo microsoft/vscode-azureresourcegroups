@@ -35,10 +35,11 @@ Requires an approved plan. Verify before starting:
 
 > **16 core rules** govern every scaffold. Rule 0 is the load-bearing UX rule — visible feedback first. Rules 1–15 govern correctness. Details in referenced docs, consumed at relevant step.
 >
-> ⛔ **Nested-model lock:** Resolve the exact current runtime model identifier as `parentModelId` before
-> launching any frontend, backend, build, repair, or verification sub-agent. Every `task` / `runSubagent`
-> invocation MUST pass `model: parentModelId`; generic task agents otherwise use their own default model.
-> If no exact identifier is available, stop before delegation instead of accepting model drift.
+> ⛔ **Nested-model lock:** Read the final `copilot-on-rails-model-contract:v1` block that the extension
+> appended to the current query. Require `authority: "extension-resolved-selector"` and set `parentModelId`
+> to its `taskModel` value exactly. Never use `tool_search`, a model catalog, session metadata, or inference
+> to rediscover it. Every `task` / `runSubagent` invocation MUST pass `model: parentModelId`; if the contract
+> is missing, malformed, or rejected, stop before delegation instead of selecting another model.
 
 > **📁 Paths are examples, not assumptions.** Every directory shown in these instructions (`services/web/`, `services/functions/`, `services/shared/`, `services/functions/src/utils/`, …) is an **illustrative default for a fresh project**. When the workspace already has a structure, follow it. Read the actual layout first and map these roles (frontend folder, Functions project, shared types, etc.) onto the user's real folders — never assume or impose a specific path. The plan's Project Structure section, when present, is the source of truth for where things go. **If the plan names the deployable apps after the product** (e.g. `services/office-compliance-api`, `services/office-compliance-portal`), honor those names exactly — including in `workspaces`, `cd` commands, imports, and the computed `main`/`rootDir` (`dist/<project>-api/src/functions/*.js`). The shared package stays generic (`services/shared`).
 

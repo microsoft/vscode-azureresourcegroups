@@ -237,14 +237,14 @@ const contracts: Contract[] = [
     {
         file: "azure-project-plan/plan.md",
         name: "plan-preview-task-model-lock",
-        pattern: /runSubagent`\/`task` call per page[\s\S]*model: parentModelId/,
-        grader: "page-preview tasks retain the parent model",
+        pattern: /copilot-on-rails-model-contract:v1[\s\S]*extension-resolved-selector[\s\S]*taskModel[\s\S]*Do not use `tool_search`[\s\S]*model: parentModelId/,
+        grader: "page-preview tasks use the extension-resolved parent model without rediscovery",
     },
     {
         file: "azure-project-scaffold/instructions.md",
         name: "scaffold-task-model-lock",
-        pattern: /Every `task` \/ `runSubagent`[\s\S]*MUST pass `model: parentModelId`/,
-        grader: "frontend/backend/build/repair/verification tasks retain the parent model",
+        pattern: /copilot-on-rails-model-contract:v1[\s\S]*extension-resolved-selector[\s\S]*taskModel[\s\S]*Never use `tool_search`[\s\S]*MUST pass `model: parentModelId`/,
+        grader: "frontend/backend/build/repair/verification tasks use the extension-resolved parent model",
     },
     {
         file: "azure-deploy/prereq/instructions.md",
@@ -547,6 +547,38 @@ for (const rule of consistencyRules) {
     }
 }
 
+const attributesPath = path.join(repoRoot, ".gitattributes");
+try {
+    const attributes = fs.readFileSync(attributesPath, "utf8");
+    const requiredLfPolicies = [
+        /^evals\/\*\*\s+text=auto\s+eol=lf\s*$/m,
+        /^resources\/agents\/\*\*\s+text=auto\s+eol=lf\s*$/m,
+    ];
+    if (requiredLfPolicies.every(policy => policy.test(attributes))) {
+        checked.push("agent-assets-lf-checkout-policy");
+    } else {
+        failures.push(
+            "agent-assets-lf-checkout-policy: .gitattributes must force LF for both evals/** and "
+            + "resources/agents/** so byte-exact asset hashes are portable.",
+        );
+    }
+} catch (err) {
+    failures.push(`agent-assets-lf-checkout-policy: ${err instanceof Error ? err.message : String(err)}`);
+}
+
+const crlfAssets = trackedFiles().filter(name =>
+    fs.readFileSync(path.join(agentsRoot, name)).includes(Buffer.from("\r\n")),
+);
+if (crlfAssets.length) {
+    failures.push(
+        "agent-assets-noncanonical-eol: tracked agent assets contain CRLF bytes despite the LF checkout policy.\n"
+        + crlfAssets.map(name => `    ${name}`).join("\n")
+        + "\n    Normalize these files to LF before recording the byte-exact baseline.",
+    );
+} else {
+    checked.push("agent-assets-canonical-lf");
+}
+
 const currentHash = hashAgentAssets();
 const currentFiles = agentAssetFiles();
 
@@ -625,7 +657,7 @@ const previous: AssetBaseline | null = fs.existsSync(lockPath)
     ? JSON.parse(fs.readFileSync(lockPath, "utf8")) as AssetBaseline
     : null;
 
-if (update) {
+if (update && failures.length === 0) {
     fs.writeFileSync(lockPath, `${JSON.stringify({
         agentAssetsHash: currentHash,
         scope: SCOPE,

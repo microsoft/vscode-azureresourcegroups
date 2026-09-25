@@ -32,6 +32,34 @@ export function getDefaultOpusModelOption(models: readonly AvailableChatModel[])
 }
 
 /**
+ * Resolves a persisted model selection to the exact model object that will be passed to chat.
+ */
+export function resolveAvailableChatModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
+    const selectNewest = (matches: readonly AvailableChatModel[]): AvailableChatModel | undefined =>
+        [...matches].sort((a, b) =>
+            b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' })
+            || a.name.localeCompare(b.name)
+            || a.id.localeCompare(b.id))[0];
+
+    const qualifiedNameMatch = displayName.match(/^(.+?)\s*\(([^()]+)\)\s*$/);
+    if (qualifiedNameMatch) {
+        const [, name, vendor] = qualifiedNameMatch;
+        const match = selectNewest(models.filter(model => model.name === name.trim() && model.vendor === vendor));
+        if (match) {
+            return match;
+        }
+    }
+
+    const canonicalIdMatch = models.find(model => `${model.vendor}/${model.id}` === displayName);
+    if (canonicalIdMatch) {
+        return canonicalIdMatch;
+    }
+
+    return selectNewest(models.filter(model => model.name === displayName))
+        ?? selectNewest(models.filter(model => model.id === displayName));
+}
+
+/**
  * Returns the currently available supported Copilot models as qualified names
  * that VS Code can resolve when opening chat.
  */

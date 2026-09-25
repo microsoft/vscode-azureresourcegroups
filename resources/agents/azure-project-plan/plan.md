@@ -186,7 +186,7 @@ Every row resolves to just two states, following the status rules in [prerequisi
 
 ### Sample Content
 
-> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain and workload context (Sections 1–5).
+> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview page tasks (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain and workload context (Sections 1–5).
 
 For each page above, list 3–6 representative records using that page's primary entity — a short table or bullet list per page, whatever fits the data shape. Use **real values from this app's domain** (real entity names, realistic numbers, real states) — a recipe app lists recipes, an issue tracker lists issues, a storefront lists products. **Never** emit generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum. The skeleton below shows the **format**, not the content — replace every `{...}` with your domain's records.
 
@@ -239,8 +239,8 @@ For each page above, list 3–6 representative records using that page's primary
    - `## N. Quality Attributes & Tradeoffs` exists, contains all four workload key-value rows, and its table contains all five pillars with no blank target/response/validation/risk cells.
    - `## 1. Project Overview` exists and contains a `**Goal**:` row, and the Design System section (when a frontend exists) contains a `**Component Library**:` row.
 1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
-2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call the `open_plan_view` tool. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
-3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
+2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call the `open_plan_view` tool. Do this **immediately after `manifest.json` exists and before launching the page tasks**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
+3. **Render the page previews** — Step 3.5b below: launch one model-locked task per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
 5. If approved, update status from `Planning` to `Approved`.
 6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a presentation-quality visual spec and translates it into real components using the framework named in the Frontend stack section.
@@ -255,9 +255,9 @@ For each page above, list 3–6 representative records using that page's primary
 
 **Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a presentation-quality visual spec, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 
-**Inputs:** the just-written `.azure/project-plan.md` Design System & UI section (Color Palette, Typography, Pages, Style Direction, Component Library), the **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](../shared-references/frontend-quality-bar.md) (the fidelity-agnostic contract this preview and the eventual scaffold both satisfy), plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read the html-preview reference **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a), its `## Icons` block, and its `## Token → HTML recipes` to hand per-page slices to the sub-agents (Step 3.5b). The sub-agents never receive the Shared CSS.
+**Inputs:** the just-written `.azure/project-plan.md` Design System & UI section (Color Palette, Typography, Pages, Style Direction, Component Library), the **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](../shared-references/frontend-quality-bar.md) (the fidelity-agnostic contract this preview and the eventual scaffold both satisfy), plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read the html-preview reference **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a), its `## Icons` block, and its `## Token → HTML recipes` to hand per-page slices to the page tasks (Step 3.5b). The page tasks never receive the Shared CSS.
 
-#### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
+#### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE page-task launch)
 
 Both files MUST exist before the plan-preview webview opens, so the controller can render tabs in the loading state. Use the `create_file` tool — it's OS-agnostic and creates parent folders automatically.
 
@@ -363,19 +363,24 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 - `route` is the path from the Design System section's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
 
-#### 3.5a-open. Open the plan view NOW — before fanning out
+#### 3.5a-open. Open the plan view NOW — before launching page tasks
 
-The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (the `open_plan_view` tool, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
+The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (the `open_plan_view` tool, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page tasks render in the background. Do **not** wait for the tasks to finish before the view opens — that delay is exactly the regression this ordering prevents.
 
 > **Embedded webview only** (see agent Hard rule 8): the preview renders *exclusively* inside the plan webview's **UI Preview** card as sandboxed iframes — never `simpleBrowser.show`, `vscode.env.openExternal`, a dev server, or a `.preview-temp/*.html` editor tab. There is no port or URL for the planning preview.
 
 #### 3.5b. Fan out one sub-agent per page (parallel)
 
-Resolve the exact current runtime model identifier as `parentModelId` before fan-out. Launch one
-`runSubagent`/`task` call per page, **all in a single tool-call batch** (the platform parallelizes independent
-sub-agent invocations), and pass `model: parentModelId` on every call. The generic task agent has its own
-default model; omitting `model` is forbidden. If the runtime does not expose an exact identifier, stop instead
-of silently routing page generation to another model. Cap at **4 concurrent** — if the plan has more than 4
+Before fan-out, read the **final** `copilot-on-rails-model-contract:v1` HTML comment that the extension
+appended to the current query. Require `authority: "extension-resolved-selector"`, a non-empty `taskModel`,
+and a non-empty `runtimeModelId`. Set `parentModelId` to `taskModel` **exactly**. Do not use `tool_search`,
+the model catalog, session metadata, or any inference to rediscover or replace this value. If the contract is
+missing or malformed, stop before delegation and report that the extension-provided model contract is
+unavailable. If a task rejects the value, stop; never retry it on another model.
+
+Launch one `runSubagent`/`task` call per page, **all in a single tool-call batch** (the platform parallelizes
+independent sub-agent invocations), and pass `model: parentModelId` on every call. The generic task agent has
+its own default model; omitting `model` is forbidden. Cap at **4 concurrent** — if the plan has more than 4
 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
 
 1. The page's row from the Design System section's Pages table (page name, route, purpose, layout regions).

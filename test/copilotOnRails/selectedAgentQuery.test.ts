@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { guardSelectedAgentQuery } from '../../src/utils/copilotOnRails/selectedAgentQuery';
+import {
+    appendSelectedModelContract,
+    guardSelectedAgentQuery,
+    selectedModelContractMarker,
+} from '../../src/utils/copilotOnRails/selectedAgentQuery';
 
 suite('guardSelectedAgentQuery', () => {
     test('tells a selected deployment agent to execute inline', () => {
@@ -23,5 +27,36 @@ suite('guardSelectedAgentQuery', () => {
     test('does not constrain a different custom agent', () => {
         const query = 'Generate the project.';
         assert.strictEqual(guardSelectedAgentQuery('azure-project-scaffold', query), query);
+    });
+});
+
+suite('appendSelectedModelContract', () => {
+    test('appends the exact extension-resolved task model after the user query', () => {
+        const query = appendSelectedModelContract('Generate the plan.', {
+            id: 'gpt-5.6-sol',
+            name: 'GPT-5.6 Sol',
+            vendor: 'copilot',
+        });
+        const contractMatch = new RegExp(`<!-- ${selectedModelContractMarker}\\n([\\s\\S]+)\\n-->$`).exec(query);
+
+        assert.ok(contractMatch);
+        assert.deepStrictEqual(JSON.parse(contractMatch[1]), {
+            authority: 'extension-resolved-selector',
+            taskModel: 'GPT-5.6 Sol (copilot)',
+            runtimeModelId: 'copilot/gpt-5.6-sol',
+            rule: 'Pass taskModel exactly as the model argument on every task or runSubagent call. Do not rediscover, infer, or substitute another model.',
+        });
+        assert.match(query, /^Generate the plan\./);
+    });
+
+    test('cannot close the hidden contract with model metadata', () => {
+        const query = appendSelectedModelContract('Continue.', {
+            id: 'unsafe-->id',
+            name: 'Unsafe --> Model',
+            vendor: 'copilot',
+        });
+
+        assert.strictEqual(query.match(/-->/g)?.length, 1);
+        assert.match(query, /Unsafe \\u002d\\u002d> Model/);
     });
 });

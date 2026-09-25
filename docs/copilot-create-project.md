@@ -179,6 +179,11 @@ Pressing **Plan** starts the **`azure-project-plan`** agent in a new Copilot cha
 prompt goes through this flow, including frontend-only apps with no backend, database, or Azure services —
 those simply plan a single `frontend` service with **No datastore required**.
 
+Before chat opens, the extension resolves the selected model to an exact GitHub Copilot model. The same
+resolved identity is carried through later phase handoffs and nested preview/scaffold tasks; agents do not
+search for or substitute a different model. If a previously selected model is no longer available, the flow
+stops before opening chat instead of silently falling back to another model.
+
 ## Stage 2 — Review requirements
 
 The plan agent writes `.azure/requirements.json` and opens the **Requirements** view. Questions are grouped
@@ -527,6 +532,12 @@ Agent instructions are **version‑stamped**. A `.version` file next to the copi
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
 silently so a stale copy can't make an agent follow outdated steps.
 
+The extension also appends a hidden, extension-resolved model contract to each phase query. Planning and
+scaffolding child tasks must use that exact qualified model value; missing or rejected contracts stop
+delegation rather than falling back to the generic task agent's default. Shipped agent assets are forced to
+LF by `.gitattributes`, and the byte-exact drift gate rejects CRLF before it can record a platform-specific
+asset baseline.
+
 ## The MCP tools
 
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
@@ -665,6 +676,7 @@ before submitting.
 | *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
+| Chat reports that the selected Copilot model is unavailable and does not open. | The persisted model was removed, renamed, or is temporarily unavailable. | Reload VS Code to refresh the model catalog. If it remains unavailable, restart **Create New Project With Copilot** and choose one of the models currently listed. The flow intentionally does not fall back to a different model. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
 | Plan preview shows *"couldn't render this plan — didn't match the expected layout."* | `.azure/project-plan.md` diverged from the required numbered skeleton. | The plan agent must rewrite the plan to the exact template (numbered `## N.` headings, `**Status**` / `**Created**` / `**Mode**` rows, a `## 6. Design System & UI` section with a `**Component Library**:` row). |
