@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.13.2 - 2026-09-27
+
+### Added
+* [[1903]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1903) Add a **CI/CD** stage to the Azure Project view with a survey for users interested in the upcoming feature
+
+### Engineering
+* [[1892]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1892) Compress non-deployment Copilot on Rails agent instructions
+
 ## 0.13.1 - 2026-09-18
 
 ### Added
