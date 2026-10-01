@@ -13,16 +13,29 @@ import { LocalPlanView } from "./LocalPlanView";
 import { RequirementsView } from "./RequirementsView";
 import { ScaffoldNextStepsView } from "./ScaffoldNextStepsView";
 import { ScaffoldPlanView } from "./ScaffoldPlanView";
+import { UserFeedback } from "./components/UserFeedback";
+import { type JSX } from "react";
+
+function withUserFeedback(View: () => JSX.Element): () => JSX.Element {
+    return function ViewWithUserFeedback(): JSX.Element {
+        return (
+            <>
+                <View />
+                <UserFeedback />
+            </>
+        );
+    };
+}
 
 export const WebviewRegistry = {
-    createProjectView: CreateProjectView,
-    deploymentPlanView: DeploymentPlanView,
-    deployResultView: DeployResultView,
-    frontendPreviewView: FrontendPreviewView,
-    loadingView: LoadingView,
-    localDevNextStepsView: LocalDevNextStepsView,
-    localPlanView: LocalPlanView,
-    requirementsView: RequirementsView,
-    scaffoldPlanView: ScaffoldPlanView,
-    scaffoldNextStepsView: ScaffoldNextStepsView,
+    createProjectView: withUserFeedback(CreateProjectView),
+    deploymentPlanView: withUserFeedback(DeploymentPlanView),
+    deployResultView: withUserFeedback(DeployResultView),
+    frontendPreviewView: withUserFeedback(FrontendPreviewView),
+    loadingView: withUserFeedback(LoadingView),
+    localDevNextStepsView: withUserFeedback(LocalDevNextStepsView),
+    localPlanView: withUserFeedback(LocalPlanView),
+    requirementsView: withUserFeedback(RequirementsView),
+    scaffoldPlanView: withUserFeedback(ScaffoldPlanView),
+    scaffoldNextStepsView: withUserFeedback(ScaffoldNextStepsView),
 } as const;
