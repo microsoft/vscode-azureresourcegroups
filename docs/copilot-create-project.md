@@ -35,6 +35,7 @@ the work as it happens.
   - [The MCP tools](#the-mcp-tools)
   - [Files & state](#files--state)
 - [Part 5 — Support & triage runbook](#part-5--support--triage-runbook)
+  - [Share product feedback](#share-product-feedback)
   - [Report an issue](#report-an-issue)
   - [Inspect diagnostics](#inspect-diagnostics)
   - [What the diagnostics contain (privacy)](#what-the-diagnostics-contain-privacy)
@@ -420,6 +421,9 @@ new subfolder or an empty folder so unattended generation cannot write over exis
 | **Deployment results** view | `copilotOnRails.openDeployResultView` | `open_deploy_result_view` | Read-only report of a finished deploy: status, endpoints, resources, cleanup. |
 | **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline, including a CI/CD placeholder that links to the expectations survey. |
 
+Every CoR webview also has a persistent **Feedback** button in the lower-right corner. It opens the
+Microsoft Forms product-feedback modal without leaving the current stage.
+
 > The `openScaffoldPlanView`, `openFrontendPreviewView`, `openScaffoldNextStepsView`, `openDebugPlanView`,
 > `openDebugNextStepsView`, `openDeploymentPlanView`, and `openDeployResultView` commands are also available from the Command
 > Palette, primarily for support/debugging (they open the view for the current workspace's artifacts).
@@ -515,6 +519,27 @@ firewall rule is a last resort, and it is never widened beyond a single address 
 # Part 5 — Support & triage runbook
 
 This part is for anyone diagnosing or triaging a *Create New Project with Copilot* report.
+
+## Share product feedback
+
+Every CoR webview has a **Feedback** button for comments about the overall Create with Copilot experience.
+This is separate from the plan and frontend **Request changes** controls, which send revision prompts to
+Copilot.
+
+Selecting it opens the official Microsoft Forms response page in a modal over the current CoR screen. The
+user completes and submits the form directly to Microsoft Forms without leaving VS Code. An **Open in
+browser** fallback is available for environments where tenant sign-in, third-party cookie policy, or network
+policy prevents the embedded form from loading.
+
+The extension does not programmatically submit a response and does not attach the project prompt, workspace
+files, paths, diagnostics, machine identifiers, or account details. Microsoft Forms receives only the
+answers the user enters into the form, subject to the form owner's response and identity settings.
+
+> 📷 *Screenshot needed: the embedded Microsoft Forms product-feedback modal over any CoR webview.*
+
+<p align="center">
+  <img src="images/copilot-create-project/17-user-feedback-form.png" alt="Microsoft Forms feedback modal in a Copilot on Rails webview" />
+</p>
 
 ## Report an issue
 
