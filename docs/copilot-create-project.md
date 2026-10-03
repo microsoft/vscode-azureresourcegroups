@@ -134,9 +134,18 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 ## Prerequisites
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
+- The **Copilot** chat session target. Copilot on Rails enables the Copilot Harness for the workspace
+  and waits for custom-agent registration to settle. After creating a fresh phase chat, it primes the
+  custom mode without sending a prompt, then resolves the agent by name when submitting. This avoids
+  stale Agent Host plugin revisions and prevents a silent fallback to **Agent**.
 - A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
   GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
+  When the Copilot Harness is active, the extension maps that selection only to the matching
+  `agent-host-copilotcli` model. It does not pass Local or legacy `copilotcli` identifiers, which
+  VS Code rejects as foreign to the Agent Host session. The extension constructs the Agent Host
+  selector from the selected Local model ID because the language model extension API does not list
+  the Agent Host copies that the chat command can resolve.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
@@ -401,6 +410,9 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 `start_project_integrate` → `start_local_development`) and skip the Frontend preview and Next Steps views.
 Project-folder selection still happens before autopilot starts; a non-empty workspace requires choosing a
 new subfolder or an empty folder so unattended generation cannot write over existing content.
+While the run is active, CoR sets both local chat and Agent Host defaults to Autopilot, enables global
+tool auto-approval, and raises the request limit. It restores the user's prior global chat defaults when
+Autopilot finishes, is turned off from the status bar, or reaches its safety deadline.
 
 ---
 
@@ -456,7 +468,11 @@ silently so a stale copy can't make an agent follow outdated steps.
 ## The MCP tools
 
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
-("Copilot Azure Resources Extension Tools"). Agents call them to open views and trigger the next stage.
+("Copilot Azure Resources Extension Tools"). The server starts eagerly on a loopback TCP transport so
+the Copilot Harness can connect before its first tool call. Agents call the tools to open views and
+trigger the next stage. Agent manifests include both the Local harness reference names and the
+Copilot Harness server label and tool-search alias because the two harnesses resolve those allowlist
+entries differently.
 
 | Tool | Effect |
 | --- | --- |
@@ -494,6 +510,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
 | `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
+| `.vscode/settings.json` | extension | Workspace overrides that enable the Copilot Harness for CoR sessions. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
 `copilotOnRails.createdAt`, and `copilotOnRails.diagnosticEvents` (see below).

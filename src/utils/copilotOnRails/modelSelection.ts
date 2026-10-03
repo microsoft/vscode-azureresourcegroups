@@ -12,6 +12,7 @@ export interface AvailableChatModel {
 }
 
 export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as const;
+const copilotHarnessVendor = 'agent-host-copilotcli';
 
 export function getSupportedModelName(...identifiers: string[]): typeof supportedModelNames[number] | undefined {
     const modelIdentifiers = identifiers.join(' ');
@@ -29,6 +30,41 @@ export function getDefaultOpusModelOption(models: readonly AvailableChatModel[])
             || a.name.localeCompare(b.name))[0];
 
     return model ? `${model.name} (${model.vendor})` : undefined;
+}
+
+export function resolveAvailableChatModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
+    const vendorMatch = displayName.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    if (vendorMatch) {
+        const [, name, vendor] = vendorMatch;
+        const match = models.find(model => model.name === name.trim() && model.vendor === vendor.trim());
+        if (match) {
+            return match;
+        }
+    }
+
+    return models.find(model => model.name === displayName)
+        ?? models.find(model => model.id === displayName);
+}
+
+/**
+ * Maps a model selected from VS Code's local Copilot model pool to the corresponding
+ * Agent Host model used by the Copilot Harness.
+ */
+export function resolveCopilotHarnessModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
+    const selectedModel = resolveAvailableChatModel(displayName, models);
+    if (!selectedModel) {
+        return undefined;
+    }
+
+    if (selectedModel.vendor === copilotHarnessVendor) {
+        return selectedModel;
+    }
+
+    const harnessModels = models.filter(model => model.vendor === copilotHarnessVendor);
+    return harnessModels.find(model => model.id === selectedModel.id)
+        ?? harnessModels.find(model => model.family === selectedModel.family)
+        ?? harnessModels.find(model => model.name === selectedModel.name)
+        ?? { ...selectedModel, vendor: copilotHarnessVendor };
 }
 
 /**

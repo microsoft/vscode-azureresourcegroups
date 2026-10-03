@@ -8,8 +8,9 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { resolveCopilotHarnessModel } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
-import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
+import { ensureCopilotHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
@@ -19,6 +20,11 @@ import { ensureAgentInstructions } from './agentInstructions';
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
+const OPEN_CHAT_COMMAND_ID = 'workbench.action.chat.open';
+const OPEN_CHAT_COMMAND_PREFIX = 'workbench.action.chat.open';
+const AGENT_COMMAND_READY_TIMEOUT_MS = 10_000;
+const AGENT_COMMAND_READY_POLL_MS = 100;
+const EXISTING_AGENT_COMMAND_SETTLE_MS = 1_000;
 let agentLaunchInProgress = false;
 let requireWorkspaceTrustReload = false;
 
@@ -37,26 +43,9 @@ export function registerWorkspaceTrustTracking(): void {
 async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
     try {
         const models = await vscode.lm.selectChatModels();
-        // Try matching by "Name (vendor)" format: e.g. "Claude Opus 4.7 (copilot)"
-        const vendorMatch = displayName.match(/^(.+?)\s*\((\w+)\)\s*$/);
-        if (vendorMatch) {
-            const [, name, vendor] = vendorMatch;
-            const match = models.find(
-                (m) => m.name === name.trim() && m.vendor === vendor,
-            );
-            if (match) {
-                return { id: match.id, vendor: match.vendor };
-            }
-        }
-        // Try matching by name alone
-        const byName = models.find((m) => m.name === displayName);
-        if (byName) {
-            return { id: byName.id, vendor: byName.vendor };
-        }
-        // Try matching by id (in case the caller already has the id)
-        const byId = models.find((m) => m.id === displayName);
-        if (byId) {
-            return { id: byId.id, vendor: byId.vendor };
+        const match = resolveCopilotHarnessModel(displayName, models);
+        if (match) {
+            return { id: match.id, vendor: match.vendor };
         }
     } catch {
         // If the lm API isn't available, fall through
@@ -101,7 +90,7 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     }
 
     if (!copilotChatExtension.isActive) {
-        await ensureLocalHarnessOn();
+        await ensureCopilotHarnessOn();
 
         try {
             await vscode.window.withProgress(
@@ -134,11 +123,18 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     agentLaunchInProgress = true;
     try {
-        await ensureLocalHarnessOn();
+        await ensureCopilotHarnessOn();
 
         // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
         // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
+
+        await waitForAgentModeRegistration(agentName);
+        await vscode.commands.executeCommand(getAgentChatOpenCommandId(agentName));
+        await vscode.commands.executeCommand(
+            OPEN_CHAT_COMMAND_ID,
+            buildAgentChatModeOptions(agentName),
+        );
 
         const resolvedModel = model ?? getSessionModel();
         setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
@@ -146,15 +142,16 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
 
-        // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
-        // command is the supported way to launch one. If the mode hasn't been discovered yet this
-        // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
-        // that (see requireWorkspaceTrustReload).
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: agentName,
-            query,
-            ...(selector ? { modelSelector: selector } : {}),
-        });
+        const result = await vscode.commands.executeCommand<false | undefined>(
+            OPEN_CHAT_COMMAND_ID,
+            buildAgentChatOpenOptions(agentName, query, selector),
+        );
+        if (result === false) {
+            throw new Error(vscode.l10n.t(
+                'The "{0}" Copilot agent request was rejected.',
+                agentName,
+            ));
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setCorProp(context, chatLaunchOutcomeKey, 'error');
@@ -179,6 +176,51 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     }
     setCorProp(context, chatLaunchOutcomeKey, 'chatLaunched');
     return true;
+}
+
+export function getAgentChatOpenCommandId(agentName: string): string {
+    return `${OPEN_CHAT_COMMAND_PREFIX}${agentName}`;
+}
+
+export function buildAgentChatModeOptions(agentName: string): { mode: string } {
+    return { mode: agentName };
+}
+
+export function buildAgentChatOpenOptions(
+    agentName: string,
+    query: string,
+    modelSelector?: { id?: string; vendor?: string },
+): { mode: string; query: string; modelSelector?: { id?: string; vendor?: string }; waitForRequestAcceptance: true } {
+    return {
+        mode: agentName,
+        query,
+        ...(modelSelector ? { modelSelector } : {}),
+        waitForRequestAcceptance: true,
+    };
+}
+
+async function waitForAgentModeRegistration(agentName: string): Promise<void> {
+    const commandId = getAgentChatOpenCommandId(agentName);
+    const deadline = Date.now() + AGENT_COMMAND_READY_TIMEOUT_MS;
+    let commandWasAlreadyRegistered = false;
+
+    do {
+        if ((await vscode.commands.getCommands(true)).includes(commandId)) {
+            if (!commandWasAlreadyRegistered) {
+                commandWasAlreadyRegistered = true;
+                await new Promise(resolve => setTimeout(resolve, EXISTING_AGENT_COMMAND_SETTLE_MS));
+                continue;
+            }
+            return;
+        }
+        commandWasAlreadyRegistered = false;
+        await new Promise(resolve => setTimeout(resolve, AGENT_COMMAND_READY_POLL_MS));
+    } while (Date.now() < deadline);
+
+    throw new Error(vscode.l10n.t(
+        'The "{0}" Copilot agent was not registered for the selected chat harness.',
+        agentName,
+    ));
 }
 
 /** Result of {@link prepareAndLaunchAgent}; consumed by {@link launchAgentAndRecordOutcome}. */
