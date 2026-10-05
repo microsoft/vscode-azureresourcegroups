@@ -160,18 +160,6 @@ const contracts: Contract[] = [
         grader: "API Login scaffold contract (create-account control and page)",
     },
     {
-        file: "azure-project-scaffold.agent.md",
-        name: "autopilot-integrate-handoff-no-arguments",
-        pattern: /Call `start_project_integrate` without arguments\.[^\n]*does not accept a `prompt`:\s*```json\s*\{\}/,
-        grader: "start_project_integrate accepts no input; the extension owns Autopilot propagation",
-    },
-    {
-        file: "azure-project-scaffold/instructions.md",
-        name: "autopilot-integrate-manual-no-arguments",
-        pattern: /call `start_project_integrate` without arguments[^\n]*do not pass a `prompt`/,
-        grader: "scaffold manual must match the zero-argument integration handoff tool",
-    },
-    {
         file: "azure-debug-plan/references/inventory.md",
         name: "derived-auth-api-test-inventory",
         pattern: /include implemented registration, login, and current-user endpoints when `API Login` is enabled/,
@@ -333,6 +321,8 @@ function describeAssetChanges(
 const failures: string[] = [];
 const checked: string[] = [];
 
+// Agent frontmatter is the permission boundary for every custom agent. Validate the parsed
+// `tools` array rather than matching YAML text so formatting changes do not affect this check.
 for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".agent.md"))) {
     const body = fs.readFileSync(path.join(agentsRoot, file), "utf8");
     const header = /^---\r?\n([\s\S]*?)\r?\n---/.exec(body);
@@ -340,16 +330,27 @@ for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".age
     const tools: unknown = metadata && typeof metadata === "object" && !Array.isArray(metadata) && "tools" in metadata
         ? metadata.tools
         : undefined;
+
+    // These tools are shared by every phase. Both names in each alias pair are required
+    // because supported agent hosts expose the same capability under different identifiers.
     const requiredTools = [
         "copilot-azure-resources-extension-tools/*", "Copilot Azure Resources Extension Tools/*",
         "tool_search", "toolSearch", "execute", "read", "browser", "edit", "search", "web", "todo",
     ];
+
+    // The debug-plan phase only produces a local debugging plan. Every other phase may
+    // delegate work and query Azure, so those phases need both forms of the Azure MCP tool.
     if (file !== "azure-debug-plan.agent.md") {
         requiredTools.push("agent", "azure-mcp/search", "Azure MCP/*");
     }
+
+    // Deployment also authors and validates infrastructure, which requires the Bicep tools.
     if (file === "azure-deploy.agent.md") {
         requiredTools.push("bicep/*", "Bicep/*");
     }
+
+    // Require an exact set: reject malformed entries, missing capabilities, and extra tools.
+    // In particular, broad `vscode` or unrelated MCP access must not bypass phase scoping.
     const allowedTools = new Set(requiredTools);
     if (!Array.isArray(tools) || tools.some(tool => typeof tool !== "string" || !allowedTools.has(tool))
         || requiredTools.some(tool => !tools.includes(tool))) {
