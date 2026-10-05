@@ -22,6 +22,7 @@ const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
 const OPEN_CHAT_COMMAND_ID = 'workbench.action.chat.open';
+const NEW_CHAT_COMMAND_ID = 'workbench.action.chat.newChat';
 const OPEN_CHAT_COMMAND_PREFIX = 'workbench.action.chat.open';
 const AGENT_COMMAND_READY_TIMEOUT_MS = 10_000;
 const AGENT_COMMAND_READY_POLL_MS = 100;
@@ -126,9 +127,13 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     try {
         await ensureCopilotHarnessOn();
 
+        // Custom-agent commands are registered from the focused chat widget. Open Chat before
+        // creating the fresh session so first-time launches do not wait on a widget that does not exist.
+        await vscode.commands.executeCommand(OPEN_CHAT_COMMAND_ID);
+
         // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
         // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        await vscode.commands.executeCommand(NEW_CHAT_COMMAND_ID);
 
         await waitForAgentModeRegistration(agentName);
         await vscode.commands.executeCommand(getAgentChatOpenCommandId(agentName));

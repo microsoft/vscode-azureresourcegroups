@@ -185,9 +185,9 @@ description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
   <img src="images/copilot-create-project/03-create-project-prompt.png" alt="Create with Copilot prompt view" />
 </p>
 
-Pressing **Plan** starts the **`azure-project-plan`** agent in a new Copilot chat session. Every new-project
-prompt goes through this flow, including frontend-only apps with no backend, database, or Azure services —
-those simply plan a single `frontend` service with **No datastore required**.
+Pressing **Plan** opens Copilot Chat if needed, then starts the **`azure-project-plan`** agent in a new chat
+session. Every new-project prompt goes through this flow, including frontend-only apps with no backend,
+database, or Azure services. Those simply plan a single `frontend` service with **No datastore required**.
 
 ## Stage 2 — Review requirements
 
