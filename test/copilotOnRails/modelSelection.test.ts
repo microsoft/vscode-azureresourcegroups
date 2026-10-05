@@ -7,7 +7,6 @@ import assert from 'assert';
 import {
     AvailableChatModel,
     resolveAvailableChatModel,
-    resolveCopilotHarnessModel,
 } from '../../src/utils/copilotOnRails/modelSelection';
 
 const localModel: AvailableChatModel = {
@@ -18,12 +17,7 @@ const localModel: AvailableChatModel = {
     name: 'GPT-6.1 Sol',
 };
 
-const harnessModel: AvailableChatModel = {
-    ...localModel,
-    vendor: 'agent-host-copilotcli',
-};
-
-const legacyHarnessModel: AvailableChatModel = {
+const cliModel: AvailableChatModel = {
     ...localModel,
     vendor: 'copilotcli',
 };
@@ -31,30 +25,30 @@ const legacyHarnessModel: AvailableChatModel = {
 suite('Copilot on Rails model selection', () => {
     test('resolves a qualified local model name', () => {
         assert.strictEqual(
-            resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, harnessModel]),
+            resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, cliModel]),
             localModel,
         );
     });
 
-    test('maps a local Copilot model to the Agent Host model with the same id', () => {
+    test('resolves a qualified Copilot CLI model without changing its vendor', () => {
         assert.strictEqual(
-            resolveCopilotHarnessModel('GPT-6.1 Sol (copilot)', [localModel, legacyHarnessModel, harnessModel]),
-            harnessModel,
+            resolveAvailableChatModel('GPT-6.1 Sol (copilotcli)', [localModel, cliModel]),
+            cliModel,
         );
     });
 
-    test('constructs an Agent Host selector when the extension API omits Agent Host models', () => {
-        assert.deepStrictEqual(
-            resolveCopilotHarnessModel('GPT-6.1 Sol (copilot)', [localModel, legacyHarnessModel]),
-            harnessModel,
+    test('does not fabricate a selector for an unavailable model', () => {
+        assert.strictEqual(
+            resolveAvailableChatModel('Unavailable model', [cliModel]),
+            undefined,
         );
     });
 
     test('resolves an unqualified picker name using the Copilot CLI model id', () => {
-        const cliModel = { ...legacyHarnessModel, id: 'cli-sol' };
-        assert.deepStrictEqual(
-            resolveCopilotHarnessModel('GPT-6.1 Sol', [localModel, cliModel]),
-            { ...cliModel, vendor: 'agent-host-copilotcli' },
+        const model = { ...cliModel, id: 'cli-sol' };
+        assert.strictEqual(
+            resolveAvailableChatModel('GPT-6.1 Sol', [model]),
+            model,
         );
     });
 });

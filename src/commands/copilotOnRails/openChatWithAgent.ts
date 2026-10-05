@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { resolveCopilotHarnessModel } from '../../utils/copilotOnRails/modelSelection';
+import { resolveAvailableChatModel } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { AUTOPILOT_QUERY_MARKER, isAutopilotActive } from '../../webviews/copilotOnRails/extension/autopilot';
 import { ensureCopilotHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
@@ -39,13 +39,13 @@ export function registerWorkspaceTrustTracking(): void {
 }
 
 /**
- * Resolves a user-facing model name (e.g. "Claude Opus 4.7 (copilot)") to a
+ * Resolves a user-facing model name (e.g. "Claude Opus 4.7") to a
  * modelSelector object that VS Code's chat commands expect.
  */
 async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
     try {
-        const models = await vscode.lm.selectChatModels();
-        const match = resolveCopilotHarnessModel(displayName, models);
+        const models = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
+        const match = resolveAvailableChatModel(displayName, models);
         if (match) {
             return { id: match.id, vendor: match.vendor };
         }

@@ -19,12 +19,12 @@ suite('Copilot on Rails agent chat launch', () => {
             buildAgentChatOpenOptions(
                 'azure-project-plan',
                 'Build a project',
-                { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+                { id: 'gpt-6.1-sol', vendor: 'copilotcli' },
             ),
             {
                 mode: 'azure-project-plan',
                 query: 'Build a project',
-                modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+                modelSelector: { id: 'gpt-6.1-sol', vendor: 'copilotcli' },
                 waitForRequestAcceptance: true,
             },
         );
@@ -33,11 +33,11 @@ suite('Copilot on Rails agent chat launch', () => {
     test('carries Autopilot into fresh phase chats without changing the agent or model', () => {
         for (const agentName of ['azure-project-scaffold', 'azure-project-integrate', 'azure-debug-plan', 'azure-debug-generate', 'azure-deploy']) {
             assert.deepStrictEqual(
-                buildAgentChatOpenOptions(agentName, 'Continue the project', { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' }, true),
+                buildAgentChatOpenOptions(agentName, 'Continue the project', { id: 'gpt-6.1-sol', vendor: 'copilotcli' }, true),
                 {
                     mode: agentName,
                     query: '[AUTOPILOT MODE] Continue the project',
-                    modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+                    modelSelector: { id: 'gpt-6.1-sol', vendor: 'copilotcli' },
                     waitForRequestAcceptance: true,
                 },
             );

@@ -12,7 +12,6 @@ export interface AvailableChatModel {
 }
 
 export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as const;
-const copilotHarnessVendor = 'agent-host-copilotcli';
 
 export function getSupportedModelName(...identifiers: string[]): typeof supportedModelNames[number] | undefined {
     const modelIdentifiers = identifiers.join(' ');
@@ -44,28 +43,6 @@ export function resolveAvailableChatModel(displayName: string, models: readonly 
 
     return models.find(model => model.name === displayName)
         ?? models.find(model => model.id === displayName);
-}
-
-/**
- * Maps a model selected from VS Code's local Copilot model pool to the corresponding
- * Agent Host model used by the Copilot Harness.
- */
-export function resolveCopilotHarnessModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
-    const selectedModel = models.find(model => model.vendor === 'copilotcli' && model.name === displayName)
-        ?? resolveAvailableChatModel(displayName, models);
-    if (!selectedModel) {
-        return undefined;
-    }
-
-    if (selectedModel.vendor === copilotHarnessVendor) {
-        return selectedModel;
-    }
-
-    const harnessModels = models.filter(model => model.vendor === copilotHarnessVendor);
-    return harnessModels.find(model => model.id === selectedModel.id)
-        ?? harnessModels.find(model => model.family === selectedModel.family)
-        ?? harnessModels.find(model => model.name === selectedModel.name)
-        ?? { ...selectedModel, vendor: copilotHarnessVendor };
 }
 
 /**

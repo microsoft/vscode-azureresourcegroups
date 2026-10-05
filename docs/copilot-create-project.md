@@ -145,8 +145,8 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   this list. If no supported models are available, it explains that Copilot models may still be loading
   and asks the user to wait a moment, then click **Create New Project With Copilot** again. If the problem
   persists, the message advises checking Copilot sign-in and organization model policies.
-  When the Copilot Harness starts, the extension maps that selection to an `agent-host-copilotcli`
-  selector with the same model ID. It does not pass the `copilotcli` vendor to the Agent Host session.
+  When the Copilot Harness starts, the extension passes the selected model's actual ID and `copilotcli`
+  vendor to Chat without remapping it or constructing an Agent Host fallback.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
@@ -579,6 +579,22 @@ The diagnostics object has four fields:
 
 `report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 
+Model discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
+
+| Property | Meaning |
+| --- | --- |
+| `modelPickerVendor` | The queried vendor, `copilotcli`. |
+| `modelPickerReturnedModelCount` | Number of models returned by that vendor. |
+| `modelPickerSupportedModelCount` | Number matching the supported-family filter, before duplicate display names are removed. |
+| `modelPickerFilteredOutModelCount` | Number excluded by the supported-family filter. |
+| `availableModelCount` | Number of distinct options shown in the picker, or zero when the prompt view cannot open. |
+| `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, or `ready` when options are available. |
+
+Diagnostics also include `modelPickerReturnedModels` with each returned model's ID, name, vendor,
+family, and version, and `modelPickerShownModels` with the displayed option names. These catalogs
+are workspace-cached diagnostic data only and are not sent to telemetry. The counts and discovery
+outcome are mirrored to telemetry separately through the standard CoR property handling.
+
 Privacy guarantees, by design:
 
 - Diagnostics are **workspace‑cached only** (VS Code `workspaceState`).
@@ -597,6 +613,7 @@ before submitting.
 | --- | --- | --- |
 | *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
+| The create flow says Copilot models may still be loading. | The CLI model catalog is empty or contains no supported models yet. | Wait a moment and click **Create New Project With Copilot** again. Inspect the discovery properties described above to distinguish an empty catalog from models excluded by the family filter and compare returned models with displayed options. If the problem persists, check Copilot sign-in and organization model policies. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
