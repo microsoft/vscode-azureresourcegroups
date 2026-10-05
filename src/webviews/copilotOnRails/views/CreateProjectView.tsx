@@ -143,7 +143,7 @@ export const CreateProjectView = (): JSX.Element => {
                     />
                     <div className='promptActions'>
                         <div className='actionsLeft'>
-                            {config.modelOptions.length > 0 && (
+                            {config.modelOptions.length > 0 ? (
                                 <select
                                     className='modelDropdown'
                                     value={selectedModel}
@@ -153,6 +153,10 @@ export const CreateProjectView = (): JSX.Element => {
                                         <option key={model} value={model}>{displayName(model)}</option>
                                     ))}
                                 </select>
+                            ) : (
+                                <span className='modelFallbackMessage' role='status'>
+                                    {config.modelUnavailableMessage}
+                                </span>
                             )}
                             <span className='hint'>{config.hint}</span>
                         </div>

@@ -122,6 +122,7 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         modelLabel: vscode.l10n.t('Model'),
         modelOptions,
         defaultModelLabel: vscode.l10n.t('VS Code default'),
+        modelUnavailableMessage: vscode.l10n.t('Models could not be loaded. Using VS Code default. Wait a moment, then reopen this page to try again.'),
         recentPrompts: getRecentPrompts(),
         initialPrompt,
         initialModel: selectedModel,
