@@ -12,7 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
-import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, initializeCorProjectId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType, type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -43,6 +43,7 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
 
     private async planProject(prompt: string, model?: string): Promise<void> {
         recordPrompt(prompt);
+        await initializeCorProjectId();
         await this.openChatWithQuery(prompt, model);
     }
 

@@ -191,7 +191,10 @@ function computeOutcome(tracked: TrackedDebugSession): 'succeeded' | 'failed' | 
 function reportDebugSessionEvent(eventName: string, properties: Record<string, string>, measurements?: Record<string, number>): void {
     void callWithTelemetryAndErrorHandling(eventName, async (context: IActionContext) => {
         context.telemetry.properties.isCopilotEvent = 'true';
-        context.telemetry.properties.corProjectId = getCorProjectId();
+        const projectId = getCorProjectId();
+        if (projectId) {
+            context.telemetry.properties.corProjectId = projectId;
+        }
         Object.assign(context.telemetry.properties, properties);
         if (measurements) {
             Object.assign(context.telemetry.measurements, measurements);

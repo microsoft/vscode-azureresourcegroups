@@ -582,20 +582,20 @@ The diagnostics object has four fields:
 Starting the create-project view flow resets cached CoR project state before Copilot readiness checks
 and model discovery. Pressing **Plan** records the submitted prompt without resetting that state,
 so the model-discovery diagnostics remain available alongside the planning and later-stage events.
+The telemetry-only `corProjectId` is created when the prompt is submitted, not when the create view
+loads or models are discovered. Subsequent project events reuse it.
 
 Model discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
 
 | Property | Meaning |
 | --- | --- |
 | `modelPickerVendor` | The queried vendor, `copilotcli`. |
-| `modelPickerReturnedModelCount` | Number of models returned by that vendor. |
-| `modelPickerSupportedModelCount` | Number matching the supported-family filter, before duplicate display names are removed. |
-| `modelPickerFilteredOutModelCount` | Number excluded by the supported-family filter. |
-| `availableModelCount` | Number of distinct options shown in the picker, or zero when the prompt view cannot open. |
+| `modelPickerAvailableModelCount` | Number of entries in `modelPickerAvailableModels`, before filtering. |
+| `modelPickerFilteredModelCount` | Number of entries in `modelPickerFilteredModels`, after filtering and deduplication. |
 | `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, or `ready` when options are available. |
 
-Diagnostics also include `modelPickerReturnedModels` with each returned model's ID, name, vendor,
-family, and version, and `modelPickerShownModels` with the displayed option names. These catalogs
+Diagnostics also include `modelPickerAvailableModels` with the returned model names before filtering,
+and `modelPickerFilteredModels` with the displayed model names after filtering and deduplication. These catalogs
 are workspace-cached diagnostic data only and are not sent to telemetry. The counts and discovery
 outcome are mirrored to telemetry separately through the standard CoR property handling.
 

@@ -5,8 +5,10 @@
 
 import { createTestActionContext } from '@microsoft/vscode-azext-utils';
 import assert from 'assert';
+import { ext } from '../../src/extensionVariables';
 import { ensureRequiredCopilotOnRailsContext } from '../../src/utils/copilotOnRails/CopilotOnRailsContext';
 import { AvailableChatModel, getSupportedModelOptions } from '../../src/utils/copilotOnRails/modelSelection';
+import { callWithDiagnosticsAndTelemetryHandling, getCorProjectId, initializeCorProjectId } from '../../src/utils/copilotOnRails/telemetryUtils';
 import {
     OPEN_PROJECT_FOLDER_OPTIONS,
     PROJECT_FOLDER_SELECTION_TELEMETRY_KEY,
@@ -45,6 +47,56 @@ suite('Create Project with Copilot folder selection', () => {
 });
 
 suite('Create Project with Copilot model picker diagnostics', () => {
+    test('leaves discovery unassigned and initializes the project id at prompt submission', async () => {
+        const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
+        const state = new Map<string, unknown>();
+        Object.defineProperty(ext, 'context', {
+            configurable: true,
+            value: {
+                globalState: { get: () => false },
+                workspaceState: {
+                    get: (key: string, defaultValue?: unknown) => state.get(key) ?? defaultValue,
+                    update: async (key: string, value: unknown) => { state.set(key, value); },
+                },
+            },
+        });
+        try {
+            const discoveryContext = await createTestActionContext();
+            await callWithDiagnosticsAndTelemetryHandling(
+                discoveryContext,
+                { type: 'extensionAction', name: 'copilotOnRails.createProjectWithCopilot' },
+                async () => { assert.strictEqual(getCorProjectId(), undefined); },
+            );
+            assert.strictEqual(getCorProjectId(), undefined);
+            assert.strictEqual(discoveryContext.telemetry.properties.corProjectId, undefined);
+
+            const projectId = await initializeCorProjectId();
+            assert.ok(projectId);
+            const submitContext = await createTestActionContext();
+            await callWithDiagnosticsAndTelemetryHandling(
+                submitContext,
+                { type: 'webviewAction', name: 'createProjectSubmitPrompt' },
+                async () => { assert.strictEqual(getCorProjectId(), projectId); },
+            );
+            assert.strictEqual(submitContext.telemetry.properties.corProjectId, projectId);
+            assert.strictEqual(getCorProjectId(), projectId);
+            assert.strictEqual(await initializeCorProjectId(), projectId);
+            const nextCreateContext = await createTestActionContext();
+            await callWithDiagnosticsAndTelemetryHandling(
+                nextCreateContext,
+                { type: 'extensionAction', name: 'copilotOnRails.createProjectWithCopilot' },
+                async () => { assert.strictEqual(getCorProjectId(), projectId); },
+            );
+            assert.strictEqual(nextCreateContext.telemetry.properties.corProjectId, undefined);
+        } finally {
+            if (originalContext) {
+                Object.defineProperty(ext, 'context', originalContext);
+            } else {
+                Reflect.deleteProperty(ext, 'context');
+            }
+        }
+    });
+
     const sonnet: AvailableChatModel = {
         id: 'claude-sonnet-5',
         vendor: 'copilotcli',
@@ -61,9 +113,9 @@ suite('Create Project with Copilot model picker diagnostics', () => {
     };
 
     for (const scenario of [
-        { name: 'empty catalog', models: [], supported: 0, excluded: 0, shown: 0, outcome: 'emptyCatalog' },
-        { name: 'unsupported catalog', models: [haiku], supported: 0, excluded: 1, shown: 0, outcome: 'noSupportedModels' },
-        { name: 'supported catalog with duplicate labels', models: [sonnet, haiku, sonnet], supported: 2, excluded: 1, shown: 1, outcome: 'ready' },
+        { name: 'empty catalog', models: [], filtered: 0, outcome: 'emptyCatalog' },
+        { name: 'unsupported catalog', models: [haiku], filtered: 0, outcome: 'noSupportedModels' },
+        { name: 'supported catalog with duplicate labels', models: [sonnet, haiku, sonnet], filtered: 1, outcome: 'ready' },
     ]) {
         test(`records counts and outcome for ${scenario.name} in telemetry and diagnostics`, async () => {
             const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
@@ -72,20 +124,22 @@ suite('Create Project with Copilot model picker diagnostics', () => {
             recordModelPickerDiscovery(context, scenario.models, options);
 
             const expected = {
-                modelPickerReturnedModelCount: scenario.models.length,
-                modelPickerSupportedModelCount: scenario.supported,
-                modelPickerFilteredOutModelCount: scenario.excluded,
-                availableModelCount: scenario.shown,
+                modelPickerAvailableModelCount: scenario.models.length,
+                modelPickerFilteredModelCount: scenario.filtered,
                 modelPickerOutcome: scenario.outcome,
             };
             for (const [key, value] of Object.entries(expected)) {
                 assert.strictEqual(context.telemetry.properties[key], String(value));
                 assert.strictEqual(context.diagnostics.properties[key], value);
             }
-            assert.deepStrictEqual(context.diagnostics.properties.modelPickerReturnedModels, scenario.models);
-            assert.deepStrictEqual(context.diagnostics.properties.modelPickerShownModels, options);
-            assert.strictEqual(context.telemetry.properties.modelPickerReturnedModels, undefined);
-            assert.strictEqual(context.telemetry.properties.modelPickerShownModels, undefined);
+            assert.deepStrictEqual(context.diagnostics.properties.modelPickerAvailableModels, scenario.models.map(model => model.name));
+            assert.deepStrictEqual(context.diagnostics.properties.modelPickerFilteredModels, options);
+            assert.strictEqual(context.telemetry.properties.modelPickerAvailableModels, undefined);
+            assert.strictEqual(context.telemetry.properties.modelPickerFilteredModels, undefined);
+            for (const key of ['modelPickerReturnedModelCount', 'modelPickerSupportedModelCount', 'modelPickerFilteredOutModelCount', 'availableModelCount', 'modelPickerReturnedModels', 'modelPickerShownModels']) {
+                assert.strictEqual(context.telemetry.properties[key], undefined);
+                assert.strictEqual(context.diagnostics.properties[key], undefined);
+            }
         });
     }
 });

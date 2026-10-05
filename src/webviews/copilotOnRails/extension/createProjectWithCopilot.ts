@@ -151,16 +151,13 @@ export function recordModelPickerDiscovery(
     models: readonly AvailableChatModel[],
     modelOptions: readonly string[],
 ): void {
-    const supportedModelCount = models.filter(model => getSupportedModelName(model.id, model.family, model.name) !== undefined).length;
-    setCorProp(context, 'modelPickerReturnedModelCount', models.length);
-    setCorProp(context, 'modelPickerSupportedModelCount', supportedModelCount);
-    setCorProp(context, 'modelPickerFilteredOutModelCount', models.length - supportedModelCount);
-    setCorProp(context, 'availableModelCount', modelOptions.length);
+    setCorProp(context, 'modelPickerAvailableModelCount', models.length);
+    setCorProp(context, 'modelPickerFilteredModelCount', modelOptions.length);
     setCorProp(context, 'modelPickerOutcome', models.length === 0 ? 'emptyCatalog' : modelOptions.length === 0 ? 'noSupportedModels' : 'ready');
 
     const properties = ensureRequiredCopilotOnRailsContext(context).diagnostics.properties;
-    properties.modelPickerReturnedModels = models.map(({ id, name, vendor, family, version }) => ({ id, name, vendor, family, version }));
-    properties.modelPickerShownModels = [...modelOptions];
+    properties.modelPickerAvailableModels = models.map(model => model.name);
+    properties.modelPickerFilteredModels = [...modelOptions];
 }
 
 /**
