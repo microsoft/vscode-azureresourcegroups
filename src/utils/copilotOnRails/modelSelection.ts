@@ -24,7 +24,7 @@ export function getSupportedModelName(...identifiers: string[]): typeof supporte
 
 export function getDefaultOpusModelOption(models: readonly AvailableChatModel[]): string | undefined {
     const model = models
-        .filter(model => model.vendor === 'copilot' && getSupportedModelName(model.id, model.family, model.name) === 'Opus')
+        .filter(model => getSupportedModelName(model.id, model.family, model.name) === 'Opus')
         .sort((a, b) =>
             a.version.localeCompare(b.version, undefined, { numeric: true, sensitivity: 'base' })
             || a.name.localeCompare(b.name))[0];
@@ -68,14 +68,14 @@ export function resolveCopilotHarnessModel(displayName: string, models: readonly
 }
 
 /**
- * Returns the currently available supported Copilot models as qualified names
- * that VS Code can resolve when opening chat.
+ * Filters a vendor-scoped API result to supported model families and returns
+ * qualified names that VS Code can resolve when opening chat.
  */
 export function getSupportedModelOptions(models: readonly AvailableChatModel[]): string[] {
     const matchingModels = models
         .map(model => ({ supportedName: getSupportedModelName(model.id, model.family, model.name), model }))
         .filter((entry): entry is { supportedName: typeof supportedModelNames[number]; model: AvailableChatModel } =>
-            entry.model.vendor === 'copilot' && entry.supportedName !== undefined)
+            entry.supportedName !== undefined)
         .sort((a, b) =>
             supportedModelNames.indexOf(a.supportedName) - supportedModelNames.indexOf(b.supportedName)
             || b.model.version.localeCompare(a.model.version, undefined, { numeric: true, sensitivity: 'base' })

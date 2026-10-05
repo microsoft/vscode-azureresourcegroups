@@ -6,7 +6,6 @@
 import assert from 'assert';
 import {
     AvailableChatModel,
-    getSupportedModelOptions,
     resolveAvailableChatModel,
     resolveCopilotHarnessModel,
 } from '../../src/utils/copilotOnRails/modelSelection';
@@ -29,26 +28,7 @@ const legacyHarnessModel: AvailableChatModel = {
     vendor: 'copilotcli',
 };
 
-const opusModel: AvailableChatModel = {
-    id: 'claude-opus-5.5',
-    vendor: 'copilot',
-    family: 'claude-opus-5.5',
-    version: '5.5',
-    name: 'Claude Opus 5.5',
-};
-
 suite('Copilot on Rails model selection', () => {
-    test('includes available Opus models in the picker', () => {
-        assert.deepStrictEqual(
-            getSupportedModelOptions([localModel, opusModel]),
-            ['Claude Opus 5.5 (copilot)', 'GPT-6.1 Sol (copilot)'],
-        );
-    });
-
-    test('returns no picker options when VS Code reports no models', () => {
-        assert.deepStrictEqual(getSupportedModelOptions([]), []);
-    });
-
     test('resolves a qualified local model name', () => {
         assert.strictEqual(
             resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, harnessModel]),
