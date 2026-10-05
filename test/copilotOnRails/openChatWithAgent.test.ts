@@ -29,4 +29,27 @@ suite('Copilot on Rails agent chat launch', () => {
             },
         );
     });
+
+    test('carries Autopilot into fresh phase chats without changing the agent or model', () => {
+        for (const agentName of ['azure-project-scaffold', 'azure-project-integrate', 'azure-debug-plan', 'azure-debug-generate', 'azure-deploy']) {
+            assert.deepStrictEqual(
+                buildAgentChatOpenOptions(agentName, 'Continue the project', { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' }, true),
+                {
+                    mode: agentName,
+                    query: '[AUTOPILOT MODE] Continue the project',
+                    modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+                    waitForRequestAcceptance: true,
+                },
+            );
+        }
+    });
+
+    test('does not duplicate an existing Autopilot marker', () => {
+        const query = '[AUTOPILOT MODE] I approve the plan.';
+        assert.strictEqual(buildAgentChatOpenOptions('azure-project-scaffold', query, undefined, true).query, query);
+    });
+
+    test('preserves interactive handoff prompts', () => {
+        assert.strictEqual(buildAgentChatOpenOptions('azure-project-integrate', 'Continue the project', undefined, false).query, 'Continue the project');
+    });
 });

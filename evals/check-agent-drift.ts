@@ -23,6 +23,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { parse as parseYaml } from "yaml";
 import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
 import { listEvalAssetFiles, SHARED_FOLDER } from "./src/agent-definition.ts";
 import { resolveSweepModels } from "./msbench/models.ts";
@@ -157,6 +158,18 @@ const contracts: Contract[] = [
         name: "api-login-create-account-flow",
         pattern: /login page MUST contain a visible \*\*Create account\*\* button that opens a dedicated create-account page/,
         grader: "API Login scaffold contract (create-account control and page)",
+    },
+    {
+        file: "azure-project-scaffold.agent.md",
+        name: "autopilot-integrate-handoff-no-arguments",
+        pattern: /Call `start_project_integrate` without arguments\.[^\n]*does not accept a `prompt`:\s*```json\s*\{\}/,
+        grader: "start_project_integrate accepts no input; the extension owns Autopilot propagation",
+    },
+    {
+        file: "azure-project-scaffold/instructions.md",
+        name: "autopilot-integrate-manual-no-arguments",
+        pattern: /call `start_project_integrate` without arguments[^\n]*do not pass a `prompt`/,
+        grader: "scaffold manual must match the zero-argument integration handoff tool",
     },
     {
         file: "azure-debug-plan/references/inventory.md",
@@ -319,6 +332,32 @@ function describeAssetChanges(
 
 const failures: string[] = [];
 const checked: string[] = [];
+
+for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".agent.md"))) {
+    const body = fs.readFileSync(path.join(agentsRoot, file), "utf8");
+    const header = /^---\r?\n([\s\S]*?)\r?\n---/.exec(body);
+    const metadata: unknown = header ? parseYaml(header[1]) : undefined;
+    const tools: unknown = metadata && typeof metadata === "object" && !Array.isArray(metadata) && "tools" in metadata
+        ? metadata.tools
+        : undefined;
+    const requiredTools = [
+        "copilot-azure-resources-extension-tools/*", "Copilot Azure Resources Extension Tools/*",
+        "tool_search", "toolSearch", "execute", "read", "browser", "edit", "search", "web", "todo",
+    ];
+    if (file !== "azure-debug-plan.agent.md") {
+        requiredTools.push("agent", "azure-mcp/search", "Azure MCP/*");
+    }
+    if (file === "azure-deploy.agent.md") {
+        requiredTools.push("bicep/*", "Bicep/*");
+    }
+    const allowedTools = new Set(requiredTools);
+    if (!Array.isArray(tools) || tools.some(tool => typeof tool !== "string" || !allowedTools.has(tool))
+        || requiredTools.some(tool => !tools.includes(tool))) {
+        failures.push(`scoped-agent-tools (${file}): tools must preserve the phase's required core, CoR, and Azure tools without broad vscode or unrelated MCP access`);
+    } else {
+        checked.push(`scoped-agent-tools (${file})`);
+    }
+}
 
 for (const contract of contracts) {
     const filePath = path.join(agentsRoot, contract.file);

@@ -10,6 +10,7 @@ import { projectSubmissionState } from '../../tree/project/projectSubmissionStat
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { resolveCopilotHarnessModel } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
+import { AUTOPILOT_QUERY_MARKER, isAutopilotActive } from '../../webviews/copilotOnRails/extension/autopilot';
 import { ensureCopilotHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
@@ -144,7 +145,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
         const result = await vscode.commands.executeCommand<false | undefined>(
             OPEN_CHAT_COMMAND_ID,
-            buildAgentChatOpenOptions(agentName, query, selector),
+            buildAgentChatOpenOptions(agentName, query, selector, isAutopilotActive()),
         );
         if (result === false) {
             throw new Error(vscode.l10n.t(
@@ -190,10 +191,11 @@ export function buildAgentChatOpenOptions(
     agentName: string,
     query: string,
     modelSelector?: { id?: string; vendor?: string },
+    autopilot = false,
 ): { mode: string; query: string; modelSelector?: { id?: string; vendor?: string }; waitForRequestAcceptance: true } {
     return {
         mode: agentName,
-        query,
+        query: autopilot && !query.startsWith(AUTOPILOT_QUERY_MARKER) ? `${AUTOPILOT_QUERY_MARKER} ${query}` : query,
         ...(modelSelector ? { modelSelector } : {}),
         waitForRequestAcceptance: true,
     };
