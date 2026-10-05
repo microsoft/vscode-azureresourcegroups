@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Textarea } from '@fluentui/react-components';
-import { ClipboardTaskListLtrRegular } from '@fluentui/react-icons';
+import { Button, Textarea, Tooltip } from '@fluentui/react-components';
+import { ClipboardTaskListLtrRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import * as React from 'react';
 import { useContext, useLayoutEffect, useRef, useState, type JSX } from 'react';
@@ -154,9 +154,12 @@ export const CreateProjectView = (): JSX.Element => {
                                     ))}
                                 </select>
                             ) : (
-                                <span className='modelFallbackMessage' role='status'>
-                                    {config.modelUnavailableMessage}
-                                </span>
+                                <Tooltip content={config.modelUnavailableTooltip} relationship='description'>
+                                    <span className='modelFallbackMessage' role='status' tabIndex={0}>
+                                        <WarningRegular aria-hidden='true' />
+                                        {config.modelUnavailableMessage}
+                                    </span>
+                                </Tooltip>
                             )}
                             <span className='hint'>{config.hint}</span>
                         </div>

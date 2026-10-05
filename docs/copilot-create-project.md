@@ -145,9 +145,10 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   this list. If the API returns no models, the extension retries once after one second. This retry
   budget resets only when the extension host reloads, not each time the create flow runs.
   If discovery fails or returns no supported models, the view still opens without a model picker.
-  An inline message explains that VS Code's default will be used and suggests waiting a moment
-  before reopening the page to retry discovery. No error notification appears, and the user can
-  submit the plan normally.
+  A compact warning icon and **Models did not finish loading** message replace the picker.
+  On hover or keyboard focus, a tooltip suggests waiting a moment, then closing and reopening
+  the page. It also explains that the user can still press **Plan** and change the model manually
+  in VS Code Chat if the problem persists. No error notification appears, and submission is not blocked.
   When the Copilot Harness starts, the extension passes the selected model's actual ID and `copilotcli`
   vendor to Chat without remapping it or constructing an Agent Host fallback.
   **VS Code default** is stored as `default` in the session and model telemetry. It omits the model
@@ -190,7 +191,7 @@ description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
   <img src="images/copilot-create-project/03-create-project-prompt.png" alt="Create with Copilot prompt view" />
 </p>
 
-> 📷 First capture needed: the prompt view with the inline model-unavailable message instead of the picker.
+> 📷 First capture needed: the prompt view with the compact model-unavailable warning and its tooltip instead of the picker.
 
 <p align="center">
   <img src="images/copilot-create-project/03b-create-project-no-model-picker.png" alt="Create with Copilot prompt view with an inline model-unavailable message" />

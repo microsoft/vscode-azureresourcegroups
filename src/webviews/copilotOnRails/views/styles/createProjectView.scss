@@ -150,10 +150,25 @@
                     }
 
                     .modelFallbackMessage {
-                        max-width: 360px;
-                        font-size: 0.8em;
-                        line-height: 1.4;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        font-size: 0.75em;
+                        line-height: 1.3;
                         color: var(--vscode-descriptionForeground);
+                        cursor: help;
+
+                        svg {
+                            flex-shrink: 0;
+                            width: 14px;
+                            height: 14px;
+                            color: var(--vscode-editorWarning-foreground);
+                        }
+
+                        &:focus-visible {
+                            outline: 1px solid var(--vscode-focusBorder);
+                            outline-offset: 3px;
+                        }
                     }
 
                     .hint {
