@@ -29,7 +29,7 @@ export function getDefaultOpusModelOption(models: readonly AvailableChatModel[])
             a.version.localeCompare(b.version, undefined, { numeric: true, sensitivity: 'base' })
             || a.name.localeCompare(b.name))[0];
 
-    return model ? `${model.name} (${model.vendor})` : undefined;
+    return model?.name;
 }
 
 export function resolveAvailableChatModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
@@ -51,7 +51,8 @@ export function resolveAvailableChatModel(displayName: string, models: readonly 
  * Agent Host model used by the Copilot Harness.
  */
 export function resolveCopilotHarnessModel(displayName: string, models: readonly AvailableChatModel[]): AvailableChatModel | undefined {
-    const selectedModel = resolveAvailableChatModel(displayName, models);
+    const selectedModel = models.find(model => model.vendor === 'copilotcli' && model.name === displayName)
+        ?? resolveAvailableChatModel(displayName, models);
     if (!selectedModel) {
         return undefined;
     }
@@ -69,7 +70,7 @@ export function resolveCopilotHarnessModel(displayName: string, models: readonly
 
 /**
  * Filters a vendor-scoped API result to supported model families and returns
- * qualified names that VS Code can resolve when opening chat.
+ * display names for the model picker.
  */
 export function getSupportedModelOptions(models: readonly AvailableChatModel[]): string[] {
     const matchingModels = models
@@ -81,5 +82,5 @@ export function getSupportedModelOptions(models: readonly AvailableChatModel[]):
             || b.model.version.localeCompare(a.model.version, undefined, { numeric: true, sensitivity: 'base' })
             || a.model.name.localeCompare(b.model.name));
 
-    return [...new Set(matchingModels.map(({ model }) => `${model.name} (${model.vendor})`))];
+    return [...new Set(matchingModels.map(({ model }) => model.name))];
 }

@@ -49,4 +49,12 @@ suite('Copilot on Rails model selection', () => {
             harnessModel,
         );
     });
+
+    test('resolves an unqualified picker name using the Copilot CLI model id', () => {
+        const cliModel = { ...legacyHarnessModel, id: 'cli-sol' };
+        assert.deepStrictEqual(
+            resolveCopilotHarnessModel('GPT-6.1 Sol', [localModel, cliModel]),
+            { ...cliModel, vendor: 'agent-host-copilotcli' },
+        );
+    });
 });

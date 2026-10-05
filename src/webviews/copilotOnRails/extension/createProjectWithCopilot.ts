@@ -9,7 +9,7 @@ import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openCha
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { getDefaultOpusModelOption, getSupportedModelName } from "../../../utils/copilotOnRails/modelSelection";
+import { getDefaultOpusModelOption, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -103,24 +103,24 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         })),
     );
 
-    const modelOptions = [...new Set(availableModels.map(model => `${model.name} (${model.vendor})`))];
+    const modelOptions = getSupportedModelOptions(availableModels);
     console.log(
-        `[Copilot on Rails model picker] Unfiltered API result produced ${modelOptions.length} picker option(s):`,
+        `[Copilot on Rails model picker] Supported-family filtering produced ${modelOptions.length} picker option(s):`,
         modelOptions,
     );
 
     setCorProp(context, 'availableModelCount', modelOptions.length);
     if (modelOptions.length === 0) {
-        console.warn('[Copilot on Rails model picker] The Copilot CLI vendor returned no models.');
+        console.warn('[Copilot on Rails model picker] No supported Copilot CLI models are available.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
-            'The Copilot CLI model provider returned no models. Check the Developer Tools console for model picker diagnostics.',
+            'No supported Copilot CLI models are available. Check the Developer Tools console for model picker diagnostics.',
         ));
         return;
     }
 
     const selectedModel = initialModel && modelOptions.includes(initialModel)
         ? initialModel
-        : getDefaultOpusModelOption(availableModels);
+        : getDefaultOpusModelOption(availableModels) ?? modelOptions[0];
     console.log('[Copilot on Rails model picker] Initial and selected model:', {
         requestedInitialModel: initialModel,
         selectedModel,
