@@ -178,8 +178,7 @@ the create flow automatically. **Choose Empty Folder…** also opens the selecte
 
 ## Stage 1 — Describe your project
 
-The extension first initializes a Copilot Agent Host chat session so its models are available. The
-**Create with Copilot** view then opens with the heading **"What would you like to build?"**. Type a
+The **Create with Copilot** view opens with the heading **"What would you like to build?"**. Type a
 description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
 
 <p align="center">

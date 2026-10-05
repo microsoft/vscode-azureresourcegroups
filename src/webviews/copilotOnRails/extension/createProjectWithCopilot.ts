@@ -11,7 +11,6 @@ import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/proj
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { getDefaultOpusModelOption, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
-import { ensureCopilotHarnessOn } from "./harnessSettings";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -19,7 +18,6 @@ import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
-const OPEN_COPILOT_HARNESS_SESSION_COMMAND_ID = 'workbench.action.chat.openNewSessionSidebar.agent-host-copilotcli';
 export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
 export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
 export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
@@ -81,13 +79,8 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    await ensureCopilotHarnessOn();
-    console.log('[Copilot on Rails model picker] Opening a Copilot Agent Host session to register its model provider.');
-    await vscode.commands.executeCommand(OPEN_COPILOT_HARNESS_SESSION_COMMAND_ID);
-    console.log('[Copilot on Rails model picker] Copilot Agent Host session opened.');
-
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "agent-host-copilotcli".');
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilot".');
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
     const allModels = await vscode.lm.selectChatModels();
     const modelCountsByVendor = allModels.reduce<Record<string, number>>((counts, model) => {
         counts[model.vendor] = (counts[model.vendor] ?? 0) + 1;
@@ -120,7 +113,7 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
     if (modelOptions.length === 0) {
         console.warn('[Copilot on Rails model picker] No models remained after supported-family filtering.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
-            'No supported Copilot Agent Host models are available. Check that you are signed in to GitHub Copilot and that your plan and organization policies allow a supported model, then try again.',
+            'No supported GitHub Copilot models are available. Check that you are signed in to GitHub Copilot and that your plan and organization policies allow a supported model, then try again.',
         ));
         return;
     }
