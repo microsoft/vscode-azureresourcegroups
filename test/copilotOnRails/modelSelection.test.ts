@@ -6,6 +6,8 @@
 import assert from 'assert';
 import {
     AvailableChatModel,
+    DEFAULT_CHAT_MODEL,
+    getModelPickerOptions,
     resolveAvailableChatModel,
 } from '../../src/utils/copilotOnRails/modelSelection';
 
@@ -23,6 +25,23 @@ const cliModel: AvailableChatModel = {
 };
 
 suite('Copilot on Rails model selection', () => {
+    test('provides no picker options when the catalog is empty', () => {
+        assert.deepStrictEqual(getModelPickerOptions([]), []);
+    });
+
+    test('provides no picker options when no models pass the filter', () => {
+        const model = { ...cliModel, id: 'haiku', name: 'Claude Haiku 4.5', family: 'haiku' };
+        assert.deepStrictEqual(getModelPickerOptions([model]), []);
+    });
+
+    test('keeps the normal picker unchanged when supported models are available', () => {
+        assert.deepStrictEqual(getModelPickerOptions([cliModel]), [cliModel.name]);
+    });
+
+    test('preserves the default selection when reopening after models become available', () => {
+        assert.deepStrictEqual(getModelPickerOptions([cliModel], DEFAULT_CHAT_MODEL), [DEFAULT_CHAT_MODEL, cliModel.name]);
+    });
+
     test('resolves a qualified local model name', () => {
         assert.strictEqual(
             resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, cliModel]),

@@ -12,6 +12,12 @@ export interface AvailableChatModel {
 }
 
 export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as const;
+export const DEFAULT_CHAT_MODEL = 'default';
+
+export function getModelPickerOptions(models: readonly AvailableChatModel[], initialModel?: string): string[] {
+    const options = getSupportedModelOptions(models);
+    return options.length > 0 && initialModel === DEFAULT_CHAT_MODEL ? [DEFAULT_CHAT_MODEL, ...options] : options;
+}
 
 export function getSupportedModelName(...identifiers: string[]): typeof supportedModelNames[number] | undefined {
     const modelIdentifiers = identifiers.join(' ');

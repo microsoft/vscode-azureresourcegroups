@@ -15,6 +15,7 @@ import {
     ProjectFolderSelection,
     recordProjectFolderSelection,
     recordModelPickerDiscovery,
+    discoverModelPickerModels,
     validateProjectSubfolderName,
 } from '../../src/webviews/copilotOnRails/extension/createProjectWithCopilot';
 
@@ -47,6 +48,55 @@ suite('Create Project with Copilot folder selection', () => {
 });
 
 suite('Create Project with Copilot model picker diagnostics', () => {
+    test('retries an empty catalog once per extension-host session, not on later runs', async () => {
+        const firstContext = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+        let firstQueries = 0;
+        const models = await discoverModelPickerModels(firstContext, async () => {
+            firstQueries++;
+            return firstQueries === 1 ? [] : [sonnet];
+        });
+        assert.deepStrictEqual(models, [sonnet]);
+        assert.strictEqual(firstQueries, 2);
+        assert.strictEqual(firstContext.diagnostics.properties.modelPickerRetried, true);
+        assert.strictEqual(firstContext.telemetry.properties.modelPickerRetried, 'true');
+
+        const nextContext = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+        let nextQueries = 0;
+        const nextModels = await discoverModelPickerModels(nextContext, async () => {
+            nextQueries++;
+            return [];
+        });
+        assert.deepStrictEqual(nextModels, []);
+        assert.strictEqual(nextQueries, 1);
+        assert.strictEqual(nextContext.diagnostics.properties.modelPickerRetried, false);
+        assert.strictEqual(nextContext.diagnostics.properties.modelPickerOutcome, 'emptyCatalog');
+    });
+
+    test('records discovery failures without blocking the default-model fallback', async () => {
+        const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+        const models = await discoverModelPickerModels(context, async () => { throw new Error('Model provider unavailable'); });
+
+        assert.deepStrictEqual(models, []);
+        assert.strictEqual(context.diagnostics.properties.modelPickerOutcome, 'queryFailed');
+        assert.strictEqual(context.telemetry.properties.modelPickerOutcome, 'queryFailed');
+        assert.strictEqual(context.diagnostics.properties.modelPickerError, 'Model provider unavailable');
+        assert.strictEqual(context.telemetry.properties.modelPickerError, 'Model provider unavailable');
+        assert.strictEqual(context.diagnostics.properties.modelPickerAvailableModelCount, 0);
+        assert.strictEqual(context.diagnostics.properties.modelPickerFilteredModelCount, 0);
+        assert.deepStrictEqual(context.diagnostics.properties.modelPickerAvailableModels, []);
+        assert.deepStrictEqual(context.diagnostics.properties.modelPickerFilteredModels, []);
+    });
+
+    test('records available models when discovery succeeds', async () => {
+        const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+        const models = await discoverModelPickerModels(context, async () => [sonnet]);
+
+        assert.deepStrictEqual(models, [sonnet]);
+        assert.strictEqual(context.diagnostics.properties.modelPickerOutcome, 'ready');
+        assert.strictEqual(context.diagnostics.properties.modelPickerVendor, 'copilotcli');
+        assert.strictEqual(context.diagnostics.properties.modelPickerError, undefined);
+    });
+
     test('leaves discovery unassigned and initializes the project id at prompt submission', async () => {
         const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
         const state = new Map<string, unknown>();

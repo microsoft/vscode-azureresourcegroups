@@ -142,11 +142,16 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   GPT Sol, and GPT Terra models returned by the `copilotcli` language-model vendor, using their display
   names without a vendor suffix. The lowest-version available Opus model is selected by default,
   or the first supported option when no Opus model is available. The extension activates GitHub Copilot Chat before loading
-  this list. If no supported models are available, it explains that Copilot models may still be loading
-  and asks the user to wait a moment, then click **Create New Project With Copilot** again. If the problem
-  persists, the message advises checking Copilot sign-in and organization model policies.
+  this list. If the API returns no models, the extension retries once after one second. This retry
+  budget resets only when the extension host reloads, not each time the create flow runs.
+  If discovery fails or returns no supported models, the view still opens without a model picker
+  or warning. The user can submit the plan normally using VS Code's default model.
   When the Copilot Harness starts, the extension passes the selected model's actual ID and `copilotcli`
   vendor to Chat without remapping it or constructing an Agent Host fallback.
+  **VS Code default** is stored as `default` in the session and model telemetry. It omits the model
+  selector on every subsequent launch or chat invocation, leaving model choice to VS Code.
+  This selection is preserved if the create view reopens after a reload, even when models have
+  become available in the meantime.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
@@ -181,6 +186,12 @@ description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
 
 <p align="center">
   <img src="images/copilot-create-project/03-create-project-prompt.png" alt="Create with Copilot prompt view" />
+</p>
+
+> 📷 First capture needed: the prompt view without a model picker when model discovery is unavailable.
+
+<p align="center">
+  <img src="images/copilot-create-project/03b-create-project-no-model-picker.png" alt="Create with Copilot prompt view without a model picker" />
 </p>
 
 Pressing **Plan** opens Copilot Chat if needed, then starts the **`azure-project-plan`** agent in a new chat
@@ -592,12 +603,17 @@ Model discovery adds these properties to the `createProjectWithCopilot` event an
 | `modelPickerVendor` | The queried vendor, `copilotcli`. |
 | `modelPickerAvailableModelCount` | Number of entries in `modelPickerAvailableModels`, before filtering. |
 | `modelPickerFilteredModelCount` | Number of entries in `modelPickerFilteredModels`, after filtering and deduplication. |
-| `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, or `ready` when options are available. |
+| `modelPickerRetried` | Whether this invocation used the one-per-extension-host-session empty-catalog retry. |
+| `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, `queryFailed` when the API throws, or `ready` when supported models are available. |
 
 Diagnostics also include `modelPickerAvailableModels` with the returned model names before filtering,
 and `modelPickerFilteredModels` with the displayed model names after filtering and deduplication. These catalogs
 are workspace-cached diagnostic data only and are not sent to telemetry. The counts and discovery
 outcome are mirrored to telemetry separately through the standard CoR property handling.
+The `default` sentinel is not counted as an available or filtered model.
+Discovery failures record a masked `modelPickerError`. Submitting with the fallback records
+`copilotModel: default`, `modelSelectedInView: false`, and `chatModelSelectionSource: default`;
+chat options omit `modelSelector`.
 
 Privacy guarantees, by design:
 
@@ -617,7 +633,7 @@ before submitting.
 | --- | --- | --- |
 | *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
-| The create flow says Copilot models may still be loading. | The CLI model catalog is empty or contains no supported models yet. | Wait a moment and click **Create New Project With Copilot** again. Inspect the discovery properties described above to distinguish an empty catalog from models excluded by the family filter and compare returned models with displayed options. If the problem persists, check Copilot sign-in and organization model policies. |
+| The create view has no model picker. | The CLI model catalog is empty, has no supported models, or discovery failed. | Submit the plan normally; VS Code chooses the model without an extension override. Inspect the discovery properties described above to distinguish the cases, including `modelPickerError` when the API failed and `modelPickerRetried` for the one-time retry. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |

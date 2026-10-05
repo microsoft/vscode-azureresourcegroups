@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { resolveAvailableChatModel } from '../../utils/copilotOnRails/modelSelection';
+import { DEFAULT_CHAT_MODEL, resolveAvailableChatModel } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { AUTOPILOT_QUERY_MARKER, isAutopilotActive } from '../../webviews/copilotOnRails/extension/autopilot';
 import { ensureCopilotHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
@@ -42,7 +42,10 @@ export function registerWorkspaceTrustTracking(): void {
  * Resolves a user-facing model name (e.g. "Claude Opus 4.7") to a
  * modelSelector object that VS Code's chat commands expect.
  */
-async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+export async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+    if (displayName === DEFAULT_CHAT_MODEL) {
+        return undefined;
+    }
     try {
         const models = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
         const match = resolveAvailableChatModel(displayName, models);
@@ -143,7 +146,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         );
 
         const resolvedModel = model ?? getSessionModel();
-        setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
+        setCorProp(context, 'chatModelSelectionSource', resolvedModel === DEFAULT_CHAT_MODEL ? 'default' : model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
 
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
@@ -343,7 +346,7 @@ export async function buildChatOpenOptions(context: CopilotOnRailsContext, optio
     }
 
     const model = getSessionModel();
-    setCorProp(context, 'chatModelSelectionSource', model ? 'previouslySelected' : 'default');
+    setCorProp(context, 'chatModelSelectionSource', model && model !== DEFAULT_CHAT_MODEL ? 'previouslySelected' : 'default');
     if (model) {
         const selector = await resolveModelSelector(model);
         setCorProp(context, 'chatModelResolved', !!selector);
