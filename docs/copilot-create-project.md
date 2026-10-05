@@ -139,14 +139,14 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   custom mode without sending a prompt, then resolves the agent by name when submitting. This avoids
   stale Agent Host plugin revisions and prevents a silent fallback to **Agent**.
 - A Copilot plan with access to at least one supported model. The model picker lists Opus, Sonnet,
-  GPT Sol, and GPT Terra models returned by the `agent-host-copilotcli` language-model vendor, using their display
+  GPT Sol, and GPT Terra models returned by the `copilotcli` language-model vendor, using their display
   names without a vendor suffix. The lowest-version available Opus model is selected by default,
   or the first supported option when no Opus model is available. The extension activates GitHub Copilot Chat before loading
   this list. If no supported models are available, it explains that Copilot models may still be loading
   and asks the user to wait a moment, then click **Create New Project With Copilot** again. If the problem
   persists, the message advises checking Copilot sign-in and organization model policies.
-  When the Copilot Harness starts, the extension passes the selected model's `agent-host-copilotcli`
-  vendor and model ID to the Agent Host session.
+  When the Copilot Harness starts, the extension maps that selection to an `agent-host-copilotcli`
+  selector with the same model ID. It does not pass the `copilotcli` vendor to the Agent Host session.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
