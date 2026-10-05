@@ -15,15 +15,15 @@ const HARNESS_SETTINGS = [
     { prefix: 'chat.editor', key: 'preferCopilotHarness' },
     { prefix: 'chat', key: 'defaultToCopilotHarness' },
 ] as const;
+const CLI_AUTO_MODEL_SETTING = { prefix: 'github.copilot.chat.cli', key: 'autoModel.enabled' } as const;
 
 export const COPILOT_HARNESS_SETTING_IDS = HARNESS_SETTINGS.map(({ prefix, key }) => `${prefix}.${key}`);
 
 /**
- * Ensures Copilot on Rails uses the Copilot Harness by turning its two experimental settings on
- * at Workspace scope. Like the raised chat request
+ * Enables the Copilot Harness and configures explicit Auto selection at Workspace scope. Like the raised chat request
  * budget, the workspace override is cheap and disposable, so it is intentionally left in place.
  */
-export async function ensureCopilotHarnessOn(): Promise<void> {
+export async function ensureCopilotHarnessOn(useAutoModel = false): Promise<void> {
     const folder = workspace.workspaceFolders?.[0];
     if (!folder) {
         return;
@@ -34,5 +34,19 @@ export async function ensureCopilotHarnessOn(): Promise<void> {
         } catch {
             // Best effort: the setting may be unknown on older VS Code versions.
         }
+    }
+    await setCopilotCliAutoModelEnabled(useAutoModel);
+}
+
+export async function setCopilotCliAutoModelEnabled(enabled: boolean): Promise<void> {
+    const folder = workspace.workspaceFolders?.[0];
+    if (!folder) {
+        return;
+    }
+    const { prefix, key } = CLI_AUTO_MODEL_SETTING;
+    if (workspace.getConfiguration(prefix, folder.uri).inspect(key)) {
+        await settingUtils.updateWorkspaceSetting(key, enabled, folder.uri.fsPath, prefix, ConfigurationTarget.Workspace);
+    } else {
+        console.log('[Copilot on Rails] CLI Auto model setting is unavailable in this version; skipping its workspace override.');
     }
 }
