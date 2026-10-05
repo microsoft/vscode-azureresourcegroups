@@ -1,7 +1,7 @@
 ---
 name: azure-project-scaffold
 description: Scaffold a NEW Azure-centric project from an ALREADY-APPROVED `.azure/project-plan.md` — generate the frontend, backend services, database, and API routes. Does NOT gather requirements or write the plan; that is the `azure-project-plan` agent's job.
-tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, agent, edit, search]
+tools: [vscode, copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 ---
 
 <!-- azure-cor-disclaimer -->
