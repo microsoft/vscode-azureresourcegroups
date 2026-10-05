@@ -79,8 +79,8 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilotcli".');
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "agent-host-copilotcli".');
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
     const allModels = await vscode.lm.selectChatModels();
     const modelCountsByVendor = allModels.reduce<Record<string, number>>((counts, model) => {
         counts[model.vendor] = (counts[model.vendor] ?? 0) + 1;
@@ -111,7 +111,7 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
 
     setCorProp(context, 'availableModelCount', modelOptions.length);
     if (modelOptions.length === 0) {
-        console.warn('[Copilot on Rails model picker] No supported Copilot CLI models are available.');
+        console.warn('[Copilot on Rails model picker] No supported Copilot Agent Host models are available.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
             'Copilot models may still be loading. Wait a moment, then click Create New Project With Copilot again. If the problem persists, check your Copilot sign-in and organization model policies.',
         ));
