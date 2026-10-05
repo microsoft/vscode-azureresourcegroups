@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openChatWithAgent";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
@@ -21,7 +22,7 @@ export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
 export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
 export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
 
-export async function createProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
+export async function createProjectWithCopilot(context: CopilotOnRailsContext, initialPrompt?: string, initialModel?: string): Promise<void> {
     if (!(await ensureFreshWorkspace(context))) {
         return;
     }
@@ -58,20 +59,36 @@ export async function createProjectWithCopilot(context: CopilotOnRailsContext): 
     }
 
     // Nothing detected => start from scratch.
-    await openCreateProjectView();
+    await openCreateProjectView(context, initialPrompt, initialModel);
 }
 
 /** Re-opens the create view pre-filled after a reload-to-discover-agents; no-ops when nothing was stashed. */
 export async function resumeCreateProjectViewAfterReload(): Promise<void> {
     const resume = await consumeReloadResumePrompt();
     if (resume) {
-        await openCreateProjectView(resume.prompt, resume.model);
+        await vscode.commands.executeCommand(
+            copilotOnRailsCommandIds.createProjectWithCopilot,
+            resume.prompt,
+            resume.model,
+        );
     }
 }
 
-async function openCreateProjectView(initialPrompt?: string, initialModel?: string): Promise<void> {
+async function openCreateProjectView(context: CopilotOnRailsContext, initialPrompt?: string, initialModel?: string): Promise<void> {
+    if (!(await ensureCopilotChatReady(context))) {
+        return;
+    }
+
     const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
     const modelOptions = getSupportedModelOptions(availableModels);
+    setCorProp(context, 'availableModelCount', modelOptions.length);
+    if (modelOptions.length === 0) {
+        void vscode.window.showErrorMessage(vscode.l10n.t(
+            'No supported GitHub Copilot models are available. Check that you are signed in to GitHub Copilot and that your plan and organization policies allow a supported model, then try again.',
+        ));
+        return;
+    }
+
     const selectedModel = initialModel && modelOptions.includes(initialModel)
         ? initialModel
         : getDefaultOpusModelOption(availableModels);

@@ -141,6 +141,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 - A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
   GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
   versions appear without an extension update. The lowest-version available Opus model is selected by default.
+  The extension activates GitHub Copilot Chat before loading this list. If VS Code reports no supported
+  models, the extension asks the user to check their Copilot sign-in, plan, and organization model policies
+  instead of opening the prompt page with an empty picker.
   When the Copilot Harness is active, the extension maps that selection only to the matching
   `agent-host-copilotcli` model. It does not pass Local or legacy `copilotcli` identifiers, which
   VS Code rejects as foreign to the Agent Host session. The extension constructs the Agent Host
