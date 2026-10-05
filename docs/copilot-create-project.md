@@ -142,8 +142,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   GPT Sol, and GPT Terra models returned by the `copilotcli` language-model vendor, using their display
   names without a vendor suffix. The lowest-version available Opus model is selected by default,
   or the first supported option when no Opus model is available. The extension activates GitHub Copilot Chat before loading
-  this list and reports an error instead of opening the prompt page with an empty picker when the vendor
-  returns no supported models.
+  this list. If no supported models are available, it explains that Copilot models may still be loading
+  and asks the user to wait a moment, then click **Create New Project With Copilot** again. If the problem
+  persists, the message advises checking Copilot sign-in and organization model policies.
   When the Copilot Harness starts, the extension maps that selection to an `agent-host-copilotcli`
   selector with the same model ID. It does not pass the `copilotcli` vendor to the Agent Host session.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
