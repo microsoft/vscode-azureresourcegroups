@@ -23,7 +23,6 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
 import { getSupportedModelName, supportedModelNames } from "../src/utils/copilotOnRails/modelSelection.ts";
 import { listEvalAssetFiles, SHARED_FOLDER } from "./src/agent-definition.ts";
 import { resolveSweepModels } from "./msbench/models.ts";
@@ -321,15 +320,14 @@ function describeAssetChanges(
 const failures: string[] = [];
 const checked: string[] = [];
 
-// Agent frontmatter is the permission boundary for every custom agent. Validate the parsed
-// `tools` array rather than matching YAML text so formatting changes do not affect this check.
+// Agent frontmatter is the permission boundary for every custom agent. Manifests use a
+// single-line YAML flow sequence for `tools`, so read its entries without adding a runtime
+// dependency to the extension's root package.
 for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".agent.md"))) {
     const body = fs.readFileSync(path.join(agentsRoot, file), "utf8");
     const header = /^---\r?\n([\s\S]*?)\r?\n---/.exec(body);
-    const metadata: unknown = header ? parseYaml(header[1]) : undefined;
-    const tools: unknown = metadata && typeof metadata === "object" && !Array.isArray(metadata) && "tools" in metadata
-        ? metadata.tools
-        : undefined;
+    const toolsLine = header ? /^tools:\s*\[([^\r\n]*)\]\s*$/m.exec(header[1]) : undefined;
+    const tools = toolsLine?.[1].split(",").map(tool => tool.trim()).filter(Boolean);
 
     // These tools are shared by every phase. Both names in each alias pair are required
     // because supported agent hosts expose the same capability under different identifiers.
@@ -352,7 +350,7 @@ for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".age
     // Require an exact set: reject malformed entries, missing capabilities, and extra tools.
     // In particular, broad `vscode` or unrelated MCP access must not bypass phase scoping.
     const allowedTools = new Set(requiredTools);
-    if (!Array.isArray(tools) || tools.some(tool => typeof tool !== "string" || !allowedTools.has(tool))
+    if (!tools || tools.some(tool => !allowedTools.has(tool))
         || requiredTools.some(tool => !tools.includes(tool))) {
         failures.push(`scoped-agent-tools (${file}): tools must preserve the phase's required core, CoR, and Azure tools without broad vscode or unrelated MCP access`);
     } else {

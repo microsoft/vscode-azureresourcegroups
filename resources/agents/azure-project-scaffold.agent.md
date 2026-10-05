@@ -1,7 +1,7 @@
 ---
 name: azure-project-scaffold
 description: Scaffold a NEW Azure-centric project from an ALREADY-APPROVED `.azure/project-plan.md` — generate the frontend, backend services, database, and API routes. Does NOT gather requirements or write the plan; that is the `azure-project-plan` agent's job.
-tools: [vscode, copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, agent, browser, edit, search, web, azure-mcp/search, Azure MCP/*, todo]
 ---
 
 <!-- azure-cor-disclaimer -->
@@ -87,10 +87,10 @@ Keep concise + factual: paths + commands checklist, not prose.
 
 1. **Still run Step A** — first read `.azure/project-plan.md`; autopilot never skips approved-plan read.
 2. **No approval gate** — upstream already produced + approved plan; scaffold immediately. This agent has no plan preview or approval step in any mode.
-3. **Still run Step C** — after scaffolding, write `.azure/integration-plan.md` + hand off unattended. **Skip frontend preview approval gate** (`open_frontend_preview_view`); autopilot auto-approves UI, so hand off directly. Keep integrate agent in autopilot by calling `start_project_integrate` with marker:
+3. **Still run Step C** - after scaffolding, write `.azure/integration-plan.md` + hand off unattended. **Skip frontend preview approval gate** (`open_frontend_preview_view`); autopilot auto-approves UI, so hand off directly. Call `start_project_integrate` without arguments. The extension carries the active Autopilot mode and query marker into the new chat:
 
 ```json
-{ "prompt": "[AUTOPILOT MODE] The project has been scaffolded. Read `.azure/integration-plan.md`, then create the SQL/PostgreSQL migrations (no seed data), smoke-test the backend, wire the frontend to live data, and verify the app end-to-end." }
+{}
 ```
 
 All scaffold quality work (frontend preview verification, backend services, `.azure/.preview-temp/` cleanup at Step 11) remains. Autopilot suppresses **gates and questions**, never quality.
