@@ -9,7 +9,7 @@ import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openCha
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { getDefaultOpusModelOption, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -79,10 +79,30 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilot".');
     const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+    console.log(
+        `[Copilot on Rails model picker] selectChatModels returned ${availableModels.length} model(s):`,
+        availableModels.map(model => ({
+            id: model.id,
+            vendor: model.vendor,
+            family: model.family,
+            version: model.version,
+            name: model.name,
+            maxInputTokens: model.maxInputTokens,
+            supportedName: getSupportedModelName(model.id, model.family, model.name),
+        })),
+    );
+
     const modelOptions = getSupportedModelOptions(availableModels);
+    console.log(
+        `[Copilot on Rails model picker] Supported-family filtering produced ${modelOptions.length} picker option(s):`,
+        modelOptions,
+    );
+
     setCorProp(context, 'availableModelCount', modelOptions.length);
     if (modelOptions.length === 0) {
+        console.warn('[Copilot on Rails model picker] No models remained after supported-family filtering.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
             'No supported GitHub Copilot models are available. Check that you are signed in to GitHub Copilot and that your plan and organization policies allow a supported model, then try again.',
         ));
@@ -92,6 +112,11 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
     const selectedModel = initialModel && modelOptions.includes(initialModel)
         ? initialModel
         : getDefaultOpusModelOption(availableModels);
+    console.log('[Copilot on Rails model picker] Initial and selected model:', {
+        requestedInitialModel: initialModel,
+        selectedModel,
+    });
+
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
