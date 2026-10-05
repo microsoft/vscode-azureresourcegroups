@@ -79,8 +79,8 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilot".');
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "agent-host-copilotcli".');
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
     console.log(
         `[Copilot on Rails model picker] selectChatModels returned ${availableModels.length} model(s):`,
         availableModels.map(model => ({
