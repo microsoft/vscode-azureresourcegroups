@@ -139,13 +139,12 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   custom mode without sending a prompt, then resolves the agent by name when submitting. This avoids
   stale Agent Host plugin revisions and prevents a silent fallback to **Agent**.
 - A Copilot plan with access to at least one model. The model picker lists every model returned by the
-  `agent-host-copilotcli` language-model vendor without applying a family allowlist. The lowest-version
+  `copilotcli` language-model vendor without applying a family allowlist. The lowest-version
   available Opus model is selected by default. The extension activates GitHub Copilot Chat before loading
   this list and reports an error instead of opening the prompt page with an empty picker when the vendor
   returns no models.
-  The selected `agent-host-copilotcli` model ID and vendor are passed to the Copilot Harness when the
-  project agent starts. The extension does not pass Local or legacy `copilotcli` identifiers, which
-  VS Code rejects as foreign to the Agent Host session.
+  When the Copilot Harness starts, the extension maps that selection to an `agent-host-copilotcli`
+  selector with the same model ID. It does not pass the `copilotcli` vendor to the Agent Host session.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without

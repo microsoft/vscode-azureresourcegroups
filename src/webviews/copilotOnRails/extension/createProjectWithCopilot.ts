@@ -79,8 +79,8 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "agent-host-copilotcli".');
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilotcli".');
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
     const allModels = await vscode.lm.selectChatModels();
     const modelCountsByVendor = allModels.reduce<Record<string, number>>((counts, model) => {
         counts[model.vendor] = (counts[model.vendor] ?? 0) + 1;
@@ -111,9 +111,9 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
 
     setCorProp(context, 'availableModelCount', modelOptions.length);
     if (modelOptions.length === 0) {
-        console.warn('[Copilot on Rails model picker] The Agent Host vendor returned no models.');
+        console.warn('[Copilot on Rails model picker] The Copilot CLI vendor returned no models.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
-            'The Copilot Agent Host returned no models. Check the Developer Tools console for model picker diagnostics.',
+            'The Copilot CLI model provider returned no models. Check the Developer Tools console for model picker diagnostics.',
         ));
         return;
     }
