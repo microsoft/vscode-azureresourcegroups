@@ -9,7 +9,7 @@ import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openCha
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { getDefaultOpusModelOption, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { getDefaultOpusModelOption, getSupportedModelName } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -79,8 +79,8 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilot".');
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "agent-host-copilotcli".');
+    const availableModels = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
     const allModels = await vscode.lm.selectChatModels();
     const modelCountsByVendor = allModels.reduce<Record<string, number>>((counts, model) => {
         counts[model.vendor] = (counts[model.vendor] ?? 0) + 1;
@@ -103,17 +103,17 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         })),
     );
 
-    const modelOptions = getSupportedModelOptions(availableModels);
+    const modelOptions = [...new Set(availableModels.map(model => `${model.name} (${model.vendor})`))];
     console.log(
-        `[Copilot on Rails model picker] Supported-family filtering produced ${modelOptions.length} picker option(s):`,
+        `[Copilot on Rails model picker] Unfiltered API result produced ${modelOptions.length} picker option(s):`,
         modelOptions,
     );
 
     setCorProp(context, 'availableModelCount', modelOptions.length);
     if (modelOptions.length === 0) {
-        console.warn('[Copilot on Rails model picker] No models remained after supported-family filtering.');
+        console.warn('[Copilot on Rails model picker] The Agent Host vendor returned no models.');
         void vscode.window.showErrorMessage(vscode.l10n.t(
-            'No supported GitHub Copilot models are available. Check that you are signed in to GitHub Copilot and that your plan and organization policies allow a supported model, then try again.',
+            'The Copilot Agent Host returned no models. Check the Developer Tools console for model picker diagnostics.',
         ));
         return;
     }

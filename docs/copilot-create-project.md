@@ -138,17 +138,14 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
   and waits for custom-agent registration to settle. After creating a fresh phase chat, it primes the
   custom mode without sending a prompt, then resolves the agent by name when submitting. This avoids
   stale Agent Host plugin revisions and prevents a silent fallback to **Agent**.
-- A Copilot plan with access to at least one supported model. The model picker lists the Opus, Sonnet,
-  GPT Sol, and GPT Terra models currently available through GitHub Copilot, so newly available
-  versions appear without an extension update. The lowest-version available Opus model is selected by default.
-  The extension activates GitHub Copilot Chat before loading this list. If VS Code reports no supported
-  models, the extension asks the user to check their Copilot sign-in, plan, and organization model policies
-  instead of opening the prompt page with an empty picker.
-  When the Copilot Harness is active, the extension maps that selection only to the matching
-  `agent-host-copilotcli` model. It does not pass Local or legacy `copilotcli` identifiers, which
-  VS Code rejects as foreign to the Agent Host session. The extension constructs the Agent Host
-  selector from the selected Local model ID because the language model extension API does not list
-  the Agent Host copies that the chat command can resolve.
+- A Copilot plan with access to at least one model. The model picker lists every model returned by the
+  `agent-host-copilotcli` language-model vendor without applying a family allowlist. The lowest-version
+  available Opus model is selected by default. The extension activates GitHub Copilot Chat before loading
+  this list and reports an error instead of opening the prompt page with an empty picker when the vendor
+  returns no models.
+  The selected `agent-host-copilotcli` model ID and vendor are passed to the Copilot Harness when the
+  project agent starts. The extension does not pass Local or legacy `copilotcli` identifiers, which
+  VS Code rejects as foreign to the Agent Host session.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
