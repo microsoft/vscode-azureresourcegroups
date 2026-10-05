@@ -1,7 +1,7 @@
 ---
 name: azure-debug-generate
 description: Generate artifacts for an approved VS Code debugging plan. Responsible for generating docker-compose, VS Code launch/tasks, and emulator orchestration for streamlined project debugging.
-tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, agent, browser, edit, search, web, azure-mcp/search, Azure MCP/*, todo]
+tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, edit, search]
 target: vscode
 ---
 

@@ -320,6 +320,30 @@ function describeAssetChanges(
 const failures: string[] = [];
 const checked: string[] = [];
 
+// Every phase reads and updates workspace files, runs validation commands, invokes CoR
+// hand-off tools, and may need to discover a hand-off tool before calling it. Each alias
+// pair names the same capability in Local and Agent Host, so it adds compatibility rather
+// than granting another class of access.
+const coreAgentTools = [
+    "copilot-azure-resources-extension-tools/*", "Copilot Azure Resources Extension Tools/*",
+    "tool_search", "toolSearch", "execute", "read", "edit", "search",
+];
+
+const phaseAgentTools: Record<string, string[]> = {
+    // Plan fans out one preview-rendering sub-agent per page.
+    "azure-project-plan.agent.md": ["agent"],
+    // Scaffold delegates frontend and backend generation in parallel.
+    "azure-project-scaffold.agent.md": ["agent"],
+    // Integrate verifies the live frontend against the running backend.
+    "azure-project-integrate.agent.md": ["browser"],
+    // Debug planning and generation operate only on local workspace files and commands.
+    "azure-debug-plan.agent.md": [],
+    "azure-debug-generate.agent.md": [],
+    // Deploy delegates pipeline phases and is the only agent that queries Azure or
+    // authors and validates infrastructure through the Azure MCP and Bicep servers.
+    "azure-deploy.agent.md": ["agent", "azure-mcp/search", "Azure MCP/*", "bicep/*", "Bicep/*"],
+};
+
 // Agent frontmatter is the permission boundary for every custom agent. Manifests use a
 // single-line YAML flow sequence for `tools`, so read its entries without adding a runtime
 // dependency to the extension's root package.
@@ -329,30 +353,20 @@ for (const file of fs.readdirSync(agentsRoot).filter(name => name.endsWith(".age
     const toolsLine = header ? /^tools:\s*\[([^\r\n]*)\]\s*$/m.exec(header[1]) : undefined;
     const tools = toolsLine?.[1].split(",").map(tool => tool.trim()).filter(Boolean);
 
-    // These tools are shared by every phase. Both names in each alias pair are required
-    // because supported agent hosts expose the same capability under different identifiers.
-    const requiredTools = [
-        "copilot-azure-resources-extension-tools/*", "Copilot Azure Resources Extension Tools/*",
-        "tool_search", "toolSearch", "execute", "read", "browser", "edit", "search", "web", "todo",
-    ];
-
-    // The debug-plan phase only produces a local debugging plan. Every other phase may
-    // delegate work and query Azure, so those phases need both forms of the Azure MCP tool.
-    if (file !== "azure-debug-plan.agent.md") {
-        requiredTools.push("agent", "azure-mcp/search", "Azure MCP/*");
+    const extras = phaseAgentTools[file];
+    if (!extras) {
+        failures.push(`scoped-agent-tools (${file}): add an explicit least-privilege tool policy for this agent`);
+        continue;
     }
-
-    // Deployment also authors and validates infrastructure, which requires the Bicep tools.
-    if (file === "azure-deploy.agent.md") {
-        requiredTools.push("bicep/*", "Bicep/*");
-    }
+    const requiredTools = [...coreAgentTools, ...extras];
 
     // Require an exact set: reject malformed entries, missing capabilities, and extra tools.
-    // In particular, broad `vscode` or unrelated MCP access must not bypass phase scoping.
+    // In particular, broad `vscode`, unused convenience tools, or unrelated MCP access must
+    // not bypass the least-privilege set derived from each phase's shipped instructions.
     const allowedTools = new Set(requiredTools);
     if (!tools || tools.some(tool => !allowedTools.has(tool))
         || requiredTools.some(tool => !tools.includes(tool))) {
-        failures.push(`scoped-agent-tools (${file}): tools must preserve the phase's required core, CoR, and Azure tools without broad vscode or unrelated MCP access`);
+        failures.push(`scoped-agent-tools (${file}): tools must exactly match the phase's documented least-privilege set`);
     } else {
         checked.push(`scoped-agent-tools (${file})`);
     }

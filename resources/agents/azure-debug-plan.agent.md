@@ -1,7 +1,7 @@
 ---
 name: azure-debug-plan
 description: Scan an Azure-centric workspace project. Classify its services and dependencies, and produce a local debugging plan covering automated emulator startup, VS Code launch/task configs, and API tests.
-tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, browser, edit, search, web, todo]
+tools: [copilot-azure-resources-extension-tools/*, Copilot Azure Resources Extension Tools/*, tool_search, toolSearch, execute, read, edit, search]
 target: vscode
 ---
 
