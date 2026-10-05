@@ -573,11 +573,15 @@ The diagnostics object has four fields:
 | Field | Value |
 | --- | --- |
 | `prompt` | The project description the user typed. |
-| `createdAt` | ISO‑8601 timestamp of when the project was first prompted. |
+| `createdAt` | ISO‑8601 timestamp of when the create-project view flow started. |
 | `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
 | `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
 
 `report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
+
+Starting the create-project view flow resets cached CoR project state before Copilot readiness checks
+and model discovery. Pressing **Plan** records the submitted prompt without resetting that state,
+so the model-discovery diagnostics remain available alongside the planning and later-stage events.
 
 Model discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
 
