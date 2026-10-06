@@ -126,7 +126,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     agentLaunchInProgress = true;
     try {
         const resolvedModel = model ?? getSessionModel();
-        await ensureCopilotHarnessOn(resolvedModel === AUTO_CHAT_MODEL);
+        await ensureCopilotHarnessOn({ useAutoModel: resolvedModel === AUTO_CHAT_MODEL });
 
         // Custom-agent commands are registered from the focused chat widget. Open Chat before
         // creating the fresh session so first-time launches do not wait on a widget that does not exist.

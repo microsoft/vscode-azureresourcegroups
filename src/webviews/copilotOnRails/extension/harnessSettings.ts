@@ -23,7 +23,7 @@ export const COPILOT_HARNESS_SETTING_IDS = HARNESS_SETTINGS.map(({ prefix, key }
  * Enables the Copilot Harness and configures explicit Auto selection at Workspace scope. Like the raised chat request
  * budget, the workspace override is cheap and disposable, so it is intentionally left in place.
  */
-export async function ensureCopilotHarnessOn(useAutoModel = false): Promise<void> {
+export async function ensureCopilotHarnessOn({ useAutoModel = false }: { useAutoModel?: boolean } = {}): Promise<void> {
     const folder = workspace.workspaceFolders?.[0];
     if (!folder) {
         return;

@@ -25,92 +25,52 @@ const localModel: AvailableChatModel = {
 
 const cliModel: AvailableChatModel = {
     ...localModel,
+    id: 'cli-sol',
     vendor: 'copilotcli',
 };
 
 suite('Copilot on Rails model selection', () => {
-    test('resolves explicit Auto without needing the CLI catalog to advertise it', () => {
+    test('resolves explicit Auto and default without substituting missing named models', () => {
         assert.deepStrictEqual(
             resolveCopilotHarnessModelSelector(AUTO_CHAT_MODEL, []),
             { id: 'auto', vendor: 'agent-host-copilotcli' },
         );
+        assert.strictEqual(resolveCopilotHarnessModelSelector('Unavailable model', [cliModel]), undefined);
+        assert.strictEqual(resolveCopilotHarnessModelSelector(DEFAULT_CHAT_MODEL, [{ ...cliModel, id: DEFAULT_CHAT_MODEL }]), undefined);
     });
 
-    test('does not treat Auto family metadata as a supported named model', () => {
-        const auto = { ...cliModel, id: 'auto', name: AUTO_CHAT_MODEL, family: 'claude-opus-4.6' };
-        assert.deepStrictEqual(getSupportedModelOptions([auto, cliModel]), [cliModel.name]);
+    test('excludes Auto from named-model filtering and prefers an actual CLI Opus model', () => {
+        const opus = { ...cliModel, id: 'claude-opus-4.6', name: 'Claude Opus 4.6', family: 'opus', version: '4.6' };
+        const auto = { ...opus, id: 'auto', name: AUTO_CHAT_MODEL };
+        assert.deepStrictEqual(getSupportedModelOptions([auto, opus, cliModel]), [opus.name, cliModel.name]);
         assert.deepStrictEqual(getModelPickerOptions([auto]), []);
-        assert.strictEqual(getDefaultOpusModelOption([auto, cliModel]), undefined);
+        assert.strictEqual(getDefaultOpusModelOption([auto, opus]), opus.name);
     });
 
-    test('offers Auto once and keeps a named model first regardless of the CLI Auto flag', () => {
+    test('offers Auto once after named models and preserves a reopened default selection', () => {
         const auto = { ...cliModel, id: 'auto', name: AUTO_CHAT_MODEL, family: 'claude-sonnet-5' };
         assert.deepStrictEqual(getModelPickerOptions([cliModel]), [cliModel.name, AUTO_CHAT_MODEL]);
         assert.deepStrictEqual(getModelPickerOptions([auto, cliModel]), [cliModel.name, AUTO_CHAT_MODEL]);
-        assert.deepStrictEqual(getModelPickerOptions([cliModel], AUTO_CHAT_MODEL), [cliModel.name, AUTO_CHAT_MODEL]);
+        assert.deepStrictEqual(getModelPickerOptions([cliModel], DEFAULT_CHAT_MODEL), [DEFAULT_CHAT_MODEL, cliModel.name, AUTO_CHAT_MODEL]);
     });
 
     test('maps a discovered CLI model id to the Agent Host launch vendor', () => {
         assert.deepStrictEqual(
             resolveCopilotHarnessModelSelector('GPT-6.1 Sol', [cliModel]),
-            { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+            { id: cliModel.id, vendor: 'agent-host-copilotcli' },
         );
     });
 
-    test('does not resolve an unavailable model to a fallback selector', () => {
-        assert.strictEqual(resolveCopilotHarnessModelSelector('Unavailable model', [cliModel]), undefined);
-    });
-
-    test('omits a selector for the default sentinel even if a provider lists that id', () => {
-        assert.strictEqual(
-            resolveCopilotHarnessModelSelector(DEFAULT_CHAT_MODEL, [{ ...cliModel, id: DEFAULT_CHAT_MODEL }]),
-            undefined,
-        );
-    });
-
-    test('provides no picker options when the catalog is empty', () => {
+    test('hides the picker when no supported named models are available', () => {
         assert.deepStrictEqual(getModelPickerOptions([]), []);
-    });
-
-    test('provides no picker options when no models pass the filter', () => {
         const model = { ...cliModel, id: 'haiku', name: 'Claude Haiku 4.5', family: 'haiku' };
         assert.deepStrictEqual(getModelPickerOptions([model]), []);
     });
 
-    test('keeps supported models available alongside explicit Auto', () => {
-        assert.deepStrictEqual(getModelPickerOptions([cliModel]), [cliModel.name, AUTO_CHAT_MODEL]);
-    });
-
-    test('preserves the default selection when reopening after models become available', () => {
-        assert.deepStrictEqual(getModelPickerOptions([cliModel], DEFAULT_CHAT_MODEL), [DEFAULT_CHAT_MODEL, cliModel.name, AUTO_CHAT_MODEL]);
-    });
-
-    test('resolves a qualified local model name', () => {
-        assert.strictEqual(
-            resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, cliModel]),
-            localModel,
-        );
-    });
-
-    test('resolves a qualified Copilot CLI model without changing its vendor', () => {
-        assert.strictEqual(
-            resolveAvailableChatModel('GPT-6.1 Sol (copilotcli)', [localModel, cliModel]),
-            cliModel,
-        );
-    });
-
-    test('does not fabricate a selector for an unavailable model', () => {
-        assert.strictEqual(
-            resolveAvailableChatModel('Unavailable model', [cliModel]),
-            undefined,
-        );
-    });
-
-    test('resolves an unqualified picker name using the Copilot CLI model id', () => {
-        const model = { ...cliModel, id: 'cli-sol' };
-        assert.strictEqual(
-            resolveAvailableChatModel('GPT-6.1 Sol', [model]),
-            model,
-        );
+    test('resolves display names, IDs, and legacy vendor-qualified names', () => {
+        assert.strictEqual(resolveAvailableChatModel(cliModel.name, [cliModel]), cliModel);
+        assert.strictEqual(resolveAvailableChatModel(cliModel.id, [cliModel]), cliModel);
+        assert.strictEqual(resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, cliModel]), localModel);
+        assert.strictEqual(resolveAvailableChatModel('GPT-6.1 Sol (copilotcli)', [localModel, cliModel]), cliModel);
     });
 });

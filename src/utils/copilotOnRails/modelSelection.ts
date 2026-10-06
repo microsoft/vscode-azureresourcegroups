@@ -12,6 +12,8 @@ export interface AvailableChatModel {
 }
 
 export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as const;
+
+/** Defer to whatever model is already highlighted in VS Code Chat by omitting modelSelector (not the same as auto). */
 export const DEFAULT_CHAT_MODEL = 'default';
 export const AUTO_CHAT_MODEL = 'Auto';
 

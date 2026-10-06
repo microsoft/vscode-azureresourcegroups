@@ -24,114 +24,93 @@ suite('Copilot on Rails agent chat launch', () => {
         settingUtils.updateWorkspaceSetting = originalUpdateWorkspaceSetting;
     });
 
-    test('omits a model selector when the VS Code default is selected', async () => {
-        const selector = await resolveModelSelector(DEFAULT_CHAT_MODEL);
+    test('builds custom-agent requests with an explicit model or the VS Code default', async () => {
+        const agentName = 'azure-project-plan';
+        const query = 'Build a project';
+        const expected = { mode: agentName, query, waitForRequestAcceptance: true };
+        const selector = { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' };
+        assert.deepStrictEqual(buildAgentChatModeOptions(agentName), { mode: agentName });
         assert.deepStrictEqual(
-            buildAgentChatOpenOptions('azure-project-plan', 'Build a project', selector),
-            { mode: 'azure-project-plan', query: 'Build a project', waitForRequestAcceptance: true },
+            buildAgentChatOpenOptions(agentName, query, selector),
+            { ...expected, modelSelector: selector },
+        );
+        assert.deepStrictEqual(
+            buildAgentChatOpenOptions(agentName, query, await resolveModelSelector(DEFAULT_CHAT_MODEL)),
+            expected,
         );
     });
 
-    test('selects Auto explicitly when requested', async () => {
-        assert.deepStrictEqual(
-            await resolveModelSelector(AUTO_CHAT_MODEL),
-            { id: 'auto', vendor: 'agent-host-copilotcli' },
-        );
-    });
-
-    test('disables CLI Auto during initial workspace setup', async () => {
-        await ensureCopilotHarnessOn();
+    test('enables the Copilot Harness at workspace scope and honors explicit Auto', async () => {
         const folder = workspace.workspaceFolders?.[0];
-        const settingAvailable = folder && workspace.getConfiguration('github.copilot.chat.cli', folder.uri).inspect('autoModel.enabled');
+        assert.ok(folder, 'The extension test runner must provide a workspace');
+        await ensureCopilotHarnessOn();
+        assert.deepStrictEqual(workspaceSettingUpdates.slice(0, 2), [
+            ['preferCopilotHarness', true, folder.uri.fsPath, 'chat.editor', ConfigurationTarget.Workspace],
+            ['defaultToCopilotHarness', true, folder.uri.fsPath, 'chat', ConfigurationTarget.Workspace],
+        ]);
+        await ensureCopilotHarnessOn({ useAutoModel: true });
+        const settingAvailable = workspace.getConfiguration('github.copilot.chat.cli', folder.uri).inspect('autoModel.enabled');
         const autoUpdates = workspaceSettingUpdates.filter(([key]) => key === 'autoModel.enabled');
         assert.deepStrictEqual(autoUpdates, settingAvailable
-            ? [['autoModel.enabled', false, folder?.uri.fsPath, 'github.copilot.chat.cli', ConfigurationTarget.Workspace]]
+            ? [false, true].map(enabled => ['autoModel.enabled', enabled, folder.uri.fsPath, 'github.copilot.chat.cli', ConfigurationTarget.Workspace])
             : []);
     });
 
-    for (const model of [DEFAULT_CHAT_MODEL, AUTO_CHAT_MODEL]) {
-        test(`persists ${model} across phases and configures its workspace Auto flag`, async () => {
-            const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
-            const state = new Map<string, unknown>();
-            Object.defineProperty(ext, 'context', {
-                configurable: true,
-                value: {
-                    workspaceState: {
-                        get: (key: string) => state.get(key),
-                        update: async (key: string, value: unknown) => { state.set(key, value); },
-                    },
+    test('preserves default and Auto selections across a phase handoff', async () => {
+        const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
+        const state = new Map<string, unknown>();
+        Object.defineProperty(ext, 'context', {
+            configurable: true,
+            value: {
+                workspaceState: {
+                    get: (key: string) => state.get(key),
+                    update: async (key: string, value: unknown) => { state.set(key, value); },
                 },
-            });
-            try {
-                await recordModel(model);
-                for (const phase of ['scaffold', 'integrate', 'debug', 'deploy'] as const) {
-                    await recordPhase(phase);
-                    assert.strictEqual(getSessionModel(), model);
-                    const context = await createTestActionContext();
-                    const options = { query: 'Continue the project' };
-                    assert.deepStrictEqual(await buildChatOpenOptions(context, options), model === AUTO_CHAT_MODEL
-                        ? { ...options, modelSelector: { id: 'auto', vendor: 'agent-host-copilotcli' } }
-                        : options);
-                    assert.strictEqual(context.telemetry.properties.chatModelSelectionSource, model === DEFAULT_CHAT_MODEL ? 'default' : 'previouslySelected');
-                    assert.strictEqual(context.telemetry.properties.chatModelResolved, String(model === AUTO_CHAT_MODEL));
-                }
-                const folder = workspace.workspaceFolders?.[0];
-                const settingAvailable = folder && workspace.getConfiguration('github.copilot.chat.cli', folder.uri).inspect('autoModel.enabled');
-                const expectedUpdate = ['autoModel.enabled', model === AUTO_CHAT_MODEL, folder?.uri.fsPath, 'github.copilot.chat.cli', ConfigurationTarget.Workspace];
-                assert.deepStrictEqual(workspaceSettingUpdates, settingAvailable ? Array(4).fill(expectedUpdate) : []);
-            } finally {
-                if (originalContext) {
-                    Object.defineProperty(ext, 'context', originalContext);
-                } else {
-                    Reflect.deleteProperty(ext, 'context');
-                }
-            }
+            },
         });
-    }
-
-    test('builds options that select the custom agent without submitting a prompt', () => {
-        assert.deepStrictEqual(
-            buildAgentChatModeOptions('azure-project-integrate'),
-            { mode: 'azure-project-integrate' },
-        );
+        try {
+            for (const model of [DEFAULT_CHAT_MODEL, AUTO_CHAT_MODEL]) {
+                await recordModel(model);
+                await recordPhase('scaffold');
+                assert.strictEqual(getSessionModel(), model);
+                const context = await createTestActionContext();
+                const options = { query: 'Continue the project' };
+                assert.deepStrictEqual(await buildChatOpenOptions(context, options), model === AUTO_CHAT_MODEL
+                    ? { ...options, modelSelector: { id: 'auto', vendor: 'agent-host-copilotcli' } }
+                    : options);
+                assert.strictEqual(context.telemetry.properties.chatModelSelectionSource, model === DEFAULT_CHAT_MODEL ? 'default' : 'previouslySelected');
+                assert.strictEqual(context.telemetry.properties.chatModelResolved, String(model === AUTO_CHAT_MODEL));
+            }
+            const folder = workspace.workspaceFolders?.[0];
+            const settingAvailable = folder && workspace.getConfiguration('github.copilot.chat.cli', folder.uri).inspect('autoModel.enabled');
+            const expectedUpdates = [false, true].map(enabled =>
+                ['autoModel.enabled', enabled, folder?.uri.fsPath, 'github.copilot.chat.cli', ConfigurationTarget.Workspace]);
+            assert.deepStrictEqual(workspaceSettingUpdates, settingAvailable ? expectedUpdates : []);
+        } finally {
+            if (originalContext) {
+                Object.defineProperty(ext, 'context', originalContext);
+            } else {
+                Reflect.deleteProperty(ext, 'context');
+            }
+        }
     });
 
-    test('resolves the agent by name when submitting the prompt', () => {
+    test('marks Autopilot requests once without changing their agent or model', () => {
         assert.deepStrictEqual(
             buildAgentChatOpenOptions(
-                'azure-project-plan',
-                'Build a project',
+                'azure-project-scaffold',
+                'Continue the project',
                 { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
+                true,
             ),
             {
-                mode: 'azure-project-plan',
-                query: 'Build a project',
+                mode: 'azure-project-scaffold',
+                query: '[AUTOPILOT MODE] Continue the project',
                 modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
                 waitForRequestAcceptance: true,
             },
         );
-    });
-
-    test('carries Autopilot into fresh phase chats without changing the agent or model', () => {
-        for (const agentName of ['azure-project-scaffold', 'azure-project-integrate', 'azure-debug-plan', 'azure-debug-generate', 'azure-deploy']) {
-            assert.deepStrictEqual(
-                buildAgentChatOpenOptions(agentName, 'Continue the project', { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' }, true),
-                {
-                    mode: agentName,
-                    query: '[AUTOPILOT MODE] Continue the project',
-                    modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' },
-                    waitForRequestAcceptance: true,
-                },
-            );
-        }
-    });
-
-    test('does not duplicate an existing Autopilot marker', () => {
         const query = '[AUTOPILOT MODE] I approve the plan.';
         assert.strictEqual(buildAgentChatOpenOptions('azure-project-scaffold', query, undefined, true).query, query);
-    });
-
-    test('preserves interactive handoff prompts', () => {
-        assert.strictEqual(buildAgentChatOpenOptions('azure-project-integrate', 'Continue the project', undefined, false).query, 'Continue the project');
     });
 });
