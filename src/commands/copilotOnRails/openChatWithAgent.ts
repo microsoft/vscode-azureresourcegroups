@@ -43,9 +43,11 @@ export function registerWorkspaceTrustTracking(): void {
  * modelSelector object that VS Code's chat commands expect.
  */
 export async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+    // If auto or default, defer to VS Code chat, since we don't need to provide any specific model
     if (displayName === DEFAULT_CHAT_MODEL || displayName === AUTO_CHAT_MODEL) {
         return resolveCopilotHarnessModelSelector(displayName, []);
     }
+
     try {
         const models = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
         return resolveCopilotHarnessModelSelector(displayName, models);
