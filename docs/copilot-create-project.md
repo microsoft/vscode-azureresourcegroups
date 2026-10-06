@@ -134,41 +134,10 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 ## Prerequisites
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
-- The **Copilot** chat session target. Copilot on Rails enables the Copilot Harness for the workspace
-  and sets `github.copilot.chat.cli.autoModel.enabled` to `false` at workspace scope before model
-  discovery, even if Copilot Chat is already active. User/global settings are left unchanged.
-  This setting requires a VS Code reload to take effect if the CLI provider is already running.
-  Versions that do not register this setting skip that override.
-  Selecting **Auto** in the create view flips that workspace flag to `true` when invoking Chat.
-  Named-model and `default` selections set it to `false`. The selected mode persists across phases.
-  This flag controls the public CLI Auto option. Agent Host has separate Auto support, so launches
-  still use explicit named-model or Auto selectors rather than relying on this flag to choose a model.
-  The extension waits for custom-agent registration to settle. After creating a fresh phase chat, it primes the
-  custom mode without sending a prompt, then resolves the agent by name when submitting. This avoids
-  stale Agent Host plugin revisions and prevents a silent fallback to **Agent**.
-- A Copilot plan with access to at least one supported model. The model picker lists Opus, Sonnet,
-  GPT Sol, and GPT Terra models returned by the `copilotcli` language-model vendor, plus an explicit
-  **Auto** option when supported models are available, using their display
-  names without a vendor suffix. The lowest-version available Opus model is selected by default,
-  or the first supported named model when no Opus model is available. Auto is never selected
-  implicitly as a substitute for a named model. The extension activates GitHub Copilot Chat before loading
-  this list. If the API returns no models, the extension retries once after one second. This retry
-  budget resets only when the extension host reloads, not each time the create flow runs.
-  If discovery fails or returns no supported models, the view still opens without a model picker.
-  A compact warning icon and **Models did not finish loading** message replace the picker.
-  On hover or keyboard focus, a tooltip suggests waiting a moment, then closing and reopening
-  the page. It also explains that the user can still press **Plan** and change the model manually
-  in VS Code Chat if the problem persists. No error notification appears, and submission is not blocked.
-  Discovery uses the `copilotcli` vendor, but Chat launches use the selected model's actual ID
-  with vendor `agent-host-copilotcli`. This targets the Agent Host copy of that model; it does not
-  query a fallback catalog or substitute a different model. Passing the `copilotcli` vendor directly
-  produces an extension-host identifier that the Agent Host drops, reverting to its default.
-  Selecting **Auto** passes model ID `auto` to the Agent Host explicitly. Auto is available in our
-  picker independently of whether the public CLI catalog currently advertises it.
-  **VS Code default** is stored as `default` in the session and model telemetry. It omits the model
-  selector on every subsequent launch or chat invocation, leaving model choice to VS Code.
-  This selection is preserved if the create view reopens after a reload, even when models have
-  become available in the meantime.
+- The **Copilot CLI** chat target. Copilot on Rails manages Auto through the workspace setting
+  `github.copilot.chat.cli.autoModel.enabled`, enabling it only when **Auto** is selected in the picker.
+- A Copilot plan. If no models load in time, the view shows **Models did not finish loading**.
+  You can still press **Plan** using **VS Code default** and change the model in Chat.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
@@ -613,29 +582,26 @@ so the model-discovery diagnostics remain available alongside the planning and l
 The telemetry-only `corProjectId` is created when the prompt is submitted, not when the create view
 loads or models are discovered. Subsequent project events reuse it.
 
-Model discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
+An empty catalog gets one retry after one second; the retry budget resets on extension-host reload.
+Discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
 
 | Property | Meaning |
 | --- | --- |
 | `modelPickerVendor` | The queried vendor, `copilotcli`. |
 | `modelPickerAvailableModelCount` | Number of entries in `modelPickerAvailableModels`, before filtering. |
 | `modelPickerFilteredModelCount` | Number of entries in `modelPickerFilteredModels`, after filtering and deduplication. |
-| `modelPickerRetried` | Whether this invocation used the one-per-extension-host-session empty-catalog retry. |
+| `modelPickerRetried` | Whether this invocation retried an empty catalog. |
 | `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, `queryFailed` when the API throws, or `ready` when supported models are available. |
 
-Diagnostics also include `modelPickerAvailableModels` with the returned model names before filtering,
-and `modelPickerFilteredModels` with the supported named models after filtering and deduplication. These catalogs
-are workspace-cached diagnostic data only and are not sent to telemetry. The counts and discovery
-outcome are mirrored to telemetry separately through the standard CoR property handling.
-The `default` sentinel is not counted as an available or filtered model. The explicit **Auto** picker
-option is not a named model and is excluded from the filtered list/count; if the API advertises Auto,
-it still appears in the available list/count.
-Discovery failures record a masked `modelPickerError`. Submitting with the fallback records
-`copilotModel: default`, `modelSelectedInView: false`, and `chatModelSelectionSource: default`;
-chat options omit `modelSelector`.
-Named-model launches record `chatModelSelectorId` and `chatModelSelectorVendor` in telemetry and
-diagnostics. `chatModelResolved` means the extension constructed a selector, not that VS Code confirmed
-the final selection. VS Code does not expose the active Chat model through a consumer extension API.
+The diagnostic-only lists `modelPickerAvailableModels` and `modelPickerFilteredModels` contain returned
+names and deduplicated supported names, respectively. Auto is excluded from the filtered list/count
+but remains in the available list/count if returned by the API. The `default` sentinel is never counted.
+Discovery errors record a masked `modelPickerError`.
+
+The fallback records `copilotModel: default`, `modelSelectedInView: false`, and
+`chatModelSelectionSource: default`, and omits `modelSelector`. Explicit selections record
+`chatModelSelectorId` and `chatModelSelectorVendor` in telemetry and diagnostics.
+`chatModelResolved` confirms selector construction, not VS Code's final Chat selection.
 
 Privacy guarantees, by design:
 
@@ -656,7 +622,7 @@ before submitting.
 | *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
 | The create view shows a model-unavailable message instead of the picker. | The CLI model catalog is empty, has no supported models, or discovery failed. | Submit the plan normally using VS Code's default, or wait a moment and reopen the page to rediscover models. Inspect the discovery properties described above to distinguish the cases, including `modelPickerError` when the API failed and `modelPickerRetried` for the one-time retry. |
-| Chat shows Auto after a named model was selected in the create view. | The launch selector may refer to the wrong model pool, or VS Code may have changed the selection. | Inspect the submission event's `copilotModel`, `chatModelSelectorId`, and `chatModelSelectorVendor`. A named Copilot Harness selection should use vendor `agent-host-copilotcli`, even though discovery uses `copilotcli`. A resolved selector alone does not prove the Chat selection was applied. |
+| Chat shows Auto after selecting a named model. | Wrong model pool or a selection change in VS Code. | Compare `copilotModel` with `chatModelSelectorId`; `chatModelSelectorVendor` should be `agent-host-copilotcli`. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |
