@@ -174,12 +174,6 @@ description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
   <img src="images/copilot-create-project/03-create-project-prompt.png" alt="Create with Copilot prompt view" />
 </p>
 
-> 📷 First capture needed: the prompt view with the compact model-unavailable warning and its tooltip instead of the picker.
-
-<p align="center">
-  <img src="images/copilot-create-project/03b-create-project-no-model-picker.png" alt="Create with Copilot prompt view with an inline model-unavailable message" />
-</p>
-
 Pressing **Plan** opens Copilot Chat if needed, then starts the **`azure-project-plan`** agent in a new chat
 session. Every new-project prompt goes through this flow, including frontend-only apps with no backend,
 database, or Azure services. Those simply plan a single `frontend` service with **No datastore required**.
@@ -408,9 +402,6 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 `start_project_integrate` → `start_local_development`) and skip the Frontend preview and Next Steps views.
 Project-folder selection still happens before autopilot starts; a non-empty workspace requires choosing a
 new subfolder or an empty folder so unattended generation cannot write over existing content.
-While the run is active, CoR sets both local chat and Agent Host defaults to Autopilot, enables global
-tool auto-approval, and raises the request limit. It restores the user's prior global chat defaults when
-Autopilot finishes, is turned off from the status bar, or reaches its safety deadline.
 
 ---
 
@@ -466,11 +457,7 @@ silently so a stale copy can't make an agent follow outdated steps.
 ## The MCP tools
 
 The extension exposes these tools to Copilot through the `vscode-azureresourcegroups.mcp` server
-("Copilot Azure Resources Extension Tools"). The server starts eagerly on a loopback TCP transport so
-the Copilot Harness can connect before its first tool call. Agents call the tools to open views and
-trigger the next stage. Agent manifests include both the Local harness reference names and the
-Copilot Harness server label and tool-search alias because the two harnesses resolve those allowlist
-entries differently.
+("Copilot Azure Resources Extension Tools").
 
 | Tool | Effect |
 | --- | --- |
@@ -569,18 +556,15 @@ The diagnostics object has four fields:
 
 | Field | Value |
 | --- | --- |
-| `prompt` | The project description the user typed. |
-| `createdAt` | ISO‑8601 timestamp of when the create-project view flow started. |
-| `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured when the project started. |
+| `prompt` | The submitted project description. |
+| `createdAt` | ISO-8601 timestamp of when Plan was pressed. |
+| `systemInfo` | The operating system, CPU, Node.js, and VS Code versions captured on prompt submission. |
 | `diagnosticEvents` | Up to the **75 most recent** events, each: `timestamp`, `name` (command/tool), `type` (`extensionAction` \| `mcpTool` \| `webviewAction`), `status` (`start` \| `success` \| `error`), and a `properties` bag. Error messages are **masked** before being recorded. |
 
 `report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 
-Starting the create-project view flow resets cached CoR project state before Copilot readiness checks
-and model discovery. Pressing **Plan** records the submitted prompt without resetting that state,
-so the model-discovery diagnostics remain available alongside the planning and later-stage events.
-The telemetry-only `corProjectId` is created when the prompt is submitted, not when the create view
-loads or models are discovered. Subsequent project events reuse it.
+Pressing **Plan** resets cached CoR project state and records the submitted prompt, timestamp,
+system info, and telemetry-only `corProjectId`.
 
 An empty catalog gets one retry after one second; the retry budget resets on extension-host reload.
 Discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:

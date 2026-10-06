@@ -24,7 +24,7 @@ export function getPrompt(): string | undefined {
 const createdAtKey: string = 'copilotOnRails.createdAt';
 
 /**
- * Stamps the time the create-project view flow started as an ISO 8601 string.
+ * Stamps the prompt submission time as an ISO 8601 string.
  */
 export function recordCreatedAt(): void {
     void ext.context.workspaceState.update(createdAtKey, new Date().toISOString());

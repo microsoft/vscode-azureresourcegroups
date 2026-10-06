@@ -40,10 +40,7 @@ export class LoadingViewController extends CopilotOnRailsWebviewController<Loadi
         await callWithTelemetryAndErrorHandling(corId('loadingView.needHelpResume'), async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.properties.isCopilotEvent = 'true';
-            const projectId = getCorProjectId();
-            if (projectId) {
-                context.telemetry.properties.corProjectId = projectId;
-            }
+            context.telemetry.properties.corProjectId = getCorProjectId();
             this.panel.dispose();
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
         });

@@ -26,16 +26,16 @@ const projectIdKey: string = 'copilotOnRails.projectId';
 
 /**
  * Returns the persistent project guid associated with the workspace project.
+ * Automatically handles generating and caching one on first use.
  *
  * Note: The project guid is important for stitching together the full chain of Copilot on Rails telemetry.
  */
-export function getCorProjectId(): string | undefined {
-    return ext.context.workspaceState.get<string>(projectIdKey);
-}
-
-export async function initializeCorProjectId(): Promise<string> {
-    const projectId = getCorProjectId() ?? uuidv4();
-    await ext.context.workspaceState.update(projectIdKey, projectId);
+export function getCorProjectId(): string {
+    let projectId: string | undefined = ext.context.workspaceState.get(projectIdKey);
+    if (!projectId) {
+        projectId = uuidv4();
+        void ext.context.workspaceState.update(projectIdKey, projectId);
+    }
     return projectId;
 }
 
@@ -51,10 +51,7 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     command: (context: CopilotOnRailsContext) => Promise<T>,
 ): Promise<T> {
     context.telemetry.properties.isCopilotEvent = 'true';
-    const projectId = getCorProjectId();
-    if (projectId && eventDetails.name !== corId('createProjectWithCopilot')) {
-        context.telemetry.properties.corProjectId = projectId;
-    }
+    context.telemetry.properties.corProjectId = getCorProjectId();
 
     if (eventDetails.extras) {
         context.telemetry.properties.copilotSessionId = eventDetails.extras.sessionId;

@@ -10,7 +10,6 @@ import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/regis
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
-import { prepareNewCorProject } from "../../../utils/copilotOnRails/prepareNewCorProject";
 import { setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -78,7 +77,6 @@ export async function resumeCreateProjectViewAfterReload(): Promise<void> {
 }
 
 async function openCreateProjectView(context: CopilotOnRailsContext, initialPrompt?: string, initialModel?: string): Promise<void> {
-    await prepareNewCorProject(initialPrompt ?? '');
     if (!(await ensureCopilotChatReady(context))) {
         return;
     }

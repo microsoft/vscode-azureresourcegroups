@@ -8,7 +8,7 @@ import assert from 'assert';
 import { ext } from '../../src/extensionVariables';
 import { ensureRequiredCopilotOnRailsContext } from '../../src/utils/copilotOnRails/CopilotOnRailsContext';
 import { AvailableChatModel, getSupportedModelOptions } from '../../src/utils/copilotOnRails/modelSelection';
-import { callWithDiagnosticsAndTelemetryHandling, getCorProjectId, initializeCorProjectId } from '../../src/utils/copilotOnRails/telemetryUtils';
+import { callWithDiagnosticsAndTelemetryHandling, getCorProjectId } from '../../src/utils/copilotOnRails/telemetryUtils';
 import {
     OPEN_PROJECT_FOLDER_OPTIONS,
     PROJECT_FOLDER_SELECTION_TELEMETRY_KEY,
@@ -97,7 +97,7 @@ suite('Create Project with Copilot model picker diagnostics', () => {
         assert.strictEqual(context.diagnostics.properties.modelPickerError, undefined);
     });
 
-    test('leaves discovery unassigned and initializes the project id at prompt submission', async () => {
+    test('creates and reuses the project id through the shared wrapper', async () => {
         const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
         const state = new Map<string, unknown>();
         Object.defineProperty(ext, 'context', {
@@ -115,13 +115,11 @@ suite('Create Project with Copilot model picker diagnostics', () => {
             await callWithDiagnosticsAndTelemetryHandling(
                 discoveryContext,
                 { type: 'extensionAction', name: 'copilotOnRails.createProjectWithCopilot' },
-                async () => { assert.strictEqual(getCorProjectId(), undefined); },
+                async () => { assert.ok(getCorProjectId()); },
             );
-            assert.strictEqual(getCorProjectId(), undefined);
-            assert.strictEqual(discoveryContext.telemetry.properties.corProjectId, undefined);
-
-            const projectId = await initializeCorProjectId();
+            const projectId = getCorProjectId();
             assert.ok(projectId);
+            assert.strictEqual(discoveryContext.telemetry.properties.corProjectId, projectId);
             const submitContext = await createTestActionContext();
             await callWithDiagnosticsAndTelemetryHandling(
                 submitContext,
@@ -130,14 +128,13 @@ suite('Create Project with Copilot model picker diagnostics', () => {
             );
             assert.strictEqual(submitContext.telemetry.properties.corProjectId, projectId);
             assert.strictEqual(getCorProjectId(), projectId);
-            assert.strictEqual(await initializeCorProjectId(), projectId);
             const nextCreateContext = await createTestActionContext();
             await callWithDiagnosticsAndTelemetryHandling(
                 nextCreateContext,
                 { type: 'extensionAction', name: 'copilotOnRails.createProjectWithCopilot' },
                 async () => { assert.strictEqual(getCorProjectId(), projectId); },
             );
-            assert.strictEqual(nextCreateContext.telemetry.properties.corProjectId, undefined);
+            assert.strictEqual(nextCreateContext.telemetry.properties.corProjectId, projectId);
         } finally {
             if (originalContext) {
                 Object.defineProperty(ext, 'context', originalContext);

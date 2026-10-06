@@ -80,10 +80,7 @@ export async function openRequirementsViewFromWorkspace(context: IActionContext)
     );
 
     context.telemetry.properties.isCopilotEvent = 'true';
-    const projectId = getCorProjectId();
-    if (projectId) {
-        context.telemetry.properties.corProjectId = projectId;
-    }
+    context.telemetry.properties.corProjectId = getCorProjectId();
     context.telemetry.properties.requirementsSelected = String(!!selected);
     if (selected) {
         await openRequirementsViewAsync(selected);
