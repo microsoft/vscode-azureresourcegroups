@@ -9,7 +9,7 @@ import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openCha
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelName, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -81,34 +81,11 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    console.log('[Copilot on Rails model picker] Calling selectChatModels with vendor "copilotcli".');
     const availableModels = await discoverModelPickerModels(context, () => vscode.lm.selectChatModels({ vendor: 'copilotcli' }));
     const modelOptions = getModelPickerOptions(availableModels, initialModel);
-    console.log(
-        `[Copilot on Rails model picker] Available catalog contains ${availableModels.length} model(s):`,
-        availableModels.map(model => ({
-            id: model.id,
-            vendor: model.vendor,
-            family: model.family,
-            version: model.version,
-            name: model.name,
-            maxInputTokens: model.maxInputTokens,
-            supportedName: getSupportedModelName(model.id, model.family, model.name),
-        })),
-    );
-
-    console.log(
-        `[Copilot on Rails model picker] Discovery produced ${modelOptions.length} picker option(s):`,
-        modelOptions,
-    );
-
     const selectedModel = initialModel && (initialModel === DEFAULT_CHAT_MODEL || modelOptions.includes(initialModel))
         ? initialModel
         : getDefaultOpusModelOption(availableModels) ?? modelOptions[0] ?? DEFAULT_CHAT_MODEL;
-    console.log('[Copilot on Rails model picker] Initial and selected model:', {
-        requestedInitialModel: initialModel,
-        selectedModel,
-    });
 
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
@@ -142,7 +119,6 @@ export async function discoverModelPickerModels<T extends AvailableChatModel>(
         if (models.length === 0 && !modelDiscoveryRetryUsed) {
             modelDiscoveryRetryUsed = true;
             setCorProp(context, 'modelPickerRetried', true);
-            console.log('[Copilot on Rails model picker] Empty catalog; retrying once after one second.');
             await new Promise(resolve => setTimeout(resolve, MODEL_DISCOVERY_RETRY_DELAY_MS));
             models = await selectModels();
         }
@@ -150,7 +126,6 @@ export async function discoverModelPickerModels<T extends AvailableChatModel>(
         setCorErrorProp(context, 'modelPickerError', parseError(error).message);
         recordModelPickerDiscovery(context, [], []);
         setCorProp(context, 'modelPickerOutcome', 'queryFailed');
-        console.log('[Copilot on Rails model picker] Model discovery failed; using the VS Code default. See modelPickerError in diagnostics.');
         return [];
     }
     recordModelPickerDiscovery(context, models, getSupportedModelOptions(models));

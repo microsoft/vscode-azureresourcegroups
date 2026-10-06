@@ -46,7 +46,5 @@ export async function setCopilotCliAutoModelEnabled(enabled: boolean): Promise<v
     const { prefix, key } = CLI_AUTO_MODEL_SETTING;
     if (workspace.getConfiguration(prefix, folder.uri).inspect(key)) {
         await settingUtils.updateWorkspaceSetting(key, enabled, folder.uri.fsPath, prefix, ConfigurationTarget.Workspace);
-    } else {
-        console.log('[Copilot on Rails] CLI Auto model setting is unavailable in this version; skipping its workspace override.');
     }
 }
