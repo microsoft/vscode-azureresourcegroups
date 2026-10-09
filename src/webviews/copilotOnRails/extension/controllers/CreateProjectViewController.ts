@@ -11,6 +11,7 @@ import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { DEFAULT_CHAT_MODEL } from "../../../../utils/copilotOnRails/modelSelection";
 import { prepareNewCorProject } from "../../../../utils/copilotOnRails/prepareNewCorProject";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType, type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
@@ -41,10 +42,6 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
         );
     }
 
-    /**
-     * Resets any leftover workspace state from a previous project before launching the
-     * planning agent, so the two attempts don't get conflated.
-     */
     private async planProject(prompt: string, model?: string): Promise<void> {
         await prepareNewCorProject(prompt);
         await this.openChatWithQuery(prompt, model);
@@ -53,9 +50,10 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
     private async openChatWithQuery(query: string, model?: string): Promise<void> {
         await callWithTelemetryAndErrorHandling(corId('createProjectSubmitPrompt'), async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'createProjectSubmitPrompt' }, async (context: CopilotOnRailsContext) => {
-                setCorProp(context, 'modelSelectedInView', !!model);
+                setCorProp(context, 'modelSelectedInView', !!model && model !== DEFAULT_CHAT_MODEL);
                 if (model) {
                     await recordModel(model);
+                    setCorProp(context, 'copilotModel', model);
                 }
                 await recordRecentPrompt(query);
 

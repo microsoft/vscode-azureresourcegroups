@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Textarea } from '@fluentui/react-components';
-import { ClipboardTaskListLtrRegular } from '@fluentui/react-icons';
+import { Button, Textarea, Tooltip } from '@fluentui/react-components';
+import { ClipboardTaskListLtrRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import * as React from 'react';
 import { useContext, useLayoutEffect, useRef, useState, type JSX } from 'react';
+import { DEFAULT_CHAT_MODEL } from '../../../utils/copilotOnRails/modelSelection';
 import './styles/createProjectView.scss';
 import { type CreateProjectViewControllerType } from './utils/viewConfigTypes';
 
@@ -40,7 +41,9 @@ export const CreateProjectView = (): JSX.Element => {
         }
     }, [prompt]);
 
-    const displayName = (model: string) => model.replace(/\s*\(copilot\)\s*$/i, '');
+    const displayName = (model: string) => model === DEFAULT_CHAT_MODEL
+        ? config.defaultModelLabel
+        : model.replace(/\s*\(copilot\)\s*$/i, '');
 
     const planClicked = () => {
         if (!prompt.trim()) {
@@ -140,15 +143,24 @@ export const CreateProjectView = (): JSX.Element => {
                     />
                     <div className='promptActions'>
                         <div className='actionsLeft'>
-                            <select
-                                className='modelDropdown'
-                                value={selectedModel}
-                                onChange={(e) => setSelectedModel(e.target.value)}
-                            >
-                                {config.modelOptions.map((model) => (
-                                    <option key={model} value={model}>{displayName(model)}</option>
-                                ))}
-                            </select>
+                            {config.modelOptions.length > 0 ? (
+                                <select
+                                    className='modelDropdown'
+                                    value={selectedModel}
+                                    onChange={(e) => setSelectedModel(e.target.value)}
+                                >
+                                    {config.modelOptions.map((model) => (
+                                        <option key={model} value={model}>{displayName(model)}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <Tooltip content={config.modelUnavailableTooltip} relationship='description'>
+                                    <span className='modelFallbackMessage' role='status' tabIndex={0}>
+                                        <WarningRegular aria-hidden='true' />
+                                        {config.modelUnavailableMessage}
+                                    </span>
+                                </Tooltip>
+                            )}
                             <span className='hint'>{config.hint}</span>
                         </div>
                         <div className='buttonGroup'>

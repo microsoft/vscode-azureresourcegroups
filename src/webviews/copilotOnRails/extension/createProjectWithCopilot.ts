@@ -3,13 +3,14 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, UserCancelledError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, parseError, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openChatWithAgent";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
-import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
+import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -20,8 +21,10 @@ const deploy = vscode.l10n.t('Deploy');
 export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
 export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
 export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
+const MODEL_DISCOVERY_RETRY_DELAY_MS = 1_000;
+let modelDiscoveryRetryUsed = false;
 
-export async function createProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
+export async function createProjectWithCopilot(context: CopilotOnRailsContext, initialPrompt?: string, initialModel?: string): Promise<void> {
     if (!(await ensureFreshWorkspace(context))) {
         return;
     }
@@ -58,23 +61,32 @@ export async function createProjectWithCopilot(context: CopilotOnRailsContext): 
     }
 
     // Nothing detected => start from scratch.
-    await openCreateProjectView();
+    await openCreateProjectView(context, initialPrompt, initialModel);
 }
 
 /** Re-opens the create view pre-filled after a reload-to-discover-agents; no-ops when nothing was stashed. */
 export async function resumeCreateProjectViewAfterReload(): Promise<void> {
     const resume = await consumeReloadResumePrompt();
     if (resume) {
-        await openCreateProjectView(resume.prompt, resume.model);
+        await vscode.commands.executeCommand(
+            copilotOnRailsCommandIds.createProjectWithCopilot,
+            resume.prompt,
+            resume.model,
+        );
     }
 }
 
-async function openCreateProjectView(initialPrompt?: string, initialModel?: string): Promise<void> {
-    const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
-    const modelOptions = getSupportedModelOptions(availableModels);
-    const selectedModel = initialModel && modelOptions.includes(initialModel)
+async function openCreateProjectView(context: CopilotOnRailsContext, initialPrompt?: string, initialModel?: string): Promise<void> {
+    if (!(await ensureCopilotChatReady(context))) {
+        return;
+    }
+
+    const availableModels = await discoverModelPickerModels(context, () => vscode.lm.selectChatModels({ vendor: 'copilotcli' }));
+    const modelOptions = getModelPickerOptions(availableModels, initialModel);
+    const selectedModel = initialModel && (initialModel === DEFAULT_CHAT_MODEL || modelOptions.includes(initialModel))
         ? initialModel
-        : getDefaultOpusModelOption(availableModels);
+        : getDefaultOpusModelOption(availableModels) ?? modelOptions[0] ?? DEFAULT_CHAT_MODEL;
+
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
@@ -84,11 +96,54 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
         planButtonLabel: vscode.l10n.t('Plan'),
         modelLabel: vscode.l10n.t('Model'),
         modelOptions,
+        defaultModelLabel: vscode.l10n.t('VS Code default'),
+        modelUnavailableMessage: vscode.l10n.t('Models did not finish loading'),
+        modelUnavailableTooltip: vscode.l10n.t('Wait a moment, then close and reopen this page to try loading models again. If the problem persists, you can still press Plan and change the model manually in the VS Code Chat model picker.'),
         recentPrompts: getRecentPrompts(),
         initialPrompt,
         initialModel: selectedModel,
     });
     controller.revealToForeground();
+}
+
+export async function discoverModelPickerModels<T extends AvailableChatModel>(
+    context: CopilotOnRailsContext,
+    selectModels: () => Thenable<readonly T[]>,
+): Promise<readonly T[]> {
+    setCorProp(context, 'modelPickerVendor', 'copilotcli');
+    setCorProp(context, 'modelPickerOutcome', 'querying');
+    setCorProp(context, 'modelPickerRetried', false);
+    let models: readonly T[];
+    try {
+        models = await selectModels();
+        if (models.length === 0 && !modelDiscoveryRetryUsed) {
+            modelDiscoveryRetryUsed = true;
+            setCorProp(context, 'modelPickerRetried', true);
+            await new Promise(resolve => setTimeout(resolve, MODEL_DISCOVERY_RETRY_DELAY_MS));
+            models = await selectModels();
+        }
+    } catch (error) {
+        setCorErrorProp(context, 'modelPickerError', parseError(error).message);
+        recordModelPickerDiscovery(context, [], []);
+        setCorProp(context, 'modelPickerOutcome', 'queryFailed');
+        return [];
+    }
+    recordModelPickerDiscovery(context, models, getSupportedModelOptions(models));
+    return models;
+}
+
+export function recordModelPickerDiscovery(
+    context: CopilotOnRailsContext,
+    models: readonly AvailableChatModel[],
+    modelOptions: readonly string[],
+): void {
+    setCorProp(context, 'modelPickerAvailableModelCount', models.length);
+    setCorProp(context, 'modelPickerFilteredModelCount', modelOptions.length);
+    setCorProp(context, 'modelPickerOutcome', models.length === 0 ? 'emptyCatalog' : modelOptions.length === 0 ? 'noSupportedModels' : 'ready');
+
+    const properties = ensureRequiredCopilotOnRailsContext(context).diagnostics.properties;
+    properties.modelPickerAvailableModels = models.map(model => model.name);
+    properties.modelPickerFilteredModels = [...modelOptions];
 }
 
 /**
