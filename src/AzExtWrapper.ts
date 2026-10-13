@@ -63,6 +63,10 @@ export class AzExtWrapper {
         return this._resourceTypes.some(rt => rt === resource.resourceType);
     }
 
+    public supportsResourceType(resourceType: AzExtResourceType | string): boolean {
+        return this._resourceTypes.some(rt => rt === resourceType);
+    }
+
     public getCodeExtension(): Extension<apiUtils.AzureExtensionApiProvider> | undefined {
         return extensions.getExtension(this.id);
     }
