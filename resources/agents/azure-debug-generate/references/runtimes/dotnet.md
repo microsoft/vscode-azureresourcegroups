@@ -1,6 +1,6 @@
 # .NET / C# — Debug & Build Configuration
 
-> Covers **.NET** projects. Project-type-specific hosting (Functions, App Service, etc.) is defined in `project-types/{type}.md` — this file covers the .NET runtime layer only.
+> Covers **.NET** runtime only. `project-types/{type}.md` defines hosting (Functions, App Service, etc.).
 
 ## Prerequisites
 
@@ -13,16 +13,16 @@
 
 ## Debugger Properties
 
-<!-- Generic debug properties for this runtime.
-     See project-types/{type}.md § Runtime Wiring for how these combine with the host command.
-     See generate.md § Source Ownership for how runtime and project-type refs compose. -->
+<!-- Runtime-generic debug properties.
+     See project-types/{type}.md § Runtime Wiring for host-command combination.
+     See generate.md § Source Ownership for reference composition. -->
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| Debug protocol | `CoreCLR DAP` | .NET Core / .NET 5+ debug adapter protocol |
-| VS Code debugger type | `coreclr` | Contributed by the C# extension (`ms-dotnettools.csharp`) |
-| Request mode | `attach` | VS Code attaches to a running .NET process by `processName` |
-| Base debug port | — | CoreCLR attach uses `processName`, not a port |
+| Debug protocol | `CoreCLR DAP` | .NET Core / .NET 5+ adapter protocol |
+| VS Code debugger type | `coreclr` | From C# extension (`ms-dotnettools.csharp`) |
+| Request mode | `attach` | Attach to running .NET process by `processName` |
+| Base debug port | — | CoreCLR uses `processName`, not port |
 
 ### VS Code Problem Matchers
 
@@ -34,7 +34,7 @@
 
 ## processName Determination
 
-The `coreclr` debugger (request: `attach`) matches `processName` **literally** against the OS process list. Getting this wrong means F5 silently fails.
+`coreclr` debugger request `attach` matches `processName` **literally** in OS process list. Wrong value silently breaks F5.
 
 ### Cross-Platform Rules
 
@@ -43,7 +43,7 @@ The `coreclr` debugger (request: `attach`) matches `processName` **literally** a
 | Windows | `{AssemblyName}.exe` | `Scrapbook.Api.exe` |
 | macOS / Linux | `{AssemblyName}` (no extension) | `Scrapbook.Api` |
 
-> ⛔ **Windows requires the `.exe` suffix.** Writing `"Scrapbook.Api"` instead of `"Scrapbook.Api.exe"` produces:
+> ⛔ **Windows requires `.exe` suffix.** `"Scrapbook.Api"` instead of `"Scrapbook.Api.exe"` produces:
 >
 > ```
 > No process with the specified name is currently running.

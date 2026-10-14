@@ -1,32 +1,32 @@
 # Multi-Service Orchestration
 
-> Runs when `classify.md` finds **2+ service roots**, before inventory scanning begins.
+> Run when `classify.md` finds **2+ service roots**, before inventory scanning.
 
 ---
 
 ## Service ID Assignment
 
-Derive a short kebab-case ID per service root. Use project manifest name if available, otherwise fall back to directory name.
+Derive short kebab-case ID per service root. Prefer project manifest name; otherwise use directory name.
 
 | Runtime | Manifest Source | Field |
 |---------|----------------|-------|
 | `node-ts`, `node-js` | `package.json` | `"name"` |
 | `dotnet` | `*.csproj` | `<AssemblyName>` or filename |
-| *Other* | Service directory name | Fallback when no manifest name exists |
+| *Other* | Service directory name | Fallback without manifest name |
 
-If two IDs collide, append the project type (e.g. `payments-api` becomes `payments-api-functions`).
+On ID collision, append project type (e.g. `payments-api` becomes `payments-api-functions`).
 
 ---
 
 ## Emulator Deduplication
 
-Collect emulator lists from all services. Each emulator appears **once** in the plan's Emulators table — multiple services may depend on the same emulator.
+Collect all services' emulator lists. Each emulator appears **once** in plan Emulators table, even when shared.
 
 ---
 
 ## Partial Configuration
 
-Check each service root for existing debug config before planning.
+Before planning, check each service root's existing debug config.
 
 | State | Plan Action |
 |-------|------------|
@@ -38,8 +38,8 @@ Check each service root for existing debug config before planning.
 
 ## Compound Debug Configuration
 
-Required when 2+ service roots are detected (including Frontend SPAs).
+Required for 2+ service roots, including Frontend SPAs.
 
 ### Startup Dependencies
 
-If a frontend SPA has a proxy pointing to a local backend (detected via [project-types.md](project-types.md) § Backend Proxy Dependencies), record the `proxyTarget` service ID on that service entry. The compound config uses this to order startup (backends before frontends) that depend on them.
+If a frontend SPA proxies to a local backend (detect via [project-types.md](project-types.md) § Backend Proxy Dependencies), record `proxyTarget` service ID on its entry. Compound config orders startup: backends before dependent frontends.

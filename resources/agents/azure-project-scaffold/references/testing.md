@@ -1,6 +1,6 @@
 # Testing Patterns
 
-> Core reference for self-testable north star. Every module ships with tests. Every phase has test gate.
+> Self-testable north star: every module ships with tests; every phase has test gate.
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Project is not done until tests say it is.**
 
-Agent runs tests after every module. If tests fail, agent iterates until they pass. No module complete until tests green. Not a suggestion — it's workflow.
+Run tests after every module. Iterate failures until passing. Module completes only when tests are green. Mandatory workflow.
 
 ---
 
@@ -27,9 +27,9 @@ Agent runs tests after every module. If tests fail, agent iterates until they pa
 
 | Layer | What It Tests | Dependencies | Speed | When |
 |-------|---------------|-------------|-------|------|
-| **Unit** | Single function/class in isolation | All deps mocked | Fast (ms) | Every module, always |
-| **Integration** | Request → handler → service → response cycle | Mock services injected | Fast (ms) | Every route, always |
-| **E2E** | Full stack with real emulators | Running emulators (via azure-debug-plan) | Slower (s) | When emulators are available |
+| **Unit** | Isolated function/class | All deps mocked | Fast (ms) | Every module, always |
+| **Integration** | Request → handler → service → response | Mock services injected | Fast (ms) | Every route, always |
+| **E2E** | Full stack, real emulators | Running emulators (via azure-debug-plan) | Slower (s) | When emulators are available |
 
 ### What Each Layer Covers
 
@@ -38,21 +38,21 @@ Agent runs tests after every module. If tests fail, agent iterates until they pa
 - Config loading (env vars present, missing, defaults)
 - Validation schemas (valid input, invalid input, edge cases)
 - Error types and error handler (mapping to HTTP status codes)
-- Individual function handler logic (with injected mock services)
-- Utility functions and helpers
+- Function handler logic (injected mock services)
+- Utilities and helpers
 
 **Integration Tests** (mandatory for every route):
 - HTTP request → function handler → mock service → HTTP response
 - Correct status codes (200, 201, 400, 404, 422, 500)
 - Correct response body shapes
 - Request validation (bad input rejected)
-- Error handling (service failures produce correct error responses)
+- Error handling (service failures return correct error responses)
 
 **E2E Tests** (when emulators available via azure-debug-plan):
 - Full DB round-trip (create → read → verify data)
 - File upload → storage → retrieval
 - Cache set → get → verify
-- Health check with live services
+- Live-services health check
 
 ---
 
@@ -120,7 +120,7 @@ timeout: 5000
 
 ### Fixture Files (JSON)
 
-Store realistic mock data in `tests/fixtures/`:
+Store realistic mocks in `tests/fixtures/`:
 ```json
 // tests/fixtures/items.json
 {
@@ -160,7 +160,7 @@ Store realistic mock data in `tests/fixtures/`:
 
 ### Factory Functions
 
-For dynamic mock data, use factory functions:
+For dynamic mocks, use factories:
 ```typescript
 // tests/fixtures/itemFactory.ts
 import { Item, CreateItemRequest } from '../../services/shared/types/entities';
@@ -358,7 +358,7 @@ public class GetItemsTests
 
 ## Test Gate Enforcement
 
-Agent MUST follow this workflow at every test gate:
+MUST follow this workflow at every test gate:
 
 ### 1. Run Tests
 
@@ -375,21 +375,21 @@ dotnet test
 
 ### 2. Parse Output
 
-Look for:
-- **Pass**: All tests passed, zero failures → proceed to next phase
-- **Fail**: One or more tests failed → DO NOT proceed
+Interpret:
+- **Pass**: All tests passed, zero failures → proceed.
+- **Fail**: One or more failed → DO NOT proceed.
 ### 3. If Tests Fail
 
-1. Read failure output — identify which test failed and why
-2. Determine if issue is in **code** or **test**
+1. Read failure; identify failed test + cause.
+2. Locate issue in **code** or **test**.
 3. Fix issue
 4. Re-run tests
 5. Repeat until ALL tests pass
 
 ### 4. If Tests Pass
 
-1. Update the plan's `Status:` field in `.azure/project-plan.md` if the phase advances it
-2. Proceed to next phase
+1. If phase advances, update plan `Status:` in `.azure/project-plan.md`.
+2. Proceed.
 
 ### Decision Tree
 
@@ -407,27 +407,27 @@ Run tests
                          └── Missing dep ──→ Install dep → Re-run tests
 ```
 
-> **NEVER skip a test gate.** If you cannot get tests to pass after reasonable effort, report failure to user rather than silently proceeding.
+> **NEVER skip a test gate.** If reasonable effort cannot pass tests, report failure instead of silently proceeding.
 
 ---
 
 ## Coverage Guidance
 
-**Do not set hard coverage thresholds.** Instead, ensure:
+**Do not set hard coverage thresholds.** Ensure:
 
-- Every function handler has at least one happy-path test and one error-path test
-- Every service method is tested via mock implementations
-- Every validation schema has valid/invalid input tests
-- Every error type is tested for correct HTTP status mapping
+- Every function handler has at least one happy-path + one error-path test.
+- Every service method is tested through mock implementations.
+- Every validation schema has valid/invalid tests.
+- Every error type has correct HTTP status mapping tests.
 - Edge cases are covered (empty arrays, null values, boundary numbers, special characters)
 
-The goal is **meaningful coverage**, not a percentage target.
+Goal: **meaningful coverage**, not percentage.
 
 ---
 
 ## Test Naming Conventions
 
-Use descriptive test names that document behavior:
+Use descriptive behavior-documenting test names:
 
 ```
 ✅ "should return 200 with list of items when items exist"
@@ -451,20 +451,20 @@ Use descriptive test names that document behavior:
 
 ## Frontend Testing
 
-> The frontend has its own build gate at Step 1 (F4). These patterns ensure the frontend is tested as rigorously as the backend.
+> Frontend has its own Step 1 (F4) build gate. Test it as rigorously as backend.
 
 ### Minimum Test Coverage
 
-Every frontend generated by this skill must include tests for:
+Every generated frontend must test:
 
 | Category | What to Test | Why |
 |----------|-------------|-----|
-| **Auth flow** | Login success, login failure, logout, token expiry redirect | Auth is the security boundary |
-| **Protected routes** | Unauthenticated user redirected to /login | Ensures route protection works |
-| **Data display** | List renders items from mock API data | Core feature verification |
-| **Error states** | Error message shown when API returns error | Users must see failures |
-| **Form validation** | Invalid input shows feedback before submit | UX quality |
-| **Destructive actions** | Delete shows confirmation before executing | Data safety |
+| **Auth flow** | Login success and failure, logout, token-expiry redirect | Security boundary |
+| **Protected routes** | Unauthenticated user redirected to /login | Verify route protection |
+| **Data display** | List renders mock API items | Verify core feature |
+| **Error states** | Error shown when API fails | Expose failures |
+| **Form validation** | Invalid input gets pre-submit feedback | UX quality |
+| **Destructive actions** | Delete requires confirmation | Data safety |
 
 ### Test Setup Pattern (React + Vitest)
 
@@ -570,4 +570,4 @@ describe('useAuth', () => {
 
 ### Reference
 
-See [frontend-patterns.md](.github/agents/shared-references/frontend-patterns.md) for complete frontend architecture guidance.
+See [frontend-patterns.md](.github/agents/shared-references/frontend-patterns.md) for full frontend architecture guidance.

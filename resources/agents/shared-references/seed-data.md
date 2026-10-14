@@ -1,20 +1,20 @@
 # Seed Data & Migrations
 
-> Database schema management and realistic test data seeding patterns.
+> Database schema management and realistic test-data seeding.
 
 ---
 
 ## Core Principle
 
-**Repeatable, idempotent schema and data management.** Migrations run forward and backward cleanly. Seed data is realistic, usable in both dev and tests. Running seed twice does not duplicate data.
+**Repeatable, idempotent schema and data management.** Migrations run cleanly forward and backward. Realistic seed data works in dev and tests; repeated seeding creates no duplicates.
 
 ---
 
 ## When This Applies
 
-This reference is used **only when project includes a database service** (PostgreSQL, CosmosDB, Azure SQL). If project only uses Blob Storage, Queue Storage, or Redis, skip this reference.
+Use this reference **only when project includes a database service** (PostgreSQL, CosmosDB, Azure SQL). Skip projects using only Blob Storage, Queue Storage, or Redis.
 
-> ⛛ **CRITICAL**: Migration files and seed data scripts MUST contain actual code — not empty files or empty directories. Empty `seeds/migrations/` directory is #1 cause of runtime failures that unit tests cannot catch (mocks use in-memory Maps, not SQL tables). Every table in plan's Database Constraints section MUST have corresponding migration file with complete `CREATE TABLE` statement. Every migration file MUST have both `up()` and `down()` functions. `seeds/fixtures/seed-data.json` MUST contain realistic sample data.
+> ⛛ **CRITICAL**: Migration files and seed-data scripts MUST contain actual code, never empty files or directories. Empty `seeds/migrations/` is #1 cause of runtime failures missed by unit tests because mocks use in-memory Maps, not SQL tables. Every table in plan's Database Constraints needs a migration file with complete `CREATE TABLE`; every migration needs `up()` and `down()`; `seeds/fixtures/seed-data.json` MUST contain realistic sample data.
 
 ---
 
@@ -164,7 +164,7 @@ seed().catch(console.error);
 
 ### Python and C# Migrations
 
-For Python migration patterns (Alembic + SQLAlchemy), see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C# migration patterns (Entity Framework Core), see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+For Python migrations (Alembic + SQLAlchemy), see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C# migrations (Entity Framework Core), see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
@@ -271,12 +271,12 @@ describe.skipIf(!shouldRun)('Seed Data', () => {
 
 ## Fixture Data Guidelines
 
-1. **Use realistic data** — Names, descriptions, values should look like real data, not "test1", "test2"
-2. **Include edge cases** — Empty strings (where valid), long strings, special characters, Unicode, boundary numbers (0, negative, max)
-3. **Use stable IDs** — Seed data should have predictable IDs (e.g., `seed-001`) so tests can reference specific records
-4. **Keep fixtures in JSON** — Shared between seed scripts and test fixtures. Easy to read and modify.
-5. **Separate seed data from test fixtures** — Seed data populates dev database. Test fixtures drive unit test assertions. May overlap but serve different purposes.
-6. **Document fixture schema** — Add comment block or README explaining what each fixture covers
+1. **Use realistic data** — Use realistic names, descriptions, and values, not "test1", "test2"
+2. **Include edge cases** — Include valid empty strings, long strings, special characters, Unicode, and boundary numbers (0, negative, max)
+3. **Use stable IDs** — Use predictable seed IDs (e.g., `seed-001`) so tests can reference specific records
+4. **Keep fixtures in JSON** — Share between seed scripts and test fixtures; keep readable and editable.
+5. **Separate seed data from test fixtures** — Seed data populates dev database; test fixtures drive unit-test assertions. They may overlap but serve different purposes.
+6. **Document fixture schema** — Add a comment block or README explaining each fixture's coverage
 
 ### Example Fixture Structure
 

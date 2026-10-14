@@ -9,14 +9,14 @@ metadata:
 
 # Azure Project Plan
 
-> **AUTHORITATIVE — MANDATORY.** Canonical source for planning Azure-centric apps. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
+> **AUTHORITATIVE — MANDATORY.** Canonical Azure-centric app planning source. Follow exactly; ignore prior assumptions and other sources. Do not improvise.
 
-**North Star:** capture requirements → approved plan in minutes, no long back-and-forth. After approval, auto-chain to `azure-project-scaffold`.
+**North Star:** requirements → approved plan in minutes, without long discussion. After approval, auto-chain to `azure-project-scaffold`.
 
 ## Triggers
-Plan/design a new app of **any** shape; create requirements/architecture; start a project from scratch; full-stack Azure Functions app; testable API with Azure services; bootstrap Functions + frontend; multi-service projects (frontend + API + worker) regardless of framework (Express, Fastify, etc.); **and frontend-only work** — a static site, single-page app, or small client-side tool ("a simple unit converter", "a little calculator page", "just a clean frontend tool") with no backend, no database, and no Azure services.
+Plan/design new apps of **any** shape; define requirements/architecture; start from scratch; full-stack Azure Functions apps; testable APIs with Azure services; Functions + frontend; multi-service projects (frontend + API + worker) with any framework (Express, Fastify, etc.); **and frontend-only work** — static sites, single-page apps, or small client-side tools ("a simple unit converter", "a little calculator page", "just a clean frontend tool") without backend, database, or Azure services.
 
-> ⚠️ **No request is too small to plan.** "Nothing needs to be saved, no accounts, no backend" describes a *valid project shape* — one `frontend` service with `dataStores: ["No datastore required"]` — not a reason to bypass this agent. Never answer a build request by writing `index.html` or any other application code directly; always start with `.azure/requirements.json`.
+> ⚠️ **No request is too small to plan.** "Nothing needs to be saved, no accounts, no backend" is a *valid project shape*: one `frontend` service with `dataStores: ["No datastore required"]`. Never bypass this agent or answer a build request with `index.html` or other application code; always start with `.azure/requirements.json`.
 
 
 ## ❌ Do NOT activate — route instead
@@ -29,21 +29,21 @@ Plan/design a new app of **any** shape; create requirements/architecture; start 
 | Benchmark scaffold quality | **scaffold-benchmark** |
 
 ## Rules
-1. **Plan first** — create `.azure/project-plan.md` before any code. No `services/`, configs, or project files until the user approves. Only files allowed under the project root: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` (per Step 3.5).
+1. **Plan first** — create `.azure/project-plan.md` before code. No `services/`, configs, or project files before user approval. Under project root, allow only `.azure/project-plan.md` and `.azure/.preview-temp/` contents (per Step 3.5).
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
-3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a presentation-quality frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a visual spec but builds the real app with the chosen framework).
-4. **Interactive UI** — all user input comes through the requirements and plan webviews; never ask in plain chat and never call `vscode_askQuestions`. Batch open questions into the webview rather than the transcript.
+3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never require manual invocation. During planning, **generate a presentation-quality frontend HTML/CSS preview** per Step 3.5. The scaffold agent uses it as visual spec, then builds the real app with the chosen framework.
+4. **Interactive UI** — collect all input through requirements and plan webviews; never plain chat or `vscode_askQuestions`. Batch open questions in the webview, not transcript.
 
 ## Autopilot is selected on the plan page (this agent always runs guided)
-This agent **always** runs guided: it generates `.azure/project-plan.md` with `Status: Planning`, opens the plan preview, and stops for the user's approval. It does **not** detect, decide, or record autopilot, and never skips the preview or approval gate.
-Autopilot is chosen by the **user** via the **Autopilot toggle on the plan webview**, after the plan is shown. When they approve with it on, the extension records `**Execution Mode**: auto` in `.azure/project-plan.md`, enables global auto-approve, and hands off to the scaffold agent with the `[AUTOPILOT MODE]` marker; every downstream skill then inherits autopilot from the plan file and runs unattended to the end.
+This agent **always** runs guided: generate `.azure/project-plan.md` with `Status: Planning`, open plan preview, and stop for user approval. Never detect, decide, or record autopilot; never skip preview or approval.
+After seeing the plan, the **user** chooses autopilot via the **Autopilot toggle on the plan webview**. Approval with it on makes the extension record `**Execution Mode**: auto` in `.azure/project-plan.md`, enable global auto-approve, and hand off with `[AUTOPILOT MODE]`; downstream skills inherit autopilot from the plan and run unattended to completion.
 
-There is nothing autopilot-specific for you to do here — just write a correct, complete plan and always emit both the `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat — the only stop is the plan webview approval.
+No autopilot-specific action here. Write a complete, correct plan; always emit both `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat; only stop for plan webview approval.
 
 
 ## Two-phase instructions — read the file for the current phase
 
-This agent runs in two phases with **separate instruction files**. Read only the file for the phase you are in — do **not** load both at once. This keeps each phase focused and fast.
+Two phases use **separate instruction files**. Read only the current phase file; do **not** load both.
 
 | Phase | When | Read & follow | Produces |
 |-------|------|---------------|----------|
@@ -52,10 +52,10 @@ This agent runs in two phases with **separate instruction files**. Read only the
 
 - **Phase A** — Step 1 (Detect Workspace) + Step 2 (Gather Requirements).
 - **Phase B** — Step 3 (Generate Plan) + Step 3.5 (Frontend Preview) + Planning Quick Reference.
-- The end-to-end order is unchanged: **DETECT → GATHER → GENERATE PLAN → GENERATE PREVIEW → approval → AUTO-CHAIN scaffold.** Only the instructions are split by phase; each phase file is self-contained for its phase.
+- Order remains **DETECT → GATHER → GENERATE PLAN → GENERATE PREVIEW → approval → AUTO-CHAIN scaffold.** Instructions split by phase; each file is self-contained.
 
 ## Workflow (mandatory order)
-DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Detect + gather are inlined in [`requirements.md`](requirements.md); plan generation, the preview, and all architectural context are inlined in [`plan.md`](plan.md). Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5.
+DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold. Allow only `.azure/project-plan.md` and `.azure/.preview-temp/` contents; no `services/`, configs, or production code. Detect + gather are in [`requirements.md`](requirements.md); plan generation, preview, and architectural context are in [`plan.md`](plan.md). Planning reads ZERO external files except `references/html-preview.md` for Step 3.5.
 
 ## Outputs
 
@@ -66,4 +66,4 @@ DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 
 
 ## Next
 
-> **Automatic**: after the plan is approved, the flow immediately invokes **azure-project-scaffold** (auto-chain). No user action required.
+> **Automatic**: plan approval immediately invokes **azure-project-scaffold** (auto-chain). No user action.

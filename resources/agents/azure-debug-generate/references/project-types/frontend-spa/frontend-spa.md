@@ -1,14 +1,14 @@
 # Project Type: Frontend SPA
 
-Reference guide for local development setup of frontend single-page application projects.
+Local development reference for frontend single-page applications.
 
-> All SPA frameworks share the same VS Code debug configuration shape: browser debugger type (e.g., `chrome`, `msedge`), `launch` request mode, dev server as a prerequisite task. The per-framework differences — runtime, startup command, default port, and background problem matcher — are resolved from the Framework Lookup Table below.
+> All SPA frameworks use one VS Code debug shape: browser type (e.g., `chrome`, `msedge`), `launch` request, and dev-server prerequisite task. Resolve runtime, startup command, default port, and background problem matcher from Framework Lookup Table.
 
 ---
 
 ## Detection Signals
 
-Match against these signals to classify a workspace root as a frontend SPA. If the workspace clearly is an SPA but doesn't match a specific signal below, still classify it as Frontend SPA — use the Framework Lookup Table's fallback row for configuration.
+Use these signals to classify a workspace root as Frontend SPA. If clearly an SPA but unmatched, still classify it and use Framework Lookup Table fallback.
 
 | Signal | Notes |
 |--------|-------|
@@ -22,25 +22,25 @@ Match against these signals to classify a workspace root as a frontend SPA. If t
 
 ## Prerequisites
 
-No VS Code extension is required — browser debugging uses VS Code's built-in adapter. A Chromium-based browser (Chrome or Edge) must be installed, though; that is captured as a Debug prerequisite via [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection. Runtime prerequisites (e.g., Node.js) are listed in `runtimes/{rt}.md § Prerequisites`.
+No VS Code extension required; browser debugging uses its built-in adapter. Require installed Chromium browser (Chrome or Edge), captured as Debug prerequisite via [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection. Runtime prerequisites (e.g., Node.js): `runtimes/{rt}.md § Prerequisites`.
 
 ---
 
 ## Runtime Support Matrix
 
-Runtime support for Frontend SPAs is tracked per-framework in the **Framework Lookup Table** below. Each row's `Status` column indicates implementation readiness.
+Framework Lookup Table tracks support; each `Status` shows readiness.
 
 ---
 
 ## Dependency Discovery
 
-Frontend SPAs communicate with backend services via HTTP during local development — they do not connect to Azure emulators directly. In monorepo setups, Azure service dependencies (storage, databases, etc.) are handled by the backend project type. In standalone SPA projects, the backend may already be running as a deployed service or a separate local process — no emulator setup is needed for the SPA itself.
+Frontend SPAs call backends through HTTP, never Azure emulators directly. In monorepos, backend project type handles Azure dependencies (storage, databases, etc.). Standalone backends may be deployed or separate local processes; SPA needs no emulator setup.
 
 ---
 
 ## Backend Proxy Dependencies
 
-Frontend dev servers often proxy API requests to a local backend during development. In multi-service setups, if a proxy config is detected pointing to another local service, that backend service's startup task should be a dependency of the frontend's dev server task to prevent `ECONNREFUSED` errors during initial page load.
+Dev servers often proxy APIs to local backends. In multi-service setups, when proxy config targets another local service, make its startup task a frontend dev-server dependency to prevent initial-load `ECONNREFUSED`.
 
 | Framework | Proxy Config Location |
 |-----------|----------------------|
@@ -53,15 +53,15 @@ Frontend dev servers often proxy API requests to a local backend during developm
 
 ## Startup Command
 
-The startup command varies per framework. See the **Framework Lookup Table** below for the specific command for each detected framework (e.g., `npm run dev` for Vite, `npm start` for Angular).
+Resolve each framework's startup command from **Framework Lookup Table** (e.g., Vite `npm run dev`, Angular `npm start`).
 
 ---
 
 ## Framework Lookup Table
 
-Use this table to resolve per-framework values when generating the VS Code configuration. The `Status` column is the source of truth for implementation readiness — if a framework is not ✅ Implemented, emit a `⚠️ LIMITED SUPPORT:` warning per [limited-support.md](../../limited-support.md).
+Use this table for generated VS Code values. `Status` is readiness source of truth; unless ✅ Implemented, emit `⚠️ LIMITED SUPPORT:` per [limited-support.md](../../limited-support.md).
 
-> **To add a new framework:** add a row with its runtime, detection signal, startup command, default port, problem matcher patterns, and status.
+> **To add a new framework:** add runtime, detection, startup command, default port, problem matcher patterns, and status row.
 
 | Framework | Runtime | Detection | Startup Command | Default Port | Ready Pattern (begins) | Ready Pattern (ends) | Status |
 |-----------|---------|----------|-----------------|--------------|----------------------|---------------------|--------|
@@ -72,15 +72,15 @@ Use this table to resolve per-framework values when generating the VS Code confi
 | Blazor WASM | dotnet | `*.razor` + `WebAssembly` SDK in `*.csproj` | `dotnet watch run` | 5000 | `Now listening on` | `Application started` | 🔲 Planned |
 | other | — | No match | — | — | — | — | [limited-support.md](../../limited-support.md) |
 
-> ⚠️ **ANSI escape codes:** Dev servers often wrap output in color codes (e.g., `\x1b[32m...\x1b[0m`). Prefer plain-text anchors that appear outside styled regions (e.g., `Local:` instead of `ready in \d+`) to avoid regex mismatches.
+> ⚠️ **ANSI escape codes:** Dev servers may color output (e.g., `\x1b[32m...\x1b[0m`). Use plain-text anchors outside styled regions (e.g., `Local:` instead of `ready in \d+`) to avoid regex mismatches.
 
 ---
 
 ## Runtime Wiring
 
-<!-- For Frontend SPAs, all configuration comes from this file — the Framework Lookup Table and VS Code Debug Configuration.
-     Browser-based projects do not use runtimes/{rt}.md for debugger type or build chain.
-     See generate.md § Source Ownership for the server-side vs browser distinction. -->
+<!-- Frontend SPA configuration comes from this file's Framework Lookup Table and VS Code Debug Configuration.
+     Browser projects do not use runtimes/{rt}.md for debugger type or build chain.
+     See generate.md § Source Ownership for server-side vs browser distinction. -->
 
 | Startup command | Startup task label | Task type | Problem matcher | Request Mode |
 |----------------|-------------------|-----------|-----------------|--------------|
@@ -88,9 +88,9 @@ Use this table to resolve per-framework values when generating the VS Code confi
 
 ### VS Code Debug Configuration
 
-The request mode is always `launch` (VS Code opens the browser). The browser (Chrome or Edge) is the one recorded in the plan's Prerequisites section during the browser detection pass (see [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection) — use its debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). The user can change the browser in the plan before approval.
+Request mode is always `launch`; VS Code opens the browser. Use browser recorded during plan prerequisite detection (see [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection) and its adapter `type` (`chrome` for Chrome, `msedge` for Edge). User may change it before plan approval.
 
-Look up the launch configuration template from the corresponding adapter file in [`debug-adapters/`](debug-adapters/):
+Get launch template from corresponding file in [`debug-adapters/`](debug-adapters/):
 
 | Browser / Adapter | Adapter File | Status |
 |-------------------|-------------|--------|
@@ -98,11 +98,11 @@ Look up the launch configuration template from the corresponding adapter file in
 | Blazor WASM (.NET) | [debug-adapters/blazorwasm.md](debug-adapters/blazorwasm.md) | 🔲 Planned |
 | ∞ | [debug-adapters/_template.md](debug-adapters/_template.md) | — |
 
-> **To add a new debug adapter:** copy `debug-adapters/_template.md` to `debug-adapters/{adapter}.md` and add a row to this table.
+> **To add a new debug adapter:** copy `debug-adapters/_template.md` to `debug-adapters/{adapter}.md`; add table row.
 
 ### VS Code Task Configuration
 
-The top-level task is the framework's dev server. No runtime build chain — the dev server handles compilation internally. The task label follows the pattern `"{id} dev"`.
+Top-level task is framework dev server; it compiles internally, so no runtime build chain. Label: `"{id} dev"`.
 
 ```json
 {
@@ -126,53 +126,53 @@ The top-level task is the framework's dev server. No runtime build chain — the
 
 ### Connection Strings
 
-Not applicable — Frontend SPAs do not connect to Azure emulators directly. In monorepo setups, connection strings are owned by the backend project type.
+Not applicable: Frontend SPAs do not directly connect to Azure emulators. In monorepos, backend project type owns connection strings.
 
 ---
 
 ## API Test Collections
 
-Not applicable — Frontend SPAs do not expose API endpoints. In monorepo setups, API test collections are owned by the backend project type. See [api-test-collections.md](../../api-test-collections.md) for backend patterns.
+Not applicable: Frontend SPAs expose no API endpoints. In monorepos, backend project type owns API test collections. See [api-test-collections.md](../../api-test-collections.md) for backend patterns.
 
 ---
 
 ## VS Code Extension Recommendations (`.vscode/extensions.json`)
 
-No project-type-specific extensions. Browser debugging uses VS Code's built-in capabilities.
+No project-type extensions; browser debugging is built in.
 
-> Framework-specific extensions (if any) would be listed here. Runtime extensions are listed in `runtimes/{rt}.md`.
+> List framework extensions here, if any. Runtime extensions: `runtimes/{rt}.md`.
 
 ---
 
 ## VS Code Workspace Settings (`.vscode/settings.json`)
 
-No project-type-specific workspace settings.
+No project-type workspace settings.
 
 ---
 
 ## Validation Signals
 
-Used by [validation.md](../../validation.md) during Phase 3 to verify the generated debug configuration works.
+[validation.md](../../validation.md) uses these in Phase 3 to verify generated debug configuration.
 
 ### Ready Signal
 
-Use the `Ready Pattern (begins)` and `Ready Pattern (ends)` columns from the **Framework Lookup Table** above for the detected framework. The ready signal is observed on stdout of the dev server task.
+Use detected framework's `Ready Pattern (begins)` and `Ready Pattern (ends)` from **Framework Lookup Table**. Observe ready signal on dev-server task stdout.
 
 ### HTTP Verification
 
 | Curl Target | Expected Status | Notes |
 |-------------|-----------------|-------|
-| `http://localhost:{dev-server-port}` | `200` or `301` | Use the resolved dev server port from the Framework Lookup Table. Validates the dev server started — do NOT launch a browser. Framework-specific redirects (e.g., `301` for Next.js) are acceptable. |
+| `http://localhost:{dev-server-port}` | `200` or `301` | Use Framework Lookup Table port. Verify dev server without launching browser. Accept framework redirects (e.g., Next.js `301`). |
 
 ---
 
 ## Checklist — Frontend SPA Project Validation
 
-After generating `launch.json` and `tasks.json`, verify the following were produced correctly:
+After generating `launch.json` and `tasks.json`, verify:
 
-1. ✅ Dev server task exists in `tasks.json` with a custom `background` problem matcher using the correct begin/end patterns from the Framework Lookup Table
-2. ✅ `launch.json` uses the browser debug adapter matching the browser recorded in the plan's Prerequisites (`chrome` or `msedge`) with `"request": "launch"`
-3. ✅ `launch.json` `url` matches the framework's default port from the Framework Lookup Table
-4. ✅ `launch.json` `preLaunchTask` points to the dev server task
+1. ✅ Dev-server task exists in `tasks.json` with custom `background` problem matcher and correct Framework Lookup Table begin/end patterns
+2. ✅ `launch.json` uses plan browser adapter (`chrome` or `msedge`) with `"request": "launch"`
+3. ✅ `launch.json` `url` matches Framework Lookup Table default port
+4. ✅ `launch.json` `preLaunchTask` targets dev-server task
 
-> Runtime-specific checks (e.g., build task, debugger type) are defined in `runtimes/{rt}.md`.
+> Runtime checks (e.g., build task, debugger type): `runtimes/{rt}.md`.

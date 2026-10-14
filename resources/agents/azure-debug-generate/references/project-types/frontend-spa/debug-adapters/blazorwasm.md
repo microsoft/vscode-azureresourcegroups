@@ -1,6 +1,6 @@
 # Blazor WASM — Browser Debug Adapter
 
-> 🔲 **Planned** — This adapter is not yet implemented. Emit a `⚠️ LIMITED SUPPORT:` warning per [limited-support.md](../../../limited-support.md).
+> 🔲 **Planned** — Not implemented. Emit a `⚠️ LIMITED SUPPORT:` warning per [limited-support.md](../../../limited-support.md).
 
 ## VS Code Debugger Type
 
@@ -27,14 +27,14 @@
 | Field | Source |
 |-------|--------|
 | `type` | Always `blazorwasm` |
-| `url` | Default Port from [frontend-spa.md § Framework Lookup Table](../frontend-spa.md) |
-| `browser` | Which browser to launch — defaults to `chrome` |
+| `url` | Default Port in [frontend-spa.md § Framework Lookup Table](../frontend-spa.md) |
+| `browser` | Browser to launch — defaults to `chrome` |
 | `cwd` | .NET project root |
-| `preLaunchTask` | `{id} dev` — the dev server task from [frontend-spa.md § VS Code Task Configuration](../frontend-spa.md) |
+| `preLaunchTask` | `{id} dev` — dev server task from [frontend-spa.md § VS Code Task Configuration](../frontend-spa.md) |
 
 ---
 
 ## Notes
 
-- The `blazorwasm` adapter is provided by the C# extension, not built into VS Code.
-- The launch config shape differs from the CDP-based `chrome`/`msedge` adapter — it requires `browser` and `cwd` fields, and does not use `webRoot`.
+- C# extension provides the `blazorwasm` adapter; VS Code does not.
+- Unlike CDP-based `chrome`/`msedge`, it requires `browser` and `cwd`, not `webRoot`.

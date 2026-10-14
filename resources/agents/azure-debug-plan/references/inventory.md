@@ -1,6 +1,6 @@
 # Inventory
 
-Scan the workspace to populate the plan. For multi-service workspaces, loop over each service in `services[]` from classify.md; deduplicate emulators across services per [multi-service.md](multi-service.md).
+Scan workspace to populate plan. For multi-service workspaces, process each `services[]` service from classify.md; deduplicate emulators per [multi-service.md](multi-service.md).
 
 ---
 
@@ -8,28 +8,28 @@ Scan the workspace to populate the plan. For multi-service workspaces, loop over
 
 ### Autopilot: Reuse the Project Plan Prerequisites
 
-**Autopilot mode only.** In autopilot, if `.azure/project-plan.md` exists and lists Prerequisites (its `### Run` and `### Debug` groups), carry those prerequisites over wholesale into the debug plan instead of re-deriving them — the planning stage already inventoried them, and autopilot has no approval gate to catch a dropped prerequisite. Add any prerequisites the workspace scan reveals that project-plan is missing, and don't silently override a project-plan entry. Only when project-plan has no Prerequisites do you fall back to deriving them from the workspace scan below.
+**Autopilot mode only.** If `.azure/project-plan.md` lists Prerequisites (`### Run` and `### Debug` groups), copy all into debug plan instead of re-deriving: planning already inventoried them, and autopilot lacks approval gate to catch omissions. Add scan-discovered missing prerequisites; never silently override project-plan entries. Derive from workspace scan below only when project-plan lacks Prerequisites.
 
-In interactive (non-autopilot) mode, derive prerequisites from the workspace scan as usual; the user reviews and edits the plan before approving.
+In interactive (non-autopilot) mode, derive from workspace scan; user reviews and edits before approval.
 
 ### Deriving Prerequisites from the Workspace Scan
 
-Identify required tools and then inventory them by following [prerequisites.md](../../shared-references/prerequisites.md).
+Identify and inventory required tools via [prerequisites.md](../../shared-references/prerequisites.md).
 
-The required tools are derived from a scan of the currently opened workspace project — check only the tools and extensions relevant to the detected project types, runtimes, and Azure bindings. Both tool sets defined in prerequisites.md apply here — the **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and the **Debug** tools (Docker, Docker Compose, VS Code extensions, ...) — since debugging exercises the full local stack.
+Derive tools from current workspace scan. Check only those relevant to detected project types, runtimes, and Azure bindings. Include both prerequisites.md sets: **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and **Debug** tools (Docker, Docker Compose, VS Code extensions, ...), because debugging uses full local stack.
 
-For every detected project type, include its VS Code debug-integration extension from the Debug Tools table as its own Debug row (e.g. an Azure Functions project always includes `ms-azuretools.vscode-azurefunctions`) — these extensions are required for the debug experience and are separate from the Run-group CLI/runtime tools, so never omit them.
+For every detected project type, add its VS Code debug-integration extension from Debug Tools as a separate Debug row (e.g. Azure Functions always includes `ms-azuretools.vscode-azurefunctions`). These required extensions differ from Run-group CLI/runtime tools; never omit them.
 
 ---
 
 ## Step 2: Azure Dependencies
 
-For each service, identify Azure service dependencies by scanning bindings or SDK packages.
+Identify each service's Azure dependencies by scanning bindings or SDK packages.
 
 - **Functions projects:** Scan bindings per [project-types.md](project-types.md) § functions
-- **Other project types:** Scan dependency files (e.g. `package.json`, `requirements.txt`, `*.csproj`) for packages that indicate an Azure service dependency
+- **Other project types:** Scan dependency files (e.g. `package.json`, `requirements.txt`, `*.csproj`) for Azure service packages
 
-The table below shows common SDK-to-service mappings — this is **not exhaustive**. Any package that implies connectivity to an Azure service should be mapped accordingly.
+Common SDK-to-service mappings below are **not exhaustive**. Map every package implying Azure service connectivity.
 
 | Example Packages | Azure Service | Emulator |
 |-----------------|--------------|----------|
@@ -40,11 +40,11 @@ The table below shows common SDK-to-service mappings — this is **not exhaustiv
 | `@azure/event-hubs` | Event Hubs | eventhubs-emulator |
 | `mssql`, `Microsoft.Data.SqlClient` | Azure SQL | azure-sql-edge |
 
-> Multiple storage bindings (blob + queue + table) consolidate to a **single** azurite entry.
-> Cross-check `local.settings.json`, `.env`, and app config for existing connection references to confirm findings.
+> Consolidate multiple storage bindings (blob + queue + table) into **one** azurite entry.
+> Confirm findings against connection references in `local.settings.json`, `.env`, and app config.
 
 ---
 
 ## Step 3: API Test Collection Inventory
 
-For each service, identify whether it exposes testable HTTP endpoints or triggers and provide a brief summary for the plan. Inventory the implemented route and trigger registrations in the workspace, not only the route table in `.azure/project-plan.md`. The project plan intentionally omits derived authentication routes, so include implemented registration, login, and current-user endpoints when `API Login` is enabled. Detailed endpoint parsing happens during the generation phase.
+For each service, identify testable HTTP endpoints or triggers; summarize briefly in the plan. Inventory implemented route and trigger registrations in the workspace, not only the route table in `.azure/project-plan.md`. The project plan intentionally omits derived authentication routes; include implemented registration, login, and current-user endpoints when `API Login` is enabled. Detailed parsing occurs during generation.

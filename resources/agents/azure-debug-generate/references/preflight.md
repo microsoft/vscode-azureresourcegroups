@@ -1,6 +1,6 @@
 # Pre-Flight Checks
 
-Verify the plan exists and environment is ready before proceeding onwards to generating files.
+Before file generation, verify plan exists and environment ready.
 
 ## Container Runtime Readiness Check
 
@@ -35,15 +35,15 @@ Read the container runtime from the plan's Orchestrator table (**Docker**, **Pod
 
 ## Stale Data Directory Check
 
-Before generating any files, check for leftover emulator state from a previous run — both **workspace data directories** (bind-mounted emulators such as Azurite's `.azurite/`, `.cosmos/`, `.servicebus/`) and **named volumes** (database emulators such as Postgres's `postgres_data`; see [emulators/postgres.md](emulators/postgres.md)). Stale state can cause container startup failures — for example, PostgreSQL's `initdb` will refuse to initialize if the data directory (the `postgres_data` volume) already contains files from an incompatible or partially-initialized cluster.
+Before generating files, find leftover emulator state from prior runs: **workspace data directories** (bind-mounted emulators such as Azurite's `.azurite/`, `.cosmos/`, `.servicebus/`) and **named volumes** (database emulators such as Postgres's `postgres_data`; see [emulators/postgres.md](emulators/postgres.md)). Stale state can break container startup; for example, PostgreSQL `initdb` refuses a `postgres_data` volume containing incompatible or partially initialized cluster files.
 
-- **Bind-mounted data directories:** list them with `ls`/`Get-ChildItem` in the workspace.
-- **Named volumes:** list them with `docker compose ls` / `docker volume ls` (or the `podman` equivalents) — a project-scoped `*_postgres_data` volume from a prior run is the database equivalent of a stale directory.
+- **Bind-mounted data directories:** list via `ls`/`Get-ChildItem` in the workspace.
+- **Named volumes:** list via `docker compose ls` / `docker volume ls` (or `podman` equivalents). A prior project's `*_postgres_data` volume is the database equivalent of a stale directory.
 
 If any stale state is found:
 
-1. **List all found directories and named volumes** with their sizes.
-2. **Ask the user how to proceed** using `ask_user`:
+1. **List all found directories and named volumes** with sizes.
+2. **Ask how to proceed** via `ask_user`:
 
 ```
 ask_user(
@@ -55,20 +55,20 @@ ask_user(
 )
 ```
 
-3. **If the user chooses to delete** — Remove bind-mounted directories with platform-appropriate removal (`rm -rf` on macOS/Linux, `Remove-Item -Recurse -Force` on Windows), and remove named volumes with `docker compose down -v` / `podman compose down -v` (or `docker volume rm <project>_postgres_data`), before proceeding with generation.
-4. **If the user wants to keep them** — Proceed, but warn that containers may fail to start. If they do fail, offer to clean up at that point.
+3. **If the user chooses to delete** — Before generation, remove bind-mounted directories using platform-appropriate removal (`rm -rf` on macOS/Linux, `Remove-Item -Recurse -Force` on Windows), and named volumes via `docker compose down -v` / `podman compose down -v` (or `docker volume rm <project>_postgres_data`).
+4. **If the user wants to keep them** — Proceed with a container-start failure warning; offer cleanup if failure occurs.
 5. **Never delete data directories or volumes silently** — Always confirm with the user first.
 
 ---
 
 ## Port Conflict Check
 
-Before generating any files, scan all ports required by the planned emulators (e.g. `lsof -i -P -n`). For each occupied port, identify the process name and PID.
+Before file generation, scan all planned emulator ports (e.g. `lsof -i -P -n`). Identify process name and PID per occupied port.
 
 If any conflicts are found:
 
-1. **List all conflicts clearly** — port number, process name, PID.
-2. **Ask the user how to proceed** using `ask_user`:
+1. **List conflicts clearly** — port, process name, PID.
+2. **Ask how to proceed** via `ask_user`:
 
 ```
 ask_user(
@@ -80,6 +80,6 @@ ask_user(
 )
 ```
 
-3. **If the user wants help remapping** — Propose alternative port numbers, update all references in the plan and project files (docker-compose service ports, connection strings, convenience scripts, VS Code debug config), then resume generation.
-4. **If the user will handle it themselves** — Proceed with generation using the original ports.
-5. **Never remap ports or modify config silently** — Always confirm with the user before making changes.
+3. **If remapping help requested** — Propose alternatives; update every plan/project reference (docker-compose service ports, connection strings, convenience scripts, VS Code debug config); resume.
+4. **If user handles it** — Generate with original ports.
+5. **Never silently remap ports or modify config** — Confirm first.

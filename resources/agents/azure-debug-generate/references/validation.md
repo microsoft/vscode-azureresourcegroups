@@ -1,8 +1,8 @@
 # Validation
 
-Verify that the generated VS Code debug configuration actually works. This phase runs after all artifacts are generated (Phase 2) and before the closing message.
+Prove generated VS Code debug configuration works. Run after Phase 2 artifacts, before closing.
 
-> ⛔ **MANDATORY.** You MUST execute every step in this file for each launch configuration. Do NOT skip, assume, or approximate results. Do NOT proceed to the closing message until every checklist entry has a real ✅ or ❌ result.
+> ⛔ **MANDATORY.** Execute every step for each launch config. Never skip, assume, or approximate. Close only after every checklist entry has real ✅/❌.
 
 > **Compose command comes from the plan.** Every `docker compose …` invocation below is a stand-in for the plan's Orchestrator **Compose Command** — use `docker compose` by default, or `podman compose` when the plan selected Podman. The commands (`up -d`, `ps`, `logs`, `down`) are identical across both engines.
 
@@ -12,80 +12,80 @@ Verify that the generated VS Code debug configuration actually works. This phase
 
 ## Validation Algorithm
 
-Steps 1–8 apply to each **non-compound** launch configuration in `.vscode/launch.json`; Step 9 then validates each **compound** configuration.
+Run Steps 1–8 per **non-compound** `.vscode/launch.json` config; Step 9 per **compound**.
 
-For each **non-compound** launch configuration in `.vscode/launch.json`:
+For each **non-compound** `.vscode/launch.json` config:
 
 ### Step 1: Resolve the Task Chain
 
-- Read the config's `preLaunchTask` value
-- Trace the full `dependsOn` chain in `.vscode/tasks.json` to resolve the dependency order
+- Read config `preLaunchTask`
+- Trace full `.vscode/tasks.json` `dependsOn` chain for dependency order
 
 ### Step 2: Verify Script Dependencies
 
-- For each task in the resolved chain, verify that its command can actually execute:
-   - **Package scripts** (e.g., `npm run clean`, `dotnet build`) — Confirm a matching script entry or build target exists in the project
-   - **CLI tool invocations** (e.g., `rimraf`, `concurrently`) — Confirm the tool is installed as a project dependency
-   - If a dependency is missing, add it as a project dev dependency before proceeding (see [generate.md § Dependency Availability](generate.md))
+- For every resolved task, prove command executable:
+   - **Package scripts** (e.g., `npm run clean`, `dotnet build`) — Matching project script or build target exists
+   - **CLI tool invocations** (e.g., `rimraf`, `concurrently`) — Tool installed as project dependency
+   - Missing dependency: add project dev dependency first (see [generate.md § Dependency Availability](generate.md))
 
 ### Step 3: Start Services
 
-- Run prerequisite tasks first (install, clean, emulators), then start the `preLaunchTask` itself as a background process
+- Run prerequisites first (install, clean, emulators), then start `preLaunchTask` in background
 
 ### Step 4: Verify Emulators
 
-- If a `docker-compose.yml` was generated, verify all services started correctly after `docker compose up -d` (or `podman compose up -d`):
-   - **Long-running services** (database emulators, Azurite) → should be running and healthy
-   - **One-shot services** (e.g., `db-migrate`) → should have exited with code 0
-   - Use `docker compose ps` and `docker compose logs <service>` (or the `podman compose` equivalents) to check
-   - If any service failed, diagnose the issue, fix the configuration, and re-run until all services are healthy or exited cleanly
-   - Only mark the config ❌ after exhausting reasonable fix attempts
+- If `docker-compose.yml` was generated, after `docker compose up -d` (or `podman compose up -d`) verify all services started correctly:
+   - **Long-running services** (database emulators, Azurite) → running and healthy
+   - **One-shot services** (e.g., `db-migrate`) → exited with code 0
+   - Check via `docker compose ps` and `docker compose logs <service>` (or `podman compose` equivalents)
+   - On failure, diagnose, fix, and re-run until all services are healthy or exited cleanly
+   - Mark config ❌ only after exhausting reasonable fix attempts
 
 ### Step 5: Confirm Ready Signal
 
-- Watch stdout from the **top-level task** for the ready signal. Look up the expected pattern from `project-types/{type}.md` § Validation Signals § Ready Signal.
+- Watch **top-level task** stdout for ready signal from `project-types/{type}.md` § Validation Signals § Ready Signal.
 
 ### Step 6: Confirm HTTP Reachability
 
-- After the ready signal, confirm with `curl` using the **application HTTP port** (not the debug port). Look up the expected URL and status from `project-types/{type}.md` § Validation Signals § HTTP Verification.
+- After ready signal, use `curl` on **application HTTP port**, not debug port. Expected URL/status: `project-types/{type}.md` § Validation Signals § HTTP Verification.
 
 > Use the curl template: `curl -s -o /dev/null -w "%{http_code}" <target>`
 
-> **HTTP verification not applicable:** If the project type's HTTP Verification table says "N/A" or no anonymous/public endpoint is available (e.g., all routes require auth keys), skip HTTP verification. The config can still pass (✅) based on the ready signal alone — note "HTTP verification skipped: {reason}" in the checklist entry.
+> **HTTP verification not applicable:** If project-type HTTP Verification says "N/A" or lacks anonymous/public endpoint (e.g., all routes require auth keys), skip. Ready signal alone may pass ✅; checklist must say "HTTP verification skipped: {reason}".
 
 ### Step 7: Per-Debugger-Type Checks
 
-- Run additional checks based on the `type` field in the launch configuration. See the [Per-Runtime Validation Checks](#per-runtime-validation-checks) section below. If no additional checks are listed for the debugger type, skip this step.
+- Run checks for launch config `type`; see [Per-Runtime Validation Checks](#per-runtime-validation-checks). If none for debugger type, skip.
 
 ### Step 8: Cleanup
 
-- Tear down **every** process this config started — not just the last one. Kill the top-level `preLaunchTask` process **and every task in its resolved `dependsOn` chain** (dev servers, `func host`, watchers, and any emulators started for this config), then confirm the app HTTP port and the debug port are released (e.g. `lsof -i :<port>` returns nothing) before moving to the next config. A lingering process here causes the next config — or the compound — to hit "port already in use".
+- Tear down **every** process started, not only last: top-level `preLaunchTask` + every resolved `dependsOn` task (dev servers, `func host`, watchers, emulators). Before next config, confirm app HTTP/debug ports released (e.g. `lsof -i :<port>` empty). Lingering processes make next config/compound hit "port already in use".
 
 ### Step 9: Validate the Compound Configuration
 
-For each **compound** launch configuration, faithfully run its orchestration — do NOT infer the result from the individual configs.
+For each **compound**, run actual orchestration; never infer from individual configs.
 
-> ⛔ **Do NOT skip running the compound.** Configs that each pass standalone can still fail when launched together: overlapping or duplicated `dependsOn` chains can start a service more than once, or a second invocation can grab an already-bound port. The user must never see this. You MUST run the compound's orchestration and observe the real result.
+> ⛔ **Run every compound.** Standalone-passing configs can fail together: overlapping/duplicate `dependsOn` chains may double-start services or rebind ports. Run compound orchestration; observe real result.
 
-- **Confirm the startup graph is deduplicated.** Before running, verify the compound satisfies every rule in [multi-service.md § Deduplicated Startup Graph](multi-service.md) — the compound's effective task graph must start each service exactly once. If any rule is violated, fix the generated config before running; do not validate a graph that can duplicate a service.
+- **Confirm deduplicated startup graph.** Before run, verify every [multi-service.md § Deduplicated Startup Graph](multi-service.md) rule: effective graph starts each service once. Fix violations before run; never validate duplication-capable graph.
 
-- **Run the compound orchestration.** Execute the compound's `preLaunchTask` (the sequenced compound task chain) exactly as VS Code would — run its `dependsOn` members in `dependsOrder: "sequence"`. This is the same terminal-driven orchestration used for the individual configs.
+- **Run compound orchestration.** Execute compound `preLaunchTask` sequenced chain like VS Code: its `dependsOn` members in `dependsOrder: "sequence"`. Use same terminal orchestration as individuals.
 
-- **Assert each service starts exactly once.** Watch the task output: each service's top-level task must produce exactly one running instance. When an individual config's `preLaunchTask` fires again for an already-running service, that duplicate invocation MUST be a silent no-op (via `instancePolicy: "silent"`) — never a second process. If any service starts a second instance or grabs an already-bound port, that is considered a fail and should be fixed before proceeding.
+- **Assert each service starts once.** Task output must show one instance per top-level task. Repeated individual `preLaunchTask` on running service MUST silently no-op via `instancePolicy: "silent"`, never spawn second process. Double instance or occupied-port grab fails; fix before proceeding.
 
-- **Assert readiness and HTTP reachability per service.** For each member service, confirm its ready signal (as in Step 5) and HTTP reachability (as in Step 6), reusing the same `project-types/{type}.md § Validation Signals` lookups the per-config algorithm uses. Every service must reach its ready signal; every service with an HTTP endpoint must return the expected status via `curl`.
+- **Assert readiness + HTTP per service.** Confirm each member's ready signal (Step 5) and HTTP (Step 6), using same `project-types/{type}.md § Validation Signals`. Every service reaches ready; each HTTP endpoint returns expected `curl` status.
 
-- **Record the result.** Mark the compound ✅ only after **each service started exactly once AND reached its ready signal AND (where applicable) passed HTTP reachability**. Otherwise mark it ❌ with the duplicate/failure evidence.
+- **Record result.** Compound ✅ only when **each service started once AND reached ready AND, where applicable, passed HTTP**. Otherwise ❌ with duplicate/failure evidence.
 
-> **Known limitation:** As with individual configs, the agent validates task orchestration and readiness through the terminal — it does not attach VS Code debuggers to the compound's member configs. Keep the assertion focused on **started exactly once + ready + reachable**.
+> **Known limitation:** Agent validates orchestration/readiness through terminal; it does not attach VS Code debuggers to compound members. Assert **started exactly once + ready + reachable**.
 
-- **Tear down the compound.** Stop every process the compound started (all member configs and their full task chains) and confirm their ports are released, exactly as in Step 8. This feeds into the final teardown sweep below.
+- **Tear down compound.** Stop all started processes (member configs + full chains); confirm ports released per Step 8. Then final sweep below.
 
 ---
 
 ## Validation Signal Lookup
 
-Ready signals and HTTP verification targets are defined in each project-type reference file under `§ Validation Signals`. Load the project-type file for the service being validated and read its signal tables.
+Each project-type reference `§ Validation Signals` defines ready signals and HTTP targets. Load service project-type file; read tables.
 
 | Information | Where to find it |
 |-------------|-----------------|
@@ -94,35 +94,35 @@ Ready signals and HTTP verification targets are defined in each project-type ref
 | Debugger-specific checks (processName, etc.) | `runtimes/{rt}.md` § Checklist — Live Validation Checks |
 | Runtime-specific details (debug port, outFiles) | `runtimes/{rt}.md` § Debugger Properties |
 
-> **Path resolution:** Some project types use subdirectories — see [generate.md § Project Type Path Resolution](generate.md) for the lookup table.
+> **Path resolution:** Some types use subdirectories; see [generate.md § Project Type Path Resolution](generate.md).
 
 ---
 
 ## Per-Runtime Validation Checks
 
-Additional runtime-specific checks beyond the generic algorithm. These run after the ready signal and HTTP verification.
+Runtime-specific checks after generic ready signal + HTTP verification.
 
-> ⛔ You **MUST** load and execute the runtime's live validation checks. Do NOT skip this step or assume the checks pass.
+> ⛔ Load and execute runtime live validation checks. Never skip or assume pass.
 
-- Load `runtimes/{rt}.md` § Checklist and execute every item under **Live Validation Checks**. Each runtime's checklist contains debugger-specific verifications (e.g., source map verification for Node.js, process attachment verification for .NET).
+- Load `runtimes/{rt}.md` § Checklist; run every **Live Validation Checks** item. Runtime checklist holds debugger checks (e.g., Node.js source maps, .NET process attachment).
 
 ---
 
 ## Final Teardown — Free All Ports Before Handing Back
 
-After all individual configs **and** every compound have been validated, and **before** the Plan Integration / status write, sweep and stop everything validation spun up:
+After all individuals + compounds, but **before** Plan Integration/status, stop everything validation started:
 
-1. **Stop every lingering background process** you started during validation — every dev server, `func host`, watcher, and task/language process, across all configs and the compound. Nothing you launched may still be running.
-2. **Stop every emulator you started.** If validation ran `docker compose up` (or `podman compose up`), run the matching `docker compose down` / `podman compose down` (or stop the specific services you started). Do not leave Azurite, database emulators, or any compose service running.
-3. **Verify the ports are free again.** Confirm that every port the generated configs will use is released — application HTTP ports, debug ports, and emulator ports. Use `lsof -i :<port>` (and the plan's `docker compose ps` / `podman compose ps` for emulators); each must show nothing bound. If any port is still held, find and stop the owning process before finishing.
+1. **Stop every lingering background process** started during validation: every dev server, `func host`, watcher, and task/language process across all configs and the compound. Leave nothing running.
+2. **Stop every emulator you started.** If validation ran `docker compose up` (or `podman compose up`), run matching `docker compose down` / `podman compose down` or stop the specific services. Leave no Azurite, database emulator, or compose service running.
+3. **Verify the ports are free again.** Confirm every generated application HTTP, debug, and emulator port is released. `lsof -i :<port>` and the plan's `docker compose ps` / `podman compose ps` must show nothing bound. Find and stop any owner before finishing.
 
-> A subsequent user **F5** must start from a completely clean slate. Do NOT proceed to the closing message or set status to `Implemented` while any validation-spawned process or emulator is still running, or while any of these ports is still bound.
+> Next **F5** needs clean slate. Never close or set `Implemented` while validation processes/emulators run or ports remain bound.
 
 ---
 
 ## Plan Integration
 
-After validating all configurations, **create or update** the `## Debug Configuration Checklist` section in `.azure/vscode-debug-plan.md`. If the section does not exist, add it at the end of the plan before closing.
+After all validation, **create/update** `## Debug Configuration Checklist` in `.azure/vscode-debug-plan.md`; if absent, append before closing.
 
 ```
 ## Debug Configuration Checklist
@@ -133,4 +133,4 @@ Debug Configuration Checklist:
 ✅ <compound-name> — each service started once + ready + curl result
 ```
 
-One line per config (non-compound and compound). For a **non-compound** config, ✅ requires the ready signal observed AND curl confirmed (or curl skipped with a valid reason). For a **compound** config, ✅ requires the real compound test from Step 9 — each member service started **exactly once** AND reached its ready signal AND (where applicable) passed HTTP reachability — never an inferred pass from the individual results.
+One line per non-compound/compound config. **Non-compound** ✅ requires observed ready AND curl, or valid skip reason. **Compound** ✅ requires real Step 9: each member started **once**, reached ready, and where applicable passed HTTP—never infer from individuals.

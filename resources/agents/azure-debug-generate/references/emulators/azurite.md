@@ -42,6 +42,6 @@ UseDevelopmentStorage=true
 ## Notes
 
 - Ports: 10000 (Blob), 10001 (Queue), 10002 (Table)
-- **Consolidation:** If multiple storage bindings are detected (blob + queue + table), use a **single** Azurite service — not one per binding type.
-- The Event Hubs Emulator requires Azurite for checkpointing. If both are needed, the `azurite` service is shared.
-- **Container runtime:** Certified for both **Docker** and **Podman** — the service block above is unchanged for either engine. Under Podman on Windows/macOS the ports are published from the Podman machine to the host exactly as with Docker; no `:Z`/`:z` volume label is needed for the `./.azurite` bind mount.
+- **Consolidation:** Multiple storage bindings (blob + queue + table) use **one** Azurite service, not one per binding type.
+- Event Hubs Emulator needs Azurite for checkpointing. When both are needed, share the `azurite` service.
+- **Container runtime:** Certified for **Docker** and **Podman**; service block unchanged for either engine. On Windows/macOS, Podman publishes ports from Podman machine to host like Docker; the `./.azurite` bind mount needs no `:Z`/`:z` volume label.
