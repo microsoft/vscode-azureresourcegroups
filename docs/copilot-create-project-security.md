@@ -81,15 +81,28 @@ artifacts written only when a CLI/plugin host cannot access the extension's in-p
 
 ## Deployment artifact preflight
 
-`validate-deployment-artifacts.mjs` treats `context.json`, `prepare-plan.json`,
+`validate-deployment-artifacts.mjs` treats `context.json`, `prereq-output.json`, `prepare-plan.json`,
 `scaffold-manifest.json`, and deployable IaC as untrusted workspace input. It symlink-resolves and confines
 the session and infrastructure roots to the current workspace, bounds file counts and byte sizes, parses
 JSON to unknown object roots, and narrows every required target field. It rejects stale subscription/resource
 group references and missing legacy target fields; it never rewrites artifacts or adopts the active Azure
-CLI target. `validate-node-runtime-contracts.mjs` applies the same confinement and bounded-scan rules to
-generated JavaScript/TypeScript source and skips symlinks and generated/dependency directories.
-The emitted `deployment-artifact-validation.json` is evidence, not a trust marker; any consumer must still
-validate its schema, exact session ID, and locked target before rendering or copying its fields.
+CLI target. It also requires the schema-version-2 scaffold envelope and schema-version-1 deployment contract,
+confines every contract component path, requires exact component coverage, and rejects disabled validators or
+relaxed acceptance/recovery rules. `validate-node-runtime-contracts.mjs` applies the same confinement and
+bounded-scan rules to generated JavaScript/TypeScript source and skips symlinks and generated/dependency
+directories. The emitted schema-version-2 `deployment-artifact-validation.json` is evidence, not a trust
+marker; any consumer must still validate its schema, exact session ID, locked target, and contract SHA-256
+before rendering or copying its fields.
+
+`record-first-pass-outcome.mjs` reads only the fixed pending filename inside a GUID session directory, bounds
+and runtime-validates it, validates every evidence path as an existing non-symlink file confined to the
+workspace, and rebinds the target from `context.json` plus the validated deployment contract. It writes only
+the fixed `first-pass-outcome.json` filename with exclusive create semantics and refuses overwrite. The
+recorder also requires the saved preflight evidence to contain the same canonical contract SHA-256, so a
+contract edit after what-if cannot be attached to the original attempt. The pending file is removed only
+after the validated final artifact is written. The write-once file is still
+untrusted workspace evidence: consumers must validate its schema version, session ID, target, gate IDs, and
+evidence paths before rendering or copying fields.
 
 ## Markdown, HTML, and SVG
 

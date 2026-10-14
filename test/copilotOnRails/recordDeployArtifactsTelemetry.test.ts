@@ -62,6 +62,47 @@ suite('recordDeployArtifactsTelemetry', () => {
         }
     });
 
+    test('records first-pass funnel and eventual recovery without evidence text', async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'deploy-telemetry-'));
+        try {
+            const sourceFile = vscode.Uri.file(join(directory, 'deploy-result.json'));
+            await vscode.workspace.fs.writeFile(sourceFile, Buffer.from('{"status":"succeeded"}'));
+            await vscode.workspace.fs.writeFile(
+                vscode.Uri.file(join(directory, 'first-pass-outcome.json')),
+                Buffer.from(JSON.stringify({
+                    status: 'failed',
+                    healthStatus: 'degraded',
+                    failedStage: 'code-deployment',
+                    gates: [{ status: 'failed', evidencePaths: ['private-output.log'] }],
+                    failure: {
+                        classification: 'APPLICATION_ERROR',
+                        fingerprint: 'private-fingerprint',
+                        summary: 'Private summary',
+                    },
+                })),
+            );
+            const context = ensureRequiredCopilotOnRailsContext(await createTestActionContext());
+
+            await recordDeployArtifactsTelemetry(context, sourceFile);
+
+            assert.strictEqual(context.diagnostics.properties['firstPassOutcome.status'], 'failed');
+            assert.strictEqual(context.diagnostics.properties['firstPassOutcome.failedStage'], 'code-deployment');
+            assert.strictEqual(context.diagnostics.properties['firstPassOutcome.failureClassification'], 'APPLICATION_ERROR');
+            assert.strictEqual(context.diagnostics.properties['deployResult.recoveredAfterFailedFirstPass'], true);
+            assert.strictEqual(context.telemetry.properties['firstPassOutcome.status'], 'failed');
+            assert.strictEqual(context.telemetry.properties['deployResult.recoveredAfterFailedFirstPass'], 'true');
+            const recordedProperties = JSON.stringify({
+                diagnostics: context.diagnostics.properties,
+                telemetry: context.telemetry.properties,
+            });
+            assert.ok(!recordedProperties.includes('private-output.log'));
+            assert.ok(!recordedProperties.includes('private-fingerprint'));
+            assert.ok(!recordedProperties.includes('Private summary'));
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
+    });
+
     test('a missing final result or status leaves existing properties unchanged', async () => {
         const directory = await mkdtemp(join(tmpdir(), 'deploy-telemetry-'));
         try {

@@ -12,8 +12,20 @@ export type HealthStatus = "healthy" | "degraded" | "unreachable" | "unknown";
 
 // ─── Deploy healing types ────────────────────────────────────────────────────
 
-export type DeployErrorClassification = "IAC_ERROR" | "INFRA_TRANSIENT" | "ENVIRONMENT_BLOCKING";
-export type DeployHealingPhase = "validation" | "deployment";
+export type DeployErrorClassification =
+  | "CONTRACT_ERROR"
+  | "IAC_ERROR"
+  | "APPLICATION_ERROR"
+  | "INFRA_TRANSIENT"
+  | "ENVIRONMENT_BLOCKING"
+  | "UNKNOWN";
+export type DeployHealingPhase =
+  | "preflight"
+  | "validation"
+  | "deployment"
+  | "code-deployment"
+  | "migration"
+  | "acceptance";
 
 /** Tracks a resource group created during a healing attempt that is no longer
  *  the final deployment target. Surfaced at handoff for manual cleanup. */
@@ -36,6 +48,32 @@ export interface OrphanResourceGroup {
 }
 export type DeployHealingAction = "routed-to-scaffold" | "retried" | "surfaced-to-user";
 export type DeployHealingResult = "fixed" | "still-failing" | "blocked";
+export type DeployRepairKind =
+  | "iac-change"
+  | "source-change"
+  | "package-rebuild"
+  | "configuration-change"
+  | "permission-propagation-wait"
+  | "proven-transient-retry"
+  | "plan-level-change"
+  | "none";
+
+export interface DeployInputChange {
+  /** Workspace-relative artifact or configuration path. Never record secret values. */
+  artifact: string;
+  description: string;
+  beforeSha256: string;
+  afterSha256: string;
+  evidencePath: string;
+}
+
+export interface DeployRetryDecision {
+  disposition: "not-retried" | "changed-repair" | "proven-transient";
+  /** Required for changed-repair; hashes prove that deployable inputs actually changed. */
+  inputChanges: readonly DeployInputChange[];
+  /** Required for proven-transient; points to command/platform evidence rather than a guess. */
+  transientEvidencePaths: readonly string[];
+}
 
 // ─── Deterministic resource inventory (extension MCP or portable provider) ───
 
@@ -81,7 +119,13 @@ export interface DeployHealingError {
 export interface DeployHealingAttempt {
   attempt: number;
   phase: DeployHealingPhase;
+  /** Stable normalized root-cause key used to reject repeated unchanged attempts. */
+  failureFingerprint: string;
+  /** Existing workspace-relative files that support the classification. */
+  evidencePaths: readonly string[];
   errors: DeployHealingError[];
+  repairKind: DeployRepairKind;
+  retryDecision: DeployRetryDecision;
   action: DeployHealingAction;
   result: DeployHealingResult;
   /** Resource group targeted by this attempt — useful for audit and debugging */
@@ -112,6 +156,74 @@ export interface DeployDuration {
 export type DeployStatus = "in-progress" | "succeeded" | "failed";
 
 export type ResourceDeployStatus = "succeeded" | "failed" | "skipped";
+
+export type DeploymentGateId =
+  | "artifact-target-binding"
+  | "iac-conformance"
+  | "component-build"
+  | "component-tests"
+  | "runtime-contracts"
+  | "package-integrity"
+  | "what-if"
+  | "inventory-baseline"
+  | "infrastructure"
+  | "code-deployment"
+  | "migration"
+  | "application-health"
+  | "dependency-access"
+  | "correlation";
+
+export type DeploymentGateStatus = "passed" | "failed" | "not-run" | "not-applicable";
+
+export interface FirstPassGateOutcome {
+  id: DeploymentGateId;
+  status: DeploymentGateStatus;
+  /** Existing workspace-relative evidence files. Required for passed/failed. */
+  evidencePaths: readonly string[];
+  detail?: string;
+}
+
+export interface FirstPassFailure {
+  classification: DeployErrorClassification;
+  fingerprint: string;
+  summary: string;
+  evidencePaths: readonly string[];
+}
+
+/** Immutable first deployment outcome written once before healing starts. */
+export interface FirstPassOutcome {
+  schemaVersion: 1;
+  sessionId: string;
+  recordedUtc: string;
+  /** SHA-256 of the canonical deploymentContract validated before what-if. */
+  contractSha256: string;
+  target: {
+    subscriptionId: string;
+    tenantId?: string;
+    resourceGroup: string;
+    region: string;
+  };
+  status: "succeeded" | "failed";
+  failedStage?:
+    | "preflight"
+    | "what-if"
+    | "infrastructure"
+    | "code-deployment"
+    | "migration"
+    | "acceptance";
+  deploymentExitCode?: number;
+  healthStatus: HealthStatus;
+  gates: readonly FirstPassGateOutcome[];
+  failure?: FirstPassFailure;
+}
+
+export interface FirstPassReference {
+  status: "pending" | "succeeded" | "failed";
+  evidencePath: "first-pass-outcome.json";
+  recordedUtc?: string;
+  contractSha256?: string;
+  failureFingerprint?: string;
+}
 
 export interface ResourceResult {
   resourceId: string;
@@ -171,6 +283,8 @@ export interface DeployResult {
   resourceIds: string[];
   endpoints: DeployEndpoint[];
   healthStatus: HealthStatus;
+  /** Write-once initial outcome. Healing updates eventual status but never this evidence. */
+  firstPass: FirstPassReference;
   duration: DeployDuration;
   warnings: string[];
   partial: boolean;

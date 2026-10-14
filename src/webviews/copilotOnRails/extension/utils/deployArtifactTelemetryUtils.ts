@@ -9,7 +9,12 @@ import { setCorProp } from '../../../../utils/copilotOnRails/telemetryUtils';
 import { isJsonObject } from '../../shared/jsonUtils';
 import { parseDeployResultJson } from '../../views/utils/parseDeployResultJson';
 
-type ArtifactFile = 'prereq-output.json' | 'prepare-plan.json' | 'scaffold-manifest.json' | 'deploy-result.json';
+type ArtifactFile =
+    | 'prereq-output.json'
+    | 'prepare-plan.json'
+    | 'scaffold-manifest.json'
+    | 'first-pass-outcome.json'
+    | 'deploy-result.json';
 type Telemetry = Record<string, string | number | boolean>;
 type JsonObject = Record<string, unknown>;
 
@@ -54,6 +59,13 @@ export interface DeployArtifactTelemetry {
     orphanedResourceCount?: number;
     unverifiedResourceCount?: number;
     inventoryUnverified?: boolean;
+    gateCount?: number;
+    failedGateCount?: number;
+    notRunGateCount?: number;
+    notApplicableGateCount?: number;
+    failedStage?: string;
+    failureClassification?: string;
+    recoveredAfterFailedFirstPass?: boolean;
 }
 
 const serviceTypes: Record<string, string> = {
@@ -92,6 +104,7 @@ export async function recordDeployArtifactsTelemetry(context: CopilotOnRailsCont
         ['prereq-output.json', 'prereqOutput'],
         ['prepare-plan.json', 'preparePlan'],
         ['scaffold-manifest.json', 'scaffoldManifest'],
+        ['first-pass-outcome.json', 'firstPassOutcome'],
         ['deploy-result.json', 'deployResult'],
     ] as const) {
         const uri = vscode.Uri.joinPath(sourceFile, '..', file);
@@ -111,6 +124,10 @@ export async function recordDeployArtifactsTelemetry(context: CopilotOnRailsCont
     }
     if (properties['deployResult.status'] !== 'succeeded' && properties['deployResult.status'] !== 'failed') {
         return;
+    }
+    if ((properties['firstPassOutcome.status'] === 'succeeded' || properties['firstPassOutcome.status'] === 'failed')) {
+        properties['deployResult.recoveredAfterFailedFirstPass'] =
+            properties['firstPassOutcome.status'] === 'failed' && properties['deployResult.status'] === 'succeeded';
     }
     for (const [key, value] of Object.entries(properties)) {
         setCorProp(context, key, value);
@@ -181,6 +198,35 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
                 conformanceStatus: category(conformance?.status, ['PASS', 'PASS-INFERRED', 'FAIL']),
                 flaggedFindingCount: count(records(review?.findings), 'rating', 'FLAGGED'),
                 healingAttemptCount: records(review?.healingAttempts)?.length,
+            };
+            break;
+        }
+        case 'first-pass-outcome.json': {
+            const gates = records(data.gates);
+            const failure = object(data.failure);
+            metrics = {
+                status: category(data.status, ['succeeded', 'failed']),
+                healthStatus: category(data.healthStatus, ['healthy', 'degraded', 'unreachable', 'unknown']),
+                gateCount: gates?.length,
+                failedGateCount: count(gates, 'status', 'failed'),
+                notRunGateCount: count(gates, 'status', 'not-run'),
+                notApplicableGateCount: count(gates, 'status', 'not-applicable'),
+                failedStage: category(data.failedStage, [
+                    'preflight',
+                    'what-if',
+                    'infrastructure',
+                    'code-deployment',
+                    'migration',
+                    'acceptance',
+                ]),
+                failureClassification: category(failure?.classification, [
+                    'CONTRACT_ERROR',
+                    'IAC_ERROR',
+                    'APPLICATION_ERROR',
+                    'INFRA_TRANSIENT',
+                    'ENVIRONMENT_BLOCKING',
+                    'UNKNOWN',
+                ]),
             };
             break;
         }

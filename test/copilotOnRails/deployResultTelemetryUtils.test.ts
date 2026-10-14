@@ -79,6 +79,64 @@ suite('deployResultTelemetryUtils', () => {
         assert.deepStrictEqual(telemetry, expected);
     });
 
+    test('first-pass outcome records only allowlisted funnel metrics', () => {
+        const telemetry = getDeployArtifactTelemetry('first-pass-outcome.json', JSON.stringify({
+            status: 'failed',
+            healthStatus: 'degraded',
+            failedStage: 'acceptance',
+            contractSha256: 'private-hash',
+            gates: [
+                { id: 'application-health', status: 'failed', evidencePaths: ['private-health.log'] },
+                { id: 'correlation', status: 'not-run', evidencePaths: [], detail: 'Private detail' },
+                { id: 'migration', status: 'not-applicable', evidencePaths: [], detail: 'Private detail' },
+            ],
+            failure: {
+                classification: 'APPLICATION_ERROR',
+                fingerprint: 'private-fingerprint',
+                summary: 'Private failure summary',
+                evidencePaths: ['private-health.log'],
+            },
+        }));
+
+        assert.deepStrictEqual(telemetry, {
+            parsedOk: true,
+            status: 'failed',
+            healthStatus: 'degraded',
+            gateCount: 3,
+            failedGateCount: 1,
+            notRunGateCount: 1,
+            notApplicableGateCount: 1,
+            failedStage: 'acceptance',
+            failureClassification: 'APPLICATION_ERROR',
+        });
+    });
+
+    test('first-pass outcome buckets unsupported categories without exposing text', () => {
+        const telemetry = getDeployArtifactTelemetry('first-pass-outcome.json', JSON.stringify({
+            status: 'private@example.com',
+            healthStatus: 'Private health',
+            failedStage: 'Private stage',
+            gates: [{ status: 'failed', detail: 'Private detail' }],
+            failure: {
+                classification: 'Private classification',
+                fingerprint: 'private-fingerprint',
+                summary: 'Private summary',
+            },
+        }));
+
+        assert.deepStrictEqual(telemetry, {
+            parsedOk: true,
+            status: 'unknown',
+            healthStatus: 'unknown',
+            gateCount: 1,
+            failedGateCount: 1,
+            notRunGateCount: 0,
+            notApplicableGateCount: 0,
+            failedStage: 'unknown',
+            failureClassification: 'unknown',
+        });
+    });
+
     test('empty result omits unavailable metrics', () => {
         assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', '{}'), { parsedOk: true });
         assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', '{"endpoints":[],"partial":false}'), {

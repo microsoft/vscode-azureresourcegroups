@@ -265,6 +265,24 @@ const contracts: Contract[] = [
         grader: "legacy target/readiness/runtime artifacts fail before the first Azure preview",
     },
     {
+        file: "azure-deploy/scaffold/references/validation-and-manifest.md",
+        name: "versioned-deployment-contract",
+        pattern: /(?=[\s\S]*schemaVersion: 2)(?=[\s\S]*deploymentContract)(?=[\s\S]*exact subscription)(?=[\s\S]*every `context\.json\.components\[\]`)(?=[\s\S]*requiredValidators\[\])(?=[\s\S]*recoveryPolicy)/,
+        grader: "scaffold owns one versioned target/component/acceptance/recovery contract",
+    },
+    {
+        file: "azure-deploy/deploy/instructions.md",
+        name: "immutable-first-pass-outcome",
+        pattern: /(?=[\s\S]*Before any repair\/retry)(?=[\s\S]*deployment-contract SHA-256)(?=[\s\S]*record-first-pass-outcome\.mjs)(?=[\s\S]*first-pass-outcome\.json)(?=[\s\S]*Never edit\/delete\/recreate)/,
+        grader: "initial deployment outcome remains measurable after healing changes eventual status",
+    },
+    {
+        file: "azure-deploy/deploy/references/error-classification.md",
+        name: "causal-retry-contract",
+        pattern: /(?=[\s\S]*failureFingerprint)(?=[\s\S]*changed-repair)(?=[\s\S]*before\/after SHA-256)(?=[\s\S]*proven-transient)(?=[\s\S]*UNKNOWN)/,
+        grader: "retries require a causal input change or preserved transient evidence",
+    },
+    {
         file: "azure-deploy/deploy/instructions.md",
         name: "portable-product-inventory",
         pattern: /(?=[\s\S]*capture-deployment-inventory\.mjs)(?=[\s\S]*Do not substitute hand-written[\s\S]*az resource list)(?=[\s\S]*inventorySource)(?=[\s\S]*unverified[\s\S]*no cleanup list)/i,
@@ -319,7 +337,13 @@ const executableContracts: ExecutableContract[] = [
         name: "deployment-artifact-validation-self-test",
         file: "azure-deploy/deploy/scripts/validate-deployment-artifacts.mjs",
         args: ["--self-test"],
-        grader: "locked-target artifact validation and stale binding rejection",
+        grader: "versioned deployment-contract, locked-target, component, and stale binding rejection",
+    },
+    {
+        name: "first-pass-outcome-self-test",
+        file: "azure-deploy/deploy/scripts/record-first-pass-outcome.mjs",
+        args: ["--self-test"],
+        grader: "write-once first-pass evidence, gate completeness, and typed failure validation",
     },
     {
         name: "node-runtime-contract-self-test",

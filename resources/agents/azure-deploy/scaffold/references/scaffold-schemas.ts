@@ -87,7 +87,74 @@ export interface ConformanceResult {
   source: "script" | "manual";
 }
 
+export interface DeploymentContractTarget {
+  subscriptionId: string;
+  tenantId?: string;
+  resourceGroup: string;
+  region: string;
+}
+
+export type DeploymentComponentValidator =
+  | "build-or-syntax"
+  | "tests-or-no-tests-proof"
+  | "package-integrity"
+  | "node-runtime-contracts"
+  | "postgres-managed-identity"
+  | "migration-controller"
+  | "functions-flex-package"
+  | "container-image"
+  | "correlation";
+
+export interface DeploymentContractComponent {
+  /** Exact component name copied from context.json.components[]. */
+  name: string;
+  /** Workspace-relative component path copied from context.json.components[]. */
+  path: string;
+  /** Exact language copied from context.json.components[].stack.language. */
+  language: string;
+  /** Stack-specific validators deploy must execute for this component. */
+  requiredValidators: readonly DeploymentComponentValidator[];
+}
+
+export interface DeploymentContract {
+  schemaVersion: 1;
+  /** Immutable Azure target copied from context.json.azure. */
+  target: DeploymentContractTarget;
+  /** Every application component that must be built, tested, packaged, deployed, and accepted. */
+  components: readonly DeploymentContractComponent[];
+  /** Gates that must be evaluated before the first provisioning command. */
+  validators: {
+    artifactTargetBinding: true;
+    iacConformance: true;
+    componentBuild: true;
+    componentTests: true;
+    runtimeContracts: true;
+    packageIntegrity: true;
+    whatIf: true;
+    inventoryBaseline: true;
+  };
+  /** Independent release obligations evaluated after provisioning and code deployment. */
+  acceptance: {
+    infrastructure: true;
+    codeDeployment: true;
+    migration: "required" | "not-applicable";
+    applicationHealth: true;
+    dependencyAccess: true;
+    correlation: "required" | "not-applicable";
+  };
+  /** Bounded causal-recovery policy consumed by deploy. */
+  recoveryPolicy: {
+    maxAttempts: 3;
+    unchangedRetry: "proven-transient-only";
+    requireFailureFingerprint: true;
+    requireEvidencePaths: true;
+    requireChangedInputsForNonTransient: true;
+  };
+}
+
 export interface ScaffoldManifest {
+  /** Version of the scaffold-manifest.json envelope. */
+  schemaVersion: 2;
   /** Session id this manifest belongs to. */
   sessionId: string;
   /** UTC timestamp when scaffold completed. */
@@ -112,4 +179,6 @@ export interface ScaffoldManifest {
   };
   validationResult?: ValidationResult;
   conformance?: ConformanceResult;
+  /** Versioned executable obligations that deploy validates before any Azure mutation. */
+  deploymentContract: DeploymentContract;
 }

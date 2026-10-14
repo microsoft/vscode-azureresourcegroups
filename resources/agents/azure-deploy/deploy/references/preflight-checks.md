@@ -17,7 +17,12 @@ node .github/agents/azure-deploy/deploy/scripts/validate-deployment-artifacts.mj
 ```
 
 Save the JSON output as `deployment-artifact-validation.json`. Missing target fields identify a legacy artifact and fail closed: return to prepare/scaffold to regenerate
-it. Do not patch strings in deploy. For Bicep, rerun the shipped `scaffold-conformance.ps1` (Windows) or
+it. The validator also requires `scaffold-manifest.json.schemaVersion: 2` and
+`deploymentContract.schemaVersion: 1`; it rejects a missing component, unsafe component path, disabled
+validator, relaxed recovery policy, or migration/correlation marked not applicable for a workload that
+requires it. Do not patch strings or the contract in deploy. The emitted evidence uses schema version 2 and
+records the validated contract version and canonical SHA-256, component count, conditional acceptance gates,
+and maximum recovery attempts. For Bicep, rerun the shipped `scaffold-conformance.ps1` (Windows) or
 `.sh` (macOS/Linux) script against the final IaC and require PASS. For Terraform, require the validated
 `azurerm` provider and exact `subscription_id`/resource-group variable binding plus its recorded passing
 format-specific conformance. This happens before what-if so a stale resource-group binding or old PostgreSQL
@@ -142,7 +147,7 @@ Each check runs independently. Collect all results, then present structured repo
 
 | Check | Fail Behavior |
 |-------|---------------|
-| Immutable artifact/runtime contract | Block before what-if. Return to the owning prepare/scaffold/integration phase; never patch during deploy. |
+| Immutable artifact/runtime contract | `CONTRACT_ERROR`. Block before what-if. Return to the owning prepare/scaffold/integration phase; never patch during deploy. |
 | Deployment preview | Warn, don't block (can fail on unsupported types) |
 | RBAC | Block. Surface `az role assignment create`. |
 | RG check | Warn on location mismatch. Don't block. |

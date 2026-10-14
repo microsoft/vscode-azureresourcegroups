@@ -96,7 +96,7 @@ place.
 
 | Location | Artifacts |
 |----------|-----------|
-| `.copilot-azure/sessions/{uuid}/` | `context.json`, `prereq-output.json`, `prepare-plan.json`, `scaffold-manifest.json`, `deploy-result.json` |
+| `.copilot-azure/sessions/{uuid}/` | `context.json`, `prereq-output.json`, `prepare-plan.json`, versioned `scaffold-manifest.json`, `deployment-artifact-validation.json`, write-once `first-pass-outcome.json`, inventory evidence when the portable provider is used, and `deploy-result.json` |
 | `.copilot-azure/sessions/{uuid}/replaced-files/` | User files displaced by scaffold (existing IaC), stored at their original relative path (**mirror path** = same directory structure as the repo). Never overwritten or deleted — moved here so the original is preserved. |
 
 ## Phase-gated Reference Loading

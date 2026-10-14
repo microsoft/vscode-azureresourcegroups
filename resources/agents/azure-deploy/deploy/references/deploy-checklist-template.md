@@ -77,6 +77,13 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Store token in $env:SWA_CLI_DEPLOYMENT_TOKEN — never as CLI arg
 
 ## During healing / retries
+- ⛔ **Freeze first pass before any repair:** Write `first-pass-outcome.pending.json` with all 14 gate outcomes
+  and existing evidence paths, then run `record-first-pass-outcome.mjs --session-path
+  .copilot-azure/sessions/{sessionId}`. The script creates `first-pass-outcome.json` exactly once and removes
+  the pending file. Update `deploy-result.json.firstPass`; never delete, replace, or edit the write-once file.
+- ⛔ Every retry needs a normalized failure fingerprint plus evidence. Deterministic failures require a
+  rebuilt/changed deployable input and before/after SHA-256 in `inputChanges[]`. An unchanged retry is allowed
+  only for a proven `INFRA_TRANSIENT` with `transientEvidencePaths[]`. Missing evidence = `UNKNOWN` = stop.
 - ⛔ REGION LOCK: Deploy region MUST match plan region ({region}). Any region change → RE-PRESENT deploy approval gate with old and new region. Do NOT silently switch. After approval: update `prepare-plan.json.services[].region`, `deploymentVariables.location`, AND append attempt number to `naming.suffix` (e.g., `edd6` → `edd602`). Recompute ALL resource names from the new suffix before redeploying — globally unique names (App Service, Storage, ACR) from the old region may be soft-deleted and unavailable.
 - ⛔ IaC-only: NEVER use `az containerapp update --image`, `az webapp update`, `az appservice plan delete`, or `az group create` — fix the Bicep and redeploy via `az deployment sub create`
 - ⛔ IaC-only for app-managed roles: NEVER `az role assignment create` for AcrPull or KV Secrets User — Bicep-managed (deterministic GUID), so an imperative grant collides on redeploy (`RoleAssignmentExists`). Missing app role = fix the Bicep module and redeploy. (Deployer/subscription-scope 403s are the ONLY exception — see [`error-classification.md`](error-classification.md).)
@@ -97,6 +104,9 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 
 ## Before handoff (Step 8)
 - ⛔ Read [`deploy-schemas.ts`](deploy-schemas.ts) for exact DeployResult field names
+- ⛔ `first-pass-outcome.json` exists, was created by `record-first-pass-outcome.mjs`, and
+  `deploy-result.json.firstPass` matches its status, timestamp, contract SHA-256, evidence path, and optional
+  failure fingerprint.
 - ⛔ Run a final product inventory capture — then runtime-validate schema/session/subscription/source and populate `createdResources[]`, `orphanedResourceGroups[]`, verification fields, `inventorySource`, and fixed in-session portable evidence paths when used (do NOT hand-author them or treat malformed evidence as empty).
 - Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list --subscription {sub}`, migration evidence, correlation quality gate, and inventory output. Read back to verify.
 - ⛔ `deployment-summary.md` — generate from `deploy-result.json` fields (Status, Health, Portal Links, Cleanup). NOT a separate data source.
@@ -107,14 +117,15 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 
 ## Artifact verification (Step 8 — MANDATORY)
 ⛔ Before returning to orchestrator, verify ALL artifacts exist by reading each one back:
-1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`, `createdResources[]`, `orphanedResourceGroups[]`, and `inventorySource`. Inventory arrays come from a final product capture. DB-backed releases also require complete `migration`; APIs require `qualityGates.correlation`. Missing/renamed fields → rewrite with real values NOW.
-2. `deploy-audit.log` — MUST exist with ≥2 entries (started + result for at least 1 command). Missing → reconstruct from memory
-3. `deployment-summary.md` — MUST contain Status, Health, Portal Links sections. Missing → generate from deploy-result.json
-4. `context.json` — MUST have `"deploy"` in `completedPhases`, `currentPhase: null`, updated `lastModifiedUtc`
-5. ⛔ **Endpoint completeness** — EVERY service in `prepare-plan.json.services[]` that hosts application code MUST have a corresponding entry in `deploy-result.json.endpoints[]` with code deployed and a valid `healthStatus` (`healthy`, `degraded`, `unreachable`, `unknown`). If ANY compute endpoint is missing or has code not deployed, set `partial: true` and `status: "failed"`. A deployment with undeployed user components is NOT `"succeeded"`.
-6. ⛔ **Application acceptance** — A DB-backed release cannot be `succeeded`/`healthy` unless the immutable artifact was verified, the migration controller probe succeeded, process exit is 0, and post-state is verified. An API cannot be `succeeded`/`healthy` unless the live correlation gate passed.
+1. `first-pass-outcome.json` — MUST exist and contain the original gate outcomes. It is write-once; never reconstruct or edit it after healing starts.
+2. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `firstPass`, `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`, `createdResources[]`, `orphanedResourceGroups[]`, and `inventorySource`. Inventory arrays come from a final product capture. DB-backed releases also require complete `migration`; APIs require `qualityGates.correlation`. Missing/renamed fields → rewrite with real values NOW.
+3. `deploy-audit.log` — MUST exist with ≥2 entries (started + result for at least 1 command). Missing → reconstruct from memory
+4. `deployment-summary.md` — MUST contain Status, Health, Portal Links sections. Missing → generate from deploy-result.json
+5. `context.json` — MUST have `"deploy"` in `completedPhases`, `currentPhase: null`, updated `lastModifiedUtc`
+6. ⛔ **Endpoint completeness** — EVERY service in `prepare-plan.json.services[]` that hosts application code MUST have a corresponding entry in `deploy-result.json.endpoints[]` with code deployed and a valid `healthStatus` (`healthy`, `degraded`, `unreachable`, `unknown`). If ANY compute endpoint is missing or has code not deployed, set `partial: true` and `status: "failed"`. A deployment with undeployed user components is NOT `"succeeded"`.
+7. ⛔ **Application acceptance** — A DB-backed release cannot be `succeeded`/`healthy` unless the immutable artifact was verified, the migration controller probe succeeded, process exit is 0, and post-state is verified. An API cannot be `succeeded`/`healthy` unless the live correlation gate passed.
 
-If ANY artifact is missing or incomplete, write it NOW — do NOT return to orchestrator without all 6 checks passing.
+If ANY artifact is missing or incomplete, write it NOW — do NOT return to orchestrator without all 7 checks passing.
 
 ⛔ **Then STOP — return to orchestrator. No further CLI commands or agent invocations.**
 ```

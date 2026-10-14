@@ -166,7 +166,11 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    {list of generated files}
    ### Self-review findings (from Steps 6–9)
    {findings JSON}
+   ### context.json
+   {full JSON}
    ### prepare-plan.json
+   {full JSON}
+   ### prereq-output.json
    {full JSON}
    ### prereq-output.json.warnings[]
    {warnings array}
@@ -177,7 +181,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    ### Session path
    {.copilot-azure/sessions/{uuid}/}
    ```
-   - **Expect:** `scaffold-manifest.json` with `validationResult`, deploy checklist generated
+   - **Expect:** `scaffold-manifest.json` with `schemaVersion: 2`, versioned `deploymentContract`, and `validationResult`; deploy checklist generated
    - Verify `deploy-checklist.md` exists (written at Step 5b) — if missing, create NOW from [`deploy-checklist-template.md`](../deploy/references/deploy-checklist-template.md). Verify `deploy-result.json` exists — if missing, create from [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts).
    - ⛔ **Verify `context.json` update (main-thread — do NOT delegate).** Read `.copilot-azure/sessions/{uuid}/context.json`. If `completedPhases` does not include `"scaffold"` OR `currentPhase` is not `"deploy"`, write it yourself via `edit` / `create`: append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc` to current UTC ISO 8601. This is a phase-boundary write required by [pipeline-rules.md](../references/pipeline-rules.md) — do not skip it.
    - ⛔ **Return to orchestrator for Step 8 (Deploy Approval Gate).** YOUR NEXT ACTION MUST BE presenting the Deploy Gate per orchestrator instructions.md — do NOT write a "summary of generated files" message, do NOT emit a completion report. The Deploy Gate prompt (`🚀 Ready to deploy? ...`) is the ONLY correct next output.

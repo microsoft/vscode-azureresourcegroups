@@ -363,6 +363,11 @@ healthy. The deploy agent now applies these release gates when they are relevant
   subscription, tenant, resource group, and region. Legacy or stale bindings return to prepare/scaffold
   instead of being patched during deploy. The final scaffold conformance gate and generated Node runtime
   contract gate also run before the first Azure preview.
+- **Versioned deployment contract.** Scaffold writes one schema-versioned contract into
+  `scaffold-manifest.json` that binds the locked target, every application component, the required
+  build/test/runtime/package/preflight gates, post-deploy acceptance obligations, and the bounded recovery
+  policy. Deploy runtime-validates the contract before what-if; missing components, disabled gates, unsafe
+  paths, and incorrectly skipped migration/correlation acceptance fail closed.
 - **PostgreSQL provider readiness.** Generated Bicep creates the server, then a managed-identity deployment
   script polls the exact subscription/resource group until the server reports `Ready`, successfully reads the
   `microsoft-entra-admin` child-provider endpoint, and waits for provider stabilization. Only that script's
@@ -383,6 +388,11 @@ healthy. The deploy agent now applies these release gates when they are relevant
   replacement, success and structured-error response headers, and exact-origin CORS exposure. Generated
   Node APIs centralize both `X-Correlation-ID` and `Access-Control-Expose-Headers` in one response wrapper,
   with focused success/error/origin tests before packaging.
+- **Immutable first-pass outcome and causal recovery.** Before any repair or retry, the deploy agent records
+  every contract gate and its evidence in write-once `first-pass-outcome.json`. The eventual result can
+  improve after healing, but the initial outcome remains measurable. Deterministic failures can retry only
+  after a rebuilt or changed deployable input with before/after SHA-256 evidence; an unchanged retry is
+  limited to a preserved, typed infrastructure transient. Unknown causes stop instead of looping.
 
 ### Knowing what was created (and cleaning up after a failure)
 
@@ -416,9 +426,10 @@ never delete anything. See
 When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
 a read-only report of what actually shipped: status and health, the live endpoints, the Azure resources that
 were created (including their inventory classification and provisioning state), any recovery attempts made
-along the way, and the command that deletes everything again. It
-opens on failure too, so you can see which resources or endpoints didn't make it. You can reopen it any time
-with **Azure: Open Deploy Results View**.
+along the way, and the command that deletes everything again. The backing `deploy-result.json` also links the
+immutable first-pass artifact used for deployment-funnel analysis. The view opens on failure too, so you can
+see which resources or endpoints didn't make it. You can reopen it any time with **Azure: Open Deploy Results
+View**.
 
 > 📷 *Screenshot needed: the Deployment results view after a successful deploy.*
 
@@ -584,10 +595,12 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current/completed phases, exact execution-model lock, and locked Azure target (subscription, tenant, resource group, and region). Drives the Deployment progress view. |
-| `.copilot-azure/sessions/{id}/deployment-artifact-validation.json` | deploy agent | Read-only pre-what-if proof that the session, deploy command, final IaC, and generated runtime contracts match the immutable Azure target and current release gates. |
+| `.copilot-azure/sessions/{id}/scaffold-manifest.json` | deploy agent | Schema-versioned scaffold inventory plus the deployment contract: immutable target, complete component list, required validators, independent acceptance gates, and bounded recovery policy. |
+| `.copilot-azure/sessions/{id}/deployment-artifact-validation.json` | deploy agent | Schema-version-2 read-only pre-what-if proof that the session, canonical deployment-contract SHA-256, deploy command, final IaC, and generated runtime contracts match the immutable Azure target and current release gates. |
+| `.copilot-azure/sessions/{id}/first-pass-outcome.json` | deploy agent's write-once recorder | Immutable initial deployment funnel result bound to that exact contract SHA-256: every required gate, evidence paths, first failure stage, typed classification, and stable failure fingerprint before any healing occurs. |
 | `.copilot-azure/sessions/{id}/deployment-inventory-baseline.json` | deploy agent's portable inventory provider | Atomic pre-deployment resource-ID snapshot for the exact session and subscription. Written only when the in-process inventory provider is unavailable. |
 | `.copilot-azure/sessions/{id}/deployment-inventory-capture.json` | deploy agent's portable inventory provider | Atomic post-attempt diff, ARM-operation attribution, verification status, and resource classifications. Written only when the portable provider is selected. |
-| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, inventory source/evidence, migration-controller proof, correlation gate, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
+| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, immutable first-pass reference, target, endpoints, resources, inventory source/evidence, migration-controller proof, correlation gate, and typed recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
@@ -657,7 +670,10 @@ The diagnostics object has four fields:
 `report_agent_launch` contributes at most one diagnostic lifecycle for each agent in a chat session.
 Requirements and plan telemetry include only the selected low-cardinality workload labels (for example,
 `standard production` or `bursty`), never project content, compliance details, numerical targets, or the
-free-text rationale.
+free-text rationale. Deployment telemetry similarly records only allowlisted status/health categories,
+first-pass gate counts, first failed stage, typed failure classification, healing count, and whether a failed
+first pass eventually recovered. It never records targets, component paths, evidence paths, commands,
+fingerprints, hashes, URLs, or failure text.
 
 Privacy guarantees, by design:
 
@@ -687,6 +703,8 @@ before submitting.
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
 | The deploy agent selected a different subscription, resource group, or region than the prompt. | The session predates target locking, or its locked target conflicts with the new request. | Inspect `.copilot-azure/sessions/{id}/context.json.azure`. Start a fresh session or explicitly approve a target change; do not use `az account set` as a workaround. Every deployment command should include the locked subscription. |
+| Deploy stops before what-if with a deployment-contract error. | `scaffold-manifest.json` is legacy, omits a component/gate, or no longer matches the locked target and workload acceptance requirements. | Return to scaffold and regenerate schema version 2; do not edit the contract during deploy. |
+| Deploy will not retry the same failure. | The cause is unknown, or neither a deployable input changed nor preserved platform evidence proves a transient. | Inspect `first-pass-outcome.json` and `deploy-result.json.healingAttempts[]`. Fix/rebuild the owning input or collect the missing evidence; do not force an unchanged retry. |
 | A Flex ZIP upload succeeded but no Functions are registered, or Azure chose the wrong Node build runtime. | A source/remote build did not produce a self-contained artifact. | Rebuild from a clean tree, run `validate-functions-flex-package.mjs` against both staging root and final ZIP, deploy with `--build-remote false`, then compare the exact registered Function set and probe `/api/health`. |
 | Azure reports the app or migration job ready, but the release is not application-healthy. | The migration entrypoint/controller was absent or unreachable, the process failed, or database post-state was not verified. | Inspect `deploy-result.json.migration`: artifact proof, controller reachability, process exit, stdout/stderr, migration history, tables, principal/OID, and row state must all be present before retry or acceptance. |
 | API requests do not consistently return `X-Correlation-ID`. | Correlation middleware, structured-error handling, or CORS exposure is incomplete. | Run the shipped `verify-correlation-contract.mjs` live gate and fix preservation, generation/replacement, error response, or `Access-Control-Expose-Headers` behavior before accepting the release. |
