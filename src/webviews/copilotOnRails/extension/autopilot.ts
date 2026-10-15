@@ -13,13 +13,13 @@ import { settingUtils } from "../../../utils/settingUtils";
 import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { armDebugPlanImplementedWatcher } from "./debugPlanImplementedWatcher";
-import { ensureLocalHarnessOn } from "./harnessSettings";
+import { ensureCopilotHarnessOn } from "./harnessSettings";
 
 /**
  * Autopilot mode for the create-project workflow.
  * It temporarily enables global chat tool auto-approve and restores it later.
  * It also raises workspace chat request budget for long unattended runs, and forces the
- * experimental "Copilot Harness" chat settings off at Workspace scope for the run.
+ * experimental "Copilot Harness" chat settings on at Workspace scope for the run.
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
@@ -32,6 +32,8 @@ const MAX_REQUESTS_KEY = 'maxRequests';
 export const WORKSPACE_MAX_REQUESTS = 9999;
 const PERMISSIONS_SECTION = 'chat.permissions';
 const PERMISSIONS_KEY = 'default';
+const AGENT_HOST_CONFIGURATION_SECTION = 'chat';
+const AGENT_HOST_CONFIGURATION_KEY = 'defaultConfiguration';
 
 /**
  * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
@@ -47,6 +49,7 @@ export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 const STATE_ACTIVE = 'copilotOnRails.autopilot.active';
 const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
 const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
+const STATE_PRIOR_AGENT_HOST_CONFIGURATION = 'copilotOnRails.autopilot.priorAgentHostConfiguration';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
 /** Set once per run to ensure the debug-plan approval telemetry has been recorded */
@@ -113,6 +116,40 @@ function getPermissionLevelValue(): unknown {
 async function setPermissionLevelValue(value: unknown): Promise<void> {
     const config = vscode.workspace.getConfiguration(PERMISSIONS_SECTION);
     await config.update(PERMISSIONS_KEY, value, vscode.ConfigurationTarget.Global);
+}
+
+function getAgentHostConfiguration(): vscode.WorkspaceConfiguration | undefined {
+    const config = vscode.workspace.getConfiguration(AGENT_HOST_CONFIGURATION_SECTION);
+    return config.inspect(AGENT_HOST_CONFIGURATION_KEY) ? config : undefined;
+}
+
+export function getAutopilotAgentHostConfiguration(value: unknown): Record<string, unknown> {
+    const configuration = typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : {};
+    return {
+        ...configuration,
+        mode: 'autopilot',
+        approvals: 'allowAll',
+    };
+}
+
+async function enableAgentHostAutopilot(context: vscode.ExtensionContext): Promise<void> {
+    const config = getAgentHostConfiguration();
+    if (!config) {
+        return;
+    }
+
+    if (context.globalState.get<unknown>(STATE_PRIOR_AGENT_HOST_CONFIGURATION) === undefined) {
+        const prior = config.inspect(AGENT_HOST_CONFIGURATION_KEY)?.globalValue;
+        await context.globalState.update(STATE_PRIOR_AGENT_HOST_CONFIGURATION, prior ?? null);
+    }
+
+    await config.update(
+        AGENT_HOST_CONFIGURATION_KEY,
+        getAutopilotAgentHostConfiguration(config.get(AGENT_HOST_CONFIGURATION_KEY)),
+        vscode.ConfigurationTarget.Global,
+    );
 }
 
 function showStatusBarItem(): void {
@@ -257,7 +294,8 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     await setAutoApproveValue(true);
     await raiseWorkspaceMaxRequests();
     await setPermissionLevelValue('autopilot');
-    await ensureLocalHarnessOn();
+    await enableAgentHostAutopilot(context);
+    await ensureCopilotHarnessOn();
     armAutopilot(deadline);
 }
 
@@ -281,9 +319,20 @@ export async function disableAutopilot(): Promise<void> {
         const priorPermission = context.globalState.get<unknown>(STATE_PRIOR_PERMISSION_LEVEL);
         await setPermissionLevelValue(priorPermission === null ? undefined : priorPermission);
 
+        const priorAgentHostConfiguration = context.globalState.get<unknown>(STATE_PRIOR_AGENT_HOST_CONFIGURATION);
+        if (priorAgentHostConfiguration !== undefined) {
+            const config = getAgentHostConfiguration();
+            await config?.update(
+                AGENT_HOST_CONFIGURATION_KEY,
+                priorAgentHostConfiguration === null ? undefined : priorAgentHostConfiguration,
+                vscode.ConfigurationTarget.Global,
+            );
+        }
+
         await context.globalState.update(STATE_ACTIVE, undefined);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, undefined);
+        await context.globalState.update(STATE_PRIOR_AGENT_HOST_CONFIGURATION, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
         await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, undefined);
     }
@@ -315,6 +364,12 @@ export function registerAutopilot(context: vscode.ExtensionContext): void {
     if (context.globalState.get<boolean>(STATE_ACTIVE) === true) {
         const deadline = context.globalState.get<number>(STATE_DEADLINE) ?? 0;
         if (Date.now() < deadline) {
+            void enableAgentHostAutopilot(context).catch(error => {
+                ext.outputChannel.warn(vscode.l10n.t(
+                    'Could not restore the Agent Host Autopilot configuration: {0}',
+                    error instanceof Error ? error.message : String(error),
+                ));
+            });
             armAutopilot(deadline);
         } else {
             void disableAutopilot();

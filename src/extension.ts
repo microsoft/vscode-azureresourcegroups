@@ -67,8 +67,8 @@ import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/ex
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeployProgressWatcher } from './webviews/copilotOnRails/extension/deployProgressWatcher';
-import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerDeployResultAutoOpen } from './webviews/copilotOnRails/extension/openDeployResultView';
+import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
@@ -155,7 +155,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             id: mcpServerId,
             serverLabel: mcpServerLabel,
             serverVersion: ext.version,
+            transport: 'tcp',
             registerTools: (server) => registerMcpTools(server),
+            eagerlyStart: true,
         });
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is
