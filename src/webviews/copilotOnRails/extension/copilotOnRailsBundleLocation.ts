@@ -9,7 +9,7 @@ import { ext } from "../../../extensionVariables";
 
 /**
  * Returns the location of the bundled Copilot on Rails webview script and stylesheet
- * (produced by `esbuild.copilotOnRailsViews.mjs`).
+ * (produced by `esbuild.mjs`).
  */
 export function getCopilotOnRailsBundleLocation(): WebviewBundleLocation {
     return {

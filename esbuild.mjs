@@ -3,35 +3,28 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
-import { copy } from 'esbuild-plugin-copy';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, createWebviewEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 
-const { extensionConfig, telemetryConfig } = autoSelectEsbuildConfig();
+const configs = autoSelectEsbuildConfig();
 
 /** @type {import('esbuild').BuildOptions} */
-const finalConfig = {
-    ...extensionConfig,
+configs.extension = {
+    ...configs.extension,
     entryPoints: [
-        ...extensionConfig.entryPoints,
+        ...configs.extension.entryPoints,
         {
             in: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
             out: 'cloudConsoleLauncher',
         },
     ],
-    // Disable code splitting to avoid VS Code extension loading issues (see #1352)
-    splitting: false,
-    format: 'cjs',
-    plugins: [
-        ...extensionConfig.plugins,
-        copy({
-            assets: [
-                {
-                    from: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons/*.svg',
-                    to: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons',
-                },
-            ],
-        }),
-    ],
 };
 
-await autoEsbuildOrWatch({ extensionConfig: finalConfig, telemetryConfig });
+configs.webview = createWebviewEsbuildConfig({
+    entryPoints: {
+        views: './src/webviews/copilotOnRails/views/webviewEntry.tsx',
+    },
+    outdir: './dist/copilotOnRails',
+    logLevel: 'info',
+});
+
+await autoEsbuildOrWatch(configs);

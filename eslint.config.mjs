@@ -29,7 +29,6 @@ export default defineConfig([
             'evals/grader-certification/**',
             'evals/msbench/.staged/**',
             'evals/vscode-parity/**',
-            'src/webviews/copilotOnRails/views/react-shim.js',
         ],
     },
     {

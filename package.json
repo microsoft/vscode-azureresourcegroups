@@ -1017,10 +1017,9 @@
         ]
     },
     "scripts": {
-        "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
+        "build": "npm run build:esbuild && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
-        "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
-        "build:check": "tsc --noEmit",
+        "build:check": "tsgo --noEmit",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0 && npm run eval:drift",
         "test": "vscode-test",
@@ -1035,7 +1034,7 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
-        "@microsoft/vscode-azext-eng": "^1.1.0-alpha.1",
+        "@microsoft/vscode-azext-eng": "file:C:/Users/bwater/.copilot/session-state/667aceef-83fa-46a7-b115-6d99460e3ecd/files/microsoft-vscode-azext-eng-1.2.0-tsgo.tgz",
         "@modelcontextprotocol/server": "^2.0.0-beta.4",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
@@ -1048,9 +1047,8 @@
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
         "esbuild": "*",
-        "esbuild-plugin-copy": "*",
         "mermaid": "^11.15.0",
-        "sass": "~1.79.6",
+        "sass": "^1.105.1",
         "tsx": "*",
         "typescript-eslint": "^8.61.1"
     },
