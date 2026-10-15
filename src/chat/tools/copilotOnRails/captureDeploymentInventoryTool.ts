@@ -6,7 +6,7 @@
 import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import type { AzureSubscription } from "api/src/resources/azure";
+import type { AzureSubscription } from "../../../../api/src/resources/azure";
 import * as vscode from "vscode";
 import { z } from "zod/mini";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
