@@ -29,6 +29,7 @@ engine: copilot
 model: gpt-5.4
 network: defaults
 checkout: false
+inlined-imports: true
 # Required secret: a fine-grained token owned by `microsoft` with repository
 # Contents/Issues/Pull requests read access and organization Projects read/write access.
 tools:
