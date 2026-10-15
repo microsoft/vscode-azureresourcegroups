@@ -15,6 +15,10 @@
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
         "allowImportingTsExtensions": true,
+        "types": [
+            "node",
+            "@microsoft/vscode-azext-eng/mocha/test-globals"
+        ],
         "skipLibCheck": true
     },
     "exclude": [
