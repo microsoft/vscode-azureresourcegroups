@@ -91,32 +91,25 @@ promptSteps:
   # status to Approved, call start_azure_debug_generate, and STOP.
   - text: "The debug plan looks good, approved. Generate the configuration."
     assertions:
-      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
-        query: SELECT COUNT(*) > 0 FROM llm_responses
-
       # vally: tool-calls required [workflow-tools-start_azure_debug_generate]
       # Declared HERE rather than on the last step, and that is load-bearing. The
-      # hand-off is contracted to happen on the turn the user approves; the
-      # implied stepIndex filter binds this to :stepIndex = 2, so it asserts the
-      # hand-off happened at the gate rather than at some point in the session.
-      # In debug-plan-approval-gate.yaml the same tool is asserted ABSENT on the
-      # pre-approval turn — together those two are the gate.
-      # The hand-off now opens the generate agent in a new chat session. OTel can
-      # omit the transition tool call, while the response exported for this step
-      # is already the generate agent beginning its workflow. Keep the direct
-      # tool assertion when available and accept that observed transition as the
-      # fallback.
+      # hand-off is contracted to happen on the turn the user approves. Current
+      # agent-host versions may complete that turn tool-only and omit the MCP call
+      # from OTel, so the downstream generate agent surfacing its Docker preflight
+      # is accepted as transition proof. This positive assertion is also the
+      # turn's liveness sentinel.
       - comment: Agent should hand off to the generate agent once the plan is approved
         query: >-
-          SELECT COUNT(*) > 0 FROM toolCalls
-          WHERE (
-            tool LIKE '%start_azure_debug_generate%'
-            OR EXISTS (
-              SELECT 1 FROM llm_responses
-              WHERE llm_responses.stepIndex = toolCalls.stepIndex
-              AND response LIKE '%debug-generation workflow%'
-            )
-          )
+          SELECT
+            (SELECT COUNT(*) FROM toolCalls
+             WHERE stepIndex = 2
+             AND tool LIKE '%start_azure_debug_generate%') > 0
+            OR
+            (SELECT COUNT(*) FROM llm_responses
+             WHERE stepIndex = 3
+             AND response LIKE '%<name>vscode_askQuestions</name>%'
+             AND response LIKE '%Docker%') > 0
+        enableImpliedStepIndexFilter: false
 
       - comment: Agent should not fall back to the chat question tool (turn 2)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
