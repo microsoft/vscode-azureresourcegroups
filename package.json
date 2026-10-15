@@ -1034,7 +1034,7 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
-        "@microsoft/vscode-azext-eng": "file:C:/Users/bwater/.copilot/session-state/667aceef-83fa-46a7-b115-6d99460e3ecd/files/microsoft-vscode-azext-eng-1.2.0-tsgo.tgz",
+        "@microsoft/vscode-azext-eng": "^1.2.0",
         "@modelcontextprotocol/server": "^2.0.0-beta.4",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
