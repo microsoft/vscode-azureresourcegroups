@@ -38,7 +38,7 @@ tools:
   github:
     mode: local
     read-only: true
-    github-token: ${{ secrets.GH_AW_PROJECT_GITHUB_TOKEN }}
+    github-token: ${{ secrets.GH_AW_PROJECT_GITHUB_TOKEN || secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN }}
     toolsets: [issues, pull_requests, projects, repos]
     min-integrity: none
 safe-outputs:
