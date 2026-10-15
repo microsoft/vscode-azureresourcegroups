@@ -283,6 +283,10 @@ destructive changes and when environment blockers such as an unavailable contain
 need a user decision. After generation, choosing **Deploy to Azure** hands off directly to the deployment agent
 without rerunning debug setup.
 
+In Guided mode, generation remains `Executing` when a required system tool is unavailable or a required port is
+occupied and no explicit choice is made. Copilot does not install system software, start system services, stop
+processes, or remap ports merely because the user is unavailable.
+
 Migration startup automation is enabled only when the workspace already contains a detectable migration command,
 dependency, or migration files. A migration tool mentioned only in a project or integration plan is not treated as
 implemented; the debug plan leaves that row unchecked so approval cannot promise an F5 task that does not exist.

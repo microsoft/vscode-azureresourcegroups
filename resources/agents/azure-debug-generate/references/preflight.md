@@ -6,7 +6,7 @@ Verify the plan exists and environment is ready before proceeding onwards to gen
 
 Read the container runtime from the plan's Orchestrator table (**Docker**, **Podman**, or **Podman (Docker-compatible)**) and confirm the engine is actually running before you generate or validate anything. A CLI on PATH is not the same as a running engine.
 
-- **Docker** — confirm the daemon is reachable (`docker info`). If it errors, tell the user to start Docker Desktop / the Docker service and wait, then retry.
+- **Docker** — confirm the daemon is reachable (`docker info`). If the command is missing or the daemon is unavailable, tell the user to install/start Docker Desktop or the Docker service and wait, then retry. Never install Docker, add package repositories, or start a system daemon yourself during Guided generation.
 - **Podman (Docker-compatible)** — the plan runs the Podman engine through its Docker-compatible socket, and the generated tasks use `docker compose`. Confirm the socket answers with `docker info` (it will report the Podman server). If `docker info` errors, the Docker-compatible socket isn't up: tell the user to enable Docker compatibility in Podman Desktop and ensure the **Podman machine** is started (same machine check as below), then retry.
 - **Podman** — confirm the engine is reachable (`podman info`). On **Windows and macOS** this needs a running **Podman machine**:
 
@@ -32,6 +32,8 @@ Read the container runtime from the plan's Orchestrator table (**Docker**, **Pod
 > ⛔ **NEVER switch the plan's container runtime on your own — not at readiness, not during generation, not during validation.** The runtime in the Orchestrator table was chosen (and, when the user asked for a specific engine, chosen *by them*). If the selected engine fails at **any** point — the engine won't start, a container won't come up, ports don't forward to the host, a volume/permission error, a health check never passes — **STOP and surface the blocker to the user with `ask_user`**, describing the failure and the options (fix the engine, or explicitly switch to the other engine). Do **not** silently rewrite the Orchestrator row, the `Start Emulators` task, or the convenience scripts to a different engine and continue. Silently falling back — e.g. from a user-requested Podman to Docker because Podman had a networking or bind-mount issue — is a **failure of this agent**, even if the resulting app works: the user asked for Podman and must decide, not discover after the fact that Docker ran everything.
 >
 > When you do surface a runtime blocker, prefer offering the **fix** first (many Podman-on-Windows issues are config, not dead ends — e.g. use the WSL machine provider for host port forwarding; database emulators must use a named volume, not a workspace bind mount, so `initdb` can `chown` its data dir). Only switch engines if the user explicitly chooses to.
+>
+> A response such as "the user is unavailable", "work autonomously", or "make a good decision" does not select an option and grants no installation or environment-change authority. Keep the plan `Executing` and stop until the user explicitly chooses.
 
 ## Stale Data Directory Check
 
@@ -82,4 +84,5 @@ ask_user(
 
 3. **If the user wants help remapping** — Propose alternative port numbers, update all references in the plan and project files (docker-compose service ports, connection strings, convenience scripts, VS Code debug config), then resume generation.
 4. **If the user will handle it themselves** — Proceed with generation using the original ports.
-5. **Never remap ports or modify config silently** — Always confirm with the user before making changes.
+5. **If no explicit option is selected** — Stop with the plan still `Executing`. Do not stop the existing process, bind an alternative port, or continue validation against a different port.
+6. **Never remap ports or modify config silently** — Always confirm with the user before making changes.
