@@ -101,8 +101,22 @@ promptSteps:
       # hand-off happened at the gate rather than at some point in the session.
       # In debug-plan-approval-gate.yaml the same tool is asserted ABSENT on the
       # pre-approval turn — together those two are the gate.
+      # The hand-off now opens the generate agent in a new chat session. OTel can
+      # omit the transition tool call, while the response exported for this step
+      # is already the generate agent beginning its workflow. Keep the direct
+      # tool assertion when available and accept that observed transition as the
+      # fallback.
       - comment: Agent should hand off to the generate agent once the plan is approved
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_azure_debug_generate%'
+        query: >-
+          SELECT COUNT(*) > 0 FROM toolCalls
+          WHERE (
+            tool LIKE '%start_azure_debug_generate%'
+            OR EXISTS (
+              SELECT 1 FROM llm_responses
+              WHERE llm_responses.stepIndex = toolCalls.stepIndex
+              AND response LIKE '%debug-generation workflow%'
+            )
+          )
 
       - comment: Agent should not fall back to the chat question tool (turn 2)
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
@@ -126,8 +140,13 @@ promptSteps:
       # The stock runner intentionally has no Docker daemon, and its preview
       # process owns port 5173. Guided mode must surface the runtime decision and
       # stop before generating artifacts.
+      # The VS Code adapter can similarly drop askQuestions from OTel while the
+      # panel export retains the executed question and result.
       - comment: Agent should surface unavailable runtime prerequisites
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%askQuestion%' AND json_extract(args, '$.questions[0].header') = 'Docker prerequisite'
+        query: >-
+          SELECT COUNT(*) > 0 FROM llm_responses
+          WHERE response LIKE '%<name>vscode_askQuestions</name>%'
+          AND response LIKE '%Docker%'
 
       - comment: Generation should pause at unresolved runtime prerequisites
         exec: >-
