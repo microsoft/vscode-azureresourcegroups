@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, parseError } from "@microsoft/vscode-azext-utils";
-import type { AzureSubscription } from "api/src/resources/azure";
+import type { AzureSubscription } from "../../../api/src/resources/azure";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { createResourceClientForSubscription } from "../../services/AzureResourcesService";

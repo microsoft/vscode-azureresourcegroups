@@ -8,8 +8,8 @@
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { registerMcpHttpProvider } from '@microsoft/vscode-inproc-mcp/vscode';
-import { AzureSubscription } from 'api/src';
-import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
+import { AzureSubscription } from '../api/src';
+import { GetApiOptions, apiUtils } from '../api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
