@@ -55,7 +55,24 @@
 
 ---
 
-## 5. Prerequisites
+## 5. Quality Attributes & Tradeoffs
+
+**Operating Profile**: Development / Demo
+**Data Classification**: Internal
+**Traffic Profile**: Small / Steady
+**Optimization Priority**: Balanced
+
+| Pillar | Workload Target | Scaffold Response | Planned Validation | Deferred Risk |
+|--------|-----------------|-------------------|--------------------|---------------|
+| Reliability | Stay usable for local development and demos, and fail visibly rather than silently when PostgreSQL or Blob Storage is unavailable. | Dependency-aware health endpoint, finite database and storage timeouts, bounded retries that exclude non-idempotent writes, and transactional task updates. | Health tests covering healthy and essential-failure responses, plus a repeated-completion test. | Availability, backup, RTO, and RPO targets are deferred to deployment planning. |
+| Security | Keep user-scoped task data and signing configuration protected even though the identity provider is mocked. | HMAC-signed request tokens, per-user task scoping, bounded request validation, parameterized SQL, and redaction of signing keys and connection strings from logs. | Negative tests for unsigned, malformed, and cross-user requests, plus a log-capture test asserting no signing key appears. | Real identity-provider integration and private networking are deferred to deployment. |
+| Cost Optimization | Keep the local footprint to the two Essential services the app needs. | Only PostgreSQL and Blob Storage are provisioned; no cache, queue, or background worker is scaffolded. | Dependency inventory plus a build that fails if an unapproved service client is imported. | Azure SKUs, tiers, and scale-to-zero tradeoffs are deferred to deployment planning. |
+| Operational Excellence | Make a failed request diagnosable without attaching a debugger. | Correlation IDs on every request, structured error contracts, dependency-aware health output, and deterministic local run commands. | Route tests asserting correlation propagation and structured error shape; smoke tests covering every endpoint. | Production alerting, dashboards, retention, and ownership are deferred to deployment. |
+| Performance Efficiency | Keep task list and attachment operations responsive under single-developer local load. | Paginated list routes with explicit defaults and caps, bounded request bodies, indexed task queries, and pooled database connections. | Boundary tests for page size and payload limits; integration tests for filter and sort behavior. | Numerical latency and throughput targets are undefined until production usage is known. |
+
+---
+
+## 6. Prerequisites
 
 ### Run
 
@@ -78,7 +95,7 @@
 
 ---
 
-## 6. Design System & UI
+## 7. Design System & UI
 
 **Component Library**: Fluent UI v9
 **Style Direction**: Focused productivity console — calm indigo surfaces, generous whitespace, scannable task rows with clear priority and status affordances, and a warm orange accent reserved for primary CTAs so "what to do next" always pops off the page.
@@ -139,7 +156,7 @@ Title: {empty} · Priority: Medium · Assignee: Priya Shah (me) · Due: (blank) 
 
 ---
 
-## 7. Project Structure
+## 8. Project Structure
 
 ```
 task-tracker/
@@ -209,7 +226,7 @@ task-tracker/
 
 ---
 
-## 8. Route Definitions
+## 9. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
 |---|--------|------|-------------|-------------|--------------|------|-------------|
@@ -225,7 +242,7 @@ task-tracker/
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations

@@ -21,6 +21,27 @@ Deterministic resource-inventory capture provided by the Azure Resources extensi
 
 Holds the baseline snapshot in memory (no files written). On `phase: "capture"` returns the created resources classified `expected`/`failed`/`orphaned`/`unverified` plus orphaned resource groups; write those into `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]`.
 
+### Portable provider for CLI hosts
+
+Direct Copilot CLI/plugin hosts may load the agent assets without loading the extension's in-process MCP
+provider. After one retry of the exact tool name proves `capture_deployment_inventory` is absent, use only
+the shipped product provider:
+
+```text
+node .github/agents/azure-deploy/deploy/scripts/capture-deployment-inventory.mjs --phase baseline --session-path .copilot-azure/sessions/{uuid} --subscription {subscriptionId}
+node .github/agents/azure-deploy/deploy/scripts/capture-deployment-inventory.mjs --phase capture --session-path .copilot-azure/sessions/{uuid} --subscription {subscriptionId} --expected-resource-group {rg} --deployment-name {name1} --deployment-name {name2} --resource-group {rg1} --resource-group {rg2}
+```
+
+It uses explicit-subscription Azure CLI calls and atomically writes
+`deployment-inventory-baseline.json`/`deployment-inventory-capture.json` in the fixed session directory.
+Treat both files as untrusted workspace artifacts: validate the session path and returned JSON schema before
+copying values into `deploy-result.json`. Set `inventorySource: "portable-cli"` and preserve both evidence
+paths. The extension tool remains `inventorySource: "extension-mcp"`.
+
+This is the only supported fallback. Do not hand-author inventory from arbitrary `az resource list` output.
+The portable provider applies the same attribution and safety rule: an unverified inventory yields no
+resource-level cleanup recommendations.
+
 ⛔ **Classification confidence differs, and your wording to the user MUST reflect it:**
 
 | Classification | Meaning | How to present it |
@@ -30,7 +51,9 @@ Holds the baseline snapshot in memory (no files written). On `phase: "capture"` 
 | `orphaned` | Appeared during the deploy window but **no tracked deployment reported it**. | It *may* be a healing/imperative stray — or another person's resource on a shared subscription. Present as "review before deleting", never as "safe to delete" or "created by this deployment". |
 | `unverified` | Deployment operations could not be read at all, so nothing could be attributed. | Say the inventory could not be verified and point the user at the portal. Do **not** produce any cleanup list or delete command. |
 
-When the tool returns `inventoryUnverified: true`, record it in `deploy-result.json` as `inventoryUnverified` + `inventoryUnverifiedReason` and skip the cleanup section entirely.
+When the provider returns `inventoryUnverified: true`, record it in `deploy-result.json` as
+`inventoryUnverified` + `inventoryUnverifiedReason`. Suppress resource-level cleanup recommendations; retain
+the standard exact-RG and session-tagged cleanup commands with an explicit unverified warning.
 
 See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](../instructions.md) Steps 5b/6/8/9.
 
@@ -85,8 +108,8 @@ See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](.
 
 | Tool | Sub-command | AppOnboard Step | Purpose |
 |------|-----------|----------|---------|
-| `capture_deployment_inventory` | *(baseline)* | Step 5b | Snapshot pre-existing resources before the first deployment |
-| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list() to record created/orphaned/failed resources; build cleanup commands from `failed` entries only |
+| Product inventory provider (`capture_deployment_inventory` or shipped portable provider) | *(baseline)* | Step 5b | Snapshot pre-existing resources before the first deployment |
+| Product inventory provider (`capture_deployment_inventory` or shipped portable provider) | *(capture)* | Steps 6, 8, 9 | Diff scoped resources to record created/orphaned/failed resources; build cleanup commands from `failed` entries only |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_availability-status_get` | Step 7 | Post-deploy health. Call with `resourceId` from `deploy-result.json.resourceIds[]` |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_health-events_list` | Step 3 | Pre-deploy outage check. `event-type: "ServiceIssue"`, `status: "Active"` |
 | `mcp_azure_mcp_monitor` | `monitor_activitylog_list` | Step 7+ | Failed deployment analysis. `resource-name` from deploy output, `event-level: "Error"`, `hours: 1` |

@@ -14,7 +14,9 @@ Validate IaC syntax, write `scaffold-manifest.json`, and generate deploy checkli
 |-------|----------|
 | IaC file paths (all generated `.bicep` or `.tf` files) | YES |
 | Self-review findings from Steps 6–9 | YES |
+| `context.json` — locked target and complete `components[]` | YES |
 | `prepare-plan.json` — services, naming, region, subscriptionId | YES |
+| `prereq-output.json` — detected stacks, migrations, warnings, and health endpoint | YES |
 | `prereq-output.json.warnings[]` — prereq warnings with `fixPhase` | YES |
 | `prereq-output.json.healthEndpoint` — detected health path (or `null`) | YES |
 | Conformance result JSON (from main-thread Step 10a-conf) | YES |
@@ -78,7 +80,7 @@ The main thread (instructions.md Step 10a-conf) already ran the conformance scri
 
 Read [scaffold-schemas.ts](scaffold-schemas.ts) for exact field names.
 
-**Do:** Write `scaffold-manifest.json` to the session folder with: `sessionId`, `scaffoldCompletedUtc`, `iacFormat`, `targetScope`, `entryPoint`, `parametersFile`, `files[]`, `deployCommand`, `twoPhaseWiring` (if Container Apps), `phase2Steps` (if applicable), `selfReview` (from caller input), `validationResult` (from Steps 2–3). Use the exact field names from [scaffold-schemas.ts](scaffold-schemas.ts) § `ScaffoldManifest`.
+**Do:** Write `scaffold-manifest.json` to the session folder with: `schemaVersion: 2`, `sessionId`, `scaffoldCompletedUtc`, `iacFormat`, `targetScope`, `entryPoint`, `parametersFile`, `files[]`, `deployCommand`, `twoPhaseWiring` (if Container Apps), `phase2Steps` (if applicable), `selfReview` (from caller input), `validationResult` (from Steps 2–3), and the versioned `deploymentContract` from [validation-and-manifest.md](validation-and-manifest.md). Copy the exact locked target and every context component; mark migration/correlation required when the workload requires them. Use the exact field names from [scaffold-schemas.ts](scaffold-schemas.ts) § `ScaffoldManifest`.
 
 ### Step 5 — Handle failures (if any)
 
@@ -94,7 +96,7 @@ Read [scaffold-healing-rules.md](scaffold-healing-rules.md) ONLY if validation f
 
 Read [`deploy-schemas.ts`](../../deploy/references/deploy-schemas.ts) — specifically the `DeployResult` interface.
 
-**Do:** Create `.copilot-azure/sessions/{id}/deploy-result.json` conforming to the `DeployResult` interface. Populate fields from all session artifacts already written (`prepare-plan.json`, `context.json`, `scaffold-manifest.json`, `prereq-output.json`). Use sensible defaults for fields the deploy phase will fill later. The deploy main agent updates this file in-place at Step 8 with real values.
+**Do:** Create `.copilot-azure/sessions/{id}/deploy-result.json` conforming to the `DeployResult` interface. Populate fields from all session artifacts already written (`prepare-plan.json`, `context.json`, `scaffold-manifest.json`, `prereq-output.json`). Set `firstPass` to `{ "status": "pending", "evidencePath": "first-pass-outcome.json" }`. Use sensible defaults for fields the deploy phase will fill later. The deploy main agent updates this file in-place with the immutable first-pass reference and eventual result.
 
 ### Step 8 — Return results
 

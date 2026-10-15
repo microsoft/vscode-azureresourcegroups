@@ -3,13 +3,16 @@
 - Mode: `offline`
 - Fixtures: `stage-local-dev`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `reference-iac-deployed`, `safety-boundaries-clean`, `reference-frontend-integrated`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 164/164 passed
+- Cases: 180/180 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
 | `golden-stage-local-dev-frontend-scaffold` | `stage-local-dev` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `golden-stage-local-dev-integration-plan` | `stage-local-dev` | `integration-plan` | `passed` | `passed` | PASS |
+| `integration-plan-dependency-access-required` | `stage-local-dev` | `integration-plan` | `missingDependencyAccess` | `missingDependencyAccess` | PASS |
+| `integration-plan-dependency-access-permission-required` | `stage-local-dev` | `integration-plan` | `incompleteDependencyAccess` | `incompleteDependencyAccess` | PASS |
 | `golden-sample-agent-output-requirements` | `sample-agent-output` | `requirements` | `passed` | `passed` | PASS |
+| `golden-sample-agent-output-requirements-workload` | `sample-agent-output` | `requirements-workload` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-project-plan` | `sample-agent-output` | `project-plan` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-plan-gate` | `sample-agent-output` | `plan-gate` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-preview` | `sample-agent-output` | `preview` | `passed` | `passed` | PASS |
@@ -18,7 +21,16 @@
 | `golden-sample-agent-output-project-builds` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
 | `frontend-scaffold-dot-directory-ignored` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `requirements-schema-version` | `sample-agent-output` | `requirements` | `schemaVersion` | `schemaVersion` | PASS |
+| `requirements-operating-profile-required` | `sample-agent-output` | `requirements` | `missingOperatingProfile` | `missingOperatingProfile` | PASS |
+| `requirements-data-classification-required` | `sample-agent-output` | `requirements` | `missingDataClassification` | `missingDataClassification` | PASS |
+| `requirements-traffic-profile-required` | `sample-agent-output` | `requirements` | `missingTrafficProfile` | `missingTrafficProfile` | PASS |
+| `requirements-optimization-priority-required` | `sample-agent-output` | `requirements` | `missingOptimizationPriority` | `missingOptimizationPriority` | PASS |
+| `requirements-rejects-arbitrary-workload-value` | `sample-agent-output` | `requirements` | `invalidWorkloadChoice` | `invalidWorkloadChoice` | PASS |
+| `requirements-workload-expectation-is-live` | `sample-agent-output` | `requirements-workload` | `workloadChoiceMismatch` | `workloadChoiceMismatch` | PASS |
 | `project-plan-numbering` | `sample-agent-output` | `project-plan` | `nonSequentialHeading` | `nonSequentialHeading, nonSequentialHeading` | PASS |
+| `project-plan-quality-contract-required` | `sample-agent-output` | `project-plan` | `missingSection` | `missingSection` | PASS |
+| `project-plan-all-pillars-required` | `sample-agent-output` | `project-plan` | `missingQualityPillar` | `missingQualityPillar` | PASS |
+| `project-plan-rejects-false-waf-claim` | `sample-agent-output` | `project-plan` | `falseWellArchitectedClaim` | `falseWellArchitectedClaim` | PASS |
 | `plan-gate-frontend-dropped` | `sample-agent-output` | `plan-gate` | `frontendIntentMismatch` | `frontendIntentMismatch` | PASS |
 | `plan-gate-preview-manifest-missing` | `sample-agent-output` | `plan-gate` | `previewManifestMissingAtGate` | `previewManifestMissingAtGate` | PASS |
 | `preview-not-ready` | `sample-agent-output` | `preview` | `previewNotReady` | `previewNotReady` | PASS |
@@ -26,6 +38,10 @@
 | `frontend-dev-script-does-not-serve` | `sample-agent-output` | `frontend-scaffold` | `devScriptDoesNotServe` | `devScriptDoesNotServe` | PASS |
 | `frontend-frame-busting-csp` | `sample-agent-output` | `frontend-scaffold` | `previewFrameBusting` | `previewFrameBusting` | PASS |
 | `frontend-api-seam-bypassed` | `sample-agent-output` | `frontend-scaffold` | `apiSeamBypassed` | `apiSeamBypassed` | PASS |
+| `integration-plan-quality-contract-required` | `sample-agent-output` | `integration-plan` | `missingQualityContract` | `missingQualityContract` | PASS |
+| `integration-plan-quality-evidence-required` | `sample-agent-output` | `integration-plan` | `incompleteQualityControl` | `incompleteQualityControl` | PASS |
+| `integration-plan-rejects-false-waf-claim` | `sample-agent-output` | `integration-plan` | `falseWellArchitectedClaim` | `falseWellArchitectedClaim` | PASS |
+| `integration-plan-rejects-arbitrary-workload-value` | `sample-agent-output` | `integration-plan` | `invalidQualityProfileField` | `invalidQualityProfileField` | PASS |
 | `integration-plan-missing-no-seed-rule` | `sample-agent-output` | `integration-plan` | `missingNoSeedRule` | `missingNoSeedRule` | PASS |
 | `integration-plan-missing-backend-run-command` | `sample-agent-output` | `integration-plan` | `missingBackendCommand` | `missingBackendCommand` | PASS |
 | `integration-plan-missing-route-inventory` | `sample-agent-output` | `integration-plan` | `missingRouteInventory` | `missingRouteInventory` | PASS |

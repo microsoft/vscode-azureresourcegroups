@@ -37,9 +37,15 @@ Afterward, frontend `src/` search for `mock` / `mockData` / `previewState` finds
    const BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
    async function request<T>(path: string, init?: RequestInit): Promise<T> {
+     const headers = new Headers(init?.headers);
+     headers.set('Content-Type', 'application/json');
+     if (!headers.has('x-correlation-id')) {
+       headers.set('x-correlation-id', crypto.randomUUID());
+     }
      const res = await fetch(`${BASE}${path}`, {
-       headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
        ...init,
+       headers,
+       signal: init?.signal ?? AbortSignal.timeout(10_000),
      });
      if (!res.ok) {
        const body = await res.json().catch(() => ({}));
@@ -54,8 +60,12 @@ Afterward, frontend `src/` search for `mock` / `mockData` / `previewState` finds
      // ...one method per endpoint, matching the ApiClient interface exactly
    };
    ```
-   `liveClient` typed `: ApiClient` lets compiler enforce every page-called method.
-3. **Swap the seam — the one file that changes.** Point `src/api/index.ts` `api` at live client:
+   Because `liveClient` is typed `: ApiClient`, the compiler guarantees it covers every method the pages already call.
+   The timeout and correlation header are part of the Workload Quality Contract. If the scaffold supplied a
+   shared request helper, reuse it rather than creating a second policy. Add retries only for explicitly
+   idempotent operations and documented transient failures; never auto-retry a `POST`/mutation simply because
+   `fetch` failed.
+3. **Swap the seam — the one file that changes.** Edit `src/api/index.ts` so `api` points at the live client:
    ```ts
    import type { ApiClient } from './types';
    import { liveClient } from './client';

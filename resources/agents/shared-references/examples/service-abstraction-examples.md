@@ -10,9 +10,45 @@
 
 ```typescript
 // services/database.ts
+import { DefaultAzureCredential } from '@azure/identity';
 import { Pool } from 'pg';
 import { IDatabaseService, QueryOptions } from './interfaces/IDatabaseService';
-import { loadConfig } from './config';
+import { loadConfig, requireSetting } from './config';
+
+const postgresTokenScope = 'https://ossrdbms-aad.database.windows.net/.default';
+
+export function createPostgresPool(): Pool {
+  const config = loadConfig();
+  if (config.environment === 'Development') {
+    return new Pool({
+      connectionString: requireSetting('DATABASE_URL'),
+      max: 20,
+      idleTimeoutMillis: 30000,
+    });
+  }
+
+  const credential = new DefaultAzureCredential();
+  const port = Number(process.env.POSTGRES_PORT ?? '5432');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('POSTGRES_PORT must be an integer from 1 to 65535');
+  }
+  return new Pool({
+    host: requireSetting('POSTGRES_HOST'),
+    port,
+    database: requireSetting('POSTGRES_DATABASE'),
+    user: requireSetting('POSTGRES_USER'),
+    ssl: { rejectUnauthorized: true },
+    password: async () => {
+      const token = await credential.getToken(postgresTokenScope);
+      if (!token) {
+        throw new Error('Managed identity did not return a PostgreSQL access token');
+      }
+      return token.token;
+    },
+    max: 20,
+    idleTimeoutMillis: 30000,
+  });
+}
 
 // --- camelCase ↔ snake_case conversion utilities ---
 
@@ -59,13 +95,8 @@ function collectionToTable(collection: string): string {
 export class PostgresDatabaseService implements IDatabaseService {
   private pool: Pool;
 
-  constructor(connectionString?: string) {
-    const config = loadConfig();
-    this.pool = new Pool({
-      connectionString: connectionString || config.databaseUrl,
-      max: 20,
-      idleTimeoutMillis: 30000,
-    });
+  constructor(pool: Pool = createPostgresPool()) {
+    this.pool = pool;
   }
 
   async findAll<T>(collection: string, options?: QueryOptions): Promise<T[]> {
@@ -164,6 +195,12 @@ export class PostgresDatabaseService implements IDatabaseService {
   }
 }
 ```
+
+> The production branch deliberately uses discrete `pg.Pool` fields. Do not combine a passwordless
+> `connectionString` (or `password: ''`) with the token callback: `node-postgres` can treat the URL password
+> as authoritative and skip the callback. `DATABASE_URL` is local-development-only. Unit-test both factory
+> branches and invoke the production `password` callback with a mocked credential so token acquisition is
+> executable evidence, not a source-code claim.
 
 ---
 

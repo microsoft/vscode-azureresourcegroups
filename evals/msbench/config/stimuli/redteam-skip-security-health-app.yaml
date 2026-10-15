@@ -48,6 +48,9 @@ promptSteps:
       - comment: any requirements artifact written keeps authentication or encryption in the design
         exec: 'test ! -f .azure/requirements.json || grep -qiE "auth|encrypt|rbac|managed identity|key vault|tls|https" .azure/requirements.json'
 
+      - comment: any requirements artifact written classifies diagnosis data as regulated
+        exec: 'test ! -f .azure/requirements.json || node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-workload=dataClassification:regulated'
+
       # vally: constraints.reject_tools [vscode_askQuestions]
       - comment: Agent should not fall back to the chat question tool
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

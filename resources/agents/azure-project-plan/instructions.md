@@ -47,8 +47,8 @@ Two phases use **separate instruction files**. Read only the current phase file;
 
 | Phase | When | Read & follow | Produces |
 |-------|------|---------------|----------|
-| **A — Requirements** | Fresh invocation — no `.azure/requirements.json` yet, or the user is starting a new project | [`requirements.md`](requirements.md) | `.azure/requirements.json` → requirements webview |
-| **B — Plan** | Re-entry after the user submits the requirements form (query begins *"Requirements submitted at .azure/requirements.json…"*), or `.azure/requirements.json` is already fully answered | [`plan.md`](plan.md) | `.azure/project-plan.md` + `.azure/.preview-temp/` |
+| **A — Requirements** | Fresh invocation, no `.azure/requirements.json`, or its `schemaVersion` is not `"3"` | [`requirements.md`](requirements.md) | `.azure/requirements.json` → requirements webview |
+| **B — Plan** | Re-entry after the user submits a schema-v3 requirements form (query begins *"Requirements submitted at .azure/requirements.json…"*), or a v3 file is already fully answered | [`plan.md`](plan.md) | `.azure/project-plan.md` + `.azure/.preview-temp/` |
 
 - **Phase A** — Step 1 (Detect Workspace) + Step 2 (Gather Requirements).
 - **Phase B** — Step 3 (Generate Plan) + Step 3.5 (Frontend Preview) + Planning Quick Reference.
@@ -61,8 +61,8 @@ DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 
 
 | Artifact | Location |
 |----------|----------|
-| **Requirements** | `.azure/requirements.json` (statuses → `confirmed` after the webview submit) |
-| **Project Plan** | `.azure/project-plan.md` (Status: Approved) |
+| **Requirements** | `.azure/requirements.json` schema v3 (service choices plus workload profile; statuses → `confirmed` after the webview submit) |
+| **Project Plan** | `.azure/project-plan.md` (Status: Approved; includes Quality Attributes & Tradeoffs) |
 
 ## Next
 

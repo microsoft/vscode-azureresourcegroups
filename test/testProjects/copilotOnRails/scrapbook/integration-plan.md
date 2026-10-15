@@ -80,3 +80,33 @@
 |---------|---------------|---------|
 | PostgreSQL (database) | Essential | `DATABASE_URL` |
 | Azure Blob Storage | Essential | `STORAGE_CONNECTION_STRING` |
+
+## Workload Quality Contract
+
+| Field | Value |
+|---|---|
+| Operating Profile | Standard Production |
+| Data Classification | Confidential / Personal |
+| Traffic Profile | Bursty |
+| Optimization Priority | Balanced |
+
+### Application Controls
+
+| ID | Pillar | Control | Evidence | Integration Validation |
+|---|---|---|---|---|
+| `REL-DEGRADE-01` | Reliability | AI labeling degrades without failing photo persistence | caption service boundary and upload handler | `npm test --workspace=scrapbook-api` |
+| `SEC-LOG-01` | Security | Photo and pairing values are absent from logs | request logger and authorization middleware | `npm test --workspace=scrapbook-api` |
+| `COST-SCOPE-01` | Cost Optimization | AI work runs only for the enabled enhancement | service registry | `npm run build --workspace=scrapbook-api` |
+| `OE-CORRELATION-01` | Operational Excellence | Upload and cleanup logs carry correlation IDs | request/job logging middleware | `npm test --workspace=scrapbook-api` |
+| `PE-BOUNDS-01` | Performance Efficiency | Upload size, list pagination, and cleanup batches are bounded | shared validation and cleanup configuration | `npm test --workspace=scrapbook-api` |
+
+### Dependency Access
+
+| Dependency | Operation | Deployed identity | Required permission | Local equivalent |
+|---|---|---|---|---|
+| PostgreSQL (database) | `SELECT 1` health probe and scrapbook CRUD | API app system-assigned managed identity | Database principal created with `pgaadauth_create_principal`, granted table/sequence privileges | `DATABASE_URL` against the Compose PostgreSQL container |
+| Azure Blob Storage | List containers, one page, as the health probe; upload/read page images | API app system-assigned managed identity | Storage Blob Data Contributor (`containers/read` and `containers/blobs/*` are `dataActions`) | `STORAGE_CONNECTION_STRING` against Azurite |
+
+### Deferred Risks
+
+- Recovery targets, alert routing, private networking, and numeric burst throughput are resolved during deployment planning.

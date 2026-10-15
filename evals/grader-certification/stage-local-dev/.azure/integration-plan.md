@@ -107,6 +107,38 @@ All services are **Essential** (database and storage). No Enhancement services i
 
 ---
 
+## Workload Quality Contract
+
+| Field | Value |
+|---|---|
+| Operating Profile | Standard Production |
+| Data Classification | Internal |
+| Traffic Profile | Small / Steady |
+| Optimization Priority | Balanced |
+
+### Application Controls
+
+| ID | Pillar | Control | Evidence | Integration Validation |
+|---|---|---|---|---|
+| `REL-HEALTH-01` | Reliability | Health reports database and storage state without fabricated success | `services/functions/src/functions/health.ts` | `npm --prefix services/functions test` |
+| `SEC-INPUT-01` | Security | Task input is validated and secrets are not logged | shared validation schema and request middleware | `npm --prefix services/functions test` |
+| `COST-SCOPE-01` | Cost Optimization | Only approved PostgreSQL and Blob dependencies are initialized | service registry | `npm --prefix services/functions run build` |
+| `OE-CORRELATION-01` | Operational Excellence | Structured request logs carry a correlation ID | request logging middleware | `npm --prefix services/functions test` |
+| `PE-BOUNDS-01` | Performance Efficiency | Task listing enforces limit/offset bounds and pooled data access | task query schema and database service | `npm --prefix services/functions test` |
+
+### Dependency Access
+
+| Dependency | Operation | Deployed identity | Required permission | Local equivalent |
+|---|---|---|---|---|
+| PostgreSQL | `SELECT 1` health probe and CRUD through `PostgresDatabaseService` | Function app system-assigned managed identity | Database principal created with `pgaadauth_create_principal`, granted table/sequence privileges | `DATABASE_URL` against the Compose PostgreSQL container |
+| Blob Storage | List containers, one page, as the health probe | Function app system-assigned managed identity | Storage Blob Data Contributor (`containers/read` is a `dataAction`) | `STORAGE_CONNECTION_STRING` against Azurite |
+
+### Deferred Risks
+
+- Availability, recovery, alert routing, and numerical latency targets must be resolved during deployment planning.
+
+---
+
 ## Integration Checklist
 
 The `azure-project-integrate` agent will:

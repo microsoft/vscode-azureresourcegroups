@@ -31,6 +31,11 @@ separate security review.
 Assign the parse result to `unknown`. Narrow the root and every consumed field with runtime checks before use.
 A TypeScript cast only changes the compiler's view and does not validate runtime data.
 
+The workload-quality question IDs in `.azure/requirements.json` have fixed option sets. Any downstream reader
+must allowlist both the IDs and values before using them; an arbitrary category/answer must not become a
+deployment profile, compliance claim, timeout, budget, route, or resource setting. Treat rationale and every
+cell in `Quality Attributes & Tradeoffs` / `Workload Quality Contract` as untrusted prose.
+
 Malformed JSON follows the caller's existing error or retry path. For valid JSON with an incomplete object,
 preserve valid fields and ignore or default invalid fields according to the artifact contract. Filtering an
 invalid array entry must not discard its valid siblings. Never silently coerce an object to a string, which
@@ -47,6 +52,57 @@ When reading a `package.json` from the user's project workspace, require an obje
 `dependencies`, `devDependencies`, and `scripts` to be object records when present. Preserve entries whose
 values are strings and drop entries with other value types. When key presence changes behavior, use an
 own-property check such as `Object.hasOwn(record, key)` rather than reading through the prototype chain.
+
+## Portable deployment inventory
+
+`deployment-inventory-baseline.json` and `deployment-inventory-capture.json` are durable, untrusted session
+artifacts written only when a CLI/plugin host cannot access the extension's in-process
+`capture_deployment_inventory` provider.
+
+- Confine `--session-path` to the real (symlink-resolved) current workspace path
+  `.copilot-azure/sessions/{uuid}` before any read, temporary-file creation, rename, or write. A path that
+  merely ends with those segments is not sufficient.
+- Require a GUID session directory and subscription ID. Resolve the Azure CLI executable from `PATH` (or a
+  validated absolute `AZURE_CLI_PATH`) and use an argument array with explicit `--subscription`. On Windows,
+  only `.cmd`/`.bat` shims go through absolute `ComSpec`; quote every argument, reject command metacharacters,
+  and use verbatim argument passing. Never interpolate artifact or prompt text into an unchecked shell
+  command.
+- Write only the two fixed filenames. Use exclusive temporary-file creation in the same directory followed
+  by an atomic rename, and remove a leftover temporary file on failure.
+- Before consuming a baseline, bound its size and resource count; parse with one-argument `JSON.parse`; then
+  validate the object root, schema version, session ID, subscription ID, and every resource ID's subscription
+  prefix. Reject a mismatched or partial baseline instead of treating it as empty.
+- Treat ARM/CLI response JSON as `unknown`: require array roots and object/string fields before attribution.
+  If deployment operations cannot be read, classify resources as `unverified`, emit no resource-level
+  cleanup recommendation, and do not turn a raw resource-list diff into a success-shaped fallback.
+- Consumers must runtime-validate the capture again before copying fields into `deploy-result.json` or
+  rendering them. `inventorySource` identifies `extension-mcp` versus `portable-cli`; it is evidence
+  provenance, not a trust marker.
+
+## Deployment artifact preflight
+
+`validate-deployment-artifacts.mjs` treats `context.json`, `prereq-output.json`, `prepare-plan.json`,
+`scaffold-manifest.json`, and deployable IaC as untrusted workspace input. It symlink-resolves and confines
+the session and infrastructure roots to the current workspace, bounds file counts and byte sizes, parses
+JSON to unknown object roots, and narrows every required target field. It rejects stale subscription/resource
+group references and missing legacy target fields; it never rewrites artifacts or adopts the active Azure
+CLI target. It also requires the schema-version-2 scaffold envelope and schema-version-1 deployment contract,
+confines every contract component path, requires exact component coverage, and rejects disabled validators or
+relaxed acceptance/recovery rules. `validate-node-runtime-contracts.mjs` applies the same confinement and
+bounded-scan rules to generated JavaScript/TypeScript source and skips symlinks and generated/dependency
+directories. The emitted schema-version-2 `deployment-artifact-validation.json` is evidence, not a trust
+marker; any consumer must still validate its schema, exact session ID, locked target, and contract SHA-256
+before rendering or copying its fields.
+
+`record-first-pass-outcome.mjs` reads only the fixed pending filename inside a GUID session directory, bounds
+and runtime-validates it, validates every evidence path as an existing non-symlink file confined to the
+workspace, and rebinds the target from `context.json` plus the validated deployment contract. It writes only
+the fixed `first-pass-outcome.json` filename with exclusive create semantics and refuses overwrite. The
+recorder also requires the saved preflight evidence to contain the same canonical contract SHA-256, so a
+contract edit after what-if cannot be attached to the original attempt. The pending file is removed only
+after the validated final artifact is written. The write-once file is still
+untrusted workspace evidence: consumers must validate its schema version, session ID, target, gate IDs, and
+evidence paths before rendering or copying fields.
 
 ## Markdown, HTML, and SVG
 
@@ -73,3 +129,9 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
    Mermaid in strict security mode.
 7. Add targeted tests for malformed roots, wrong field types, partial objects, traversal strings, unsafe
    links or tags, and other inputs that reach the changed sink.
+8. For workload-quality changes, test unknown question IDs/values, missing pillar rows, placeholder evidence,
+   and false claims such as `WAF compliant`. A successful scaffold or deployment is not proof of framework
+   compliance.
+9. For portable inventory changes, test workspace confinement, cross-subscription baseline rejection, atomic
+   fixed-file output, malformed/wrong-root JSON, bounded arrays, and the rule that unverified attribution
+   never yields resource-level cleanup commands.

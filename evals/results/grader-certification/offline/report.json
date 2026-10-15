@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T16:38:55.728Z",
+  "generatedAt": "2026-09-21T18:31:45.990Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -42,10 +42,44 @@
       "durationMs": 0
     },
     {
+      "id": "integration-plan-dependency-access-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "expected": "missingDependencyAccess",
+      "actual": [
+        "missingDependencyAccess"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-dependency-access-permission-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "integration-plan",
+      "expected": "incompleteDependencyAccess",
+      "actual": [
+        "incompleteDependencyAccess"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "golden-sample-agent-output-requirements",
       "tier": "offline",
       "fixture": "sample-agent-output",
       "validator": "requirements",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-sample-agent-output-requirements-workload",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements-workload",
       "expected": "passed",
       "actual": [],
       "passed": true,
@@ -136,6 +170,78 @@
       "durationMs": 0
     },
     {
+      "id": "requirements-operating-profile-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "missingOperatingProfile",
+      "actual": [
+        "missingOperatingProfile"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-data-classification-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "missingDataClassification",
+      "actual": [
+        "missingDataClassification"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-traffic-profile-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "missingTrafficProfile",
+      "actual": [
+        "missingTrafficProfile"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-optimization-priority-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "missingOptimizationPriority",
+      "actual": [
+        "missingOptimizationPriority"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-rejects-arbitrary-workload-value",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "invalidWorkloadChoice",
+      "actual": [
+        "invalidWorkloadChoice"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-workload-expectation-is-live",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements-workload",
+      "expected": "workloadChoiceMismatch",
+      "actual": [
+        "workloadChoiceMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "project-plan-numbering",
       "tier": "offline",
       "fixture": "sample-agent-output",
@@ -144,6 +250,42 @@
       "actual": [
         "nonSequentialHeading",
         "nonSequentialHeading"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-plan-quality-contract-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "expected": "missingSection",
+      "actual": [
+        "missingSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-plan-all-pillars-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "expected": "missingQualityPillar",
+      "actual": [
+        "missingQualityPillar"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-plan-rejects-false-waf-claim",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "expected": "falseWellArchitectedClaim",
+      "actual": [
+        "falseWellArchitectedClaim"
       ],
       "passed": true,
       "durationMs": 0
@@ -228,6 +370,54 @@
       "expected": "apiSeamBypassed",
       "actual": [
         "apiSeamBypassed"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-quality-contract-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingQualityContract",
+      "actual": [
+        "missingQualityContract"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-quality-evidence-required",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "incompleteQualityControl",
+      "actual": [
+        "incompleteQualityControl"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-rejects-false-waf-claim",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "falseWellArchitectedClaim",
+      "actual": [
+        "falseWellArchitectedClaim"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-rejects-arbitrary-workload-value",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "invalidQualityProfileField",
+      "actual": [
+        "invalidQualityProfileField"
       ],
       "passed": true,
       "durationMs": 0

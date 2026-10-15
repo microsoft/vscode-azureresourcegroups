@@ -32,10 +32,8 @@ promptSteps:
       - comment: Agent should have written the requirements artifact
         query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
 
-      # Wording is pinned to photo-app-requirements.yaml: same exec means same
-      # gate, and the comment is that gate's only identifier in stored results.
-      - comment: requirements.json satisfies the requirements contract
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+      - comment: requirements.json classifies the private HR workload as confidential
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-workload=dataClassification:confidential-personal
 
       - comment: Agent should have opened the requirements webview
         query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'

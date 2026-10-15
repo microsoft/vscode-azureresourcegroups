@@ -20,10 +20,15 @@ suite('scaffoldPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planExecutionMode: 'auto',
                 planMode: 'new',
-                planSectionCount: 9,
-                planSectionTitles: 'project overview,attendance compliance api — azure functions,attendance compliance web app — web app,services required,prerequisites,design system & ui,project structure,route definitions,next steps',
+                planSectionCount: 10,
+                planSectionTitles: 'project overview,attendance compliance api — azure functions,attendance compliance web app — web app,services required,quality attributes & tradeoffs,prerequisites,design system & ui,project structure,route definitions,next steps',
                 appType: 'spa + api',
                 apiLogin: 'yes',
+                qualityAttributesPresent: true,
+                operatingProfile: 'standard production',
+                dataClassification: 'confidential / personal',
+                trafficProfile: 'small / steady',
+                optimizationPriority: 'balanced',
 
                 serviceCount: 2,
                 serviceLanguages: 'typescript',
@@ -63,10 +68,15 @@ suite('scaffoldPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planExecutionMode: 'unknown',
                 planMode: 'new',
-                planSectionCount: 10,
-                planSectionTitles: 'project overview,backend — scrapbook api,frontend — scrapbook web,worker — cleanup worker,services required,prerequisites,design system & ui,project structure,route definitions,next steps',
+                planSectionCount: 11,
+                planSectionTitles: 'project overview,backend — scrapbook api,frontend — scrapbook web,worker — cleanup worker,services required,quality attributes & tradeoffs,prerequisites,design system & ui,project structure,route definitions,next steps',
                 appType: 'spa + api',
                 apiLogin: 'yes',
+                qualityAttributesPresent: true,
+                operatingProfile: 'standard production',
+                dataClassification: 'confidential / personal',
+                trafficProfile: 'bursty',
+                optimizationPriority: 'balanced',
 
                 serviceCount: 3,
                 serviceLanguages: 'typescript',
@@ -109,6 +119,11 @@ suite('scaffoldPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.planSectionTitles, '');
             assert.strictEqual(telemetry.appType, 'unknown');
             assert.strictEqual(telemetry.apiLogin, 'unknown');
+            assert.strictEqual(telemetry.qualityAttributesPresent, false);
+            assert.strictEqual(telemetry.operatingProfile, 'unknown');
+            assert.strictEqual(telemetry.dataClassification, 'unknown');
+            assert.strictEqual(telemetry.trafficProfile, 'unknown');
+            assert.strictEqual(telemetry.optimizationPriority, 'unknown');
             assert.strictEqual(telemetry.serviceCount, 0);
             assert.strictEqual(telemetry.serviceLanguages, '');
             assert.strictEqual(telemetry.azureServiceCount, 0);
@@ -132,6 +147,21 @@ suite('scaffoldPlanTelemetryUtils', () => {
             });
 
             assert.strictEqual(telemetry.planParsedOk, false);
+        });
+
+        test('does not emit arbitrary quality values to telemetry', () => {
+            const markdown = [
+                '# Project Plan',
+                '**Status**: Planning',
+                '',
+                '## 1. Quality Attributes & Tradeoffs',
+                '',
+                '**Operating Profile**: Secret customer launch profile',
+            ].join('\n');
+
+            const telemetry = getScaffoldPlanTelemetry(parseScaffoldPlanMarkdown(markdown));
+            assert.strictEqual(telemetry.qualityAttributesPresent, true);
+            assert.strictEqual(telemetry.operatingProfile, 'unknown');
         });
 
         test('classifies debug prerequisites and extensions', () => {

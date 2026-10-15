@@ -5,6 +5,7 @@
 
 import { maskUserInfo } from "@microsoft/vscode-azext-utils";
 import { findColumnIndex, findKeyValue, findSection, findTable, type ScaffoldPlanData, type ScaffoldPlanSection } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { WORKLOAD_QUESTION_CONTRACT } from "../../views/utils/parseRequirements";
 
 export const SCAFFOLD_PLAN_TELEMETRY_PREFIX = 'projectScaffoldPlan.';
 
@@ -26,6 +27,16 @@ export interface ScaffoldPlanTelemetry {
     appType: string;
     /** Whether the approved plan enables user-facing API login (`yes`, `no`, or `unknown`). */
     apiLogin: string;
+    /** Whether the workload quality contract is present in the plan. */
+    qualityAttributesPresent: boolean;
+    /** Workload operating profile from the quality contract, or `unknown`. */
+    operatingProfile: string;
+    /** Highest data classification from the quality contract, or `unknown`. */
+    dataClassification: string;
+    /** Traffic shape from the quality contract, or `unknown`. */
+    trafficProfile: string;
+    /** Primary architecture tradeoff from the quality contract, or `unknown`. */
+    optimizationPriority: string;
 
     /** Total run-prerequisite rows. */
     runPrereqTotalCount: number;
@@ -87,6 +98,7 @@ export function getScaffoldPlanTelemetry(planData: ScaffoldPlanData): ScaffoldPl
     const prereqs = getPrerequisiteMetrics(planData);
     const design = getDesignSystemMetrics(planData);
     const routes = getRouteMetrics(planData);
+    const quality = getQualityAttributeMetrics(planData);
 
     return {
         planParsedOk: !planData.parseError,
@@ -96,6 +108,11 @@ export function getScaffoldPlanTelemetry(planData: ScaffoldPlanData): ScaffoldPl
         planSectionTitles: getSectionTitles(planData),
         appType: getAppType(planData),
         apiLogin: getApiLogin(planData),
+        qualityAttributesPresent: quality.present,
+        operatingProfile: quality.operatingProfile,
+        dataClassification: quality.dataClassification,
+        trafficProfile: quality.trafficProfile,
+        optimizationPriority: quality.optimizationPriority,
 
         serviceCount: services.count,
         serviceLanguages: services.languages,
@@ -141,6 +158,27 @@ function getApiLogin(planData: ScaffoldPlanData): string {
     const value = section && findKeyValue(section, 'API Login');
     const normalized = value && normalizeToken(value);
     return normalized === 'yes' || normalized === 'no' ? normalized : 'unknown';
+}
+
+function getQualityAttributeMetrics(planData: ScaffoldPlanData): {
+    present: boolean;
+    operatingProfile: string;
+    dataClassification: string;
+    trafficProfile: string;
+    optimizationPriority: string;
+} {
+    const section = findSection(planData, 'Quality Attributes');
+    const read = (key: string, allowed: readonly string[]): string => {
+        const value = section && findKeyValue(section, key);
+        return value && allowed.includes(value) ? normalizeToken(value) : 'unknown';
+    };
+    return {
+        present: section !== undefined,
+        operatingProfile: read(WORKLOAD_QUESTION_CONTRACT.operatingProfile.planKey, WORKLOAD_QUESTION_CONTRACT.operatingProfile.options),
+        dataClassification: read(WORKLOAD_QUESTION_CONTRACT.dataClassification.planKey, WORKLOAD_QUESTION_CONTRACT.dataClassification.options),
+        trafficProfile: read(WORKLOAD_QUESTION_CONTRACT.trafficProfile.planKey, WORKLOAD_QUESTION_CONTRACT.trafficProfile.options),
+        optimizationPriority: read(WORKLOAD_QUESTION_CONTRACT.optimizationPriority.planKey, WORKLOAD_QUESTION_CONTRACT.optimizationPriority.options),
+    };
 }
 
 /**

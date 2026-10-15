@@ -47,7 +47,11 @@ export default defineConfig([
     {
         // Node-run scripts outside the extension's TypeScript program need
         // linting without the type-aware project service.
-        files: ['evals/**/*.{js,cjs,mjs}', '.github/cor/instruction-reviewers/**/*.cjs'],
+        files: [
+            'evals/**/*.{js,cjs,mjs}',
+            'resources/agents/**/*.mjs',
+            '.github/cor/instruction-reviewers/**/*.cjs',
+        ],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: {
             parserOptions: {
@@ -57,13 +61,18 @@ export default defineConfig([
             globals: {
                 __dirname: 'readonly',
                 __filename: 'readonly',
+                AbortController: 'readonly',
                 Buffer: 'readonly',
+                clearTimeout: 'readonly',
                 console: 'readonly',
                 crypto: 'readonly',
                 exports: 'writable',
+                fetch: 'readonly',
                 module: 'writable',
                 process: 'readonly',
                 require: 'readonly',
+                setTimeout: 'readonly',
+                URL: 'readonly',
             },
         },
         rules: {

@@ -18,27 +18,68 @@ Flex app — they either error or silently do nothing.
 
 ## Deploy the package
 
-Build/zip the project, then deploy with the Functions channel. Prefer a **remote build** for interpreted
-runtimes so native wheels/modules are built on Linux, not on the local machine:
+Build and validate the immutable package, then deploy with the Functions channel. **TypeScript uses a
+precompiled, self-contained package by default.** A structurally valid source ZIP is insufficient: Oryx can
+select a different Node major than `functionAppConfig.runtime`, omit monorepo sibling sources, or finish with
+zero registered Functions.
 
 ```powershell
-# Python / Node / TypeScript — zip the PROJECT ROOT (manifest at the zip root) and request a remote build.
+# Python — zip the project root and request a Linux remote build when native wheels require it.
 az functionapp deployment source config-zip `
   --subscription {sub} -g {rg} -n {app} `
   --src $zipPath --build-remote true
 
-# .NET (isolated) / Java / Go — deploy a precompiled package (build output at the zip root); no remote build.
-az functionapp deployment source config-zip --subscription {sub} -g {rg} -n {app} --src $zipPath
+# TypeScript / Node — deploy the validated precompiled package; never ask Oryx to choose the Node toolchain.
+az functionapp deployment source config-zip `
+  --subscription {sub} -g {rg} -n {app} `
+  --src $zipPath --build-remote false
+
+# .NET (isolated) / Java / Go — deploy precompiled output at the ZIP root.
+az functionapp deployment source config-zip --subscription {sub} -g {rg} -n {app} --src $zipPath --build-remote false
 ```
 
-`func azure functionapp publish {app}` (Azure Functions Core Tools) is an equivalent channel and also performs
-a remote build — use it if Core Tools is already the project's workflow.
+Do not use `func azure functionapp publish` for the TypeScript path because it can re-enable a remote build.
+
+### TypeScript/Node package gate
+
+1. Require the IaC runtime and `package.json.engines.node` to support the same major (Node 22 for the current
+   template). Run the build from a clean checkout/staging directory, not from a previously built monorepo:
+   install with the lockfile, run the clean script, compile, and prune to production dependencies.
+2. Stage a package root containing `host.json`, `package.json`, the lockfile, compiled `dist/`, production
+   `node_modules/`, migrations, and any runtime assets. The package must contain the complete compiled closure
+   for sibling/shared source imports; no compiled relative import may resolve outside the package.
+3. Determine the exact expected Function names from the scaffolded handlers and deployment manifest. Before
+   upload, validate both the staging directory and the final ZIP:
+
+   ```text
+   node .github/agents/azure-deploy/deploy/scripts/validate-functions-flex-package.mjs --root {stagingRoot} --node-major 22 --expected-functions health,createItem,listItems
+   node .github/agents/azure-deploy/deploy/scripts/validate-functions-flex-package.mjs --zip {zipPath} --node-major 22 --expected-functions health,createItem,listItems
+   ```
+
+   The validator rejects missing root manifests/lockfile, Node-major mismatch, backslash/traversal ZIP entries,
+   a `package.json.main` glob that does not resolve to the exact expected Function set, missing production
+   dependencies, and broken/escaping compiled relative imports. Preserve its ZIP byte count and SHA-256 in
+   deployment evidence.
+4. Upload once with `--build-remote false`. A failed validator is a pre-upload package defect, not a deployment
+   attempt. A failed upload requires diagnosis and a changed, revalidated package; never send an unchanged ZIP.
+5. Immediately after a successful upload, require the registered Functions to equal the expected set:
+
+   ```powershell
+   az functionapp function list --subscription {sub} -g {rg} -n {app} --query "[].name" -o tsv
+   ```
+
+   Normalize returned `app/functionName` values to the final segment and compare exact sets. Then require
+   `/api/health` to be non-404 and dependency-aware. Upload success without exact registration and health is
+   not an application-healthy release.
+
+If a Node dependency has a native binary, build/prune in a controlled Linux environment pinned to the same
+Node major. Do not hand toolchain selection back to an unpinned remote builder.
 
 - The runtime is fixed by `functionAppConfig.runtime` in IaC — do **not** pass or set `FUNCTIONS_WORKER_RUNTIME`.
 - The deploying identity writes the package to the deployment container. With shared-key access disabled, that
   identity (the signed-in user for a local deploy, or the CI principal) needs **Storage Blob Data Contributor**
   on the deployment storage account, in addition to the function app's own identity role.
-- After deploy, sync is automatic; then run the health check below.
+- After deploy, sync is automatic; then run the exact registration and health gates above.
 
 ## ⛔ Local (non-CI) deploys: hardening can lock you out — do not deny-by-default before first deploy
 
@@ -79,9 +120,10 @@ already gone).
 
 ## Health check
 
-HTTP GET the function endpoint(s) (max 3 iterations, honoring cold start). A Flex app can take up to ~30s to
-initialize on first start; `System.TimeoutException`/gRPC host messages during that window are startup noise,
-not deploy failures. Inspect the response body for error patterns (`connection refused`, `MODULE_NOT_FOUND`,
+HTTP GET the function endpoint(s) (max 3 iterations, honoring cold start) only after exact Function
+registration passes. A Flex app can take up to ~30s to initialize on first start;
+`System.TimeoutException`/gRPC host messages during that window are startup noise, not deploy failures.
+Inspect the response body for error patterns (`connection refused`, `MODULE_NOT_FOUND`,
 `SET-IN-DEPLOY-PHASE`) — HTTP 200 alone is not proof of health when the app depends on another service.
 
 ## Database post-deploy

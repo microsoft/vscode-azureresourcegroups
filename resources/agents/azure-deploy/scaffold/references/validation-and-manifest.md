@@ -62,9 +62,38 @@ Fail: fix errors and retry.
 
 ## Step 12 — Write `scaffold-manifest.json`
 
-⛔ **You MUST read [`scaffold-schemas.ts`](scaffold-schemas.ts)** to get the exact `ScaffoldManifest` interface. Write to the session folder with ALL fields populated: `files[]`, `selfReview.findings[]`, AND `validationResult` (from Step 11). This is a single write — validation is already complete.
+⛔ **You MUST read [`scaffold-schemas.ts`](scaffold-schemas.ts)** to get the exact `ScaffoldManifest` interface. Write to the session folder with ALL fields populated: `schemaVersion: 2`, `files[]`, `selfReview.findings[]`, `validationResult` (from Step 11), and `deploymentContract`. This is a single write — validation is already complete.
 
 > ⛔ **Phase exit gate: `scaffold-manifest.json.validationResult` MUST NOT be null.** If validation ran: `{ status: 'Validated'/'Partial'/'Failed', checks: [{ name, passed, detail? }] }` (per `ValidationResult` in [`scaffold-schemas.ts`](scaffold-schemas.ts)). Null = incomplete scaffold.
+
+### Versioned deployment contract
+
+`deploymentContract` is not a summary. It is the executable handoff from scaffold to deploy:
+
+- `schemaVersion: 1`.
+- `target`: copy the exact subscription, optional tenant, resource group, and region from
+  `context.json.azure`; never copy the active CLI default.
+- `components[]`: copy every `context.json.components[]` name, workspace-relative path, and
+  `stack.language` exactly once. For each component, populate `requiredValidators[]` from the fixed
+  `DeploymentComponentValidator` union. Every component includes `build-or-syntax`,
+  `tests-or-no-tests-proof`, and `package-integrity`; JavaScript/TypeScript includes
+  `node-runtime-contracts`; add `postgres-managed-identity`, `migration-controller`,
+  `functions-flex-package`, `container-image`, and `correlation` only where the stack/plan requires them.
+  Do not omit a component or any validator required by its stack because the check is expected to fail or be
+  inconvenient; record the evaluation evidence instead.
+- `validators`: set every fixed validator field in `DeploymentContract.validators` to `true`. These fields
+  mean deploy must evaluate the gate; a component with no test suite records a supported no-tests result,
+  not an omitted gate.
+- `acceptance.migration`: `required` when `prepare-plan.json.appDbName` is present, the plan contains
+  PostgreSQL/MySQL/Azure SQL, or a migration framework was detected; otherwise `not-applicable`.
+- `acceptance.correlation`: `required` for every API, backend, or Function workload; otherwise
+  `not-applicable`.
+- `recoveryPolicy`: copy the fixed values from `DeploymentContract.recoveryPolicy`. Do not relax them for a
+  specific workload.
+
+The deploy preflight runtime-validates this object before what-if. A missing/legacy version, target drift,
+component omission, disabled validator, unsafe component path, or incorrect required acceptance gate returns
+to scaffold; deploy never patches the contract in place.
 
 **You MUST also update `context.json`** per `AppOnboardContext` in [`session-schemas.ts`](../../references/session-schemas.ts): append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc`.
 
@@ -81,6 +110,6 @@ Present the user with: files generated, selfReview findings, **validation result
 > ⛔ **Azure service compatibility warnings.** Read `prereq-output.json.warnings[]` for any warnings with `fixPhase: "deploy-gate"`. Surface EACH at the deploy gate: "⚠️ Azure compatibility: {warning.summary}. Fix: {warning.fix}. Approve? (Yes / Skip / Cancel)". If the user skips, add to `postDeployRecommendations[]`.
 
 > ⛔ **Phase exit — NOT complete until ALL done:**
-> 1. `scaffold-manifest.json` written with `files[]`, `selfReview.findings[]`, AND `validationResult`
+> 1. `scaffold-manifest.json` written with `schemaVersion: 2`, `deploymentContract`, `files[]`, `selfReview.findings[]`, AND `validationResult`
 > 2. `context.json`: `"scaffold"` appended to `completedPhases`, `currentPhase` → `"deploy"`, `lastModifiedUtc` updated
 > 3. `deploy-checklist.md` exists in session folder — written by the parallel checklist subagent at scaffold Step 5b (before IaC gen completes). Verify it exists. If missing (subagent failed), write it now from [`deploy-checklist-template.md`](../../deploy/references/deploy-checklist-template.md) — fill in real values from `prepare-plan.json`, delete unrelated compute sections.

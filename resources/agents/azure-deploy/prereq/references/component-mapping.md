@@ -72,7 +72,7 @@ Also check for `azure.yaml` coexistence: if BOTH `azure.yaml` AND non-Azure `.tf
 
 ### Compose Service Dependency Extraction
 
-When `docker-compose.yml` or `compose.yml` is found, parse `services:` for infrastructure dependencies. Map known images to `detectedServices[]` entries (`DetectedService` in `session-schemas.ts`):
+When `docker-compose.yml` or `compose.yml` is found, parse `services:` for infrastructure dependencies. Map known images to `detectedServices[]` entries (`DetectedService` in [`session-schemas.ts`](../../references/session-schemas.ts)):
 
 | Image pattern | `type` | Version source |
 |--------------|--------|----------------|

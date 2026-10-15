@@ -21,7 +21,7 @@ az deployment sub create --name $deploymentName --subscription {subscriptionId} 
 
 ### RG-scope (403 fallback)
 
-Use `az deployment group create --name $deploymentName --resource-group {rg}` and adjust `$resId` to include `/resourceGroups/{rg}`:
+Use `az deployment group create --name $deploymentName --subscription {subscriptionId} --resource-group {rg}` and adjust `$resId` to include `/resourceGroups/{rg}`:
 ```powershell
 $resId = "/subscriptions/{subscriptionId}/resourceGroups/{rg}/providers/Microsoft.Resources/deployments/$deploymentName"
 $link = "https://portal.azure.com/#view/HubsExtension/DeploymentDetailsBlade/~/overview/id/$($resId.Replace('/', '%2F'))"
@@ -30,7 +30,7 @@ Write-Output "LINK=$link"
 
 For Terraform (no single ARM deployment): `https://portal.azure.com/#@{tenantId}/resource/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/activitylog`
 
-> 💡 Resolve `{subscriptionId}` and `{resourceGroup}` from `context.json`. For Terraform, resolve `{tenantId}` via `az account show --query tenantId -o tsv`.
+> 💡 Resolve `{subscriptionId}` and `{resourceGroup}` from `context.json`. For Terraform, resolve `{tenantId}` via `az account show --subscription {subscriptionId} --query tenantId -o tsv`.
 
 ## Same-Scope Retries vs New Names
 

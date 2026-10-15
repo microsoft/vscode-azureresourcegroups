@@ -10,6 +10,11 @@ metadata:
 # Azure App Onboard
 
 > ⛔ **Every repo goes through the full pipeline (Steps 1–10). No exceptions.** Do not skip steps, refuse, or short-circuit based on what you recognize. Follow the Workflow table below sequentially — read each step's references before acting.
+>
+> ⛔ **You are already the selected `azure-deploy` custom agent. Execute this pipeline inline.** Never call
+> `agent`/`task` with `agent_type: "azure-deploy"`—not at startup, after compaction, or after a generic
+> continuation turn. Only the explicitly named generic `task` templates in these instructions may be
+> delegated, always with `agent_type: "task"` and the persisted root model.
 
 ## Quick Reference
 
@@ -50,7 +55,7 @@ metadata:
 
 > ⛔ **Deploy recovery:** After deploy gate approval OR before any `az deployment`/`az webapp deploy`/`az acr build` — if you haven't read `deploy/instructions.md`, read `.copilot-azure/sessions/{id}/deploy-checklist.md` first, then `deploy/instructions.md`. ⛔ Always use this pipeline's own deploy phase (`deploy/instructions.md`) — do NOT hand off to any other deployment workflow.
 
-> ⛔ **Post-scaffold transition (MANDATORY):** Immediately after `scaffold-manifest.json` is written, YOUR NEXT ACTION MUST be Step 8 (Deploy Approval Gate) — NOT a summary report, NOT a "here are the generated files" message, NOT a completion signal. Confirm `context.json` has `completedPhases: [...,"scaffold"]` + `currentPhase: "deploy"` (update it yourself if the scaffold subagent didn't). Re-read [approval-gates.md § Deploy Gate](references/approval-gates.md) if evicted from context (scaffold reference loading is heavy), then present the exact prompt: **"🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"**. This gate is the LAST content in your response — wait for the user's reply.
+> ⛔ **Post-scaffold transition (MANDATORY):** Immediately after `scaffold-manifest.json` is written, verify it has `schemaVersion: 2`, `deploymentContract.schemaVersion: 1`, the exact locked target, and every context component. A missing/legacy contract returns to scaffold and must not reach the deploy gate. Then YOUR NEXT ACTION MUST be Step 8 (Deploy Approval Gate) — NOT a summary report, NOT a "here are the generated files" message, NOT a completion signal. Confirm `context.json` has `completedPhases: [...,"scaffold"]` + `currentPhase: "deploy"` (update it yourself if the scaffold subagent didn't). Re-read [approval-gates.md § Deploy Gate](references/approval-gates.md) if evicted from context (scaffold reference loading is heavy), then present the exact prompt: **"🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"**. This gate is the LAST content in your response — wait for the user's reply.
 
 | # | Step | Action | Reference |
 |---|------|--------|-----------|

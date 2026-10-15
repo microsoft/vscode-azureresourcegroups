@@ -151,11 +151,11 @@ Give every external HTTP/SDK call a timeout to prevent hanging requests.
 
 ```typescript
 // Using AbortController (built-in)
-async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fn();
+    return await fn(controller.signal);
   } finally {
     clearTimeout(timeout);
   }
@@ -163,10 +163,14 @@ async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<
 
 // Usage
 const caption = await withTimeout(
-  () => aiCaption.generateCaption(buffer, mimeType),
+  (signal) => aiCaption.generateCaption(buffer, mimeType, { abortSignal: signal }),
   10_000 // 10 seconds
 );
 ```
+
+> ⛔ The callback **must receive and pass the signal** to the HTTP/SDK operation. Racing or aborting a
+> controller that the operation never sees only stops local waiting (or does nothing); it does not bound the
+> network call. Azure SDKs generally accept `abortSignal` in request options.
 
 See Python and C# timeout patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
@@ -180,14 +184,20 @@ Retry transient failures (429 Too Many Requests, 503 Service Unavailable, networ
 
 ```typescript
 async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: { maxRetries?: number; baseDelayMs?: number; retryableErrors?: string[] } = {}
+  fn: (attempt: number) => Promise<T>,
+  options: { idempotent: boolean; maxRetries?: number; baseDelayMs?: number }
 ): Promise<T> {
-  const { maxRetries = 3, baseDelayMs = 500 } = options;
+  const { idempotent, maxRetries = 3, baseDelayMs = 500 } = options;
+
+  // A failed non-idempotent write may already have committed remotely.
+  // Execute once unless the operation has an application-level idempotency key.
+  if (!idempotent) {
+    return fn(0);
+  }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      return await fn(attempt);
     } catch (err) {
       if (attempt === maxRetries) throw err;
 
@@ -208,6 +218,11 @@ async function withRetry<T>(
   throw new Error('Unreachable');
 }
 ```
+
+Call with `idempotent: true` only for reads, naturally idempotent operations, or writes carrying an
+application-level idempotency key. Python (`tenacity` or a bounded loop) and C# (Azure SDK retry options or a
+bounded resilience pipeline) follow the same rule: retry only classified transient failures, cap attempts
+and total delay, add jitter, and never retry an unprotected mutation.
 
 See Python and C# retry patterns in [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 

@@ -12,11 +12,11 @@
 >
 > **Raw-static preview leaves to scaffold**: real webfonts (use system fonts), JavaScript (depict states statically; toggles need not work), and real photos (use neutral placeholder blocks: subtle surface + border with muted icon or initials, **not** brand-color gradient). These limits do not permit unpolished output. Preview MUST provide everything else: real inline-SVG icons, elevation, hover/focus styling, skeleton shimmer.
 >
-> **Polish is *treatment*; content is *the plan*.** Replace every `{...}` recipe placeholder with **real, domain-specific Sample Content** from the prompt (page records in plan Section 6 Sample Content). Render the *same* entities, names, numbers, and states as the scaffolded app: faithful preview, not generic stand-in. **Never** use filler such as "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add banners or notes saying the app "will use" another framework or component library; render content directly without disclaimers.
+> **Polish is about *treatment*; content is about *the plan*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Design System & UI Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
 >
 > **Audience:** planner sub-agents from Step 3.5b. Each owns one page and writes one self-contained HTML file linked to shared `./theme.css`. **No `<script>` tags**: preview iframe disallows scripts. **No inline `<style>`**: all styling MUST come from `./theme.css`. Scaffold reproduces this look with real primitives; make it worth reproducing.
 >
-> **Output shape:** each page is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` with per-region markup below in plan Section 6 Pages-table order.
+> **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Design System & UI Pages table.
 
 ---
 
@@ -643,11 +643,11 @@ Step 3.5a writes `:root { ... }` with palette/typography tokens **and base body 
 
 For each plan Pages-table layout token, copy its snippet into page `<body>`. Tokens express **layout intent**, not literal element names.
 
-> **Every human-readable label and count is illustrative: adapt to the app; never ship verbatim.** Source replacements from plan:
-> - **Nav / sidebar labels** → Section 6 Pages-table names; link actual pages, not "Overview / Library / Settings".
-> - **Table headers, form field labels, KPI labels** → primary entity's real fields.
-> - **Rows, cards, values, badge states** → Section 6 **Sample Content** records with real entity status values.
-> - **Counts & sizing** → match plan data for KPI tiles, grid columns, table rows, list cards, tabs, and form fields. `repeat(4, …)` / `repeat(3, …)` and three-row stubs are **defaults, not quotas**. A 2-KPI dashboard has two tiles; a 6-field form has six fields. See *Adapting sizing to the domain*.
+> **Every human-readable label and every count in these snippets is an illustrative placeholder — adapt it to the app, never ship it verbatim.** Source the replacements from the plan:
+> - **Nav / sidebar labels** → the page names from the Design System & UI Pages table (link to the app's actual pages, not "Overview / Library / Settings").
+> - **Table headers, form field labels, KPI labels** → the real fields of the page's primary entity.
+> - **Rows, cards, values, badge states** → the page's records from the Design System & UI **Sample Content** block, using the entity's real status values.
+> - **Counts & sizing** → render as many KPI tiles, grid columns, table rows, list cards, tabs, and form fields as the plan's data actually calls for — the `repeat(4, …)` / `repeat(3, …)` and the three-row stubs below are **defaults, not quotas**. A 2-KPI dashboard renders two tiles; a 6-field form renders six fields. See *Adapting sizing to the domain* below.
 >
 > Snippet literals (e.g. `Active`, `Owner`, `2 min ago`) show only *shape*. "Overview / Library / Settings" or "Jane Doe" means preview is not plan-wired. Only **CSS / design tokens** (spacing scale, radii, `theme.css` classes) stay fixed; all visible text and counts are plan-driven.
 
@@ -843,7 +843,7 @@ Every nav/sidebar item, KPI tile, section-title row, empty state, error banner, 
 </form>
 ```
 
-> Render **one field per real Section 6 entity field**, not fixed three. Use fitting input types (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; name submit action (e.g. "Save", "Create", "Send").
+> Render **one field per real field** of this form's entity (from Design System & UI) — not a fixed three. Use input types that fit (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; tailor the submit label to the action (e.g. "Save", "Create", "Send").
 
 ### `table`
 ```html
@@ -876,7 +876,7 @@ Every nav/sidebar item, KPI tile, section-title row, empty state, error banner, 
 </div>
 ```
 
-> Columns match all primary-entity fields, not fixed four; rows match Section 6 Sample Content, one `<tr>` per record.
+> Columns are the primary entity's real fields (as many as the entity has — not a fixed four); rows are the page's records from the Design System & UI Sample Content (one `<tr>` per record).
 
 ### `actions` / `action-bar`
 ```html
@@ -990,10 +990,10 @@ Snippets show *shape*; **counts and proportions** must follow actual plan data, 
 | **KPI tiles** | 4 | One per tracked dashboard metric (2-metric app shows 2); row auto-fits. |
 | **Grid / list cards** | 3 | One per page Sample Content record; grid auto-fills columns. |
 | **Table rows** | 3 | One `<tr>` per Sample Content record; columns = the entity's real fields. |
-| **Form fields** | 3 | One per real entity field (sign-up may have 6; search box 1). |
-| **Nav / sidebar links** | 3 | One per page in Section 6's Pages table. |
-| **Tabs** | 3 | Count implied by page purpose. |
-| **Content density** | medium | Tight rows for list-heavy admin; hero + few cards for marketing. Follow Section 6 Style Direction. |
+| **Form fields** | 3 | One per real field of the entity (a sign-up form may have 6, a search box 1). |
+| **Nav / sidebar links** | 3 | One per page in the Design System & UI Pages table. |
+| **Tabs** | 3 | As many as the page's purpose implies. |
+| **Content density** | medium | A list-heavy admin tool packs rows tight; a marketing landing page leans hero + few cards. Let the Design System's Style Direction steer this. |
 
 Only these vary per page. **Design tokens** (`--space-*` scale, `--radius-*`, `--text-*`, `.preview-*` class definitions) stay fixed as parent webview palette/typography editor contract. Customize *what* and *how many*, never spacing scale or class CSS.
 
@@ -1021,7 +1021,7 @@ Wrap page body in `<div class="preview-root">` for vertical header → shell →
 
 Without sidebar, put `<section class="preview-main">` directly inside `.preview-root`.
 
-> **Emit only regions listed by page Layout.** Wrapper shows nesting *order*, not required set. Drop regions absent from Section 6 Layout (no `sidebar` → no `<aside>`; no `hero` → no hero; bare `form` page is `header + form`). Never add unrequested chrome for fullness.
+> **Only emit the regions this page's Layout actually lists.** The wrapper above shows the full nesting *order*, not a required set — drop any region the page's Design System & UI Layout column doesn't name (no `sidebar` token → no `<aside>`; no `hero` token → no hero block; a bare `form` page is just `header + form`). Never add chrome a page didn't ask for to make it look fuller.
 
 ---
 

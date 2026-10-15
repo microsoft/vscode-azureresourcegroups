@@ -1,6 +1,6 @@
 # Frontend Quality Bar — Render Layout Tokens with Real Library Primitives
 
-> **Load BEFORE writing frontend pages and components, during Step 1 (Frontend).** Contract between plan Section 5 (Design System & UI) and scaffolded JSX.
+> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend). This is the contract between the plan's Design System & UI section and the scaffolded JSX.
 
 > **Read first:** fidelity-agnostic **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](.github/agents/shared-references/frontend-quality-bar.md), shared design contract for planning preview + scaffold. This file adds **framework rendering layer** (per-library primitive mapping, theming, motion, dark mode).
 
@@ -8,7 +8,7 @@
 
 ## Core principle
 
-> **Layout tokens express layout INTENT, not implementation.** Plan Section 6 layout `header + hero + grid + footer` does NOT mean four placeholder `<div>`s. **Render equivalent regions with real Section 6 `Component Library`, themed by Section 6 Color Palette.**
+> **Layout tokens are layout INTENT, not implementation.** When the plan's Design System & UI section says a page's layout is `header + hero + grid + footer`, that does NOT mean produce four `<div>`s with placeholder text. It means **render the equivalent of those regions using the real `Component Library` and Color Palette named in that section.**
 
 If you ever emit JSX like this:
 
@@ -26,9 +26,9 @@ If you ever emit JSX like this:
 
 ---
 
-## Section 6 inputs you MUST consume
+## Design System & UI inputs you MUST consume
 
-| Field in plan §5         | What it controls                                                         |
+| Field in Design System & UI | What it controls                                                      |
 |--------------------------|--------------------------------------------------------------------------|
 | `Component Library:`     | Mandatory library primitives to import and render.                       |
 | `Style Direction:`       | Density, corner radius, elevation, list-vs-hero bias.                    |
@@ -37,7 +37,7 @@ If you ever emit JSX like this:
 | Pages table (`Layout`)   | **Library primitives** composed per page (mapping below).                |
 | `.azure/.preview-temp/*.html` + `theme.css` | Approved **presentation-quality static HTML/CSS preview**: faithful visual spec for page regions and order, themed palette, real inline-SVG icons, populated content, all four data states. Raw-static limits omit real webfonts, motion, working dark mode, real photos. **Reproduce faithfully with real library primitives; add only production-only capabilities** ("Polish floor" below); never regress. Do not import, embed, or `<iframe>` it. Delete folder in Step 11. |
 
-> If Section 6 missing or `Component Library:` blank, **STOP**. Plan incomplete; re-run `azure-project-plan`, never guess.
+> If Design System & UI is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — re-run `azure-project-plan` instead of guessing.
 
 ---
 
@@ -65,7 +65,7 @@ Use row matching plan `Component Library:`. Every region token MUST resolve to r
 | `footer`     | `<Divider>` + horizontal `<Caption1>` row with copyright + links                                                    |
 | unknown      | `<MessageBar intent="info">` saying `Unknown layout token "{token}" — will be rendered with {Component Library} in scaffold` |
 
-**Theming**: Wrap app shell in `<FluentProvider theme={appTheme}>`; `appTheme = createLightTheme(brandRamp)`, with 16-step `BrandVariants` `brandRamp` derived from Section 6 `primary`. Use Section 6 `Typography` body font.
+**Theming**: Wrap the app shell in `<FluentProvider theme={appTheme}>` where `appTheme = createLightTheme(brandRamp)` and `brandRamp` is a 16-step `BrandVariants` derived from the Design System's `primary` color. Body font comes from its `Typography`.
 
 **Icons**: Use real `@fluentui/react-icons` Regular variants; never emoji or hand-drawn inline SVG placeholders. Defaults: `HomeRegular`, `SearchRegular`, `SettingsRegular`, `PersonRegular`, `GridRegular`, `DocumentRegular`, `BookmarkRegular`, `MailRegular`, `CalendarRegular`, `ChevronDownRegular`, `AppsRegular`, `TableSimpleRegular`.
 
@@ -88,7 +88,7 @@ Use row matching plan `Component Library:`. Every region token MUST resolve to r
 | `footer`     | `<v-divider />` + `<v-footer>` row                                                               |
 | unknown      | `<v-alert type="info">Unknown layout token "{token}"</v-alert>`                                  |
 
-**Theming**: Configure `vuetify({ theme: { themes: { light: { colors: { primary: '…', surface: '…', … } } } } })` from Section 6 palette.
+**Theming**: Configure `vuetify({ theme: { themes: { light: { colors: { primary: '…', surface: '…', … } } } } })` from the Design System palette.
 
 ### Angular Material — Angular default
 
@@ -107,7 +107,7 @@ Use row matching plan `Component Library:`. Every region token MUST resolve to r
 | `footer`     | `<mat-divider>` + footer row                                                 |
 | unknown      | `<mat-card>` with warning icon + `Unknown layout token "{token}"`            |
 
-**Theming**: Define Material 3 theme via `mat.define-theme(...)`, using Section 6 primary as seed.
+**Theming**: Define a Material 3 theme via `mat.define-theme(...)` using the Design System primary as the seed color.
 
 ### Skeleton UI (Svelte default)
 
@@ -127,7 +127,7 @@ Use row matching plan `Component Library:`. Every region token MUST resolve to r
 | `footer`     | `<hr class="hr">` + footer `<div>`                                                               |
 | unknown      | `<aside class="alert variant-ghost-surface">Unknown layout token "{token}"</aside>`             |
 
-**Theming**: Build Skeleton theme module from Section 6 palette; set root `data-theme="…"`.
+**Theming**: Build a Skeleton theme module from the Design System palette and set `data-theme="…"` on the root.
 
 ### Pico.css / plain HTML
 
@@ -146,7 +146,7 @@ Use row matching plan `Component Library:`. Every region token MUST resolve to r
 | `footer`     | `<footer>` with small text                                                   |
 | unknown      | `<mark>Unknown layout token "{token}"</mark>`                                |
 
-**Theming**: Set CSS custom properties (`--pico-primary`, `--pico-background-color`, `--pico-color`, `--pico-muted-color`) from Section 6 palette on `:root` or `[data-theme=light]`.
+**Theming**: Set CSS custom properties (`--pico-primary`, `--pico-background-color`, `--pico-color`, `--pico-muted-color`) from the Design System palette on `:root` or `[data-theme=light]`.
 
 ---
 
@@ -167,8 +167,8 @@ Every data page MUST cover all four states with real library primitives, not tex
 
 ## Theming contract
 
-1. **Build brand ramp from Section 6 `primary`**, pass to library theme provider; do **not** ship library default brand color.
-   - Fluent UI v9: `createLightTheme(brandRamp)` where `brandRamp: BrandVariants` is 16-step ramp from HSL lightening/darkening of `primary`.
+1. **Build a brand ramp from the Design System's `primary`** and pass it to the library's theme provider — do **not** ship the library's default brand color.
+   - Fluent UI v9: `createLightTheme(brandRamp)` where `brandRamp: BrandVariants` is a 16-step ramp from HSL lightening/darkening of `primary`.
    - Vuetify: `theme.themes.light.colors.primary`.
    - Angular Material: `mat.define-theme({ color: { primary: $palette } })`.
    - Skeleton: custom theme module with `--color-primary-*` CSS variables.
@@ -181,11 +181,11 @@ Every data page MUST cover all four states with real library primitives, not tex
 
 ## Quality gate (run this checklist before claiming the preview is ready)
 
-- [ ] Every page imports Section 6 library primitives; **zero raw `<div className="card">` / `<div className="header">` placeholders** outside layout grid wrappers.
-- [ ] App shell uses library theme provider; brand ramp derives from Section 6 `primary`.
-- [ ] Every icon is real library icon (Fluent: `*Regular` from `@fluentui/react-icons`; Material: `<mat-icon>name</mat-icon>` with real names; Vuetify: `mdi-*`; Skeleton/Pico: native SVG from real icon set such as Lucide or Tabler). **No emoji or `<svg viewBox="0 0 1 1">` placeholders.**
-- [ ] Every `form` region has at least one visibly warning/error field with inline message.
-- [ ] Every data-bearing page exposes loading / error / empty / data through dev-only toggle.
+- [ ] Every page imports primitives from the library named in Design System & UI — **zero raw `<div className="card">` / `<div className="header">` placeholders** outside the layout grid wrappers.
+- [ ] App shell is wrapped in the library's theme provider; brand ramp is derived from the Design System `primary`.
+- [ ] Every icon is a real library icon (Fluent: `*Regular` from `@fluentui/react-icons`; Material: `<mat-icon>name</mat-icon>` with real names; Vuetify: `mdi-*`; Skeleton/Pico: native SVG icons via a real icon set such as Lucide or Tabler). **No emoji, no `<svg viewBox="0 0 1 1">` placeholders.**
+- [ ] Every `form` region has at least one field with a visible validation state (warning/error) and an inline message.
+- [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] No `any`; four-state contract holds; locally seeded identity works when `API Login` is `Yes`, and no auth UI exists when `No`.
 - [ ] When `API Login` is `Yes`, logout reveals visible **Create account** button on login page; button opens complete create-account page with validation/error states.
@@ -201,12 +201,12 @@ These eight requirements are **non-negotiable**. Missing any fails bar; transfor
 
 A flat colored panel is **not** hero. Every hero MUST have:
 
-- **Brand-gradient card** (linear or radial), two Section 6 palette stops (typically `primary` → `accent`, or `primary` → 12-step-lighter `primary`).
-- **Eyebrow line** above headline: uppercase, ~0.12em letter spacing, ~11–12px, 6px dot prefix, distinct from headline.
-- **Headline** using library `display`/`Title1`/`h1` token; max-width ~24ch, line-height ~1.1, sub-tight letter spacing.
-- **Subtitle** using body token; max-width ~60ch, opacity 0.85–0.95.
-- **Two CTAs**: primary library button with named action (see microcopy) + secondary/ghost variant.
-- **Ambient SVG mesh backdrop** behind gradient. Pattern:
+- A **brand-gradient card** (linear or radial) using two stops from the Design System palette (typically `primary` → `accent`, or `primary` → a 12-step-lighter `primary`).
+- An **eyebrow line** above the headline: uppercased, letter-spaced ~0.12em, ~11–12px, with a 6px dot prefix — distinct from the headline.
+- A **headline** at the library's `display`/`Title1`/`h1` token, max-width ~24ch, line-height ~1.1, sub-tight letter-spacing.
+- A **subtitle** at the body token, max-width ~60ch, opacity 0.85–0.95.
+- **Two CTAs**: a primary library button (named action, see microcopy below) + a secondary/ghost variant.
+- An **ambient SVG mesh backdrop** layered behind the gradient. Concrete pattern:
 
 ```tsx
 <svg className="hero-mesh" aria-hidden="true" viewBox="0 0 800 400" preserveAspectRatio="none">
@@ -265,7 +265,7 @@ State table is **minimum**. Every empty state MUST include real visual (library 
 
 ### 5. Density + radius derived from Style Direction
 
-Map Section 6 `Style Direction:` literal to concrete library tokens:
+Translate the `Style Direction:` literal from Design System & UI into concrete library tokens:
 
 | Style Direction keyword         | Density / radius / weight choices                                              |
 |---------------------------------|--------------------------------------------------------------------------------|
@@ -280,11 +280,11 @@ Wire through library density/spacing/radius tokens (Fluent: `tokens.borderRadius
 
 Every app ships light + dark themes:
 
-- Header theme toggle using library icon button.
-- Persist through `localStorage` key `app-theme` (`'light' | 'dark' | 'system'`).
-- Read `prefers-color-scheme` initially when key missing or `'system'`.
-- Live-update on `matchMedia('(prefers-color-scheme: dark)').addEventListener('change', …)` in `'system'` mode.
-- Derive both themes from **same** Section 6 brand palette; flip only neutrals + surfaces.
+- A theme toggle in the header (uses the library's icon button).
+- Persistence via `localStorage` key `app-theme` (`'light' | 'dark' | 'system'`).
+- Initial value reads `prefers-color-scheme` when key is missing or set to `'system'`.
+- Live update on `matchMedia('(prefers-color-scheme: dark)').addEventListener('change', …)` while in `'system'` mode.
+- Both themes derive from the **same** Design System brand palette — only neutrals and surfaces flip.
 
 ### 7. Real webfont, mapped from Style Direction
 
@@ -326,16 +326,16 @@ A page passing items 1–8 can still look templated with empty media or identica
 
 Run this 12-item yes/no list for **each generated page**. Any "no": page unfinished; do not proceed.
 
-1. Hero: brand gradient (not flat), eyebrow + headline + subtitle + 2 CTAs + ambient SVG mesh?
-2. Every nav/sidebar item: real named library icon, not emoji or glyph?
-3. Every KPI tile / section-title row / empty state / primary CTA: real icon?
-4. At least one route-change, card-hover, OR dialog or popover-open motion through library motion tool, respecting `prefers-reduced-motion`?
-5. Data pages: all four states (loading / error / empty / data) dev-toggle reachable; empty state has 64–96px icon or illustration, not just text?
-6. Dark mode: header toggle, `localStorage` persistence, initial `prefers-color-scheme` read?
-7. Real webfont loaded via `<link>` / `@import`, applied through library font token?
-8. Do density + corner radius tokens reflect Section 6's `Style Direction:` (playful → larger radii; professional → tighter)?
-9. All primary CTAs name action (`Save changes`, `Create project`), never generic `Submit` / `OK` / `Continue`?
-10. Brand ramp derives from Section 6 `primary` (16-step / theme-provider-driven), shared by both themes?
-11. Page **matches or exceeds** approved static preview: same regions and content plus real library elevation, motion, webfont, imagery; clearly preview brought to life, never worse than mock?
-12. Every region **uses real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke domain components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** when wrapping or extending real library primitive with real content + imagery. Ban empty placeholder `<div>`s re-skinning wireframe, not domain art direction.
-13. Every media-bearing entity renders **real image** from mock-data image URL, not empty tinted surface or solid-color block?
+1. Does the hero use a brand gradient (not flat color) with eyebrow + headline + subtitle + 2 CTAs + ambient SVG mesh backdrop?
+2. Does every nav/sidebar item carry a real named icon from the library's icon set (not emoji, not glyph)?
+3. Does every KPI tile / section-title row / empty state / primary CTA carry a real icon?
+4. Is there at least one motion: route change, card hover, OR dialog/popover open, wired through the library's motion tool, with `prefers-reduced-motion` respected?
+5. For data-bearing pages: are all four states (loading / error / empty / data) reachable via a dev toggle, and does the empty state include a 64–96px icon or illustration (not just text)?
+6. Is dark mode wired through a header toggle, persisted in `localStorage`, with a `prefers-color-scheme` initial read?
+7. Is a real webfont loaded via `<link>` / `@import` and applied through the library's font token?
+8. Do density + corner radius tokens reflect the Design System's `Style Direction:` (playful → larger radii; professional → tighter)?
+9. Do all primary CTAs name the action (`Save changes`, `Create project`) — no generic `Submit` / `OK` / `Continue`?
+10. Is the brand ramp derived from the Design System's `primary` (16-step / theme-provider-driven), with both themes sharing it?
+11. Does the page **match or exceed** the approved static preview — same regions and content, now with real library elevation, motion, real webfont, and real imagery — so a reviewer comparing them would say "yes, this is the preview, brought to life" (never "this looks worse than the mock")?
+12. Does every region **resolve to a real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke, domain-styled components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** as long as they wrap or extend a real library primitive and carry real content + imagery — the ban is on empty placeholder `<div>`s that merely re-skin the wireframe, not on domain art direction.
+13. Does every media-bearing entity render a **real image** (from the mock data's image URL), not an empty tinted surface or solid-color block?

@@ -20,19 +20,19 @@ suite('requirementsTelemetryUtils', () => {
 
             const expected: RequirementsTelemetry = {
                 parsedOk: true,
-                schemaVersion: '2',
+                schemaVersion: '3',
                 mode: 'new',
                 executionMode: 'guided',
 
                 serviceCount: 2,
                 serviceRoles: 'backend,frontend',
 
-                questionCount: 7,
-                confirmedCount: 7,
+                questionCount: 11,
+                confirmedCount: 11,
                 needsInputCount: 0,
                 inferredCount: 0,
 
-                questionCategories: 'auth,data,service',
+                questionCategories: 'auth,compliance,data,deployment,operations,scale,service',
 
                 serviceLanguages: 'typescript',
                 serviceFrameworks: 'react + vite',
@@ -41,6 +41,10 @@ suite('requirementsTelemetryUtils', () => {
                 hasDatabase: true,
 
                 auth: 'yes',
+                operatingProfile: 'standard production',
+                dataClassification: 'confidential / personal',
+                trafficProfile: 'small / steady',
+                optimizationPriority: 'balanced',
             };
 
             assert.deepStrictEqual(telemetry, expected);
@@ -51,19 +55,19 @@ suite('requirementsTelemetryUtils', () => {
 
             const expected: RequirementsTelemetry = {
                 parsedOk: true,
-                schemaVersion: '2',
+                schemaVersion: '3',
                 mode: 'new',
                 executionMode: 'guided',
 
                 serviceCount: 3,
                 serviceRoles: 'backend,frontend,worker',
 
-                questionCount: 9,
-                confirmedCount: 9,
+                questionCount: 13,
+                confirmedCount: 13,
                 needsInputCount: 0,
                 inferredCount: 0,
 
-                questionCategories: 'auth,data,service',
+                questionCategories: 'auth,compliance,data,deployment,operations,scale,service',
 
                 serviceLanguages: 'typescript',
                 serviceFrameworks: 'react + vite',
@@ -72,6 +76,10 @@ suite('requirementsTelemetryUtils', () => {
                 hasDatabase: true,
 
                 auth: 'yes',
+                operatingProfile: 'standard production',
+                dataClassification: 'confidential / personal',
+                trafficProfile: 'bursty',
+                optimizationPriority: 'balanced',
             };
 
             assert.deepStrictEqual(telemetry, expected);
@@ -94,6 +102,10 @@ suite('requirementsTelemetryUtils', () => {
             assert.strictEqual(telemetry.dataStores, '');
             assert.strictEqual(telemetry.hasDatabase, false);
             assert.strictEqual(telemetry.auth, 'none');
+            assert.strictEqual(telemetry.operatingProfile, 'unknown');
+            assert.strictEqual(telemetry.dataClassification, 'unknown');
+            assert.strictEqual(telemetry.trafficProfile, 'unknown');
+            assert.strictEqual(telemetry.optimizationPriority, 'unknown');
         });
 
         test('reports parse errors via parsedOk', () => {
@@ -138,6 +150,23 @@ suite('requirementsTelemetryUtils', () => {
 
             const telemetry = getRequirementsTelemetry(data);
             assert.strictEqual(telemetry.auth, 'none');
+        });
+
+        test('does not emit arbitrary workload answers to telemetry', () => {
+            const data: RequirementsData = {
+                questions: [
+                    {
+                        id: 'operatingProfile',
+                        category: 'deployment',
+                        question: 'How will this app be used?',
+                        answer: 'Secret customer launch profile',
+                        status: 'confirmed',
+                    },
+                ],
+            };
+
+            const telemetry = getRequirementsTelemetry(data);
+            assert.strictEqual(telemetry.operatingProfile, 'unknown');
         });
 
         test('exposes a namespaced telemetry prefix', () => {
