@@ -20,6 +20,25 @@ on:
   roles: all
   skip-bots: [dependabot, github-actions]
   status-comment: false
+  permissions:
+    contents: read
+  steps:
+    - name: Require project token
+      id: project_token
+      env:
+        PROJECT_TOKEN: ${{ secrets.GH_AW_PROJECT_GITHUB_TOKEN }}
+      run: |
+        if [ -n "$PROJECT_TOKEN" ]; then
+          echo "available=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::GH_AW_PROJECT_GITHUB_TOKEN is not configured; skipping project triage."
+          echo "available=false" >> "$GITHUB_OUTPUT"
+        fi
+if: needs.pre_activation.outputs.project_token_available == 'true'
+jobs:
+  pre-activation:
+    outputs:
+      project_token_available: ${{ steps.project_token.outputs.available }}
 permissions:
   contents: read
   issues: read
@@ -38,7 +57,7 @@ tools:
   github:
     mode: local
     read-only: true
-    github-token: ${{ secrets.GH_AW_PROJECT_GITHUB_TOKEN || secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN }}
+    github-token: ${{ secrets.GH_AW_PROJECT_GITHUB_TOKEN }}
     toolsets: [issues, pull_requests, projects, repos]
     min-integrity: none
 safe-outputs:
