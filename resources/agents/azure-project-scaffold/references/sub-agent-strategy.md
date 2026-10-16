@@ -1,12 +1,12 @@
 # Sub-Agent Strategy for Backend Scaffolding
 
-> Parallelization strategy for backend scaffold execution. Read when transitioning from **Step 1** to backend implementation.
+> Backend-scaffold parallelization. Read between **Step 1** and backend implementation.
 
 ---
 
 ## Execution Model
 
-> ⚠️ **PIPELINING**: The **Frontend sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
+> ⚠️ **PIPELINING**: **Frontend sub-agent** (Step 1) and backend track start **immediately after Step 0** (plan validation), **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from plan, not frontend; neither track blocks the other. For API-only projects (no frontend), skip Frontend sub-agent and start backend scaffolding immediately after Step 0.
 >
 > **Execution timeline for SPA + API projects:**
 > ```

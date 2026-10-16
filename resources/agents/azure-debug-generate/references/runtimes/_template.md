@@ -1,13 +1,13 @@
 # {Runtime} — Debug & Build Configuration
 
-> **Template** — Copy this file to `runtimes/{rt}.md` when adding a new runtime.
+> **Template** — Copy to `runtimes/{rt}.md` for new runtime.
 
 ---
 
 ## Prerequisites
 
-<!-- Required tools, SDKs, version managers — language toolchain only. -->
-<!-- Do NOT list project-type-specific tools here (e.g., Functions Core Tools belongs in functions.md). -->
+<!-- Required language toolchain only: tools, SDKs, version managers. -->
+<!-- Exclude project-type tools (e.g., Functions Core Tools belongs in functions.md). -->
 
 | Tool | Detection Command | Required For | Install Link |
 |------|-------------------|-------------|-------------|
@@ -17,15 +17,15 @@
 
 ## Debugger Properties
 
-<!-- Generic debug properties for this runtime.
-     See project-types/{type}.md § Runtime Wiring for how these combine with the host command.
-     See generate.md § Source Ownership for how runtime and project-type refs compose. -->
+<!-- Runtime-generic debug properties.
+     See project-types/{type}.md § Runtime Wiring for host-command combination.
+     See generate.md § Source Ownership for reference composition. -->
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| Debug protocol | `{protocol}` | The wire protocol the runtime exposes (e.g., `Node Inspector`, `CoreCLR DAP`, `debugpy DAP`, `JDWP`, `Delve DAP`). |
-| VS Code debugger type | `{type}` | The VS Code debugger adapter identifier (e.g., `node`, `coreclr`, `debugpy`, `java`, `go`). |
-| Base debug port | `{port}` | Default debug port for this runtime; overridden per-service in monorepos |
+| Debug protocol | `{protocol}` | Runtime wire protocol (e.g., `Node Inspector`, `CoreCLR DAP`, `debugpy DAP`, `JDWP`, `Delve DAP`). |
+| VS Code debugger type | `{type}` | VS Code debugger adapter ID (e.g., `node`, `coreclr`, `debugpy`, `java`, `go`). |
+| Base debug port | `{port}` | Runtime default; overridden per service in monorepos |
 
 ### VS Code Problem Matchers
 
@@ -39,11 +39,11 @@
 
 ## Build Chain
 
-<!-- Build steps owned by this runtime: install, build/watch.
-     The startup task is provided by the project type's Runtime Wiring table, not this file.
-     Wire: startup task depends on ["build/watch step", "Start Emulators"]. -->
+<!-- Runtime-owned build steps: install, build/watch.
+     Project type Runtime Wiring table provides startup task.
+     Wire: startup depends on ["build/watch step", "Start Emulators"]. -->
 
-Chain shape (startup task comes from the project type):
+Chain shape (project type supplies startup):
 
 ```
 "{service-id}: {startup task}"              ← from project-types/{type}.md Runtime Wiring
@@ -51,7 +51,7 @@ Chain shape (startup task comes from the project type):
        └── dependsOn: "Start Emulators"     ← only when emulators are required
 ```
 
-> **Task label scoping:** All task labels MUST be prefixed with the service ID derived from the plan's Service Label column. See [generate.md § Service ID Derivation](../generate.md).
+> **Task label scoping:** Prefix every task label with service ID derived from plan Service Label. See [generate.md § Service ID Derivation](../generate.md).
 
 ### Build Commands
 
@@ -59,42 +59,42 @@ Chain shape (startup task comes from the project type):
 |------|---------|---------|------------|
 | Start Emulators | `docker compose up -d` | Start all emulator services (idempotent — no-op if already running) | No |
 
-See [generate.md](../generate.md) § Task `runOptions` Rules for how these build steps are rendered into VS Code task configuration.
+See [generate.md](../generate.md) § Task `runOptions` Rules for rendering build steps into VS Code tasks.
 
 ---
 
 ## Convenience Scripts
 
-<!-- HOW scripts are registered for this runtime (package.json, Makefile, pyproject.toml, scripts/ dir).
-     The plan's Convenience Scripts table drives WHICH scripts to generate — do not hardcode script names here. -->
+<!-- HOW runtime registers scripts (package.json, Makefile, pyproject.toml, scripts/ dir).
+     Plan Convenience Scripts defines WHICH; never hardcode names here. -->
 
-The plan's Convenience Scripts table specifies WHICH scripts to generate. This section covers HOW to register them for this runtime.
+Plan Convenience Scripts defines WHICH scripts; this section defines HOW runtime registers them.
 
 **Script runner:** `{file}` (e.g., `package.json` scripts, `scripts/` directory, `Makefile`, `pyproject.toml`)
 **Run command pattern:** `{command}` (e.g., `npm run {script}`, `./scripts/{script}.sh`)
 
-> When the runtime's script runner is not inherently cross-platform (e.g., standalone scripts vs `package.json`), generate platform-appropriate scripts or document cross-platform alternatives.
+> If script runner is not cross-platform (e.g., standalone scripts vs `package.json`), generate platform-specific scripts or document alternatives.
 
 ### Script Format
 
-<!-- Show the format for adding a script entry to this runtime's script runner. -->
+<!-- Format for adding runtime script-runner entry. -->
 
 ### Common Script Implementations
 
-Use these implementations when building scripts from the plan:
+Use these implementations for planned scripts:
 
 | Script Purpose | Typical Command | Notes |
 |---------------|-----------------|-------|
-| Start emulators | `docker compose up -d` | Idempotent — safe to re-run |
+| Start emulators | `docker compose up -d` | Idempotent; safe to re-run |
 | Stop emulators | `docker compose down` | Stops and removes containers |
 | Clean emulator data | Stop containers with volumes, then remove bind-mount data directories | Run `docker compose down -v` (`-v` also drops **named volumes** like Postgres's `postgres_data`), then remove `{data-dirs}` = `./.{name}` **bind-mount** directories derived from `docker-compose.yml` `volumes:` mounts. Use platform-appropriate removal. |
-| Run migrations | `{migration tool CLI command}` | See [migrations.md](../migrations.md) for how to determine the command |
+| Run migrations | `{migration tool CLI command}` | Derive via [migrations.md](../migrations.md) |
 
 ---
 
 ## VS Code Extension Recommendations (`.vscode/extensions.json`)
 
-<!-- Extensions required by this runtime. Aggregated with project-type extensions into .vscode/extensions.json by generate.md. -->
+<!-- Runtime-required extensions; generate.md aggregates with project-type extensions into .vscode/extensions.json. -->
 
 | Extension ID | Why Required |
 |--------------|-------------|
@@ -104,7 +104,7 @@ Use these implementations when building scripts from the plan:
 
 ## VS Code Workspace Settings (`.vscode/settings.json`)
 
-<!-- Settings contributed by this runtime. Aggregated with project-type settings into .vscode/settings.json by generate.md. -->
+<!-- Runtime-contributed settings; generate.md aggregates with project-type settings into .vscode/settings.json. -->
 
 | Setting | Value | Why |
 |---------|-------|-----|
@@ -114,11 +114,11 @@ Use these implementations when building scripts from the plan:
 
 ## Checklist — {Runtime} Validation
 
-> ⛔ **MANDATORY — runs during Phase 3 validation after all artifacts are generated.** You MUST verify every item below. Do NOT skip, assume, or approximate results.
+> ⛔ **MANDATORY — Phase 3 after all artifacts.** Verify every item; never skip, assume, or approximate.
 
-<!-- Post-generation self-check for this runtime. Verify generated artifacts are correct — do not run or start anything. -->
+<!-- Runtime post-generation artifact check only; run/start nothing. -->
 
-After generating VS Code configuration, verify the following were produced correctly:
+After VS Code config generation, verify:
 
 ### Post-Generation Checks
 
@@ -128,8 +128,8 @@ After generating VS Code configuration, verify the following were produced corre
 
 ### Live Validation Checks
 
-<!-- These checks run during Phase 3 validation (validation.md Step 7), after the ready signal is observed.
-     Add debugger-specific verifications here (e.g., process attachment, source map verification).
-     validation.md delegates to this section — if you add checks here, they WILL be executed. -->
+<!-- Run during Phase 3 validation (validation.md Step 7), after ready signal.
+     Add debugger-specific checks (e.g., process attachment, source maps).
+     validation.md delegates here; added checks WILL run. -->
 
-> Project-type-specific checks (e.g., startup task, connection strings) are defined in `project-types/{type}.md`.
+> `project-types/{type}.md` defines project-type checks (e.g., startup task, connection strings).

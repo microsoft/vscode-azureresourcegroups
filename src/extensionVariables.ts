@@ -5,7 +5,7 @@
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "api/src/AzExtResourceType";
+import { AzExtResourceType } from "../api/src/AzExtResourceType";
 import type { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";

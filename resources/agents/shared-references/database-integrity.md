@@ -1,22 +1,22 @@
 # Database Integrity Patterns
 
-> Schema constraints, transactions, and indexes — database is last line of defense against data corruption.
+> Schema constraints, transactions, and indexes: database's last defense against corruption.
 
 ---
 
 ## Core Principle
 
-**Application-level checks are necessary but insufficient.** Database schema must enforce correctness even under concurrent access. Race conditions, partial failures, and unexpected input can bypass application logic — database constraints must catch what code misses.
+**Application-level checks are necessary but insufficient.** Schema must enforce correctness under concurrent access. Race conditions, partial failures, and unexpected input can bypass application logic; constraints must catch what code misses.
 
 ---
 
 ## Rule: Constraints Are Mandatory in Migrations
 
-Every migration MUST include appropriate constraints. Do not rely solely on application-level validation.
+Every migration MUST include appropriate constraints. Never rely only on application validation.
 
 ### UNIQUE Constraints
 
-Any field that must be unique across the table (email, username, slug, invite token) MUST have database-level UNIQUE constraint.
+Any table-unique field (email, username, slug, invite token) MUST have database-level UNIQUE constraint.
 
 ```sql
 -- Application-level check alone is NOT sufficient (race condition under concurrent requests)
@@ -37,11 +37,11 @@ Request A: SELECT WHERE email = 'alice@test.com' → not found → INSERT
 Request B: SELECT WHERE email = 'alice@test.com' → not found → INSERT  ← Both succeed!
 ```
 
-With UNIQUE constraint, second INSERT fails with constraint violation, which error handler maps to 409 Conflict.
+With UNIQUE constraint, second INSERT fails; error handler maps constraint violation to 409 Conflict.
 
 ### Foreign Key Constraints
 
-Any field referencing another table MUST have FK constraint with explicit ON DELETE behavior.
+Every field referencing another table MUST have an FK constraint with explicit ON DELETE behavior.
 
 ```sql
 CREATE TABLE photos (
@@ -64,7 +64,7 @@ CREATE TABLE photos (
 
 ### CHECK Constraints
 
-Business rules expressible as column constraints should be enforced at database level:
+Enforce column-expressible business rules at database level:
 
 ```sql
 ALTER TABLE pairing_invites
@@ -76,7 +76,7 @@ ALTER TABLE users
 
 ### Partial UNIQUE Constraints
 
-When UNIQUE constraint should only apply to rows matching a condition (e.g., prevent duplicate *pending* invites but allow multiple *rejected* ones), use PostgreSQL **partial unique index**:
+When UNIQUE applies only to matching rows (e.g., block duplicate *pending* invites but allow multiple *rejected* ones), use PostgreSQL **partial unique index**:
 
 ```sql
 -- Prevent duplicate pending invites from the same user to the same email
@@ -84,11 +84,11 @@ CREATE UNIQUE INDEX idx_unique_pending_invite
   ON invites(from_user_id, to_email) WHERE status = 'pending';
 ```
 
-> ⚠️ **Application-level checks are NOT sufficient** for partial uniqueness — concurrent requests can both pass `findOne` check and both INSERT. Database constraint is defense-in-depth layer preventing this race condition. Always include partial UNIQUE indexes in migrations when plan specifies them.
+> ⚠️ **Application-level checks are NOT sufficient** for partial uniqueness: concurrent requests can both pass `findOne` and INSERT. Database constraints prevent this race. Always include plan-specified partial UNIQUE indexes in migrations.
 
 ### NOT NULL
 
-Default to `NOT NULL`. Use `NULL` only when absence of value is a meaningful business state:
+Default to `NOT NULL`. Use `NULL` only when absence means a business state:
 
 | ✅ Nullable (meaningful absence) | ❌ Should be NOT NULL |
 |----------------------------------|----------------------|
@@ -99,7 +99,7 @@ Default to `NOT NULL`. Use `NULL` only when absence of value is a meaningful bus
 
 ## Rule: Transactions for Multi-Table Writes
 
-Any operation that writes to 2+ tables MUST use database transaction. Without transaction, failure mid-sequence leaves database in inconsistent state.
+Any operation writing to 2+ tables MUST use a database transaction. Otherwise, mid-sequence failure leaves inconsistent state.
 
 ### IDatabaseService Transaction Method
 
@@ -213,7 +213,7 @@ const couple = await database.transaction(async (trx) => {
 
 ## Rule: Indexes on Frequently Queried Columns
 
-Migrations should include indexes for columns used in:
+Migrations should index columns used in:
 - `WHERE` clauses (filter queries)
 - `JOIN` conditions
 - `ORDER BY` clauses
@@ -233,7 +233,7 @@ CREATE INDEX idx_invites_lookup ON pairing_invites(to_email, status);
 
 ## Rule: Handle Constraint Violations in Error Handler
 
-When database rejects operation due to constraint violation, map to appropriate HTTP error:
+Map database constraint violations to appropriate HTTP errors:
 
 ### TypeScript
 
@@ -270,7 +270,7 @@ if (error instanceof Error && error.message?.includes('violates foreign key')) {
 
 ## Planning Checkpoint
 
-During Phase 1 planning, project plan MUST include **Database Constraints** section:
+During Phase 1 planning, project plan MUST include a **Database Constraints** section:
 
 ```markdown
 ## Database Constraints

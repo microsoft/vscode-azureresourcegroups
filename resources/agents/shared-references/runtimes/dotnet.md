@@ -4,7 +4,7 @@
 >
 > ### ⚠️ Target framework policy (MANDATORY)
 >
-> **All generated .NET projects MUST target `net10.0` and pin the SDK to `10.0.*` in `global.json`.** Do NOT downgrade to `net8.0` / `net9.0` unless the user **explicitly** requests an older framework (e.g., "target .NET 8", "we're stuck on 8.0 LTS", "use net9.0"). If the user asks for an older version, downgrade the `TargetFramework`, `global.json` SDK, and all `Microsoft.EntityFrameworkCore.*` / `Microsoft.Extensions.*` package versions together — never mix majors.
+> **Every generated .NET project MUST target `net10.0`; pin SDK `10.0.*` in `global.json`.** Do NOT downgrade to `net8.0` / `net9.0` unless user **explicitly** requests older framework (e.g., "target .NET 8", "we're stuck on 8.0 LTS", "use net9.0"). Then downgrade `TargetFramework`, `global.json` SDK, and all `Microsoft.EntityFrameworkCore.*` / `Microsoft.Extensions.*` packages together; never mix majors.
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### `global.json` (repo root) — MANDATORY
 
-Pins the SDK so local dev, CI, and generated scaffolds agree on the toolchain. Without this, a dev on .NET 9 builds differently than CI on .NET 10.
+Pins one toolchain for local dev, CI, generated scaffolds; avoids .NET 9 local vs .NET 10 CI differences.
 
 ```json
 {
@@ -26,22 +26,22 @@ Pins the SDK so local dev, CI, and generated scaffolds agree on the toolchain. W
 
 ### `Directory.Packages.props` (repo root) — MANDATORY (Central Package Management)
 
-All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`) in generated `.csproj` files — they produce non-deterministic builds.
+Pin all package versions in ONE place. **Never use wildcards** (`1.*`, `4.*`) in generated `.csproj`; builds become non-deterministic.
 
 > ### ⚠️ Resolve latest stable versions at scaffold time (MANDATORY)
 >
-> **The versions shown below are a floor, not a pin.** NuGet releases roll forward weekly — by the time this doc is used, many versions will be stale. The scaffold agent **MUST resolve the latest stable version of every package at scaffold time** and emit those resolved values into `Directory.Packages.props`. Do NOT copy the versions below verbatim.
+> **Versions below are floors, not pins.** NuGet releases weekly; values age. Scaffold agent **MUST resolve every package's latest stable version at scaffold time** into `Directory.Packages.props`. Do NOT copy values verbatim.
 >
-> Resolve via one of:
-> - `dotnet package search {PackageId} --exact-match --take 1` (CLI, deterministic, CI-friendly)
-> - `nuget.org` API: `GET https://api.nuget.org/v3-flatcontainer/{lowercased-id}/index.json` → use the last entry in `versions[]` that does not contain `-` (stable only, no prereleases)
+> Resolve using:
+> - `dotnet package search {PackageId} --exact-match --take 1` (deterministic, CI-friendly CLI)
+> - `nuget.org` API: `GET https://api.nuget.org/v3-flatcontainer/{lowercased-id}/index.json` → last `versions[]` entry without `-` (stable, no prereleases)
 >
-> **Constraints when resolving:**
-> 1. **Stable only** — never emit a version containing `-preview`, `-rc`, `-alpha`, `-beta`, unless the user explicitly asks for prereleases.
-> 2. **Respect major-version floors listed in the comments below** (e.g., Worker must be `>= 2.50.0` for .NET 10) — if the latest stable falls below the floor, that's a bug; flag it.
-> 3. **Align framework-bundled packages to the target TFM major.** For `Microsoft.Extensions.*`, `Microsoft.EntityFrameworkCore.*`, `Microsoft.AspNetCore.*`, and `Npgsql.EntityFrameworkCore.PostgreSQL`, use the **latest `10.*` stable** when targeting `net10.0`. Do NOT pull `11.x` prereleases even if they exist.
-> 4. **Azure Functions Worker extensions** follow their own version trains (e.g., `.Extensions.Http` is on `3.x`, `.Extensions.Http.AspNetCore` is on `2.x`). Resolve each independently.
-> 5. **After emitting, run `dotnet restore` and fix any package-downgrade warnings** before marking the scaffold complete. Transitive conflicts usually mean one package needs to be bumped further.
+> **Resolution constraints:**
+> 1. **Stable only** — no versions containing `-preview`, `-rc`, `-alpha`, `-beta`, unless user explicitly requests prereleases.
+> 2. **Honor comment major-version floors** (e.g., Worker `>= 2.50.0` for .NET 10). Latest stable below floor is a bug; flag it.
+> 3. **Match framework-bundled packages to target TFM major.** For `Microsoft.Extensions.*`, `Microsoft.EntityFrameworkCore.*`, `Microsoft.AspNetCore.*`, and `Npgsql.EntityFrameworkCore.PostgreSQL`, use latest stable `10.*` targeting `net10.0`. Never select `11.x` prereleases.
+> 4. **Azure Functions Worker extensions** have independent trains (e.g., `.Extensions.Http` on `3.x`, `.Extensions.Http.AspNetCore` on `2.x`). Resolve separately.
+> 5. **Run `dotnet restore`; fix all package-downgrade warnings** before completion. Transitive conflicts usually require another package bump.
 
 ```xml
 <Project>
@@ -95,15 +95,15 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
 </Project>
 ```
 
-> **Do NOT use `Moq`.** Moq 4.20+ ships [SponsorLink](https://github.com/moq/moq/issues/1372) which makes network calls and is blocked in many enterprises. Use **NSubstitute**.
+> **Do NOT use `Moq`.** Moq 4.20+ includes network-calling [SponsorLink](https://github.com/moq/moq/issues/1372), blocked by many enterprises. Use **NSubstitute**.
 >
-> **Do NOT use `FluentAssertions` ≥ 8.0.** FluentAssertions 8+ requires a paid commercial license. Use **Shouldly** (MIT) or pin FluentAssertions to `< 8.0.0` only if explicitly required by the user.
+> **Do NOT use `FluentAssertions` ≥ 8.0.** FluentAssertions 8+ needs paid commercial license. Use **Shouldly** (MIT), or pin FluentAssertions to `< 8.0.0` only on explicit user request.
 
 ---
 
 ## Azure Functions Isolated Worker — ASP.NET Core Integration
 
-> **Use ASP.NET Core integration (`ConfigureFunctionsWebApplication` + `HttpRequest` / `IResult`) — NOT the legacy `HttpRequestData` / `HttpResponseData` API.** ASP.NET Core integration gives you model binding, `IResult`, `ProblemDetails`, middleware, and code that stays close to ASP.NET Core minimal API patterns.
+> **Use ASP.NET Core integration (`ConfigureFunctionsWebApplication` + `HttpRequest` / `IResult`), NOT legacy `HttpRequestData` / `HttpResponseData`.** Provides model binding, `IResult`, `ProblemDetails`, middleware, and ASP.NET Core minimal API-like code.
 
 ### Initialization
 
@@ -112,7 +112,7 @@ func init services/Functions --worker-runtime dotnet-isolated --target-framework
 cd services/Functions
 ```
 
-Then hand-author `Functions.csproj` (see below) — the `func init` template uses outdated defaults.
+Then hand-author `Functions.csproj` below; `func init` defaults are outdated.
 
 ### `host.json`
 
@@ -134,7 +134,7 @@ Then hand-author `Functions.csproj` (see below) — the `func init` template use
 
 ### `local.settings.json` — Uses `ConnectionStrings:*`, NOT `DATABASE_URL`
 
-`local.settings.json` is for **local dev only** (git-ignored). In Azure, the same keys become App Settings. For .NET, connection strings live under the `ConnectionStrings:` prefix and are read via `IConfiguration.GetConnectionString("Name")` — this matches the wider .NET ecosystem (ASP.NET Core and EF Core) and enables Managed Identity substitution in Azure.
+`local.settings.json`: **local dev only**, git-ignored. In Azure, same keys become App Settings. .NET connection strings use `ConnectionStrings:` and `IConfiguration.GetConnectionString("Name")`, matching ASP.NET Core and EF Core while enabling Azure Managed Identity substitution.
 
 ```json
 {
@@ -153,11 +153,11 @@ Then hand-author `Functions.csproj` (see below) — the `func init` template use
 }
 ```
 
-> **Env var name mapping for other runtimes**: Node/Python scaffolds in this repo use `DATABASE_URL` / `REDIS_URL` / `STORAGE_CONNECTION_STRING` because those are idiomatic there. **For .NET, always use `ConnectionStrings:AppDb` / `ConnectionStrings:Redis` / `ConnectionStrings:Storage`.** When the plan's resource table uses generic env var names, the .NET scaffold **MUST** translate to the `ConnectionStrings:` form.
+> **Other-runtime env var mapping**: repo Node/Python scaffolds idiomatically use `DATABASE_URL` / `REDIS_URL` / `STORAGE_CONNECTION_STRING`. **.NET always uses `ConnectionStrings:AppDb` / `ConnectionStrings:Redis` / `ConnectionStrings:Storage`.** .NET scaffold **MUST** translate generic plan resource-table env vars to `ConnectionStrings:`.
 
 ### Secrets for local dev — use `dotnet user-secrets`
 
-Never commit real secrets. For anything you can't put in plaintext `local.settings.json` (API keys, OpenAI keys, Entra client secrets during dev):
+Never commit real secrets. Put values unsuitable for plaintext `local.settings.json` (API keys, OpenAI keys, dev Entra client secrets) in user-secrets:
 
 ```bash
 cd services/Functions
@@ -166,7 +166,7 @@ dotnet user-secrets set "ConnectionStrings:AppDb" "Host=...;Password=realpasswor
 dotnet user-secrets set "OpenAI:ApiKey" "sk-..."
 ```
 
-Wire user-secrets into `Program.cs` (Functions worker doesn't enable them by default):
+Wire user-secrets into `Program.cs`; Functions worker doesn't enable them by default:
 
 ```csharp
 var builder = FunctionsApplication.CreateBuilder(args);
@@ -215,11 +215,11 @@ await host.RunAsync();
 </Project>
 ```
 
-> Note: `<PackageReference>` has **no `Version`** — versions are centrally pinned via `Directory.Packages.props`.
+> `<PackageReference>` has **no `Version`**; `Directory.Packages.props` pins centrally.
 
 ### `Program.cs` (Worker 2.x — `IHostApplicationBuilder`)
 
-> **Uses the Worker 2.x builder** (`FunctionsApplication.CreateBuilder(args)` from `Microsoft.Azure.Functions.Worker.Builder`). Requires `Microsoft.Azure.Functions.Worker >= 2.50.0` + `Worker.Sdk >= 2.0.5` (both pinned in `Directory.Packages.props` above). This shape mirrors ASP.NET Core's `WebApplication.CreateBuilder(args)` and supports both debug shapes — `dotnet run` (HTTP-only) and `func host start` attach. The legacy `HostBuilder` shape still works but is not recommended for new scaffolds.
+> **Use Worker 2.x builder** (`FunctionsApplication.CreateBuilder(args)` from `Microsoft.Azure.Functions.Worker.Builder`). Requires `Microsoft.Azure.Functions.Worker >= 2.50.0` + `Worker.Sdk >= 2.0.5`, pinned in `Directory.Packages.props`. Mirrors ASP.NET Core `WebApplication.CreateBuilder(args)` and supports both debug shapes: `dotnet run` (HTTP-only) and `func host start` attach. Legacy `HostBuilder` works but isn't recommended for new scaffolds.
 
 ```csharp
 using Azure.Identity;
@@ -285,9 +285,9 @@ var host = builder.Build();
 await host.RunAsync();
 ```
 
-> **About App Insights:** Worker 2.x integrates telemetry via **OpenTelemetry** (`Microsoft.Azure.Functions.Worker.OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter`). The older `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` pair is still supported but OpenTelemetry is the going-forward path in the Learn docs.
+> **App Insights:** Worker 2.x telemetry uses **OpenTelemetry** (`Microsoft.Azure.Functions.Worker.OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter`). Older `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` remains supported; Learn docs favor OpenTelemetry.
 
-> **Production deployment pattern**: in App Settings, set `Storage:Endpoint` to the blob service URI (e.g., `https://myaccount.blob.core.windows.net`) and grant the Function App's managed identity the `Storage Blob Data Contributor` role. Only exact `AZURE_FUNCTIONS_ENVIRONMENT=Development` selects the local connection string. The same pattern works for Cosmos, Service Bus, Key Vault, SQL, and PostgreSQL token auth.
+> **Production deployment pattern**: set App Settings `Storage:Endpoint` to blob service URI (e.g., `https://myaccount.blob.core.windows.net`); grant Function App managed identity `Storage Blob Data Contributor`. Only exact `AZURE_FUNCTIONS_ENVIRONMENT=Development` selects local connection string. Same pattern works for Cosmos, Service Bus, Key Vault, SQL, and PostgreSQL token auth.
 
 ### Managed Identity — Quick Reference
 
@@ -300,7 +300,7 @@ await host.RunAsync();
 | PostgreSQL Flexible Server | Entra token auth — `Npgsql` + token provider | See [EF Core + Entra](https://learn.microsoft.com/azure/postgresql/flexible-server/how-to-azure-ad) |
 | Service Bus | `ServiceBus:FullyQualifiedNamespace=<ns>.servicebus.windows.net` | `new ServiceBusClient(fqns, new DefaultAzureCredential())` |
 
-Use `DefaultAzureCredential` for every production Azure client. Explicit Development uses the planned local emulator instead. Never ship connection strings with account keys.
+Use `DefaultAzureCredential` for every production Azure client. Explicit Development uses planned local emulator instead. Never ship account-key connection strings.
 
 ---
 
@@ -336,7 +336,7 @@ public class GetItems(AppDbContext db, ILogger<GetItems> logger)
 }
 ```
 
-> Note: `limit` / `offset` / `CancellationToken` are automatically bound from the query string / request lifetime by ASP.NET Core integration. No manual `req.Query["limit"]` parsing.
+> ASP.NET Core integration auto-binds `limit` / `offset` / `CancellationToken` from query string and request lifetime. No manual `req.Query["limit"]` parsing.
 
 ### POST with Validation
 
@@ -383,13 +383,13 @@ public class CreateItem(
 
 > ### ⚠️ DO NOT mix `HttpTrigger HttpRequest req` with `[FromBody] T body` in the same handler
 >
-> Functions Worker `2.50.0+` with `Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore 2.x` does **NOT** populate `[FromBody] T body` when the same handler also has a separate `[HttpTrigger] HttpRequest req` parameter — `body` silently arrives as `null`, and the handler returns 400 even when the client sent a valid JSON body. The bug is real, reproducible, and **does not surface in unit tests** because mocks construct `body` directly and never go through the binder. It surfaces the moment you `curl` a live host.
+> Functions Worker `2.50.0+` + `Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore 2.x` does **NOT** populate `[FromBody] T body` when handler also has separate `[HttpTrigger] HttpRequest req`; `body` silently becomes `null`, returning 400 for valid JSON. Reproducible, but **unit tests miss it** because mocks construct `body` without binder. Live-host `curl` exposes it.
 >
-> **Two safe shapes — pick exactly one per handler:**
+> **Two safe shapes; choose exactly one per handler:**
 >
-> **A. Body-only** *(the `CreateItem` example above)*. Stack `[HttpTrigger]` and `[FromBody]` on the **same** parameter. No `HttpRequest req` parameter at all. Use this whenever you don't need the raw request.
+> **A. Body-only** *(above `CreateItem`)*. Stack `[HttpTrigger]` and `[FromBody]` on **same** parameter; omit `HttpRequest req`. Use when raw request isn't needed.
 >
-> **B. Explicit JSON read** — required whenever the handler also needs `HttpRequest req` (for `Authorization` headers, multipart uploads, raw streams, etc.). Drop `[FromBody]` entirely and read the body yourself with `req.ReadFromJsonAsync<T>(...)`. Reuse the app's configured `JsonOptions` so camelCase / converters match what the SPA sends:
+> **B. Explicit JSON read** — required with `HttpRequest req` (for `Authorization` headers, multipart uploads, raw streams, etc.). Remove `[FromBody]`; read via `req.ReadFromJsonAsync<T>(...)`. Reuse configured `JsonOptions` so camelCase and converters match SPA:
 >
 > ```csharp
 > // Functions/FunctionHelpers.cs

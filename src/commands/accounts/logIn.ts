@@ -7,7 +7,6 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import type { SignInOptions } from '@microsoft/vscode-azext-azureauth';
 import { ext } from '../../extensionVariables';
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 let _isLoggingIn: boolean = false;
 
 export async function logIn(_context: IActionContext, options?: SignInOptions): Promise<void> {

@@ -7,7 +7,7 @@ import { DeploymentExtended, DeploymentOperation, GenericResource, ResourceGroup
 import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { createCredential, createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "api/src/resources/azure";
+import { AzureSubscription } from "../../api/src/resources/azure";
 import { getDuplicateSubscriptionModeSetting } from "../commands/accounts/selectSubscriptions";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";

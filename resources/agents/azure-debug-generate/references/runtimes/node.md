@@ -1,6 +1,6 @@
 # Node.js — Debug & Build Configuration
 
-> Covers both **JavaScript** and **TypeScript** projects. The debugger properties are identical; only the build chain differs.
+> Covers **JavaScript** + **TypeScript**. Same debugger properties; different build chains.
 
 ## Prerequisites
 
@@ -15,21 +15,21 @@
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| Debug protocol | `Node Inspector` | V8 inspector protocol over WebSocket |
-| VS Code debugger type | `node` | Maps Node Inspector to VS Code's built-in Node debugger |
+| Debug protocol | `Node Inspector` | V8 inspector over WebSocket |
+| VS Code debugger type | `node` | Maps Node Inspector to built-in VS Code Node debugger |
 | Base debug port | `9229` | Default Node.js inspector port |
-| Auto-restart | `true` | Re-attach after the host restarts on file changes |
+| Auto-restart | `true` | Reattach after host restart on file changes |
 
 ### `outFiles` (node-ts only — REQUIRED)
 
-For any TypeScript Node.js project, the `launch.json` attach configuration **must** include `outFiles` pointing to the compiled JavaScript output. Without it, VS Code cannot locate `.js.map` files and breakpoints set in `.ts` source files will not trigger.
+Every TypeScript Node.js `launch.json` attach config **must** include `outFiles` targeting compiled JavaScript. Without it, VS Code cannot find `.js.map`; `.ts` breakpoints do not trigger.
 
-**Derivation:** Read the project's `tsconfig.json` to determine the output directory:
-1. Check `compilerOptions.outDir` — this is the compiled output root (e.g., `"outDir": "./dist"`)
-2. Construct the glob: `${workspaceFolder}/{service-root}/{outDir}/**/*.js`
-3. If `outDir` is not set, fall back to the project root: `${workspaceFolder}/{service-root}/**/*.js`
+**Derivation:** Read project `tsconfig.json` output directory:
+1. Check `compilerOptions.outDir`, compiled root (e.g., `"outDir": "./dist"`)
+2. Build glob `${workspaceFolder}/{service-root}/{outDir}/**/*.js`
+3. Without `outDir`, use project root `${workspaceFolder}/{service-root}/**/*.js`
 
-> `{service-root}` is the path from the workspace root to the project directory. In a single-project workspace this is empty (just `${workspaceFolder}/dist/**/*.js`). In a monorepo it includes the nested path (e.g., `${workspaceFolder}/services/functions/dist/**/*.js`).
+> `{service-root}` is workspace-root-relative project path. Single-project: empty (`${workspaceFolder}/dist/**/*.js`). Monorepo: nested path (e.g., `${workspaceFolder}/services/functions/dist/**/*.js`).
 
 **Example:**
 ```json
@@ -44,9 +44,9 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
 }
 ```
 
-> `preLaunchTask` uses the canonical `{service-id}:`-prefixed task label — see [generate.md § Service ID Derivation](../generate.md). The example above corresponds to a `functions-api` service, so the resolved value is `functions-api: func host start`.
+> `preLaunchTask` uses canonical `{service-id}:` task prefix; see [generate.md § Service ID Derivation](../generate.md). Example is `functions-api`, resolving to `functions-api: func host start`.
 
-> **Verify:** `tsconfig.json` must have `"sourceMap": true` in `compilerOptions` for any TypeScript project that will be debugged. Without source maps, VS Code breakpoints in `.ts` files cannot bind to the compiled `.js` output and will appear as gray (unverified) dots — even when the debugger is successfully attached. The build/watch task must run **before** the startup task so compiled output exists when the debugger attaches.
+> **Verify:** Debugged TypeScript `tsconfig.json` needs `"sourceMap": true` in `compilerOptions`. Otherwise `.ts` breakpoints cannot bind compiled `.js` and stay gray/unverified despite attachment. Build/watch must run **before** startup so output exists at attach.
 
 ### VS Code Problem Matchers
 
@@ -55,7 +55,7 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
 | node-ts | `$tsc-watch` | `$tsc` |
 | node-js | — | — |
 
-> **Monorepo / multi-service:** When multiple Node services are present, each is assigned a sequential debug port starting from the base port defined in the project type's Runtime Wiring table. See [multi-service.md](../multi-service.md) for port assignment rules.
+> **Monorepo / multi-service:** Assign each Node service sequential debug port from project-type Runtime Wiring base. See [multi-service.md](../multi-service.md).
 
 ---
 
@@ -63,16 +63,16 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
 
 | Signal | Variant | Notes |
 |--------|---------|-------|
-| `tsconfig.json` present | **node-ts** | TypeScript — requires compile step |
-| `package.json` without `tsconfig.json` | **node-js** | Plain JavaScript — no compile step |
+| `tsconfig.json` present | **node-ts** | TypeScript; compile required |
+| `package.json` without `tsconfig.json` | **node-js** | JavaScript; no compile |
 
 ---
 
 ## Build Chain
 
-Tasks owned by this runtime: install, clean, build, watch. The startup task and its dependency wiring are provided by the project type's Runtime Wiring table — not this file.
+Runtime owns install, clean, build, watch. Project type Runtime Wiring supplies startup and dependency wiring.
 
-> **Task label scoping:** All task labels MUST be prefixed with the service ID (e.g., `functions-api: npm watch`). See [generate.md § Service ID Derivation](../generate.md).
+> **Task label scoping:** Prefix every task label with service ID (e.g., `functions-api: npm watch`). See [generate.md § Service ID Derivation](../generate.md).
 
 ### Build Commands
 
@@ -88,9 +88,9 @@ Tasks owned by this runtime: install, clean, build, watch. The startup task and 
 
 | Step | Task Label | Command | Purpose | Background? |
 |------|-----------|---------|---------|------------|
-| install | `{service-id}: npm install` | `npm install` | Installs dependencies | No |
-| clean | `{service-id}: npm clean` | `npm run clean` | Cleans build output | No |
-| watch | `{service-id}: npm watch` | `npm run watch` | Runs `tsc --watch` for incremental builds | ✅ Yes |
+| install | `{service-id}: npm install` | `npm install` | Install dependencies | No |
+| clean | `{service-id}: npm clean` | `npm run clean` | Clean build output | No |
+| watch | `{service-id}: npm watch` | `npm run watch` | Run `tsc --watch` incremental builds | ✅ Yes |
 | build | `{service-id}: npm build` | `npm run build` | One-shot build (used outside debug flow) | No |
 
 #### node-js (JavaScript)
@@ -103,27 +103,27 @@ Tasks owned by this runtime: install, clean, build, watch. The startup task and 
 
 | Step | Task Label | Command | Purpose | Background? |
 |------|-----------|---------|---------|------------|
-| install | `{service-id}: npm install` | `npm install` | Installs dependencies | No |
+| install | `{service-id}: npm install` | `npm install` | Install dependencies | No |
 
-> No compile, clean, or watch step — JavaScript runs directly.
+> No compile, clean, or watch; JavaScript runs directly.
 
-> **Monorepo / alternative package managers:** Adjust commands if the project uses `yarn`, `pnpm`, or a monorepo layout. The key invariant is the chain shape: **install → [clean → build/watch →] startup task** (compile steps only for TypeScript).
+> **Monorepo / alternative package managers:** Adjust for `yarn`, `pnpm`, or monorepo layout. Preserve **install → [clean → build/watch →] startup task**; compile only TypeScript.
 
-See [generate.md](../generate.md) § Task `runOptions` Rules for how these build steps are rendered into VS Code task configuration.
+See [generate.md](../generate.md) § Task `runOptions` Rules for rendering build steps into VS Code tasks.
 
 
 ---
 
 ## Convenience Scripts
 
-The plan's Convenience Scripts table specifies WHICH scripts to generate. This section covers HOW to register them for Node.js projects.
+Plan Convenience Scripts defines WHICH scripts; this section defines HOW Node.js registers them.
 
 **Script runner:** `package.json` `"scripts"` block
 **Run command pattern:** `npm run {script-name}`
 
 ### Script Format
 
-Each script is a shell command added to `package.json` `"scripts"`. Example entry:
+Add each shell command to `package.json` `"scripts"`. Example:
 
 ```json
 {
@@ -133,14 +133,14 @@ Each script is a shell command added to `package.json` `"scripts"`. Example entr
 
 ### Common Script Implementations
 
-Use these implementations when building scripts from the plan:
+Use these for planned scripts:
 
 | Script Purpose | Typical Command | Notes |
 |---------------|-----------------|-------|
-| Start emulators | `docker compose up -d` | Idempotent — safe to re-run |
+| Start emulators | `docker compose up -d` | Idempotent; safe to re-run |
 | Stop emulators | `docker compose down` | Stops and removes containers |
-| Clean emulator data | `docker compose down -v && rimraf {data-dirs}` | `-v` (`--volumes`) also removes **named volumes** (e.g. Postgres's `postgres_data`). `{data-dirs}` = space-separated `./.{name}` **bind-mount** directories derived from `docker-compose.yml` `volumes:` mounts (e.g., `.azurite`). Use `rimraf` for cross-platform compatibility. Requires `rimraf` in `devDependencies` — see [generate.md § Dependency Availability](../generate.md). |
-| Run migrations | `{migration tool CLI command}` | See [migrations.md](../migrations.md) for how to determine the command |
+| Clean emulator data | `docker compose down -v && rimraf {data-dirs}` | `-v` (`--volumes`) also removes **named volumes** (e.g. Postgres's `postgres_data`). `{data-dirs}` = space-separated `./.{name}` **bind-mount** directories from `docker-compose.yml` `volumes:` mounts (e.g., `.azurite`). Use `rimraf` cross-platform; requires `rimraf` in `devDependencies`. See [generate.md § Dependency Availability](../generate.md). |
+| Run migrations | `{migration tool CLI command}` | Derive via [migrations.md](../migrations.md) |
 
 ---
 
@@ -152,21 +152,21 @@ No recommended extensions.
 
 ## VS Code Workspace Settings (`.vscode/settings.json`)
 
-<!-- Settings contributed by this runtime. Aggregated with project-type settings into .vscode/settings.json by generate.md. -->
+<!-- Runtime-contributed settings; generate.md aggregates with project-type settings into .vscode/settings.json. -->
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `files.exclude: **/node_modules` | `true` | Hide dependency tree from explorer — large and noisy |
+| `files.exclude: **/node_modules` | `true` | Hide large/noisy dependency tree |
 
-> This exclusion reduces workspace noise. It is deep-merged with any existing `files.exclude` entries — see [generate.md § VS Code Workspace Settings](../generate.md).
+> Exclusion reduces workspace noise. Deep-merge with existing `files.exclude`; see [generate.md § VS Code Workspace Settings](../generate.md).
 
 ---
 
 ## Checklist — Node.js Runtime Validation
 
-> ⛔ **MANDATORY — runs during Phase 3 validation after all artifacts are generated.** You MUST verify every item below. Do NOT skip, assume, or approximate results.
+> ⛔ **MANDATORY — Phase 3 after all artifacts.** Verify every item; never skip, assume, or approximate.
 
-After generating VS Code configuration, verify the following were produced correctly:
+After VS Code config generation, verify:
 
 ### Post-Generation Checks
 
@@ -178,10 +178,10 @@ After generating VS Code configuration, verify the following were produced corre
 
 ### Live Validation Checks
 
-These checks run during Phase 3 validation ([validation.md](../validation.md) Step 7), after the ready signal is observed:
+Run during Phase 3 validation ([validation.md](../validation.md) Step 7), after ready signal:
 
-1. ✅ For TypeScript: verify `tsconfig.json` has `"sourceMap": true` in `compilerOptions`. If missing, add `"sourceMap": true` and re-run the build task before marking the config ✅
+1. ✅ TypeScript: require `tsconfig.json` `"sourceMap": true` in `compilerOptions`. If missing, add `"sourceMap": true`; rerun build before config ✅
 
-> The Node Inspector debug port (`9229`) is handled automatically by the Functions host or `--inspect` flag.
+> Functions host or `--inspect` handles Node Inspector port (`9229`) automatically.
 
-> Project-type-specific checks (e.g., `{service-id}: func host start` task, connection strings) are defined in `project-types/{type}.md`.
+> `project-types/{type}.md` defines project-type checks (e.g., `{service-id}: func host start`, connection strings).

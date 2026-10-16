@@ -1,18 +1,18 @@
 # Error Handling
 
-> Standardized error responses, error types, and middleware for consistent error handling across all routes.
+> Standard error responses, types, and middleware across all routes.
 
 ---
 
 ## Core Principle
 
-**Every route returns errors in a consistent shape.** Clients rely on single error format for all endpoints. Error paths tested as thoroughly as happy paths.
+**Every route returns errors in a consistent shape.** Clients rely on one format across endpoints. Test error paths as thoroughly as happy paths.
 
 ---
 
 ## Standardized Error Response Shape
 
-All error responses follow this shape:
+All error responses use this shape:
 
 ```json
 {
@@ -48,7 +48,7 @@ All error responses follow this shape:
 
 ## Error Code Type Safety
 
-Error codes MUST be defined as typed union in shared types package, not arbitrary strings. Enables frontend consumers to switch on error codes with exhaustiveness checking.
+Define error codes as a typed union in shared types package, never arbitrary strings. This enables exhaustive frontend switches.
 
 ### TypeScript
 
@@ -106,7 +106,7 @@ public static class ErrorCodes
 
 ### Frontend Usage
 
-With typed error codes, frontend can handle specific error types:
+Typed error codes let frontend handle specific errors:
 
 ```typescript
 import type { ErrorCode } from 'app-shared';
@@ -331,7 +331,7 @@ app.http('createItem', {
 
 ---
 
-For Python error handling, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C#, see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+Python: [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). C#: [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 

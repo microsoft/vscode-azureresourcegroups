@@ -1,6 +1,6 @@
 # Database Migrations — Detection
 
-When a database dependency is found, detect the migration tool so the plan can record it. The generation phase uses this to configure migration automation within the orchestrator.
+When finding a database dependency, detect and record its migration tool. Generation uses it to configure orchestrator migration automation.
 
 ---
 
@@ -10,7 +10,7 @@ Scan three layers, then synthesize.
 
 ### Layer 1: Migration Files
 
-Non-exhaustive detection pattern examples:
+Non-exhaustive patterns:
 
 | Pattern | Tool |
 |---------|------|
@@ -23,11 +23,11 @@ Non-exhaustive detection pattern examples:
 
 ### Layer 2: Dependencies
 
-Check dependency manifests for migration tools, ORMs with built-in migration support, and database driver packages.
+Check manifests for migration tools, ORMs with built-in migration support, and database drivers.
 
 ### Layer 3: Scripts
 
-Check script runners (`package.json`, `Makefile`, etc.) for existing migration commands (grep for common migration key words like: `migrate`, `schema`, `seed`).
+Check script runners (`package.json`, `Makefile`, etc.) for migration commands; grep terms such as `migrate`, `schema`, `seed`.
 
 ### Synthesis
 
@@ -38,7 +38,7 @@ Check script runners (`package.json`, `Makefile`, etc.) for existing migration c
 
 ### Insufficient Evidence
 
-If a database dependency exists but no migration strategy is found across all three layers:
+If database dependency exists but no strategy appears across all three layers:
 
 1. Do not guess
 2. Do not call `ask_user` or `vscode_askQuestions`; plan generation must complete without a parallel chat-input gate

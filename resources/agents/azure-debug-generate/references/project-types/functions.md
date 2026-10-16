@@ -1,6 +1,6 @@
 # Project Type: Azure Functions
 
-Reference guide for local development setup of Azure Functions projects.
+Local development reference for Azure Functions projects.
 
 ---
 
@@ -8,8 +8,8 @@ Reference guide for local development setup of Azure Functions projects.
 
 | Signal | Notes |
 |--------|-------|
-| `host.json` present | Primary signal — required |
-| Azure Functions SDK in dependencies | Confirms it's a Functions project — identified during the plan phase |
+| `host.json` present | Required primary signal |
+| Azure Functions SDK in dependencies | Confirms Functions project during planning |
 
 ---
 
@@ -31,13 +31,13 @@ Reference guide for local development setup of Azure Functions projects.
 | python  | 🔲 Planned | [limited-support.md](../limited-support.md) |
 | java    | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
-> **Limited-support runtimes:** When a runtime with limited support is detected, emit a `⚠️ LIMITED SUPPORT:` warning per [limited-support.md](../limited-support.md) and ask the user whether to proceed. If the user agrees, proceed with best-effort generation for all artifacts (emulators, debug config, tasks). Do not silently skip debug/launch configuration — let the user decide.
+> **Limited-support runtimes:** Emit `⚠️ LIMITED SUPPORT:` per [limited-support.md](../limited-support.md), then ask whether to proceed. On agreement, best-effort generate all artifacts (emulators, debug config, tasks). Never silently skip debug/launch configuration; user decides.
 
 ---
 
 ## Dependency Discovery
 
-Scan every `function.json` for its `"type"` binding field, **or** scan Python/Java source files for trigger decorator/attribute names. Each binding maps to an emulator.
+Scan every `function.json` `"type"` binding, or Python/Java sources for trigger decorator/attribute names. Map each binding to an emulator.
 
 ### Binding → Emulator Mapping
 
@@ -53,20 +53,20 @@ Scan every `function.json` for its `"type"` binding field, **or** scan Python/Ja
 | `httpTrigger` | (built-in) | — | — | ✅ Implemented | — |
 | `timerTrigger` | (built-in) | — | — | ✅ Implemented | — |
 
-> **Azurite consolidation:** If multiple storage bindings (blob + queue + table) are detected, create a **single** Azurite service — not one per binding type.
+> **Azurite consolidation:** Multiple storage bindings (blob + queue + table) use one Azurite service, not one per type.
 
 ### Services Without Azure Emulators
 
 | Binding Type | Azure Service | Recommendation |
 |-------------|---------------|----------------|
-| `signalR` | Azure SignalR | Use a dev-tier Azure SignalR instance |
+| `signalR` | Azure SignalR | Use dev-tier Azure SignalR |
 | PostgreSQL (SDK, not a binding) | Azure Database for PostgreSQL | [emulators/postgres.md](../emulators/postgres.md) |
 
 ---
 
 ## Startup Command
 
-> For VS Code `"type": "func"` tasks, omit the `func` executable prefix — the Azure Functions extension supplies it. The equivalent CLI commands are shown below for reference.
+> For VS Code `"type": "func"` tasks, omit `func` executable prefix; Azure Functions extension supplies it. Full CLI equivalents follow.
 
 **Node.js (TypeScript & JavaScript):**
 
@@ -74,7 +74,7 @@ Scan every `function.json` for its `"type"` binding field, **or** scan Python/Ja
 languageWorkers__node__arguments="--inspect=9229" func host start
 ```
 
-> ⚠️ The Azure Functions Core Tools do **not** automatically enable the Node.js debugger. You **must** supply `--inspect=9229` to the Node worker so it opens a debug port for VS Code to attach to. Without it, the `attach` configuration connects to nothing. In the VS Code `func` task, set this via `options.env` (`languageWorkers__node__arguments`) rather than a command-line flag — the env-var form avoids shell/JSON quoting issues and uses the same `languageWorkers__<runtime>__arguments` convention across runtimes.
+> ⚠️ Azure Functions Core Tools do **not** enable Node.js debugging automatically. Supply `--inspect=9229` so Node worker opens VS Code's debug port; otherwise `attach` connects to nothing. In VS Code `func` task, use `options.env` (`languageWorkers__node__arguments`), not command-line flag. Env form avoids shell/JSON quoting and keeps `languageWorkers__<runtime>__arguments` consistent across runtimes.
 
 **dotnet:**
 
@@ -82,15 +82,15 @@ languageWorkers__node__arguments="--inspect=9229" func host start
 func host start
 ```
 
-> For .NET, the Functions host spawns a worker process that VS Code attaches to via `coreclr` — no additional debug flags are needed on the command line.
+> For .NET, Functions host spawns worker; VS Code attaches via `coreclr`. No extra command-line debug flags.
 
 ---
 
 ## Runtime Wiring
 
-<!-- Quick-reference index. See § VS Code Task Configuration below for the concrete task JSON per runtime. -->
+<!-- Quick index. See § VS Code Task Configuration for concrete task JSON per runtime. -->
 
-> See **§ VS Code Task Configuration** below for the concrete task JSON for each runtime.
+> See **§ VS Code Task Configuration** for concrete task JSON per runtime.
 
 | Runtime | Startup task label | Task type | Problem matcher | Request mode | Status | Reference |
 |---------|--------------------|-----------|-----------------|--------------|--------|-----------|
@@ -100,23 +100,23 @@ func host start
 | python  | `{service-id}: func host start` | `func` | `$func-python-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
 | java    | `{service-id}: func host start` | `func` | `$func-java-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
-> `{service-id}` is the kebab-case ID derived from the plan's Service Label column — see [generate.md § Service ID Derivation](../generate.md).
+> `{service-id}` is kebab-case ID from plan Service Label; see [generate.md § Service ID Derivation](../generate.md).
 
-> **dotnet `processName` warning.** The .NET `coreclr` (request: `attach`) configuration requires the literal `processName` in `launch.json` — `.exe` suffix on Windows, no extension on macOS/Linux. Without it, F5 fails with `"No process with the specified name is currently running"`. Do NOT use `${command:pickProcess}`. See [runtimes/dotnet.md § processName Determination](../runtimes/dotnet.md).
+> **dotnet `processName` warning.** .NET `coreclr` request `attach` requires literal `processName` in `launch.json`: `.exe` suffix on Windows, none on macOS/Linux. Otherwise F5 fails with `"No process with the specified name is currently running"`. Do NOT use `${command:pickProcess}`. See [runtimes/dotnet.md § processName Determination](../runtimes/dotnet.md).
 
-The startup step `dependsOn`:
-1. The runtime-specific build/watch task label from `runtimes/{rt}.md` § Build Chain (e.g., `{service-id}: npm watch` for node-ts, `{service-id}: dotnet build` for dotnet)
-2. `"Start Emulators"` (only when emulators are required — omit when the plan has no checked emulators)
+Startup `dependsOn`:
+1. Runtime build/watch label from `runtimes/{rt}.md` § Build Chain (e.g., `{service-id}: npm watch` for node-ts, `{service-id}: dotnet build` for dotnet)
+2. `"Start Emulators"` only when plan has checked emulators
 
 ### VS Code Task Configuration
 
-The top-level task uses the VS Code `func` task type provided by the Azure Functions extension (`ms-azuretools.vscode-azurefunctions`). The launch configuration's `preLaunchTask` points to this task.
+Top-level task uses Azure Functions extension (`ms-azuretools.vscode-azurefunctions`) VS Code `func` type. Launch `preLaunchTask` targets it.
 
-> **Task label scoping:** All task labels MUST be prefixed with the service ID (e.g., `functions-api: func host start`). This prevents label collisions in multi-service workspaces. See [generate.md § Service ID Derivation](../generate.md).
+> **Task label scoping:** Prefix ALL task labels with service ID (e.g., `functions-api: func host start`) to prevent multi-service collisions. See [generate.md § Service ID Derivation](../generate.md).
 
 #### Debug Argument Injection
 
-The Functions host runs your code in a separate **language-worker** process, so the worker must start with the runtime's debug flag. Inject it through the task's `options.env` using the `languageWorkers__<runtime>__arguments` convention, then point a matching `attach` config at the resulting port. Only the env key, the flag value, and the attach `type`/`port` change per runtime — the rest of the `func host start` task stays identical, so new runtimes slot straight into this table.
+Functions host runs code in separate **language-worker**, which must start with runtime debug flag. Inject through task `options.env` using `languageWorkers__<runtime>__arguments`; point matching `attach` config at that port. Per runtime, only env key, flag, and attach `type`/`port` differ; keep remaining `func host start` task identical.
 
 | Runtime | `options.env` setting | Value to inject | Debug port | `attach` type | Status |
 |---------|-----------------------|-----------------|------------|---------------|--------|
@@ -124,7 +124,7 @@ The Functions host runs your code in a separate **language-worker** process, so 
 | node-js | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
 
 
-**node-ts** (has watch task):
+**node-ts** (watch task):
 
 ```json
 {
@@ -142,9 +142,9 @@ The Functions host runs your code in a separate **language-worker** process, so 
 }
 ```
 
-> Remove `"Start Emulators"` from `dependsOn` when the plan has no checked emulators.
+> Remove `"Start Emulators"` from `dependsOn` if plan has no checked emulators.
 
-**node-js** (no compile/watch step):
+**node-js** (no compile/watch):
 
 ```json
 {
@@ -162,11 +162,11 @@ The Functions host runs your code in a separate **language-worker** process, so 
 }
 ```
 
-> Remove `"Start Emulators"` from `dependsOn` when the plan has no checked emulators.
+> Remove `"Start Emulators"` from `dependsOn` if plan has no checked emulators.
 
-> `dependsOn`: first entry is the runtime-specific prerequisite — watch task for TypeScript, install task for JavaScript. The exact task labels come from `runtimes/{rt}.md` § Build Chain, prefixed with the service ID.
+> `dependsOn` first entry is runtime prerequisite: TypeScript watch or JavaScript install. Exact service-ID-prefixed labels come from `runtimes/{rt}.md` § Build Chain.
 
-**dotnet** (compiled — requires build before host start):
+**dotnet** (compile before host):
 
 ```json
 {
@@ -181,17 +181,17 @@ The Functions host runs your code in a separate **language-worker** process, so 
 }
 ```
 
-> Remove `"Start Emulators"` from `dependsOn` when the plan has no checked emulators.
+> Remove `"Start Emulators"` from `dependsOn` if plan has no checked emulators.
 
-> **dotnet `processName`:** The `coreclr` attach configuration requires a literal `processName` in `launch.json`. See [runtimes/dotnet.md § processName Determination](../runtimes/dotnet.md) for how to derive it from the `.csproj`, including cross-platform rules (`.exe` suffix on Windows only).
+> **dotnet `processName`:** `coreclr` attach needs literal `processName` in `launch.json`. Derive from `.csproj` per [runtimes/dotnet.md § processName Determination](../runtimes/dotnet.md), including cross-platform rule (`.exe` suffix only on Windows).
 
 #### .NET Isolated Worker Version Constraints
 
-Functions Worker **2.x** is required for .NET 10:
+Functions Worker **2.x** required for .NET 10:
 - `Microsoft.Azure.Functions.Worker >= 2.50.0`
 - `Microsoft.Azure.Functions.Worker.Sdk >= 2.0.5`
 
-When detecting a .NET Functions project, verify these minimum versions. Worker 2.x uses the canonical `func host start` + `coreclr` (request: `attach`) flow where the Functions host spawns the worker process.
+For .NET Functions, verify these minimums. Worker 2.x canonical flow: `func host start` + `coreclr` request `attach`; Functions host spawns worker.
 
 ### Connection Strings
 
@@ -204,20 +204,20 @@ When detecting a .NET Functions project, verify these minimum versions. Worker 2
 | SQL Edge | {detected from bindings} | — | 🔲 Planned | [limited-support.md](../limited-support.md) |
 | PostgreSQL | {detected from code} | See [emulators/postgres.md](../emulators/postgres.md) | ✅ Implemented | [emulators/postgres.md](../emulators/postgres.md) |
 
-> **Key discovery:** Except for `AzureWebJobsStorage` (a well-known Azure Functions convention), connection string key names are not fixed. Perform targeted resolution — check `local.settings.json`, `.env`, binding configurations, and SDK usage to detect the actual key names. Use the detected names — do not invent defaults.
+> **Key discovery:** Only `AzureWebJobsStorage` is fixed by Azure Functions convention. Resolve actual other key names from `local.settings.json`, `.env`, binding configs, and SDK use; never invent defaults.
 
-> **Never overwrite** existing values in `local.settings.json` — only add missing keys.
+> **Never overwrite** values in `local.settings.json`; only add missing keys.
 
 ---
 
 ## API Test Collections
 
-See [api-test-collections.md](../api-test-collections.md) for all test script patterns. For this project type, generate tests for:
+See [api-test-collections.md](../api-test-collections.md). Generate:
 
 - HTTP triggers → HTTP patterns with `baseUrl: http://localhost:7071/api`
 - Blob triggers → Storage § Blob trigger pattern
 - Queue triggers → Storage § Queue trigger pattern
-- Timer triggers → Timer § admin API pattern (only if explicitly requested)
+- Timer triggers → Timer § admin API pattern, only when explicitly requested
 - Cosmos DB triggers → Cosmos DB pattern
 - Service Bus triggers → Service Bus pattern
 - Event Hub triggers → Event Hubs pattern
@@ -226,7 +226,7 @@ See [api-test-collections.md](../api-test-collections.md) for all test script pa
 
 ## VS Code Extension Recommendations (`.vscode/extensions.json`)
 
-Contribute the following to `.vscode/extensions.json`.
+Add to `.vscode/extensions.json`.
 
 | Extension ID | Why Required |
 |--------------|-------------|
@@ -236,18 +236,18 @@ Contribute the following to `.vscode/extensions.json`.
 
 ## VS Code Workspace Settings (`.vscode/settings.json`)
 
-Contribute the following to `.vscode/settings.json`.
+Add to `.vscode/settings.json`.
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `azureFunctions.showProjectWarning` | `false` | Suppresses the "failed to detect project" prompt that fires when the extension scans the workspace — our generated config already handles project setup |
-| `azureFunctions.validateEmulators` | `false` | Suppresses emulator validation warnings from the extension — emulators are managed via user's orchestrator configuration |
+| `azureFunctions.showProjectWarning` | `false` | Suppress "failed to detect project" prompt; generated config handles setup |
+| `azureFunctions.validateEmulators` | `false` | Suppress extension emulator warnings; user's orchestrator manages emulators |
 
 ---
 
 ## Validation Signals
 
-Used by [validation.md](../validation.md) during Phase 3 to verify the generated debug configuration works.
+[validation.md](../validation.md) uses these in Phase 3 to verify generated debug configuration.
 
 ### Ready Signal
 
@@ -255,24 +255,24 @@ Used by [validation.md](../validation.md) during Phase 3 to verify the generated
 |----------------|----------------------|
 | `{service-id}: func host start` | `"Host lock lease acquired"` or `"Functions host started"` |
 
-> The `Top-Level Task` column uses the canonical `{service-id}:`-prefixed label — see [generate.md § Service ID Derivation](../generate.md). Resolve `{service-id}` to the same value used during generation before matching against `tasks.json`.
+> `Top-Level Task` uses canonical `{service-id}:` prefix; see [generate.md § Service ID Derivation](../generate.md). Resolve `{service-id}` exactly as generation before matching `tasks.json`.
 
 ### HTTP Verification
 
 | Curl Target | Expected Status | Notes |
 |-------------|-----------------|-------|
-| First discovered anonymous `httpTrigger` route (e.g., `http://localhost:7071/api/{function-name}`) | `200` | Port `7071` is the Functions host HTTP port; debug port `9229` is for the debugger only. Use the first anonymous HTTP trigger found during targeted resolution. If only function-key/admin routes exist, skip HTTP verification with a warning rather than assuming a route. |
+| First discovered anonymous `httpTrigger` route (e.g., `http://localhost:7071/api/{function-name}`) | `200` | `7071` is Functions HTTP port; `9229` is debugger only. Use first anonymous HTTP trigger found by targeted resolution. If only function-key/admin routes exist, warn and skip HTTP verification; never assume a route. |
 
 ---
 
 ## Checklist — Functions Project Validation
 
-After generating `launch.json`, `tasks.json`, and `extensions.json`, verify the following were produced correctly:
+After generating `launch.json`, `tasks.json`, and `extensions.json`, verify:
 
-1. ✅ `{service-id}: func host start` task exists in `tasks.json` with `"type": "func"`
-2. ✅ `launch.json` `preLaunchTask` points to `{service-id}: func host start`
+1. ✅ `{service-id}: func host start` exists in `tasks.json` with `"type": "func"`
+2. ✅ `launch.json` `preLaunchTask` targets `{service-id}: func host start`
 3. ✅ `.vscode/extensions.json` includes `ms-azuretools.vscode-azurefunctions`
-4. ✅ `local.settings.json` contains all required connection string keys (e.g., `AzureWebJobsStorage`)
-5. ✅ `dependsOn` chain includes the runtime build/watch task and `Start Emulators` (when emulators are required)
+4. ✅ `local.settings.json` has all required connection keys (e.g., `AzureWebJobsStorage`)
+5. ✅ `dependsOn` includes runtime build/watch and `Start Emulators` when required
 
-> Runtime-specific checks (e.g., `dotnet build` task, `processName` derivation) are defined in `runtimes/{rt}.md`.
+> Runtime checks (e.g., `dotnet build`, `processName` derivation): `runtimes/{rt}.md`.

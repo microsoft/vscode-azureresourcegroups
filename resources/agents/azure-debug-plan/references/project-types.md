@@ -1,7 +1,7 @@
 # Project Types
 
-> These are **common examples, not an exhaustive list**. If a service root does not match
-> any of these, classify it by whatever best describes its purpose (e.g. `background-worker`, `console`, etc.).
+> **Common examples, not exhaustive.** Classify unmatched service roots by best
+> purpose description (e.g. `background-worker`, `console`, etc.).
 
 ## Detection Table
 
@@ -17,9 +17,9 @@
 
 ## functions
 
-For Azure Functions projects, scan bindings to identify Azure service dependencies. Parse `function.json` files or decorator/attribute bindings in source code.
+For Azure Functions projects, scan bindings for Azure dependencies. Parse `function.json` or source decorator/attribute bindings.
 
-> **Implicit dependency:** All Azure Functions projects require Azure Storage for the host runtime (trigger management, lease coordination, internal state). Always emit an Azurite emulator entry in the plan regardless of whether application-level storage SDK packages are detected.
+> **Implicit dependency:** Every Azure Functions project requires Azure Storage for host runtime trigger management, lease coordination, and internal state. Always add an Azurite emulator plan entry, regardless of application-level storage SDK detection.
 
 | Binding | Azure Service | Emulator |
 |---------|--------------|----------|
@@ -37,14 +37,14 @@ For Azure Functions projects, scan bindings to identify Azure service dependenci
 | `signalRTrigger`, `signalR` | SignalR Service | — |
 | `sql`, `sqlTrigger` | Azure SQL | azure-sql-edge |
 
-> Multiple storage bindings (blob + queue + table) consolidate to a **single** azurite entry.
-> This table is **not exhaustive** — map any other bindings to their Azure service accordingly.
+> Consolidate multiple storage bindings (blob + queue + table) into **one** azurite entry.
+> Table is **not exhaustive**; map every other binding to its Azure service.
 
 ---
 
 ## frontend-spa
 
-Frontend SPA projects do not require emulators or Azure bindings, but they **are** service roots. When a frontend is detected alongside a backend, the workspace is multi-service and **must** produce a compound debug configuration.
+Frontend SPA projects need no emulators or Azure bindings but **are** service roots. Frontend plus backend makes workspace multi-service and **must** produce compound debug config.
 
 ### Framework Detection
 
@@ -58,7 +58,7 @@ Frontend SPA projects do not require emulators or Azure bindings, but they **are
 
 ### Backend Proxy Dependencies
 
-If a proxy config points to a local backend, record the dependency so the compound debug configuration can order startup (backends before frontends).
+If proxy config targets a local backend, record dependency so compound debug config starts backends before frontends.
 
 | Framework | Proxy Config Location |
 |-----------|----------------------|

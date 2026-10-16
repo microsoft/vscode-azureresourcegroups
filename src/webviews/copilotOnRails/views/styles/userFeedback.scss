@@ -1,0 +1,116 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.userFeedbackButton {
+    position: fixed;
+    right: 20px;
+    bottom: 18px;
+    z-index: 90;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.userFeedbackOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.userFeedbackDialog {
+    display: flex;
+    width: min(720px, 100%);
+    height: min(760px, 100%);
+    flex-direction: column;
+    color: var(--vscode-editorWidget-foreground);
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+.userFeedbackHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--vscode-widget-border);
+
+    h2 {
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    p {
+        margin: 3px 0 0;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.8rem;
+    }
+}
+
+.userFeedbackHeaderActions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.userFeedbackFrameContainer {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #fff;
+}
+
+.userFeedbackLoading {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editorWidget-background);
+}
+
+.userFeedbackFrame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
+.userFeedbackFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--vscode-widget-border);
+
+    span {
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.78rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .userFeedbackOverlay {
+        padding: 8px;
+    }
+
+    .userFeedbackDialog {
+        height: 100%;
+    }
+
+    .userFeedbackFooter {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
