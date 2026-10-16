@@ -2835,9 +2835,10 @@ with a clear message:
 
 ## Next steps
 
-- Fresh MSBench runs for `plan-approval-scrapbook`, `plan-feedback-recipe-app`,
-  `scaffold-api-only`, the three `launch-report-*` probes, and the fifth turn of
-  `debug-generate-artifacts`.
+- Refresh the representative GPT/Claude baselines after agent-contract changes.
+  The deploy follow-up is covered by the dedicated
+  `debug-generate-deploy-handoff` stimulus; `debug-generate-artifacts` stops at
+  the blocked preflight boundary.
 - LLM-as-judge assertions for the qualitative parts of a generated plan.
 - A separately budgeted deployment fixture before positively exercising
   `capture_deployment_inventory`, `open_deploy_result_view`,
