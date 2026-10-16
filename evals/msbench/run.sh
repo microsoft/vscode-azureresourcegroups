@@ -45,7 +45,7 @@ SELF_TEST_RESULTS_ARCHIVE=0
 STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
-MODEL=""
+MODEL="${MODEL:-}"
 BACKEND="ces-dev1"
 PASSTHRU=()
 # The benchmark dataset naming the container image to run in. Empty means "use

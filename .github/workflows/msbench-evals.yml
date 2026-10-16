@@ -37,6 +37,14 @@ on:
         description: 'Stimulus to submit. The default is the cheapest one whose answer we already know.'
         required: false
         default: 'scaffold-unapproved-plan'
+      model:
+        description: 'Exact model id from the checked-in MSBench sweep set'
+        required: false
+        type: choice
+        default: 'gpt-5.6-sol'
+        options:
+          - 'gpt-5.6-sol'
+          - 'claude-sonnet-5'
       dataset:
         description: 'Repo-relative dataset naming a custom container image. Leave empty for the stock image. Use evals/msbench/container/dataset.jsonl together with benchmark=corbench.cor_functions_host to get one with func.'
         required: false
@@ -149,6 +157,7 @@ jobs:
         env:
           BENCHMARK: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark || 'vscbench.say_hello' }}
           STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'scaffold-unapproved-plan' }}
+          MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gpt-5.6-sol' }}
           # Empty means the stock image, which is the default for every run that
           # is not specifically exercising the custom one. Note the CI identity
           # needs no registry permission either way: CES pulls the image with its
