@@ -31,7 +31,7 @@ For every planned project type, runtime, and emulator, follow **exactly**:
 
 Where:
 - `{Category}` — short feature-area label (e.g., `Project type`, `Runtime`, `Emulator`)
-- `{value}` — planned feature (e.g., `python`, `Container App`, `Cosmos DB`)
+- `{value}` - planned feature (e.g., `java`, `Container App`, `Cosmos DB`)
 
 ---
 
@@ -68,4 +68,4 @@ Agreement gives session-wide consent. Still warn for later limited-support featu
 
 ## No Silent Substitution
 
-**Never silently substitute supported alternatives** for limited support (e.g. Container App → Azure Functions, Python → Node.js). Always generate declared project type, runtime, and emulators.
+**Never silently substitute supported alternatives** for limited support (e.g. Container App to Azure Functions, Java to Node.js). Always generate the declared project type, runtime, and emulators.

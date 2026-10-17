@@ -7,69 +7,15 @@ import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent,
 import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, OpenRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { BackendFrameworkField } from './components/BackendFrameworkField';
 import { classifyInstalledForRow, InstalledChip } from './components/InstalledChip';
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { getServiceStackKind, isAzureFunctionsFramework, normalizeScaffoldPlanComponent, type ScaffoldPlanComponent, type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type ServiceStackKind, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { getServiceStackKind, isAzureFunctionsFramework, normalizeScaffoldPlanComponent, type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type ServiceStackKind, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
-
-const editableOptions: Record<string, string[]> = {
-    'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
-    'Runtime': ['Node', 'Deno', 'Bun', 'CPython', 'PyPy', '.NET'],
-    'Backend': ['Azure Functions v4 (Node.js v4 model)', 'Express.js', 'Fastify', 'Flask', 'FastAPI', 'Spring Boot', 'ASP.NET Core'],
-    'Frontend': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None'],
-    'Framework': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor'],
-    'Package Manager': ['npm', 'yarn', 'pnpm', 'pip', 'poetry', 'uv', 'dotnet (NuGet)'],
-    'Test Runner': ['vitest', 'jest', 'mocha', 'pytest', 'unittest', 'xUnit', 'NUnit', 'MSTest'],
-};
-
-const backendFrameworkOptions: Record<string, string[]> = {
-    'TypeScript': ['Azure Functions', 'Fastify', 'Express'],
-    'JavaScript': ['Azure Functions', 'Fastify', 'Express'],
-    'Python': ['Azure Functions', 'FastAPI', 'Flask'],
-    'C# (.NET)': ['Azure Functions', 'ASP.NET Core'],
-};
-
-// Fields whose dropdown choices depend on the selected Language. When the user
-// changes the Language dropdown, each of these cells is reset to the language's
-// default (the first entry) if its current value isn't valid for the new
-// language (see cascade in handleTableCellChange). The first entry per language
-// is the recommended/default choice.
-const languageDependentOptions: Record<string, Record<string, string[]>> = {
-    'Runtime': {
-        'TypeScript': ['Node', 'Deno', 'Bun'],
-        'JavaScript': ['Node', 'Deno', 'Bun'],
-        'Python': ['CPython', 'PyPy'],
-        'C# (.NET)': ['.NET'],
-    },
-    'Frontend': {
-        'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'JavaScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'Python': ['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'C# (.NET)': ['Blazor', 'React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-    },
-    'Framework': {
-        'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte'],
-        'JavaScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte'],
-        'Python': ['React + Vite', 'Vue + Vite', 'Svelte'],
-        'C# (.NET)': ['Blazor', 'React + Vite', 'Vue + Vite'],
-    },
-    'Backend': backendFrameworkOptions,
-    'Package Manager': {
-        'TypeScript': ['npm', 'pnpm', 'yarn'],
-        'JavaScript': ['npm', 'pnpm', 'yarn'],
-        'Python': ['pip', 'poetry', 'uv'],
-        'C# (.NET)': ['dotnet (NuGet)'],
-    },
-    'Test Runner': {
-        'TypeScript': ['vitest', 'jest', 'mocha'],
-        'JavaScript': ['vitest', 'jest', 'mocha'],
-        'Python': ['pytest', 'unittest'],
-        'C# (.NET)': ['xUnit', 'NUnit', 'MSTest'],
-    },
-};
+import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, isServiceStackSection, languageDependentFields, optionsForField } from './utils/serviceStackOptions';
 
 // Options that are officially supported. Anything else is offered as a
 // convenience but flagged with a soft "not officially supported" warning.
@@ -77,43 +23,9 @@ const fullySupportedOptions: Record<string, Set<string>> = {
     'Runtime': new Set(['Node', 'CPython', '.NET']),
     'Frontend': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None']),
     'Framework': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor']),
-    'Package Manager': new Set(['npm', 'pnpm', 'pip', 'poetry', 'dotnet (NuGet)']),
-    'Test Runner': new Set(['vitest', 'jest', 'mocha', 'pytest', 'xUnit', 'NUnit', 'MSTest']),
+    'Package Manager': new Set(['npm', 'pnpm', 'pip', 'poetry', 'uv', 'dotnet (NuGet)']),
+    'Test Runner': new Set(['vitest', 'jest', 'mocha', 'pytest', 'unittest', 'xUnit', 'NUnit', 'MSTest']),
 };
-
-// Language choices allowed in frontend service sections. Frontends are always
-// JavaScript or TypeScript — Python and C# backends can pair with a JS/TS
-// frontend, but the frontend section itself must not offer those languages.
-const frontendLanguageOptions = ['JavaScript', 'TypeScript'];
-
-// Returns the dropdown options for a given field, narrowing to the language's
-// choices when the field is language-dependent.
-function optionsForField(field: ScaffoldPlanComponent, language: string | undefined, serviceKind: ServiceStackKind): string[] | undefined {
-    if (field === 'Language' && serviceKind === 'frontend') {
-        return frontendLanguageOptions;
-    }
-    const byLanguage = field === 'Framework' && serviceKind === 'backend'
-        ? backendFrameworkOptions
-        : languageDependentOptions[field];
-    if (byLanguage) {
-        const key = language?.trim();
-        return (key && byLanguage[key]) || editableOptions[field];
-    }
-    return editableOptions[field];
-}
-
-// True when a section is an editable "service stack" section — i.e. it contains
-// a table with a Language row. Each service (backend, frontend, worker, …) gets
-// its own stack section, and the count is dynamic, so we detect them by shape
-// rather than by a fixed section number.
-function isServiceStackSection(section: ScaffoldPlanSection): boolean {
-    return (section.content ?? []).some(
-        c => c.type === 'table' && c.rows.some(r => normalizeScaffoldPlanComponent(r[0] ?? '') === 'Language'),
-    );
-}
-
-
-const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
 
 function previewBackendLanguageForSection(section: ScaffoldPlanSection): string | undefined {
     for (const content of section.content ?? []) {
@@ -122,8 +34,8 @@ function previewBackendLanguageForSection(section: ScaffoldPlanSection): string 
         if (!languageRow) { continue; }
         for (let ci = 1; ci < languageRow.length; ci++) {
             const value = languageRow[ci]?.trim();
-            if (value && previewBackendLanguages.has(value)) {
-                return value === 'C# (.NET)' ? '.NET' : value;
+            if (value && isLimitedSupportBackendLanguage(value)) {
+                return '.NET';
             }
         }
     }
@@ -221,6 +133,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
         return isApprovedOrLater(plan?.status);
     }, [plan?.status]);
 
+    const hasMissingFramework = useMemo(() => plan !== null && hasMissingBackendFramework(plan), [plan]);
+
     const editedCells = useMemo(() => {
         const set = new Set<CellKey>();
         for (const item of feedbackItems) {
@@ -292,7 +206,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         // Persist any pending palette pick before approving so the scaffold agent
         // reads the updated colors from the plan file.
         flushPalettePersist();
-        if (!plan || isAlreadyApproved) {
+        if (!plan || isAlreadyApproved || hasMissingFramework) {
             return;
         }
         if (hasEdits) {
@@ -300,7 +214,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan, autopilot });
-    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi, flushPalettePersist]);
+    }, [plan, hasEdits, isAlreadyApproved, hasMissingFramework, autopilot, vscodeApi, flushPalettePersist]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -405,15 +319,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const field = normalizeScaffoldPlanComponent(content.rows[rowIdx][0] ?? '');
         applyCellChange(content, sectionIdx, contentIdx, rowIdx, colIdx, value);
 
-        // Cascade: changing this service's Language resets every
-        // language-dependent field in the SAME table (Runtime, Framework,
-        // Package Manager, Test Runner) when its current value isn't valid for
-        // the new language — e.g. switching to C# (.NET) swaps npm → dotnet
-        // (NuGet) and vitest → xUnit. Each service stack table is self-contained
-        // so the lookup stays within this table.
+        // Backend framework choices are independent of language. Preserve custom
+        // frameworks while resetting incompatible tooling within this service.
         if (field === 'Language') {
-            for (const dependentField of Object.keys(languageDependentOptions)) {
-                const component = dependentField as ScaffoldPlanComponent;
+            for (const component of languageDependentFields) {
+                if (isBackendFrameworkField(component, serviceKind)) {
+                    continue;
+                }
                 const depRowIdx = content.rows.findIndex(r => normalizeScaffoldPlanComponent(r[0] ?? '') === component);
                 if (depRowIdx < 0) {
                     continue;
@@ -497,7 +409,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, [mutateCell, mutatePaletteEntry]);
 
     const handleSubmitFeedback = useCallback(() => {
-        if (!plan || !hasEdits) {
+        if (!plan || !hasEdits || hasMissingFramework) {
             return;
         }
         // Make sure any pending palette pick is saved before the agent rewrites
@@ -512,7 +424,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi, flushPalettePersist]);
+    }, [plan, hasEdits, hasMissingFramework, feedbackItems, freeformDraft, vscodeApi, flushPalettePersist]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
@@ -603,13 +515,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                     />
                                 </Tooltip>
                                 <Tooltip
-                                    content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
+                                    content={isAlreadyApproved ? 'Plan already approved' : hasMissingFramework ? 'Enter a custom framework or select Azure Functions' : 'Approve the plan and continue with Copilot'}
                                     relationship='label'
                                 >
                                     <Button
                                         appearance='primary'
                                         icon={<CheckmarkRegular />}
-                                        disabled={isAwaitingRevision || isAlreadyApproved}
+                                        disabled={isAwaitingRevision || isAlreadyApproved || hasMissingFramework}
                                         onClick={handleApprove}
                                     >
                                         Approve Plan
@@ -669,6 +581,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                     onAddNote={handleAddNote}
                     onRemoveItem={handleRemoveFeedback}
                     onSubmit={handleSubmitFeedback}
+                    canSubmit={!hasMissingFramework}
                     onDiscardAll={handleDiscardAll}
                     onClose={() => { setFreeformDraft(''); setDrawerOpen(false); }}
                 />
@@ -691,11 +604,12 @@ interface FeedbackDrawerProps {
     onAddNote: () => void;
     onRemoveItem: (id: string) => void;
     onSubmit: () => void;
+    canSubmit: boolean;
     onDiscardAll: () => void;
     onClose: () => void;
 }
 
-const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onRemoveItem, onSubmit, onDiscardAll, onClose }: FeedbackDrawerProps): JSX.Element => {
+const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onRemoveItem, onSubmit, canSubmit, onDiscardAll, onClose }: FeedbackDrawerProps): JSX.Element => {
     const hasAny = items.length > 0 || freeformDraft.trim().length > 0;
     const freeformRef = useRef<HTMLTextAreaElement>(null);
 
@@ -783,7 +697,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                 <Button
                     appearance='primary'
                     icon={<SendRegular />}
-                    disabled={!hasAny}
+                    disabled={!hasAny || !canSubmit}
                     onClick={onSubmit}
                 >
                     Submit
@@ -1215,14 +1129,21 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                             // supported set is picked (e.g. Bun runtime, yarn,
                                             // Next.js). Informational only — doesn't block.
                                             const supportedSet = ci > 0 && componentName ? fullySupportedOptions[componentName] : undefined;
-                                            const showSupportWarning = ci > 0 && !!cell && (
-                                                serviceKind === 'backend' && (componentName === 'Framework' || componentName === 'Backend')
+                                            const showSupportWarning = ci > 0 && !!cell.trim() && (
+                                                componentName !== undefined && isBackendFrameworkField(componentName, serviceKind)
                                                     ? !isAzureFunctionsFramework(cell)
                                                     : supportedSet !== undefined && !supportedSet.has(cell.trim())
                                             );
                                             return (
                                                 <td key={ci} className={isEdited ? 'editedCell' : undefined}>
-                                                    {options ? (
+                                                    {componentName && isBackendFrameworkField(componentName, serviceKind) && ci > 0 ? (
+                                                        <BackendFrameworkField
+                                                            value={cell}
+                                                            disabled={disabled}
+                                                            edited={isEdited}
+                                                            onChange={value => onTableCellChange(sectionIdx, contentIdx, ri, ci, value)}
+                                                        />
+                                                    ) : options ? (
                                                         <select
                                                             className={`cellDropdown ${isEdited ? 'edited' : ''}`}
                                                             value={cell}
@@ -1236,7 +1157,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                                     {showSupportWarning && (
                                                         <span className='supportWarning'>
                                                             <WarningRegular />
-                                                            {cell} isn't officially supported — scaffolding may be incomplete.
+                                                            {cell} isn't officially supported - scaffolding may be incomplete.
                                                         </span>
                                                     )}
                                                 </td>

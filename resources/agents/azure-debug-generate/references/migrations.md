@@ -23,7 +23,7 @@ Plan Migrations table provides `Generate | Service | Migration Tool`. Before doc
 
 | Detection Evidence | Instruction |
 |--------------------|-------------|
-| Existing migration script in project (e.g., `npm run db:migrate`) | Use unchanged in docker-compose service |
+| Existing migration script in project (e.g., `npm run db:migrate`) | Reuse the existing migration script, adapting its invocation to the container environment |
 | Migration tool detected but no script | Add native-runner script wrapping tool CLI (e.g., `"db:migrate": "npx prisma migrate deploy"` in `package.json`) |
 | Raw SQL only, no migration tool | Recommend/install lightweight dev dependency (e.g., `node-pg-migrate` for Node.js). Ask before install. |
 
@@ -73,7 +73,7 @@ services:
 |-----------|-------|-------------------|-------|
 | Node.js / TypeScript | `node:{major}-slim` | `./node_modules:/app/node_modules:ro` | Mount node_modules separately for native modules |
 | .NET | `mcr.microsoft.com/dotnet/sdk:{version}` | — | Best-effort — emit limited support warning |
-| Python | `python:{version}-slim` | `./.venv:/app/.venv:ro` (if applicable) | Best-effort — emit limited support warning |
+| Python | `python:{major.minor}-slim` matching the service | None | Restore Linux-native requirements and run the Python migration tool inside the container; never mount a macOS/Windows host venv |
 | Java | `eclipse-temurin:{version}` | — | Best-effort — emit limited support warning |
 | Go | `golang:{version}` | — | Best-effort — emit limited support warning |
 
@@ -82,3 +82,11 @@ services:
 > - `volumes` with `:ro` — read-only project mounts
 > - `restart: "no"` — once per `docker compose up`; no restart after exit
 > - Mount ecosystem dependency directories when migration tool is project dependency
+
+### Python migration services
+
+Resolve the actual service working directory and migration command (`python -m alembic upgrade head` or an existing Python runner). Use the service's detected Python major/minor for the image, not the literal `requires-python` constraint.
+
+Install production requirements plus the manifest/group containing migration tooling **inside the Linux container**, using that container's interpreter. A temporary container venv (e.g. `/tmp/migration-venv`) can keep the read-only source mount unchanged. Never execute or mount the host `.venv`: its interpreter, paths, and binary wheels may be incompatible with the container.
+
+For a pip/Alembic project, the container command creates that temporary venv, restores the existing requirements files, then runs its interpreter with `-m alembic upgrade head` from the service root. Include `requirements-dev.txt` only if present/needed; preserve native Poetry/uv workflows when selected. The connection env var uses the database compose service hostname and internal port, not the host's `localhost` URL. Retain the database healthcheck, one-shot exit-code validation, read-only source mount, and `restart: "no"`. Do not create seed data.

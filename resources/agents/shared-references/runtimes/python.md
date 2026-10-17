@@ -1,6 +1,8 @@
 # Python Runtime Reference
 
-> Azure Functions v2 model, Python. pytest, Pydantic validation, structlog, DI patterns.
+> Azure Functions v4 host with the Python v2 programming model. CPython, pytest, Pydantic validation, structlog, DI patterns.
+
+Functions setup, manifests, handlers, and health-route examples below apply only to a service whose approved framework is Azure Functions. For a custom Python API, preserve its actual framework and reuse the environment, dependency, contract, and resilience conventions without introducing Functions files or its SDK.
 
 ---
 
@@ -10,9 +12,33 @@
 
 ```bash
 func init services/functions --python --model V2
-cd services/functions
-pip install -r requirements.txt
 ```
+
+Use the actual service directory from the plan. Before restoring dependencies, select a compatible interpreter per [prerequisites.md](../prerequisites.md). Run subsequent commands with that service as `cwd`:
+
+```text
+<selected-python> -m venv .venv
+<venv-python> -m pip install -r requirements.txt
+<venv-python> -m pip check
+```
+
+`<venv-python>` is `.venv/bin/python` on macOS/Linux or `.venv/Scripts/python.exe` on Windows, relative to the service. Reuse an existing compatible venv; do not recreate it with whichever `python3` happens to be on PATH. Use this interpreter for every install, compile check, test, and migration. A standalone Python API does not require Node.js.
+
+Keep `host.json`, `function_app.py`, `requirements.txt`, and every imported application package inside the Functions service root. Add `__init__.py` to application packages. Never repair missing sibling imports by mutating `sys.path` or depending on the workspace root as `PYTHONPATH`.
+
+### Dependency manifests
+
+Always emit service-root `requirements.txt` containing **all production imports**, including `azure-functions`, validation/logging libraries, and the chosen SDKs/drivers. Keep it consistent with `pyproject.toml`; an optional Python project manifest is not a substitute for the Functions requirements file. For Poetry/uv projects, use their native restore/export workflow and the same environment that the host will run.
+
+Example core production requirements:
+
+```text
+azure-functions>=1.17.0
+pydantic>=2.0.0
+structlog>=23.0.0
+```
+
+Put lint, test, and migration-only tooling in `requirements-dev.txt` or the existing manager's dev group. Restore those separately when needed. The VS Code Functions task uses the extensions' debugger launcher; do not add `debugpy` to production requirements merely to make a terminal-only debug command work.
 
 ### host.json
 
@@ -49,7 +75,7 @@ pip install -r requirements.txt
     "REDIS_URL": "redis://localhost:6379"
   },
   "Host": {
-    "CORS": "*",
+    "CORS": "http://localhost:5173",
     "CORSCredentials": false
   }
 }
@@ -59,6 +85,10 @@ pip install -r requirements.txt
 > Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with matching discrete values from docker-compose's
 > workspace-root `.env`. Never leave placeholders or paste credentials from tool output: redaction
 > rewrites concrete credential URLs; masked values starting with `*` corrupt YAML/JSON config.
+
+Match `Host.CORS` to the frontend's actual origin and port. With cookie-based login, set `CORSCredentials` to `true` and use explicit origins; **never** combine credentialed CORS with `"*"`. A same-origin dev proxy can avoid cross-origin requests. Keep the frontend's eventual debug URL and dev-server port aligned.
+
+`UseDevelopmentStorage=true` requires Azurite's default development account and default ports. If the compose setup uses custom accounts or mapped ports, use explicit matching storage endpoints/account credentials for both the Functions host and storage client. Never configure custom `AZURITE_ACCOUNTS` while leaving default-account shorthand in the application.
 
 ### pyproject.toml
 
@@ -111,18 +141,22 @@ select = ["E", "F", "I", "N", "W"]
 # function_app.py
 import azure.functions as func
 from services.registry import initialize_services
+from functions.get_items import bp as get_items
+from functions.create_item import bp as create_item
+from functions.get_item_by_id import bp as get_item_by_id
+from functions.health import bp as health
 
 # Initialize services on cold start
 initialize_services()
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-
-# Import function handlers — they register themselves via decorators
-import functions.get_items      # noqa: F401
-import functions.create_item    # noqa: F401
-import functions.get_item_by_id # noqa: F401
-import functions.health         # noqa: F401
+app.register_functions(get_items)
+app.register_functions(create_item)
+app.register_functions(get_item_by_id)
+app.register_functions(health)
 ```
+
+Use one Blueprint per handler module and register every Blueprint explicitly in `function_app.py`. Handlers must never import `app` from `function_app`: that creates circular registration/imports. Match the registered route inventory to the plan. With the default Functions HTTP prefix, write `route="items"`, not `route="api/items"`; the host adds `/api`.
 
 ### HTTP Function (v2 Model)
 
@@ -132,9 +166,9 @@ import azure.functions as func
 import json
 from services.registry import get_services
 from errors.error_handler import handle_error
-from function_app import app
+bp = func.Blueprint()
 
-@app.route(route="items", methods=["GET"])
+@bp.route(route="items", methods=["GET"])
 async def get_items(req: func.HttpRequest) -> func.HttpResponse:
     try:
         services = get_services()
@@ -163,9 +197,9 @@ from datetime import datetime, timezone
 from services.registry import get_services
 from errors.error_handler import handle_error
 from shared.validation import CreateItemRequest
-from function_app import app
+bp = func.Blueprint()
 
-@app.route(route="items", methods=["POST"])
+@bp.route(route="items", methods=["POST"])
 async def create_item(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # Validate input
@@ -202,9 +236,9 @@ import json
 from services.registry import get_services
 from errors.error_handler import handle_error
 from errors.error_types import NotFoundError
-from function_app import app
+bp = func.Blueprint()
 
-@app.route(route="items/{id}", methods=["GET"])
+@bp.route(route="items/{id}", methods=["GET"])
 async def get_item_by_id(req: func.HttpRequest) -> func.HttpResponse:
     try:
         services = get_services()
@@ -230,9 +264,11 @@ async def get_item_by_id(req: func.HttpRequest) -> func.HttpResponse:
 import azure.functions as func
 import json
 from services.registry import get_services
-from function_app import app
+from logger import get_logger
+bp = func.Blueprint()
+logger = get_logger("health")
 
-@app.route(route="health", methods=["GET"])
+@bp.route(route="health", methods=["GET"])
 async def health(req: func.HttpRequest) -> func.HttpResponse:
     services = get_services()
     checks = {}
@@ -240,28 +276,50 @@ async def health(req: func.HttpRequest) -> func.HttpResponse:
     try:
         checks["database"] = await services.database.health_check()
     except Exception:
+        logger.exception("health_check_failed", service="database")
         checks["database"] = False
 
     try:
         checks["storage"] = await services.storage.health_check()
     except Exception:
+        logger.exception("health_check_failed", service="storage")
         checks["storage"] = False
 
     try:
         checks["cache"] = await services.cache.health_check()
     except Exception:
+        logger.exception("health_check_failed", service="cache")
         checks["cache"] = False
 
     all_healthy = all(checks.values())
-    any_healthy = any(checks.values())
-    status = "healthy" if all_healthy else ("degraded" if any_healthy else "unhealthy")
+    essential_healthy = checks["database"] and checks["storage"]
+    status = "healthy" if all_healthy else ("degraded" if essential_healthy else "unhealthy")
 
     return func.HttpResponse(
         json.dumps({"status": status, "services": checks}),
-        status_code=200 if all_healthy else 503,
+        status_code=503 if status == "unhealthy" else 200,
         mimetype="application/json",
     )
 ```
+
+Adapt health checks to the services actually present and their plan classifications. This example treats database/storage as Essential and cache as Enhancement: an Enhancement failure is degraded `200`; an Essential failure is unhealthy `503`. Log probe failures without exposing credentials.
+
+---
+
+## Python Build and Handoff Gates
+
+Run from the service root using its selected venv:
+
+```text
+<venv-python> -m pip check
+<venv-python> -m compileall -q function_app.py functions services errors middleware shared logger.py
+```
+
+Replace the source list with the actual generated files/directories. Never run bare `python -m py_compile` without filenames, compile the venv/dependency tree, or invent npm/`tsc`/`dist` gates for a Python service. Use the project's configured Ruff command when linting is present.
+
+Scaffold owns syntax, dependency, and manifest checks. Integration owns starting the host with this venv active, verifying every Blueprint registers, applying migrations with `<venv-python> -m alembic`, and probing real endpoints. Record the interpreter version/path, venv path, restore/compile/start commands, and HTTP contract location in `.azure/integration-plan.md`.
+
+For Python backend + JS/TS frontend, keep Python models service-local and use OpenAPI/JSON Schema as the cross-language contract. Generate or validate typed frontend request/response contracts from it, including date serialization, nullability, enum values, and error shapes. Never import Python modules into the frontend or treat the backend as an npm workspace.
 
 ---
 
@@ -567,10 +625,12 @@ class HealthResponse(BaseModel):
 | Service | Package |
 |---------|---------|
 | Blob Storage | `azure-storage-blob` |
-| PostgreSQL | `psycopg2-binary` |
+| PostgreSQL | `psycopg[binary,pool]` or the existing compatible driver |
 | CosmosDB | `azure-cosmos` |
 | Redis | `redis` |
 | Migrations | `alembic`, `sqlalchemy` |
+
+For async service methods use an async-capable driver (`psycopg` async connections or `asyncpg`) and matching SQLAlchemy configuration. Never `await` synchronous `psycopg2` calls or block the Functions event loop with synchronous database I/O.
 
 ### Dev Dependencies
 

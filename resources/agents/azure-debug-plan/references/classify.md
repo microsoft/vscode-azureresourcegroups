@@ -3,7 +3,7 @@
 Determine each workspace service root's project type and runtime. Produce service-context array; single-service workspaces still produce one item for uniform flow.
 
 > **Always scan full directory tree**, not only workspace root. Find nested service roots (e.g. `./api/`, `./web/`) regardless of layout.
-> Ignore: `node_modules/`, `.git/`, `dist/`, `build/`, `bin/`, `obj/`.
+> Ignore: `node_modules/`, `.git/`, `dist/`, `build/`, `bin/`, `obj/`, `.venv/`, `venv/`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/`. Installed Python dependency trees are never service roots.
 
 ### ⚠️ Exclude Non-Service Directories
 

@@ -366,6 +366,31 @@
         }
     }
 
+    .backendFrameworkField {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .customFrameworkInput {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 4px 6px;
+        font: inherit;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 3px;
+
+        &:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+        }
+    }
+
+    .frameworkInputError {
+        color: var(--vscode-errorForeground);
+    }
+
     // Wraps section tables that contain dropdowns so the table can grow to fit
     // its widest column and scroll horizontally instead of clipping cells.
     .planTableWrapper {

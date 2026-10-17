@@ -59,7 +59,7 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 
 ---
 
-## 2. Backend — Azure Functions
+## 2. Backend - {Azure Functions or confirmed custom framework}
 
 > One **stack section per service** — emit a `## N. <Service> — <role>` heading and a single combined table for the backend, a frontend section when the app has a UI, and extra sections for any worker services. The plan view turns every section that has a **Language** row into an editable, language-aware stack card, so each service picks its own language independently. Renumber the sections that follow to match the services you emit.
 
@@ -67,13 +67,16 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 |-----------|-----------|
 | **Language** | {TypeScript / Python / C#} |
 | **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
+| **Framework** | {Azure Functions or this service's confirmed custom framework answer} |
 | **Package Manager** | {npm / pnpm / pip / poetry / dotnet (NuGet)} |
 | **Test Runner** | {vitest / jest / pytest / xUnit} |
 | **Mocking Library** | {vi.mock / jest.mock / sinon / unittest.mock / **NSubstitute** (.NET — never Moq, see runtimes/dotnet.md)} |
-| **Test Command** | {npm test / pytest / dotnet test} |
+| **Test Command** | {npm test / <venv-python> -m pytest / dotnet test} |
 | **Orchestration** | docker-compose |
 
 > **Language vs Runtime**: `Language` is the source language the user picked in this service's `language` question. `Runtime` is the execution runtime — default `Node` for TypeScript/JavaScript, `CPython` for Python, `.NET` for C#. Only deviate from the default (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (e.g. C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`). The `Orchestration` row is recorded for the scaffold step but hidden in the plan UI — always keep it set to `docker-compose`.
+
+> **API framework selection:** copy the service's framework answer into the Framework row and section title. Azure Functions is the only suggested API framework for every language; the plan view also provides a custom field. Preserve explicit custom frameworks, including during language edits, and keep their best-effort warning separate from language support. Do not emit a limited-support warning for Python on Azure Functions.
 
 ---
 
@@ -108,6 +111,8 @@ Identify the required tools, then inventory them by following [prerequisites.md]
 The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md): Run tools are needed to run the project; Debug tools (Docker, Docker Compose, VS Code extensions) are the local-debugging extras.
 
 The Debug group must include a row for every detected project type's VS Code debug-integration extension from the prerequisites.md Debug Tools table (e.g. an Azure Functions service always adds `ms-azuretools.vscode-azurefunctions`). These extension rows are required and separate from the Run-group CLI/runtime tools — do not omit them just because a related Run tool (like Functions Core Tools) is already listed.
+
+Apply the selected runtime's compatibility and extension requirements from prerequisites.md. For a new service, record the compatible base interpreter; do not report a scaffold-created environment as already installed.
 
 For each tool, record which planned service(s) need it in the `Service(s)` column (use `*` for global toolchain shared by all services, or list each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
 
