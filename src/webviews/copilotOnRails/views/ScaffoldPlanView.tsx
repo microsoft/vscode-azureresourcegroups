@@ -15,7 +15,7 @@ import './styles/scaffoldPlanView.scss';
 import { getServiceStackKind, isAzureFunctionsFramework, normalizeScaffoldPlanComponent, type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type ServiceStackKind, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
-import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, isServiceStackSection, languageDependentFields, optionsForField } from './utils/serviceStackOptions';
+import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, isServiceStackSection, languageDependentFields, matchServiceStackOption, optionsForField } from './utils/serviceStackOptions';
 
 // Options that are officially supported. Anything else is offered as a
 // convenience but flagged with a soft "not officially supported" warning.
@@ -265,6 +265,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const currentCellValue = content.rows[rowIdx][colIdx];
         const field = content.rows[rowIdx][0];
         const original = originalCellValues.current.get(key) ?? currentCellValue;
+        const component = normalizeScaffoldPlanComponent(field);
+        const serviceKind = plan ? getServiceStackKind(plan.sections[sectionIdx]) : 'unknown';
+        if (component && !isBackendFrameworkField(component, serviceKind) && matchServiceStackOption(original, [value]) === value) {
+            value = original;
+        }
         if (!originalCellValues.current.has(key)) {
             originalCellValues.current.set(key, currentCellValue);
         }
@@ -304,7 +309,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 },
             ];
         });
-    }, [mutateCell]);
+    }, [mutateCell, plan]);
 
     const handleTableCellChange = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         if (!plan) {
@@ -332,7 +337,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 }
                 const validOptions = optionsForField(component, value, serviceKind) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
-                if (validOptions.length > 0 && !validOptions.includes(currentValue)) {
+                if (validOptions.length > 0 && !matchServiceStackOption(currentValue, validOptions)) {
                     applyCellChange(content, sectionIdx, contentIdx, depRowIdx, colIdx, validOptions[0]);
                 }
             }
@@ -1124,6 +1129,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                             const options = ci > 0 && componentName
                                                 ? optionsForField(componentName, language, serviceKind)
                                                 : undefined;
+                                            const optionValue = options ? matchServiceStackOption(cell, options) ?? cell : cell;
                                             const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
                                             // Soft warning when an option outside the officially
                                             // supported set is picked (e.g. Bun runtime, yarn,
@@ -1132,7 +1138,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                             const showSupportWarning = ci > 0 && !!cell.trim() && (
                                                 componentName !== undefined && isBackendFrameworkField(componentName, serviceKind)
                                                     ? !isAzureFunctionsFramework(cell)
-                                                    : supportedSet !== undefined && !supportedSet.has(cell.trim())
+                                                    : supportedSet !== undefined && !supportedSet.has(optionValue.trim())
                                             );
                                             return (
                                                 <td key={ci} className={isEdited ? 'editedCell' : undefined}>
@@ -1146,11 +1152,11 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                                     ) : options ? (
                                                         <select
                                                             className={`cellDropdown ${isEdited ? 'edited' : ''}`}
-                                                            value={cell}
+                                                            value={optionValue}
                                                             disabled={disabled}
                                                             onChange={(e) => onTableCellChange(sectionIdx, contentIdx, ri, ci, e.target.value)}
                                                         >
-                                                            {!options.includes(cell) && <option value={cell}>{cell}</option>}
+                                                            {!options.includes(optionValue) && <option value={cell}>{cell}</option>}
                                                             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                                         </select>
                                                     ) : cell}

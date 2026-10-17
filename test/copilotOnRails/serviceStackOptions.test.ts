@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import { parseScaffoldPlanMarkdown } from '../../src/webviews/copilotOnRails/views/utils/parseScaffoldPlanMarkdown';
-import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, languageDependentFields, optionsForField } from '../../src/webviews/copilotOnRails/views/utils/serviceStackOptions';
+import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, languageDependentFields, matchServiceStackOption, optionsForField } from '../../src/webviews/copilotOnRails/views/utils/serviceStackOptions';
 
 suite('serviceStackOptions', () => {
     test('offers only Azure Functions for APIs regardless of language', () => {
@@ -27,6 +27,31 @@ suite('serviceStackOptions', () => {
     test('excludes backend frameworks from the language-change cascade', () => {
         assert.ok(!languageDependentFields.filter(field => !isBackendFrameworkField(field, 'backend')).includes('Framework'));
         assert.ok(languageDependentFields.filter(field => !isBackendFrameworkField(field, 'frontend')).includes('Framework'));
+    });
+
+    test('matches versioned service tooling to the existing dropdown choice', () => {
+        for (const [field, language, value, expected] of [
+            ['Runtime', 'Python', 'CPython 3.12', 'CPython'],
+            ['Runtime', 'Python', '  cpython v3.12.7  ', 'CPython'],
+            ['Runtime', 'TypeScript', 'Node 22 LTS', 'Node'],
+            ['Runtime', 'C# (.NET)', '.NET 8.0', '.NET'],
+            ['Package Manager', 'Python', 'pip 24.3.1', 'pip'],
+            ['Test Runner', 'Python', 'pytest 8.x', 'pytest'],
+        ] as const) {
+            const options = optionsForField(field, language, 'backend');
+            assert.ok(options);
+            assert.strictEqual(matchServiceStackOption(value, options), expected);
+        }
+    });
+
+    test('preserves unknown and incompatible runtime values instead of matching prefixes', () => {
+        const options = optionsForField('Runtime', 'Python', 'backend');
+        assert.ok(options);
+        for (const value of [undefined, '', 'CPython experimental', 'CPython 3.12 with extensions', 'CPythonista', 'Node 22', '<script>CPython 3.12</script>']) {
+            assert.strictEqual(matchServiceStackOption(value, options), undefined);
+        }
+        assert.strictEqual(matchServiceStackOption('CPython', options), 'CPython');
+        assert.strictEqual(matchServiceStackOption('PyPy 3.10', options), 'PyPy');
     });
 
     test('does not flag Python as a limited-support language', () => {

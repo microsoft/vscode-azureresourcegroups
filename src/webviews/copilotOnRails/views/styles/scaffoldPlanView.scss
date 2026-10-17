@@ -6,7 +6,7 @@
 @use './disabledButton';
 @use './fluentTooltipPortal';
 @use './installedChip' as installedChipStyles;
-@import './uiPreviewCard.scss';
+@use './uiPreviewCard';
 
 .fui-DialogSurface {
     background-color: var(--vscode-editorWidget-background) !important;
