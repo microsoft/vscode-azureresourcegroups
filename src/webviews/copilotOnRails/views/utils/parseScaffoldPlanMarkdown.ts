@@ -245,7 +245,11 @@ function parseTable(lines: string[], startIndex: number): { content: ScaffoldPla
 
     const rows: string[][] = [];
     while (i < lines.length && lines[i].trim().startsWith('|')) {
-        rows.push(parseTableRow(lines[i]));
+        const row = parseTableRow(lines[i]);
+        while (row.length < headers.length) {
+            row.push('');
+        }
+        rows.push(row);
         i++;
     }
 

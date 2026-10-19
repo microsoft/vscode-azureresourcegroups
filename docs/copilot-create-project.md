@@ -186,15 +186,6 @@ per service (backend, frontend, worker) plus shared data-stores and **API Login*
 infer are pre‑selected; the rest are pre‑filled with a recommended choice. Review each one and click
 **Submit**.
 
-For APIs in every language, **Azure Functions** is the only suggested API framework. Use the custom field to
-enter another framework; explicitly requested or existing custom choices are preserved. Python with CPython
-on Azure Functions is supported through local debugging and no longer shows a language-level limited-support
-warning. Custom frameworks, unsupported runtimes, and unsupported emulators can still show their own warnings;
-the existing .NET workflow warning is unchanged.
-
-An ambiguous or nontext API framework answer needs review before submission; the form does not silently
-turn it into a confirmed Azure Functions choice.
-
 <p align="center">
   <img src="images/copilot-create-project/04-requirements-view.png" alt="Requirements view" />
 </p>
@@ -216,8 +207,9 @@ type feedback to revise it).
 Editable service-stack choices follow the service role and language. API/backend framework controls offer
 **Azure Functions** or **Custom framework**, with a text field for the custom name. Enter a nonempty name
 before approving or submitting changes. Custom framework choices survive language edits; runtime/package
-manager/test-runner choices still adjust to the service language. Frontend framework choices are unchanged.
-The view also recognizes minor component-label variations such as `Framework` and `Backend Framework`.
+manager/test-runner choices still adjust to the service language. The view recognizes component-label
+variations such as `Framework` and `Backend Framework` and shows an editable field even when the value cell
+is missing from the plan.
 
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link

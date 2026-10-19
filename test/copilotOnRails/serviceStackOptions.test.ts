@@ -73,12 +73,44 @@ suite('serviceStackOptions', () => {
         }
     });
 
-    test('supports legacy Backend Framework labels and incomplete value cells', () => {
-        const plan = stackPlan('Backend', '');
+    test('allows repairing one-cell backend framework rows before approval', () => {
+        for (const label of ['Framework', 'Backend Framework', 'Backend']) {
+            for (const framework of ['Azure Functions', 'FastAPI']) {
+                const parsed = parseScaffoldPlanMarkdown([
+                    '# Project Plan',
+                    '## 2. Backend - App',
+                    '| Component | Technology |',
+                    '| --- | --- |',
+                    '| Language | Python |',
+                    `| ${label} |`,
+                ].join('\n'));
+                const table = parsed.sections[0].content.find(content => content.type === 'table');
+                assert.ok(table?.type === 'table');
+                assert.strictEqual(hasMissingBackendFramework(parsed), true);
+                assert.deepStrictEqual(table.rows[1], [label, '']);
+
+                table.rows[1][1] = framework;
+                assert.strictEqual(hasMissingBackendFramework(parsed), false);
+            }
+        }
+    });
+
+    test('preserves existing cells while filling missing framework columns', () => {
+        const plan = parseScaffoldPlanMarkdown([
+            '# Project Plan',
+            '## 2. Backend - APIs',
+            '| Component | API 1 | API 2 |',
+            '| --- | --- | --- |',
+            '| Language | Python | TypeScript |',
+            '| Framework | FastAPI |',
+        ].join('\n'));
         const table = plan.sections[0].content.find(content => content.type === 'table');
         assert.ok(table?.type === 'table');
-        table.rows[1] = ['Backend Framework'];
+        assert.deepStrictEqual(table.rows[1], ['Framework', 'FastAPI', '']);
         assert.strictEqual(hasMissingBackendFramework(plan), true);
+
+        table.rows[1][2] = 'Azure Functions';
+        assert.strictEqual(hasMissingBackendFramework(plan), false);
     });
 
     test('does not block approval on noneditable overview or unrelated framework rows', () => {
