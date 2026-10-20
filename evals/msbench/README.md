@@ -14,7 +14,7 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-**Fifty-five** stimuli cover all six custom agents plus infrastructure probes, with one
+**Fifty-six** stimuli cover all six custom agents plus infrastructure probes, with one
 config per stimulus in [`config/stimuli/`](config/stimuli). The Vally specs stay the
 source of truth for the scenarios they define —
 [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) and
@@ -505,6 +505,12 @@ concatenates rather than replaces, so our VSIX installs alongside `github.copilo
 The agent definition is unpacked from the VSIX itself rather than cloned from GitHub,
 so the instructions always match the build under test. Cloning a branch would let the
 two drift and silently grade the wrong version of the prompt.
+
+The Run Analysis **Tool usage** table lists tools that were invoked, not everything the
+extension registered. A refusal stimulus should therefore look sparse. To confirm tool
+availability, inspect `trajectory.json` or `final-agent-config.json`; to confirm actual
+use, inspect `session.sqlite.toolCalls`. Scheduled runs are tagged with the real stimulus
+because the borrowed benchmark name alone cannot communicate that distinction.
 
 ## Timeouts
 
@@ -2590,31 +2596,61 @@ cache every 30 seconds for up to 15 minutes. A fresh cache is load-bearing:
 `msbench-cli` treats any readable cached ZIP as complete, including a metadata-only one.
 `MSBENCH_RESULTS_WAIT_SECONDS` and `MSBENCH_RESULTS_POLL_SECONDS` tune the wait.
 
-**The scheduled workload is the known-green `scaffold-unapproved-plan` canary on the
-default model, daily at 09:00 UTC** (02:00 Pacific during daylight time, 01:00 during
-standard time). Paid jobs share a non-cancelling concurrency group so a manual run and
-the schedule cannot overlap. PR execution remains intentionally excluded. Local runs
-need none of the GitHub OIDC setup — `az login` plus the MSBench runner entitlement is
-enough, which is why that path landed first.
+**The daily workload is the positive `launch-report-debug-plan` custom-tool canary on
+the default model, at 09:00 UTC** (02:00 Pacific during daylight time, 01:00 during
+standard time). Unlike the old refusal canary, its green result visibly requires our
+VSIX, custom agent and `report_agent_launch` MCP tool to load.
+
+**A weekly core matrix runs Sunday at 10:00 UTC.** It covers seven representative
+workflow stimuli on both model families (14 paid runs), sequentially:
+
+- `plan-feedback-recipe-app`
+- `scaffold-fullstack`
+- `scaffold-api-only`
+- `integrate-seam`
+- `debug-generate-artifacts`
+- `debug-generate-deploy-handoff`
+- `deploy-scaffold-iac`
+
+Paid jobs share a non-cancelling concurrency group so manual and scheduled runs cannot
+overlap. PR execution remains intentionally excluded. Local runs need none of the
+GitHub OIDC setup — `az login` plus the MSBench runner entitlement is enough.
 
 ### The first `main` CI run should be one whose answer we already know
 
-`workflow_dispatch` takes `stimulus` and `model` inputs. The stimulus defaults to
-**`scaffold-unapproved-plan`** rather than to `run.sh`'s own default of
-`photo-app-requirements`; the model choices are the two exact ids in `models.ts`,
-`gpt-5.6-sol` and `claude-sonnet-5`.
+`workflow_dispatch` first asks for a paid workload:
 
-That is deliberate, and it is about what a red result would *mean*. The first dispatches
-are testing the pipeline — federated auth, the feed token, VSIX staging, grader staging,
-config generation, submission, artifact upload — not the product. `scaffold-unapproved-plan`
-is the cheapest merged stimulus (a refusal that ends after two tool calls) **and** its
-answer is already established locally at 6/6 green. So a red is unambiguous: CI is
-broken. Against an unknown-answer stimulus a red cannot distinguish "CI is misconfigured"
-from "the product changed", which is the one distinction the exercise exists to make.
+| Suite | Runs | Purpose |
+| --- | ---: | --- |
+| `single` | 1 | One selected stimulus and model. |
+| `weekly-core` | 14 | The scheduled representative matrix on GPT and Claude. |
+| `full` | 112 | Every checked-in stimulus on both models. Manual only because of cost and duration. |
+
+The single-run stimulus defaults to **`launch-report-debug-plan`**. The model choices
+are the two exact ids in `models.ts`, `gpt-5.6-sol` and `claude-sonnet-5`.
+
+That default is deliberate: it is cheap, its answer is established, and it positively
+calls a registered Copilot on Rails MCP tool. A red can therefore distinguish a broken
+VSIX/custom-tool pipeline from the sparse-but-correct tool list produced by a refusal
+stimulus.
 
 Pass any other stimulus once the pipeline is proven on `main`. `STIMULUS` is read from
 the environment by `run.sh` exactly as `BENCHMARK` is, so `--stimulus` still wins
 locally.
+
+Every submitted run is tagged with:
+
+```text
+suite=copilot-on-rails
+stimulus=<stimulus>        # or stack=<stack> + phase=<phase>
+source_repo=<owner/repo>
+source_sha=<commit>
+endpoint=copilot-on-rails
+```
+
+These tags make the borrowed `vscbench.say_hello` container distinguishable from the
+actual Copilot on Rails stimulus in Run Analysis and Kusto. GitHub Actions also writes
+the suite, stimulus, model, resolution and Run Analysis link into the job summary.
 
 ## Troubleshooting
 

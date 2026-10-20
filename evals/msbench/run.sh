@@ -521,6 +521,18 @@ sed -n '/^promptSteps:/,/assertions:/p' "${ASSETS}/user-overrides.yaml" \
     | sed -n '2,4p' | sed 's/^/    | /'
 echo
 
+RUN_TAGS=(
+    --tag "endpoint=${QUEUE_ENDPOINT_TAG}"
+    --tag "suite=copilot-on-rails"
+    --tag "source_repo=${GITHUB_REPOSITORY:-microsoft/vscode-azureresourcegroups}"
+    --tag "source_sha=${GITHUB_SHA:-local}"
+)
+if [ -n "$STACK" ]; then
+    RUN_TAGS+=(--tag "stack=${STACK}" --tag "phase=${PHASE:-plan}")
+else
+    RUN_TAGS+=(--tag "stimulus=${STIMULUS}")
+fi
+
 # The XXXXXX suffix is required, not decorative. BSD mktemp (macOS) accepts a bare
 # `-t PREFIX` and appends its own randomness; GNU mktemp (Linux) treats the whole
 # argument as a template and fails with "too few X's in template" unless it ends in
@@ -538,7 +550,7 @@ set +e
     --agent-assets "$ASSETS" \
     --smoke_mode "$SMOKE_MODE" \
     ${PASSTHRU[@]+"${PASSTHRU[@]}"} \
-    --tag "endpoint=${QUEUE_ENDPOINT_TAG}" 2>&1 | tee "$RUN_LOG"
+    "${RUN_TAGS[@]}" 2>&1 | tee "$RUN_LOG"
 CLI_STATUS=${PIPESTATUS[0]}
 set -e
 

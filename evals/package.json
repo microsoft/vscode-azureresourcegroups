@@ -25,7 +25,9 @@
         "seed:check": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --check",
     "seed:contract": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/check-seed-contract.ts",
         "seed:self-test": "node --disable-warning=ExperimentalWarning msbench/harvest-seed.ts --self-test",
-        "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
+    "suite:matrix": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/build-suite-matrix.ts",
+    "suite:matrix:self-test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON msbench/build-suite-matrix.ts --self-test",
+    "gate-health": "node --disable-warning=ExperimentalWarning msbench/gate-health.ts",
         "ci:local": "node ci-local.ts",
         "msbench:self-test": "node msbench/verify-run.ts --self-test"
     },
