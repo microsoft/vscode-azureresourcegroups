@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { azureDebugGenerateAgent, azureDebugPlanAgent, azureDeployAgent, azureProjectIntegrateAgent, azureProjectPlanAgent, azureProjectScaffoldAgent } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEBUG_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { beginCorPhase, completeCorPhase, type CorWorkflowEntryPoint, type CorWorkflowPhase, resumeCorWorkflow } from '../../../utils/copilotOnRails/workflowContext';
 
 /**
  * Single, extension-owned source of truth for where the user is in the
@@ -28,12 +29,7 @@ import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEBUG_PLAN_FILE_GLOB, INTEGRATION
  */
 
 /** Phases of the create-with-copilot flow, in order. */
-export type ProjectPhase =
-    | 'plan'
-    | 'scaffold'
-    | 'integrate'
-    | 'debug'
-    | 'deploy';
+export type ProjectPhase = CorWorkflowPhase;
 
 /** The persisted session record. Stored under a single `workspaceState` key. */
 export interface CopilotSessionState {
@@ -130,7 +126,7 @@ async function writeSessionState(state: CopilotSessionState | undefined): Promis
  * of forward progress: called from every place that starts a phase agent, so an
  * interrupted run can later be resumed from the correct phase.
  */
-export async function recordPhase(phase: ProjectPhase): Promise<void> {
+export async function recordPhase(phase: ProjectPhase, entryPoint: CorWorkflowEntryPoint = 'phaseHandoff'): Promise<void> {
     sessionActiveInWindow = true;
     const prev = readSessionState();
     await writeSessionState({
@@ -139,6 +135,7 @@ export async function recordPhase(phase: ProjectPhase): Promise<void> {
         contextRefs: PHASE_CONFIG[phase].contextRefs,
         model: prev?.model,
     });
+    await beginCorPhase(phase, entryPoint);
 }
 
 /** Stores the user's model selection into the session so it persists across phases. */
@@ -158,10 +155,10 @@ export function getSessionModel(): string | undefined {
 }
 
 /** Records a phase launch given the chat agent name. No-op for unknown agents. */
-export async function recordAgentLaunch(agentName: string): Promise<void> {
+export async function recordAgentLaunch(agentName: string, entryPoint: CorWorkflowEntryPoint = 'phaseHandoff'): Promise<void> {
     const phase = AGENT_PHASE[agentName];
     if (phase) {
-        await recordPhase(phase);
+        await recordPhase(phase, entryPoint);
     }
 }
 
@@ -210,6 +207,11 @@ export async function handleTrackedViewClosed(): Promise<void> {
     if (suppressNextTrackedViewClose) {
         suppressNextTrackedViewClose = false;
         return;
+    }
+    const state = readSessionState();
+    if (state) {
+        await resumeCorWorkflow();
+        await completeCorPhase(state.phase, 'canceled', { cancelReason: 'trackedViewClosed' });
     }
     await clearSession();
 }

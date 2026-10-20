@@ -6,6 +6,8 @@
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { azureProjectFocusCommandId } from '../../../constants';
+import { corId, getCorProjectId, reportCorBackgroundEvent, restoreCorProjectId } from '../../../utils/copilotOnRails/telemetryUtils';
+import { type CorWorkflowHandoff, getCorWorkflowHandoff, parseCorWorkflowHandoff, restoreCorWorkflowHandoff } from '../../../utils/copilotOnRails/workflowContext';
 import { isJsonObject } from '../shared/jsonUtils';
 
 /**
@@ -28,9 +30,13 @@ export const PENDING_CREATE_SENTINEL_PATH = '.azure/.pending-create';
 
 const PENDING_CREATE_TIMEOUT_MS = 10 * 60 * 1000;
 
-interface PendingCreateMarker {
+export interface PendingCreateMarker {
     /** Epoch ms at which the marker was written. */
     createdAt: number;
+    /** Random project correlation id. Contains no user or Azure identity. */
+    projectId?: string;
+    /** Minimal workflow identity needed to continue in the new workspace. */
+    workflow?: CorWorkflowHandoff;
 }
 
 function sentinelUri(folder: vscode.Uri): vscode.Uri {
@@ -38,7 +44,11 @@ function sentinelUri(folder: vscode.Uri): vscode.Uri {
 }
 
 export async function writePendingCreateMarker(folder: vscode.Uri): Promise<void> {
-    const marker: PendingCreateMarker = { createdAt: Date.now() };
+    const marker: PendingCreateMarker = {
+        createdAt: Date.now(),
+        projectId: getCorProjectId(),
+        workflow: getCorWorkflowHandoff(),
+    };
     try {
         await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(folder, '.azure'));
         await vscode.workspace.fs.writeFile(sentinelUri(folder), Buffer.from(JSON.stringify(marker), 'utf-8'));
@@ -47,10 +57,10 @@ export async function writePendingCreateMarker(folder: vscode.Uri): Promise<void
     }
 }
 
-async function consumePendingCreateMarker(): Promise<boolean> {
+async function consumePendingCreateMarker(): Promise<PendingCreateMarker | undefined> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-        return false;
+        return undefined;
     }
 
     for (const folder of folders) {
@@ -64,23 +74,40 @@ async function consumePendingCreateMarker(): Promise<boolean> {
 
         await deleteMarkerAndEmptyAzureFolder(folder.uri, uri);
 
-        const createdAt = parseCreatedAt(raw);
-        if (createdAt !== undefined && Date.now() - createdAt <= PENDING_CREATE_TIMEOUT_MS) {
-            return true;
+        const marker = parsePendingCreateMarker(raw);
+        if (marker) {
+            return marker;
         }
     }
 
-    return false;
+    return undefined;
 }
 
-function parseCreatedAt(raw: Uint8Array): number | undefined {
+export function parsePendingCreateMarker(raw: Uint8Array, now: number = Date.now()): PendingCreateMarker | undefined {
     try {
         const parsed: unknown = JSON.parse(Buffer.from(raw).toString('utf-8'));
         if (!isJsonObject(parsed)) {
             return undefined;
         }
 
-        return typeof parsed.createdAt === 'number' && Number.isFinite(parsed.createdAt) ? parsed.createdAt : undefined;
+        if (typeof parsed.createdAt !== 'number'
+            || !Number.isFinite(parsed.createdAt)
+            || parsed.createdAt < 0
+            || parsed.createdAt > now + 60_000
+            || now - parsed.createdAt > PENDING_CREATE_TIMEOUT_MS) {
+            return undefined;
+        }
+
+        const projectId = typeof parsed.projectId === 'string'
+            && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parsed.projectId)
+            ? parsed.projectId
+            : undefined;
+        const workflow = parseCorWorkflowHandoff(parsed.workflow);
+        return {
+            createdAt: parsed.createdAt,
+            ...(projectId ? { projectId } : {}),
+            ...(workflow ? { workflow } : {}),
+        };
     } catch {
         return undefined;
     }
@@ -112,8 +139,17 @@ async function deleteMarkerAndEmptyAzureFolder(folder: vscode.Uri, marker: vscod
  * expired.
  */
 export async function resumePendingCreateWithCopilot(): Promise<void> {
-    if (await consumePendingCreateMarker()) {
-        await vscode.commands.executeCommand(azureProjectFocusCommandId);
-        await vscode.commands.executeCommand(copilotOnRailsCommandIds.createProjectWithCopilot);
+    const marker = await consumePendingCreateMarker();
+    if (!marker) {
+        return;
     }
+    if (marker.projectId) {
+        await restoreCorProjectId(marker.projectId);
+    }
+    if (marker.workflow) {
+        await restoreCorWorkflowHandoff(marker.workflow);
+    }
+    await reportCorBackgroundEvent(corId('folderHandoffResumed'), { handoffIdentityRestored: !!marker.workflow });
+    await vscode.commands.executeCommand(azureProjectFocusCommandId);
+    await vscode.commands.executeCommand(copilotOnRailsCommandIds.createProjectWithCopilot, 'folderHandoff');
 }

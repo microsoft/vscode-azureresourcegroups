@@ -63,7 +63,16 @@ function registerCopilotOnRailsCommand<A extends unknown[]>(
     command: (context: CopilotOnRailsContext, ...args: A) => unknown,
 ): void {
     registerCommand(commandId, (context: IActionContext, ...args: A) =>
-        callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionAction', name: commandId }, async (corContext) => await command(corContext, ...args)),
+        callWithDiagnosticsAndTelemetryHandling(
+            context,
+            {
+                type: 'extensionAction',
+                name: commandId,
+                ...(commandId === copilotOnRailsCommandIds.createProjectWithCopilot ? { entryPoint: 'createProject' as const } : {}),
+                ...(commandId === copilotOnRailsCommandIds.resumeProjectWithCopilot ? { entryPoint: 'resume' as const } : {}),
+            },
+            async (corContext) => await command(corContext, ...args),
+        ),
     );
 }
 

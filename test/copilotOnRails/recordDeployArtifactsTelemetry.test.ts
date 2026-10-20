@@ -48,6 +48,11 @@ suite('recordDeployArtifactsTelemetry', () => {
             const expected = {
                 'prereqOutput.parsedOk': true,
                 'prereqOutput.componentCount': 0,
+                'prereqOutput.componentArchitecture': '[]',
+                'prereqOutput.buildPassedCount': 0,
+                'prereqOutput.buildFailedCount': 0,
+                'prereqOutput.deployabilityPassedCount': 0,
+                'prereqOutput.deployabilityFailedCount': 0,
                 'deployResult.parsedOk': true,
                 'deployResult.status': 'failed',
                 'deployResult.partial': false,

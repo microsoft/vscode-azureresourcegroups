@@ -40,6 +40,7 @@ suite('deployResultTelemetryUtils', () => {
             unverifiedResourceCount: 0,
             inventoryUnverified: false,
             healingAttemptCount: 4,
+            createdResourceTypeCounts: 'microsoft.alertsmanagement/smartdetectoralertrules=1,microsoft.dbforpostgresql/flexibleservers=1,microsoft.insights/components=1,microsoft.managedidentity/userassignedidentities=1,microsoft.operationalinsights/workspaces=1,microsoft.storage/storageaccounts=1,microsoft.web/serverfarms=1,microsoft.web/sites=1,microsoft.web/staticsites=1',
         };
 
         assert.deepStrictEqual(telemetry, expected);
@@ -77,6 +78,25 @@ suite('deployResultTelemetryUtils', () => {
         };
 
         assert.deepStrictEqual(telemetry, expected);
+    });
+
+    test('aggregates created, failed and reused ARM types without identities', () => {
+        const telemetry = getDeployArtifactTelemetry('deploy-result.json', JSON.stringify({
+            status: 'failed',
+            createdResources: [
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Web/sites/private-a', type: 'Microsoft.Web/sites', classification: 'failed' },
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Web/sites/private-b', type: 'Microsoft.Web/sites', classification: 'expected' },
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Storage/storageAccounts/private', classification: 'orphaned' },
+            ],
+            resourceResults: [
+                { resourceId: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Insights/components/private', type: 'Microsoft.Insights/components', status: 'reused' },
+            ],
+        }));
+
+        assert.strictEqual(telemetry.createdResourceTypeCounts, 'microsoft.storage/storageaccounts=1,microsoft.web/sites=2');
+        assert.strictEqual(telemetry.failedResourceTypeCounts, 'microsoft.web/sites=1');
+        assert.strictEqual(telemetry.reusedResourceTypeCounts, 'microsoft.insights/components=1');
+        assert.doesNotMatch(JSON.stringify(telemetry), /subscriptions|resourceGroups|private-a|private-b/i);
     });
 
     test('empty result omits unavailable metrics', () => {

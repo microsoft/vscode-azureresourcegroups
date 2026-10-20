@@ -6,7 +6,7 @@ Bicep default-path patterns for AppOnboard scaffold. Used as the primary IaC for
 
 ## File Structure
 
-> ⛔ **Always use `targetScope = 'subscription'`.** Subscription-scope Bicep creates the resource group in IaC with all 5 AppOnboard tags (including `created-at`). Resource-group scope requires `az group create` via CLI, which consistently misses `created-at` because CLI-created resource groups don't receive IaC-managed tags. There are zero benefits to resource-group scope for AppOnboard.
+> ⛔ **Always use `targetScope = 'subscription'`.** Subscription-scope Bicep creates the resource group in IaC with all AppOnboard/CoR tags (including `created-at` and `created-by-cor`). Resource-group scope requires `az group create` via CLI, which consistently misses IaC-managed tags. There are zero benefits to resource-group scope for AppOnboard.
 
 ```
 infra/
@@ -38,17 +38,19 @@ param location string
 param sessionId string
 
 param deployedBy string   // resolved via: az ad signed-in-user show --query displayName -o tsv
+param existingTags object = {}
 
 // ⛔ createdAt: passed in parameters.json, NOT utcNow() default (crashes Portal blade)
 param createdAt string
 
-var tags = {
+var tags = union(existingTags, {
   'app-onboard-skill': 'true'
+  'created-by-cor': 'true'
   'app-onboard-session-id': sessionId
   'created-at': createdAt
   environment: environmentName
   'deployed-by': deployedBy
-}
+})
 
 resource rg 'Microsoft.Resources/resourceGroups@2023-07-01' = {
   name: 'rg-${environmentName}'
@@ -67,6 +69,12 @@ module resources './modules/resources.bicep' = {
   }
 }
 ```
+
+`created-by-cor` is a stable, non-sensitive origin marker. Never put a workflow, user, subscription,
+tenant, project, or resource identifier in its value. Pass `tags` into every module and apply it to
+every resource type that supports ARM tags. If a resource needs additional tags, merge them with
+`union(tags, resourceSpecificTags)`; never replace the shared tags. Omit `tags` only for resource
+types that do not expose a tags property.
 
 ## main.parameters.json
 
@@ -212,7 +220,7 @@ successfully and then fail on first use.
 
 ## Service Tagging
 
-> ⛔ **You MUST read [iac-generation-rules.md § Session Tags](iac-generation-rules.md).** All resources MUST include the 5 AppOnboard session tags. Pass `tags` object from `main.bicep` into every module.
+> ⛔ **You MUST read [iac-generation-rules.md § Session Tags](iac-generation-rules.md).** All taggable resources MUST include the shared AppOnboard/CoR tags, including `created-by-cor`. Pass the merged `tags` object from `main.bicep` into every module.
 
 ## API Version Policy
 

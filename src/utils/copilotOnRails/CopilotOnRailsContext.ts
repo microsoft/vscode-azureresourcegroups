@@ -12,6 +12,10 @@ export interface CopilotOnRailsContext extends IActionContext {
      * **Important**: This separate set of properties exists because it is not always wise to mirror telemetry properties in cases of PII concern.
      */
     diagnostics?: { properties: Record<string, unknown> };
+    /**
+     * Extension-owned timing accumulated while the current action is waiting on explicit user UI.
+     */
+    corTiming?: { userWaitDurationMs: number };
 }
 
 export type RequiredCopilotOnRailsContext = CopilotOnRailsContext & Required<Pick<CopilotOnRailsContext, 'diagnostics'>>;

@@ -3,9 +3,14 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { createHash } from "crypto";
 import * as vscode from "vscode";
+import { ext } from "../../../extensionVariables";
 import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, createProjectPlanFileWatcher, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorLifecycleState, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
+import { completeCorPhase, getCorWorkflowState } from "../../../utils/copilotOnRails/workflowContext";
 import { isJsonObject } from "../shared/jsonUtils";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
@@ -14,12 +19,14 @@ import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
 import { disarmDeployProgressWatcher, isTrackedDeployResult } from "./deployProgressWatcher";
 import { closeLoadingView } from "./openLoadingView";
 import { parseDeployResultStatus } from "./utils/deployProgressSteps";
+import { recordDeployArtifactsTelemetry } from "./utils/deployArtifactTelemetryUtils";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeployResultData, DeployResultViewController>({
     createController: (data, uri) => new DeployResultViewController(data, uri),
     updateController: (controller, data, uri) => controller.updateDeployResultData(data, uri),
 });
+const recordingDeployTerminalKeys = new Set<string>();
 
 export function isDeployResultViewOpen(): boolean {
     return host.isOpen;
@@ -179,6 +186,72 @@ async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
 
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
     await ensureDeployInventoryCaptured(uri);
+    await recordDeployTerminalTelemetry(uri);
+}
+
+async function recordDeployTerminalTelemetry(uri: vscode.Uri): Promise<void> {
+    let content: string;
+    try {
+        content = await readFileText(uri);
+    } catch {
+        return;
+    }
+    const status = parseDeployResultStatus(content);
+    if (status !== 'succeeded' && status !== 'failed') {
+        return;
+    }
+
+    const workflow = getCorWorkflowState();
+    if (workflow?.currentPhase?.phase !== 'deploy') {
+        return;
+    }
+    const key = getDeployTerminalTelemetryKey(
+        uri.toString(),
+        content,
+        workflow.workflowRunId,
+        workflow.currentPhase.phaseRunId,
+    );
+    if (ext.context.workspaceState.get<boolean>(key) === true || recordingDeployTerminalKeys.has(key)) {
+        return;
+    }
+
+    recordingDeployTerminalKeys.add(key);
+    try {
+        const recorded = await callWithTelemetryAndErrorHandling(corId('deploymentTerminal'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            return await callWithDiagnosticsAndTelemetryHandling(
+                actionContext,
+                { type: 'extensionAction', name: 'deploymentTerminal', entryPoint: 'background' },
+                async (corContext) => {
+                    await completeCorPhase('deploy', status, status === 'failed' ? { failureCategory: 'unknown' } : undefined);
+                    setCorLifecycleState(corContext, status, status === 'failed' ? 'unknown' : undefined);
+                    setCorProp(corContext, 'deploymentLifecycleState', status);
+                    await recordDeployArtifactsTelemetry(corContext, uri);
+                    return true;
+                },
+            );
+        });
+        if (recorded) {
+            await ext.context.workspaceState.update(key, true);
+        }
+    } finally {
+        recordingDeployTerminalKeys.delete(key);
+    }
+}
+
+export function getDeployTerminalTelemetryKey(
+    uri: string,
+    content: string,
+    workflowRunId?: string,
+    phaseRunId?: string,
+): string {
+    const terminalIdentity = [
+        workflowRunId ?? 'unknownWorkflow',
+        phaseRunId ?? 'unknownPhase',
+        uri,
+        content,
+    ].join('\n');
+    return `copilotOnRails.deployTerminal.${createHash('sha256').update(terminalIdentity).digest('hex')}`;
 }
 
 async function reloadDeployResult(uri: vscode.Uri): Promise<void> {

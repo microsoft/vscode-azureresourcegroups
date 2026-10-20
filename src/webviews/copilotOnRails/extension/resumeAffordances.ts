@@ -6,6 +6,8 @@
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from '../../../tree/project/projectPlanFiles';
+import { corId, reportCorBackgroundEvent } from '../../../utils/copilotOnRails/telemetryUtils';
+import { completeCorPhase, markCorWorkflowWaiting, resumeCorWorkflow } from '../../../utils/copilotOnRails/workflowContext';
 import { clearSession, onDidChangeSession, phaseLabel, readSessionState, shouldOfferResume } from './projectSession';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -43,12 +45,15 @@ async function reconcileAndUpdate(): Promise<void> {
 
 /** Clears the session when no project artifacts remain on disk to resume from. */
 async function clearSessionIfWorkspaceEmptied(): Promise<void> {
-    if (readSessionState() === undefined) {
+    const state = readSessionState();
+    if (state === undefined) {
         return;
     }
     // `hasAny` includes `.azure/requirements.json`, so an interrupted project
     // that only got as far as requirements is still resumable and won't be cleared.
     if (!(await getProjectPlanFiles()).hasAny) {
+        await resumeCorWorkflow();
+        await completeCorPhase(state.phase, 'canceled', { cancelReason: 'workspaceArtifactsMissing' });
         await clearSession();
     }
 }
@@ -76,19 +81,32 @@ async function promptToResumeOnActivation(): Promise<void> {
         return;
     }
 
+    await reportCorBackgroundEvent(corId('workflowReloaded'), { reloadReason: 'resumeAvailable' });
+    await markCorWorkflowWaiting();
     const resume = vscode.l10n.t('Resume');
     const notNow = vscode.l10n.t('Not now');
+    const promptStartedAt = Date.now();
     const choice = await vscode.window.showInformationMessage(
         vscode.l10n.t('You have an in-progress Copilot project ({0}). Would you like to resume?', phaseLabel(state.phase)),
         resume,
         notNow,
+    );
+    await reportCorBackgroundEvent(
+        corId('resumePromptCompleted'),
+        { resumePromptOutcome: choice === resume ? 'resumed' : choice === notNow ? 'declined' : 'dismissed' },
+        { resumePromptWaitDurationMs: Math.max(0, Date.now() - promptStartedAt) },
     );
 
     if (choice === resume) {
         await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
     } else if (choice === notNow) {
         // The user declined to resume — clear the record so we stop offering it.
+        await completeCorPhase(state.phase, 'canceled', { cancelReason: 'resumeDeclined' });
         await clearSession();
+    } else {
+        // The status-bar affordance remains available, so continue classifying the
+        // interval until the next correlated action as extension-owned user wait.
+        await markCorWorkflowWaiting();
     }
     // Dismissing the notification (no choice) leaves the record intact, so the
     // status-bar item remains available to resume later.

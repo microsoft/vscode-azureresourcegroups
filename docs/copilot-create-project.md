@@ -326,6 +326,12 @@ phases and, while Azure is provisioning, the individual resource types and names
 The view notes that chat may still ask you to confirm the deployment. When the deployment finishes,
 it closes automatically as the Deployment results view opens.
 
+Generated Bicep adds the stable ARM tag **`created-by-cor: true`** to the shared tags object and
+threads that object through every taggable resource. Existing AppOnboard and resource-specific tags
+are merged rather than replaced. Resource types that do not support ARM tags are left unchanged.
+The value is intentionally non-unique: it identifies CoR-created infrastructure without encoding a
+user, project, workflow, subscription, or tenant identifier.
+
 > 📷 *Screenshot needed: the Deployment progress view while Azure resources are being provisioned.*
 
 <p align="center">
@@ -389,6 +395,8 @@ When the deployment phase resumes, the deploy agent takes a fresh Azure resource
 you confirm **Resume** and before it runs any command that can provision more resources. Resources already
 present at that point are treated as the pre-resume state. Inventory captured after the resume is merged with
 the existing `deploy-result.json` inventory, so cleanup evidence from earlier deployment attempts is retained.
+The extension keeps the same random `workflowRunId` across window reloads and project-folder handoffs,
+then creates a new `phaseRunId` and increments `attemptNumber` when a phase is resumed or retried.
 
 <p align="center">
   <img src="images/copilot-create-project/11-resume-prompt.png" alt="Resume notification" />
@@ -479,7 +487,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 
 | Tool | Effect |
 | --- | --- |
-| `report_agent_launch` | Records the agent name exposed by the chat runtime in the standard diagnostic event and telemetry for the tool call. It accepts any string and uses `unknown` when the runtime exposes no value. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
+| `report_agent_launch` | Records an allowlisted CoR agent name in the standard diagnostic event and telemetry for the tool call; any unrecognized value is recorded as `unknown`. Every CoR agent calls it once at the start of a chat session. Duplicate calls for the same agent and chat session are ignored. If the initial call fails, the agent searches for and activates the tool before retrying. A successful call proves that the chat session could reach the CoR MCP server. |
 | `open_requirements_view` | Opens the Requirements view. |
 | `open_plan_view` | Opens the Plan preview view. |
 | `open_frontend_preview_view` | Starts the frontend dev server and opens the Approve‑UI preview. |
@@ -503,7 +511,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 | Path | Written by | Contents |
 | --- | --- | --- |
-| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, is consumed immediately, and expires after ten minutes. |
+| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, carries only random project/workflow correlation ids plus a timestamp, is consumed immediately, and expires after ten minutes. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
@@ -515,7 +523,11 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
-`copilotOnRails.createdAt`, and `copilotOnRails.diagnosticEvents` (see below).
+`copilotOnRails.createdAt`, `copilotOnRails.diagnosticEvents`, and
+`azureResourceGroups.copilotOnRails.workflow`. The workflow record contains random run/phase ids,
+attempt counters, bounded tool/model-request counters, and accumulated active/user-wait timing; it
+does not contain prompts, paths, Azure ids, resource names, subscription/tenant ids, or account data.
+See [CoR telemetry schema and ownership](copilot-create-project-telemetry.md).
 
 `copilotOnRails.firewallLeases` is kept there too. Deploying can involve running outstanding database
 migrations, and if the database can only be reached from your machine, the deploy agent opens a

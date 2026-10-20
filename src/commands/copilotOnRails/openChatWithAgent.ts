@@ -8,7 +8,8 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
+import { setCorErrorProp, setCorLifecycleState, setCorProp, withCorUserWait } from '../../utils/copilotOnRails/telemetryUtils';
+import { type CorWorkflowEntryPoint, recordCorModelRequest } from '../../utils/copilotOnRails/workflowContext';
 import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
@@ -120,7 +121,13 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     return true;
 }
 
-export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
+export async function launchAgentChat(
+    context: CopilotOnRailsContext,
+    agentName: string,
+    query: string,
+    model?: string,
+    phaseEntryPoint: CorWorkflowEntryPoint = 'phaseHandoff',
+): Promise<boolean> {
     setCorProp(context, 'chatQueryLength', query.length);
 
     const chatLaunchOutcomeKey = 'chatLaunchOutcome';
@@ -142,19 +149,33 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
         const resolvedModel = model ?? getSessionModel();
         setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
+        context.telemetry.properties.modelSelectionMode = resolvedModel ? 'explicit' : 'hostDefault';
+        if (resolvedModel) {
+            context.telemetry.properties.requestedModel = resolvedModel;
+            context.telemetry.properties.requestedModelAvailable = 'true';
+        }
 
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
+        if (selector?.id) {
+            context.telemetry.properties.requestedModelId = selector.id;
+        }
+        if (selector?.vendor) {
+            context.telemetry.properties.requestedModelVendor = selector.vendor;
+        }
+        await recordCorModelRequest();
 
         // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
         // command is the supported way to launch one. If the mode hasn't been discovered yet this
         // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
         // that (see requireWorkspaceTrustReload).
+        const chatOpenStartedAt = Date.now();
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: agentName,
             query,
             ...(selector ? { modelSelector: selector } : {}),
         });
+        context.telemetry.measurements.chatOpenCommandDurationMs = Math.max(0, Date.now() - chatOpenStartedAt);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setCorProp(context, chatLaunchOutcomeKey, 'error');
@@ -169,7 +190,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     // Record the phase we just launched so an interrupted run can be resumed.
     try {
-        await recordAgentLaunch(agentName);
+        await recordAgentLaunch(agentName, phaseEntryPoint);
         setCorProp(context, 'chatAgentLaunchRecorded', true);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -194,6 +215,8 @@ export interface PrepareAndLaunchAgentOptions {
     restoreCreateViewOnReload?: boolean;
     /** Runs right before handing off (reload prompt or successful launch), e.g. to dispose the source panel. */
     onBeforeHandoff?: () => void;
+    /** How this phase attempt was entered, for retry/resume correlation. */
+    phaseEntryPoint?: CorWorkflowEntryPoint;
 }
 
 /**
@@ -202,7 +225,7 @@ export interface PrepareAndLaunchAgentOptions {
  * agent's instructions and launches.
  */
 async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: PrepareAndLaunchAgentOptions): Promise<AgentLaunchOutcome> {
-    const { agentName, prompt, model, skipChatReadyCheck, restoreCreateViewOnReload, onBeforeHandoff } = options;
+    const { agentName, prompt, model, skipChatReadyCheck, restoreCreateViewOnReload, onBeforeHandoff, phaseEntryPoint } = options;
 
     // Gate on trust before ensureAgentInstructions writes files, so an untrusted workspace
     // isn't littered with project files it never consented to.
@@ -224,7 +247,7 @@ async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: Pr
 
     await ensureAgentInstructions(context, agentName);
 
-    if (!(await launchAgentChat(context, agentName, prompt, model))) {
+    if (!(await launchAgentChat(context, agentName, prompt, model, phaseEntryPoint))) {
         return 'launchFailed';
     }
 
@@ -240,23 +263,32 @@ export async function launchAgentAndRecordOutcome(context: CopilotOnRailsContext
     switch (await prepareAndLaunchAgent(context, options)) {
         case 'chatNotReady':
             setCorProp(context, outcomeKey, 'copilotChatNotReady');
+            setCorLifecycleState(context, 'skipped', 'copilotChatNotReady');
             return false;
         case 'deferred':
             setCorProp(context, outcomeKey, 'deferredForAgentDiscovery');
+            setCorLifecycleState(context, 'skipped', 'reloadRequired');
             return false;
         case 'launchFailed':
             setCorProp(context, outcomeKey, 'launchFailed');
+            setCorLifecycleState(context, 'failed', 'launchFailed');
             return false;
         case 'launched':
             return true;
     }
 }
 
-export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
+export async function openChatWithAgent(
+    context: CopilotOnRailsContext,
+    agentName: string,
+    prompt: string,
+    loading?: LoadingViewConfiguration,
+    phaseEntryPoint: CorWorkflowEntryPoint = 'phaseHandoff',
+): Promise<void> {
     setCorProp(context, 'chatAgentName', agentName);
 
     const key = 'openChatWithAgentOutcome';
-    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt })) {
+    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt, phaseEntryPoint })) {
         setCorProp(context, key, 'launched');
         if (loading) {
             setCorProp(context, 'openChatLoadingStage', loading.stage);
@@ -270,14 +302,14 @@ export async function openChatWithAgent(context: CopilotOnRailsContext, agentNam
 async function promptReloadForAgentDiscovery(context: CopilotOnRailsContext): Promise<void> {
     setCorProp(context, 'promptedReloadForAgentDiscovery', true);
     const reload = vscode.l10n.t('Reload Window');
-    const choice = await vscode.window.showInformationMessage(
+    const choice = await withCorUserWait(context, () => vscode.window.showInformationMessage(
         vscode.l10n.t('Reload to set up your project'),
         {
             modal: true,
             detail: vscode.l10n.t('VS Code needs to reload this window once so it can load the project\u2019s Copilot agents. After it reloads, start your project again to continue.'),
         },
         reload,
-    );
+    ));
     if (choice === reload) {
         await vscode.commands.executeCommand(RELOAD_WINDOW_COMMAND_ID);
     }
@@ -295,9 +327,19 @@ export async function buildChatOpenOptions(context: CopilotOnRailsContext, optio
 
     const model = getSessionModel();
     setCorProp(context, 'chatModelSelectionSource', model ? 'previouslySelected' : 'default');
+    context.telemetry.properties.modelSelectionMode = model ? 'explicit' : 'hostDefault';
+    await recordCorModelRequest();
     if (model) {
+        context.telemetry.properties.requestedModel = model;
+        context.telemetry.properties.requestedModelAvailable = 'true';
         const selector = await resolveModelSelector(model);
         setCorProp(context, 'chatModelResolved', !!selector);
+        if (selector?.id) {
+            context.telemetry.properties.requestedModelId = selector.id;
+        }
+        if (selector?.vendor) {
+            context.telemetry.properties.requestedModelVendor = selector.vendor;
+        }
         return selector ? { ...options, modelSelector: selector } : options;
     }
     return options;

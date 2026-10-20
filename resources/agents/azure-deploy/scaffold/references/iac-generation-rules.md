@@ -12,23 +12,24 @@ For each service in `services[]`:
 
 > **Env var completeness:** Read `.env.example` (or `.env.sample`, `config.example`) + config/settings files (Pydantic `Settings`, `@t3-oss/env-nextjs`, Django `settings.py`) for each component to enumerate required env vars before generating IaC. Every env var with a placeholder value (not `localhost`) should map to either: (1) a Bicep parameter, (2) a **managed-identity KV reference** for an app-internal secret (NOT an Azure resource credential), or (3) a value derived from other resources. ⛔ **Database/cache/storage access is managed-identity + token — wire connection *parameters* (host, db name, MI username, `sslmode=require`) as plain app settings, never a connection-string password or access key.** ⛔ **Container Apps:** KV `secretRef` entries must be gated behind `isPlaceholder` — Phase 1 = `secrets: []`, Phase 2 activates KV refs. See [bicep-container-apps.md](bicep-container-apps.md). Flag unmapped vars in selfReview as ⚠️ WARN. Missing vars cause container crash loops at deploy time.
 
-> ⛔ **Set `targetScope = 'subscription'` in `main.bicep`.** Subscription-scope Bicep creates the resource group in IaC with all 5 AppOnboard tags (including `created-at`). Do NOT use default resource-group scope — it requires imperative `az group create` which consistently misses tags. If the user lacks subscription-level permissions, the deploy phase handles fallback to RG-scope automatically.
+> ⛔ **Set `targetScope = 'subscription'` in `main.bicep`.** Subscription-scope Bicep creates the resource group in IaC with all AppOnboard/CoR tags (including `created-at` and `created-by-cor`). Do NOT use default resource-group scope — it requires imperative `az group create` which consistently misses tags. If the user lacks subscription-level permissions, the deploy phase handles fallback to RG-scope automatically.
 
 > ⛔ **Native module deploy strategy.** If `prepare-plan.json.deployStrategy` exists, read [bicep-app-service.md § Native Module Deploy Strategy](bicep-app-service.md) and apply the startup command + app settings to the App Service Bicep. The `deployStrategy.startupCommand` goes into `appCommandLine`, and `deployStrategy.requiredAppSettings` goes into `appSettings[]`. When no `deployStrategy` exists, do NOT set `appCommandLine` — let Oryx use its default startup.
 
-### Session Tags — Mandatory on ALL Resources
+### Session and CoR Tags — Mandatory on ALL Taggable Resources
 
-⛔ Include the 5 AppOnboard tags on every resource and module. See [bicep-patterns.md § tags](bicep-patterns.md) for Bicep code block or [terraform-patterns.md § tags](terraform-patterns.md) for HCL code block.
+⛔ Include the shared AppOnboard/CoR tags on every taggable resource and thread the shared object through every module. See [bicep-patterns.md § tags](bicep-patterns.md) for the canonical Bicep block.
 
 | Tag key | Value source |
 |---------|-------------|
 | `app-onboard-skill` | `'true'` |
+| `created-by-cor` | `'true'` (stable origin marker; never an id) |
 | `app-onboard-session-id` | `sessionId` param |
 | `created-at` | ISO timestamp (scaffold populates, deploy may override) |
 | `environment` | `naming.resourcePrefix` |
 | `deployed-by` | `context.json.azure.userDisplayName` |
 
-If extending existing IaC, MERGE with existing tags using `union()` / `merge()`.
+If extending existing IaC or adding resource-specific tags, MERGE with existing tags using `union()`; never replace them. Resources that do not support ARM tags must not be given a `tags` property.
 
 > ⛔ **Do NOT generate `azure.yaml`.** Deploy via `az deployment sub create`. See [pipeline-rules.md](../../references/pipeline-rules.md) § azure.yaml prohibition.
 

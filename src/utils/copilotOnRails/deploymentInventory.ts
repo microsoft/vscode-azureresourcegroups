@@ -109,6 +109,39 @@ export function parseResourceGroupFromId(id: string): string | undefined {
 }
 
 /**
+ * Aggregates privacy-safe ARM resource types as a stable, bounded `type=count` list.
+ * Resource names and IDs are used only to derive the provider type and are never returned.
+ */
+export function aggregateArmResourceTypes(resources: readonly Pick<InventoryResource, 'id' | 'type'>[]): string | undefined {
+    const counts = new Map<string, number>();
+    for (const resource of resources) {
+        const resourceType = normalizeArmResourceType(resource.type) ?? armResourceTypeFromId(resource.id);
+        if (resourceType) {
+            counts.set(resourceType, (counts.get(resourceType) ?? 0) + 1);
+        }
+    }
+    return counts.size === 0
+        ? undefined
+        : [...counts.entries()]
+            .sort(([left], [right]) => left.localeCompare(right))
+            .slice(0, 30)
+            .map(([type, count]) => `${type}=${count}`)
+            .join(',');
+}
+
+function normalizeArmResourceType(value: string | undefined): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed && /^Microsoft\.[A-Za-z0-9.]+(?:\/[A-Za-z0-9._-]+)+$/i.test(trimmed)
+        ? trimmed.toLowerCase()
+        : undefined;
+}
+
+function armResourceTypeFromId(value: string): string | undefined {
+    const match = /\/providers\/(Microsoft\.[^/]+)\/([^/]+)/i.exec(value);
+    return match ? normalizeArmResourceType(`${match[1]}/${match[2]}`) : undefined;
+}
+
+/**
  * Computes the set of resources created between the baseline and post snapshots, classifies each
  * one against the tracked deployment targets, and derives the orphaned resource groups.
  *
