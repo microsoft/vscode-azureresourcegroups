@@ -76,6 +76,8 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 
 > **Language vs Runtime**: `Language` is the source language the user picked in this service's `language` question. `Runtime` is the execution runtime — default `Node` for TypeScript/JavaScript, `CPython` for Python, `.NET` for C#. Only deviate from the default (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (e.g. C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`). The `Orchestration` row is recorded for the scaffold step but hidden in the plan UI — always keep it set to `docker-compose`.
 
+> **Runtime names only:** write just the runtime name in the Runtime row; keep host/programming-model details and explicit version constraints outside this row; detected tool versions belong in Prerequisites.
+
 > **API framework selection:** copy the service's framework answer into the Framework row and section title. Azure Functions is the only suggested API framework for every language; the plan view also provides a custom field. Preserve explicit custom frameworks, including during language edits, and keep their best-effort warning separate from language support. Do not emit a limited-support warning for Python on Azure Functions.
 
 ---

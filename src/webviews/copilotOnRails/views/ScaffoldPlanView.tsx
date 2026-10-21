@@ -267,7 +267,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const original = originalCellValues.current.get(key) ?? currentCellValue;
         const component = normalizeScaffoldPlanComponent(field);
         const serviceKind = plan ? getServiceStackKind(plan.sections[sectionIdx]) : 'unknown';
-        if (component && !isBackendFrameworkField(component, serviceKind) && matchServiceStackOption(original, [value]) === value) {
+        if (component && !isBackendFrameworkField(component, serviceKind) && matchServiceStackOption(original, [value], component) === value) {
             value = original;
         }
         if (!originalCellValues.current.has(key)) {
@@ -337,7 +337,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 }
                 const validOptions = optionsForField(component, value, serviceKind) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
-                if (validOptions.length > 0 && !matchServiceStackOption(currentValue, validOptions)) {
+                if (validOptions.length > 0 && !matchServiceStackOption(currentValue, validOptions, component)) {
                     applyCellChange(content, sectionIdx, contentIdx, depRowIdx, colIdx, validOptions[0]);
                 }
             }
@@ -1129,7 +1129,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                             const options = ci > 0 && componentName
                                                 ? optionsForField(componentName, language, serviceKind)
                                                 : undefined;
-                                            const optionValue = options ? matchServiceStackOption(cell, options) ?? cell : cell;
+                                            const optionValue = options ? matchServiceStackOption(cell, options, componentName) ?? cell : cell;
                                             const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
                                             // Soft warning when an option outside the officially
                                             // supported set is picked (e.g. Bun runtime, yarn,
@@ -1163,7 +1163,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                                     {showSupportWarning && (
                                                         <span className='supportWarning'>
                                                             <WarningRegular />
-                                                            {cell} isn't officially supported - scaffolding may be incomplete.
+                                                            {optionValue} isn't officially supported - scaffolding may be incomplete.
                                                         </span>
                                                     )}
                                                 </td>

@@ -66,8 +66,8 @@ export function optionsForField(field: ScaffoldPlanComponent, language: string |
     return (key && byLanguage?.[key]) || editableOptions[field];
 }
 
-export function matchServiceStackOption(value: string | undefined, options: readonly string[]): string | undefined {
-    const normalized = value?.trim().toLowerCase();
+export function matchServiceStackOption(value: string | undefined, options: readonly string[], field?: ScaffoldPlanComponent): string | undefined {
+    const normalized = (field === 'Runtime' ? value?.split(/[;,(]/, 1)[0] : value)?.trim().toLowerCase();
     if (!normalized) {
         return undefined;
     }
