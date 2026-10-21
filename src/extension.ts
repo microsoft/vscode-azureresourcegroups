@@ -62,6 +62,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { clearLeasesForTesting, closeMigrationAccess, openMigrationAccess, readLeases, reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
+import { reportAzureYamlTelemetry } from './utils/reportAzureYamlTelemetry';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
@@ -163,6 +164,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         // previous session ended. Fire-and-forget so a signed-out or slow Azure call never delays
         // activation.
         void reconcileMigrationFirewallLeases(activateContext);
+
+        void reportAzureYamlTelemetry();
     });
 
     const extensionManager = new ResourceGroupsExtensionManager();
