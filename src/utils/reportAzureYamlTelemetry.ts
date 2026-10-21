@@ -22,14 +22,33 @@ export async function reportAzureYamlTelemetry(): Promise<void> {
         context.telemetry.properties.isActivationEvent = 'true';
         context.errorHandling.suppressDisplay = true;
 
-        const hasWorkspace = !!vscode.workspace.workspaceFolders?.length;
+        const folders = vscode.workspace.workspaceFolders ?? [];
+        const hasWorkspace = folders.length > 0;
         context.telemetry.properties.hasWorkspace = String(hasWorkspace);
         if (!hasWorkspace) {
             context.telemetry.properties.hasAzureYaml = 'false';
+            context.telemetry.properties.isGitRepo = 'false';
             return;
         }
 
-        const matches = await vscode.workspace.findFiles('**/azure.{yaml,yml}', excludePattern, 1);
+        const [matches, isGitRepo] = await Promise.all([
+            vscode.workspace.findFiles('**/azure.{yaml,yml}', excludePattern, 1),
+            hasGitFolder(folders),
+        ]);
         context.telemetry.properties.hasAzureYaml = String(matches.length > 0);
+        context.telemetry.properties.isGitRepo = String(isGitRepo);
     });
+}
+
+// `.git` is a directory in normal clones but a file in worktrees and submodules, so a stat covers both
+async function hasGitFolder(folders: readonly vscode.WorkspaceFolder[]): Promise<boolean> {
+    const results = await Promise.all(folders.map(async folder => {
+        try {
+            await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder.uri, '.git'));
+            return true;
+        } catch {
+            return false;
+        }
+    }));
+    return results.some(Boolean);
 }
