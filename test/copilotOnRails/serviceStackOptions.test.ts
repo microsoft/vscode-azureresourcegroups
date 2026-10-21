@@ -54,6 +54,32 @@ suite('serviceStackOptions', () => {
         assert.strictEqual(matchServiceStackOption('PyPy 3.10', options), 'PyPy');
     });
 
+    test('matches runtime versions with host and programming-model annotations', () => {
+        for (const [language, value, expected] of [
+            ['Python', 'CPython 3.12; Azure Functions runtime v4, Python v2 programming model', 'CPython'],
+            ['Python', 'CPython 3.12 (Azure Functions runtime v4, Python v2 programming model)', 'CPython'],
+            ['Python', 'CPython, Azure Functions runtime v4', 'CPython'],
+            ['Python', 'PyPy 3.10; Python 3 compatible', 'PyPy'],
+            ['TypeScript', 'Node 22 LTS; Azure Functions runtime v4', 'Node'],
+            ['C# (.NET)', '.NET 10.0 (isolated worker)', '.NET'],
+        ]) {
+            const options = optionsForField('Runtime', language, 'backend');
+            assert.ok(options);
+            assert.strictEqual(matchServiceStackOption(value, options, 'Runtime'), expected);
+            assert.strictEqual(matchServiceStackOption(value, [expected], 'Runtime'), expected);
+        }
+    });
+
+    test('does not discard custom runtime names or annotations on other fields', () => {
+        const options = optionsForField('Runtime', 'Python', 'backend');
+        assert.ok(options);
+        for (const value of [undefined, '', 'CPythonista 3.12; custom', 'CPython experimental; custom', 'Node 22; Azure Functions v4', '<script>CPython 3.12</script>']) {
+            assert.strictEqual(matchServiceStackOption(value, options, 'Runtime'), undefined);
+        }
+        assert.strictEqual(matchServiceStackOption('pip 24.3; custom', ['pip'], 'Package Manager'), undefined);
+        assert.strictEqual(matchServiceStackOption('pytest 8 (custom)', ['pytest'], 'Test Runner'), undefined);
+    });
+
     test('does not flag Python as a limited-support language', () => {
         for (const language of ['Python', 'python', 'CPython', 'TypeScript', 'JavaScript']) {
             assert.strictEqual(isLimitedSupportBackendLanguage(language), false);

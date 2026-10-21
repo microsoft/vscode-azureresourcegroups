@@ -1,7 +1,7 @@
 {
-    "agentAssetsHash": "eaae30556a420ecb8f3293fd679d57a61d50397eeaad78d87022e5670e345afd",
+    "agentAssetsHash": "5ff33ba2d58c998363d10e692d6849b8a2b55d4f86695714e186d94d1c4baacc",
     "scope": "azure-debug-generate.agent.md, azure-debug-generate/**, azure-debug-plan.agent.md, azure-debug-plan/**, azure-deploy.agent.md, azure-deploy/**, azure-project-integrate.agent.md, azure-project-integrate/**, azure-project-plan.agent.md, azure-project-plan/**, azure-project-scaffold.agent.md, azure-project-scaffold/**, shared-references/**",
-    "updatedAt": "2026-10-19T23:40:43.970Z",
+    "updatedAt": "2026-10-21T21:49:39.721Z",
     "files": {
         "azure-debug-generate.agent.md": "f0d7ab870df4619ded4252380198d197eaf03aca8d003694cf473f7a8b580d76",
         "azure-debug-generate/.metadata.json": "c0ccce18678415f23db0073d48cc646f2de446e7821c99c3130553548d958e0c",
@@ -135,7 +135,7 @@
         "azure-project-plan.agent.md": "fbe8a4d919ec5aba74b7f7505a73f51ea960e103928ab83ad7dd5e3654139c69",
         "azure-project-plan/.metadata.json": "cec03694d63e45c8cb96983bd586790878b5813289885ae94d6cefc42243f37e",
         "azure-project-plan/instructions.md": "0d68b18de65bbe4fe375329d008373a8c915c6740f1aba5ecfce51980022e0c3",
-        "azure-project-plan/plan.md": "3e1c97fb226eb2e4eeb41e79c1ada54a91f849cde140e7c405b543f344c9c1f7",
+        "azure-project-plan/plan.md": "a06532fd7ab781f730a049644b9e6dae4f84baeb1c4df7185f020e0082d7f4aa",
         "azure-project-plan/references/html-preview.md": "2db272c10c4535743366483610dc46fb885d24795298220d0585880671665369",
         "azure-project-plan/requirements.md": "779e17de0938047ac021fa6b3f205a172ccec0a3f279770b8dbd91c86aaedadb",
         "azure-project-scaffold.agent.md": "1fd514686d4c9c30e85947acfefc77c9e4dc7537cd1a5ebd4535c77e8a0126ab",

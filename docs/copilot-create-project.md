@@ -217,6 +217,12 @@ manager/test-runner choices still adjust to the service language. The view recog
 variations such as `Framework` and `Backend Framework` and shows an editable field even when the value cell
 is missing from the plan.
 
+Runtime choices show only the runtime name, such as **CPython**, and assume the latest version supported
+by the chosen framework unless you explicitly require an older version. Existing plan values that include
+a version and semicolon-, comma-, or parenthesis-separated host/programming-model details select the same
+runtime without a duplicate option, a false support warning, or a change request. Detected tool versions
+remain in **Prerequisites**.
+
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link
 deterministically from a built‑in catalog by matching the tool name, so the plan markdown can never inject an
