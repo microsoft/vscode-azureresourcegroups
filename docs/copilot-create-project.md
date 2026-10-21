@@ -202,7 +202,8 @@ Login answer.
 The plan agent writes `.azure/project-plan.md` (with `**Status**: Planning`) and opens the **Plan preview** view.
 For apps with a UI, the preview also renders one **UI Preview** card per screen (each a sandboxed HTML
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
-type feedback to revise it).
+type feedback to revise it). After feedback, the agent keeps the plan in `Planning`, updates any affected UI
+previews, reruns its structural check, and reopens or refocuses the Plan preview for another explicit approval.
 
 Editable service-stack choices follow the service role and language. API/backend framework controls offer
 **Azure Functions** or **Custom framework**, with a text field for the custom name. Enter a nonempty name
@@ -311,6 +312,20 @@ The agent reports any native-debug verification it cannot perform instead of cal
 an F5 pass. Multiple Functions services with conflicting folder-scoped language/venv settings or Python
 debugger ports need an explicitly resolved workspace scope; a Python API plus frontend uses the normal
 compound flow.
+
+Approving the debug plan authorizes creation of its checked artifacts and non-destructive merges into existing
+configuration, so generation does not ask for a second blanket file-change confirmation. It still asks before
+destructive changes and when environment blockers such as an unavailable container runtime or occupied ports
+need a user decision. After generation, choosing **Deploy to Azure** hands off directly to the deployment agent
+without rerunning debug setup.
+
+In Guided mode, generation remains `Executing` when a required system tool is unavailable or a required port is
+occupied and no explicit choice is made. Copilot does not install system software, start system services, stop
+processes, or remap ports merely because the user is unavailable.
+
+Migration startup automation is enabled only when the workspace already contains a detectable migration command,
+dependency, or migration files. A migration tool mentioned only in a project or integration plan is not treated as
+implemented; the debug plan leaves that row unchecked so approval cannot promise an F5 task that does not exist.
 
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.
