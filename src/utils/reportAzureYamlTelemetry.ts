@@ -31,12 +31,12 @@ export async function reportAzureYamlTelemetry(): Promise<void> {
             return;
         }
 
-        const [matches, isGitRepo] = await Promise.all([
-            vscode.workspace.findFiles('**/azure.{yaml,yml}', excludePattern, 1),
-            hasGitFolder(folders),
-        ]);
+        const matches = await vscode.workspace.findFiles('**/azure.{yaml,yml}', excludePattern, 1);
         context.telemetry.properties.hasAzureYaml = String(matches.length > 0);
-        context.telemetry.properties.isGitRepo = String(isGitRepo);
+
+        // Prefer the folder that holds the azure.yaml; otherwise report on all open folders
+        const azureYamlFolder = matches[0] && vscode.workspace.getWorkspaceFolder(matches[0]);
+        context.telemetry.properties.isGitRepo = String(await hasGitFolder(azureYamlFolder ? [azureYamlFolder] : folders));
     });
 }
 
