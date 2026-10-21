@@ -155,7 +155,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             id: mcpServerId,
             serverLabel: mcpServerLabel,
             serverVersion: ext.version,
+            transport: 'tcp',
             registerTools: (server) => registerMcpTools(server),
+            eagerlyStart: true,
         });
 
         // Reap any temporary database firewall rule an interrupted migration left behind. This is

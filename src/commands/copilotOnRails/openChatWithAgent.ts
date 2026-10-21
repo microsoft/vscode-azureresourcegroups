@@ -8,8 +8,10 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { AUTO_CHAT_MODEL, DEFAULT_CHAT_MODEL, resolveCopilotHarnessModelSelector } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
-import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
+import { AUTOPILOT_QUERY_MARKER, isAutopilotActive } from '../../webviews/copilotOnRails/extension/autopilot';
+import { ensureCopilotHarnessOn, setCopilotCliAutoModelEnabled } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
@@ -19,6 +21,12 @@ import { ensureAgentInstructions } from './agentInstructions';
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
+const OPEN_CHAT_COMMAND_ID = 'workbench.action.chat.open';
+const NEW_CHAT_COMMAND_ID = 'workbench.action.chat.newChat';
+const OPEN_CHAT_COMMAND_PREFIX = 'workbench.action.chat.open';
+const AGENT_COMMAND_READY_TIMEOUT_MS = 10_000;
+const AGENT_COMMAND_READY_POLL_MS = 100;
+const EXISTING_AGENT_COMMAND_SETTLE_MS = 1_000;
 let agentLaunchInProgress = false;
 let requireWorkspaceTrustReload = false;
 
@@ -31,33 +39,18 @@ export function registerWorkspaceTrustTracking(): void {
 }
 
 /**
- * Resolves a user-facing model name (e.g. "Claude Opus 4.7 (copilot)") to a
+ * Resolves a user-facing model name (e.g. "Claude Opus 4.7") to a
  * modelSelector object that VS Code's chat commands expect.
  */
-async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+export async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+    // If auto or default, defer to VS Code chat, since we don't need to provide any specific model
+    if (displayName === DEFAULT_CHAT_MODEL || displayName === AUTO_CHAT_MODEL) {
+        return resolveCopilotHarnessModelSelector(displayName, []);
+    }
+
     try {
-        const models = await vscode.lm.selectChatModels();
-        // Try matching by "Name (vendor)" format: e.g. "Claude Opus 4.7 (copilot)"
-        const vendorMatch = displayName.match(/^(.+?)\s*\((\w+)\)\s*$/);
-        if (vendorMatch) {
-            const [, name, vendor] = vendorMatch;
-            const match = models.find(
-                (m) => m.name === name.trim() && m.vendor === vendor,
-            );
-            if (match) {
-                return { id: match.id, vendor: match.vendor };
-            }
-        }
-        // Try matching by name alone
-        const byName = models.find((m) => m.name === displayName);
-        if (byName) {
-            return { id: byName.id, vendor: byName.vendor };
-        }
-        // Try matching by id (in case the caller already has the id)
-        const byId = models.find((m) => m.id === displayName);
-        if (byId) {
-            return { id: byId.id, vendor: byId.vendor };
-        }
+        const models = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
+        return resolveCopilotHarnessModelSelector(displayName, models);
     } catch {
         // If the lm API isn't available, fall through
     }
@@ -100,9 +93,9 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
         return false;
     }
 
-    if (!copilotChatExtension.isActive) {
-        await ensureLocalHarnessOn();
+    await ensureCopilotHarnessOn();
 
+    if (!copilotChatExtension.isActive) {
         try {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
@@ -134,27 +127,43 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     agentLaunchInProgress = true;
     try {
-        await ensureLocalHarnessOn();
+        const resolvedModel = model ?? getSessionModel();
+        await ensureCopilotHarnessOn({ useAutoModel: resolvedModel === AUTO_CHAT_MODEL });
+
+        // Custom-agent commands are registered from the focused chat widget. Open Chat before
+        // creating the fresh session so first-time launches do not wait on a widget that does not exist.
+        await vscode.commands.executeCommand(OPEN_CHAT_COMMAND_ID);
 
         // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
         // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        await vscode.commands.executeCommand(NEW_CHAT_COMMAND_ID);
 
-        const resolvedModel = model ?? getSessionModel();
-        setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
+        await waitForAgentModeRegistration(agentName);
+        await vscode.commands.executeCommand(getAgentChatOpenCommandId(agentName));
+        await vscode.commands.executeCommand(
+            OPEN_CHAT_COMMAND_ID,
+            buildAgentChatModeOptions(agentName),
+        );
+
+        setCorProp(context, 'chatModelSelectionSource', resolvedModel === DEFAULT_CHAT_MODEL ? 'default' : model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
 
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
+        if (selector) {
+            setCorProp(context, 'chatModelSelectorId', selector.id);
+            setCorProp(context, 'chatModelSelectorVendor', selector.vendor);
+        }
 
-        // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
-        // command is the supported way to launch one. If the mode hasn't been discovered yet this
-        // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
-        // that (see requireWorkspaceTrustReload).
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: agentName,
-            query,
-            ...(selector ? { modelSelector: selector } : {}),
-        });
+        const result = await vscode.commands.executeCommand<false | undefined>(
+            OPEN_CHAT_COMMAND_ID,
+            buildAgentChatOpenOptions(agentName, query, selector, isAutopilotActive()),
+        );
+        if (result === false) {
+            throw new Error(vscode.l10n.t(
+                'The "{0}" Copilot agent request was rejected.',
+                agentName,
+            ));
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setCorProp(context, chatLaunchOutcomeKey, 'error');
@@ -179,6 +188,52 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     }
     setCorProp(context, chatLaunchOutcomeKey, 'chatLaunched');
     return true;
+}
+
+export function getAgentChatOpenCommandId(agentName: string): string {
+    return `${OPEN_CHAT_COMMAND_PREFIX}${agentName}`;
+}
+
+export function buildAgentChatModeOptions(agentName: string): { mode: string } {
+    return { mode: agentName };
+}
+
+export function buildAgentChatOpenOptions(
+    agentName: string,
+    query: string,
+    modelSelector?: { id?: string; vendor?: string },
+    autopilot = false,
+): { mode: string; query: string; modelSelector?: { id?: string; vendor?: string }; waitForRequestAcceptance: true } {
+    return {
+        mode: agentName,
+        query: autopilot && !query.startsWith(AUTOPILOT_QUERY_MARKER) ? `${AUTOPILOT_QUERY_MARKER} ${query}` : query,
+        ...(modelSelector ? { modelSelector } : {}),
+        waitForRequestAcceptance: true,
+    };
+}
+
+async function waitForAgentModeRegistration(agentName: string): Promise<void> {
+    const commandId = getAgentChatOpenCommandId(agentName);
+    const deadline = Date.now() + AGENT_COMMAND_READY_TIMEOUT_MS;
+    let commandWasAlreadyRegistered = false;
+
+    do {
+        if ((await vscode.commands.getCommands(true)).includes(commandId)) {
+            if (!commandWasAlreadyRegistered) {
+                commandWasAlreadyRegistered = true;
+                await new Promise(resolve => setTimeout(resolve, EXISTING_AGENT_COMMAND_SETTLE_MS));
+                continue;
+            }
+            return;
+        }
+        commandWasAlreadyRegistered = false;
+        await new Promise(resolve => setTimeout(resolve, AGENT_COMMAND_READY_POLL_MS));
+    } while (Date.now() < deadline);
+
+    throw new Error(vscode.l10n.t(
+        'The "{0}" Copilot agent was not registered for the selected chat harness.',
+        agentName,
+    ));
 }
 
 /** Result of {@link prepareAndLaunchAgent}; consumed by {@link launchAgentAndRecordOutcome}. */
@@ -294,10 +349,15 @@ export async function buildChatOpenOptions(context: CopilotOnRailsContext, optio
     }
 
     const model = getSessionModel();
-    setCorProp(context, 'chatModelSelectionSource', model ? 'previouslySelected' : 'default');
+    await setCopilotCliAutoModelEnabled(model === AUTO_CHAT_MODEL);
+    setCorProp(context, 'chatModelSelectionSource', model && model !== DEFAULT_CHAT_MODEL ? 'previouslySelected' : 'default');
     if (model) {
         const selector = await resolveModelSelector(model);
         setCorProp(context, 'chatModelResolved', !!selector);
+        if (selector) {
+            setCorProp(context, 'chatModelSelectorId', selector.id);
+            setCorProp(context, 'chatModelSelectorVendor', selector.vendor);
+        }
         return selector ? { ...options, modelSelector: selector } : options;
     }
     return options;
