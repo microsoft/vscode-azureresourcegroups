@@ -29,7 +29,7 @@ export async function reportAzureYamlTelemetry(): Promise<void> {
             return;
         }
 
-        const matches = await vscode.workspace.findFiles('**/azure.yaml', excludePattern, 1);
+        const matches = await vscode.workspace.findFiles('**/azure.{yaml,yml}', excludePattern, 1);
         context.telemetry.properties.hasAzureYaml = String(matches.length > 0);
     });
 }
