@@ -19,6 +19,7 @@ suite('pending Create Project marker', () => {
                 workflowRunId,
                 entryPoint: 'createProject',
                 startedAt: 500,
+                userWaitDurationMs: 250,
                 prompt: 'private prompt',
                 path: 'C:\\private',
             },
@@ -33,6 +34,7 @@ suite('pending Create Project marker', () => {
                 workflowRunId,
                 entryPoint: 'createProject',
                 startedAt: 500,
+                userWaitDurationMs: 250,
             },
         });
     });
@@ -41,5 +43,20 @@ suite('pending Create Project marker', () => {
         const marker = (createdAt: number) => Buffer.from(JSON.stringify({ createdAt }));
         assert.strictEqual(parsePendingCreateMarker(marker(1000), 1000 + (11 * 60 * 1000)), undefined);
         assert.strictEqual(parsePendingCreateMarker(marker(62_000), 1000), undefined);
+    });
+
+    test('rejects workflow timestamps outside the JavaScript Date range', () => {
+        const marker = Buffer.from(JSON.stringify({
+            createdAt: 1000,
+            workflow: {
+                schemaVersion: '2',
+                workflowRunId,
+                entryPoint: 'folderHandoff',
+                startedAt: 1e100,
+                userWaitDurationMs: 0,
+            },
+        }));
+
+        assert.strictEqual(parsePendingCreateMarker(marker, 2000), undefined);
     });
 });

@@ -23,6 +23,7 @@ import {
     recordCorUserWait,
     recordCorToolCall,
     resumeCorWorkflow,
+    shouldConsumeCorUserWait,
 } from "./workflowContext";
 
 /**
@@ -67,7 +68,13 @@ export async function restoreCorProjectId(projectId: string): Promise<void> {
  */
 export async function callWithDiagnosticsAndTelemetryHandling<T>(
     context: IActionContext,
-    eventDetails: { type: DiagnosticEvent['type']; name: string; extras?: ToolExecutionExtras; entryPoint?: CorWorkflowEntryPoint },
+    eventDetails: {
+        type: DiagnosticEvent['type'];
+        name: string;
+        extras?: ToolExecutionExtras;
+        entryPoint?: CorWorkflowEntryPoint;
+        consumesUserWait?: boolean;
+    },
     command: (context: CopilotOnRailsContext) => Promise<T>,
 ): Promise<T> {
     const startedAt = Date.now();
@@ -83,7 +90,9 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     }
 
     const corContext: CopilotOnRailsContext = ensureRequiredCopilotOnRailsContext(context);
-    const precedingUserWaitDurationMs = await resumeCorWorkflow(startedAt);
+    const precedingUserWaitDurationMs = shouldConsumeCorUserWait(entryPoint, eventDetails.consumesUserWait)
+        ? await resumeCorWorkflow(startedAt)
+        : 0;
     corContext.corTiming = { userWaitDurationMs: 0 };
     context.telemetry.measurements.precedingUserWaitDurationMs = precedingUserWaitDurationMs;
     context.telemetry.properties.entryPoint = entryPoint;

@@ -395,8 +395,10 @@ When the deployment phase resumes, the deploy agent takes a fresh Azure resource
 you confirm **Resume** and before it runs any command that can provision more resources. Resources already
 present at that point are treated as the pre-resume state. Inventory captured after the resume is merged with
 the existing `deploy-result.json` inventory, so cleanup evidence from earlier deployment attempts is retained.
-The extension keeps the same random `workflowRunId` across window reloads and project-folder handoffs,
-then creates a new `phaseRunId` and increments `attemptNumber` when a phase is resumed or retried.
+The extension keeps the same random `workflowRunId` and accumulated user-wait timing across window
+reloads and project-folder handoffs, then creates a new `phaseRunId` and increments `attemptNumber`
+only when a phase is actually resumed or retried. Agent handoffs within the same phase retain the
+current attempt, while a new explicit **Create Project** launch always allocates a fresh workflow.
 
 <p align="center">
   <img src="images/copilot-create-project/11-resume-prompt.png" alt="Resume notification" />
@@ -511,7 +513,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 
 | Path | Written by | Contents |
 | --- | --- | --- |
-| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, carries only random project/workflow correlation ids plus a timestamp, is consumed immediately, and expires after ten minutes. |
+| `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, carries only random project/workflow correlation ids, timestamps, and accumulated user-wait duration, is consumed immediately, and expires after ten minutes. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |

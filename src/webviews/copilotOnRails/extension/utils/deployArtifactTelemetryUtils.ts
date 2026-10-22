@@ -63,7 +63,7 @@ export interface DeployArtifactTelemetry {
     inventoryUnverified?: boolean;
     createdResourceTypeCounts?: string;
     failedResourceTypeCounts?: string;
-    reusedResourceTypeCounts?: string;
+    reusedResourceTypeCountsAvailable?: boolean;
 }
 
 const serviceTypes: Record<string, string> = {
@@ -206,10 +206,10 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
             const endpoints = records(data.endpoints) || object(data.endpoints) ? result.endpoints : undefined;
             const created = records(data.createdResources);
             const resourceResults = records(data.resourceResults);
-            const failedResources = created?.length
-                ? created.filter(resource => category(resource.classification, ['failed']) === 'failed')
-                : resourceResults?.filter(resource => category(resource.status, ['failed']) === 'failed');
-            const reusedResources = resourceResults?.filter(resource => category(resource.status, ['reused']) === 'reused');
+            const failedResources = mergeResourcesById(
+                created?.filter(resource => category(resource.classification, ['failed']) === 'failed'),
+                resourceResults?.filter(resource => category(resource.status, ['failed']) === 'failed'),
+            );
             metrics = {
                 status: data.status === undefined ? undefined : result.status,
                 healthStatus: data.healthStatus === undefined ? undefined : result.healthStatus,
@@ -227,12 +227,37 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
                 healingAttemptCount: records(data.healingAttempts)?.length,
                 createdResourceTypeCounts: aggregateArmResourceTypes(toInventoryResources(created)),
                 failedResourceTypeCounts: aggregateArmResourceTypes(toInventoryResources(failedResources)),
-                reusedResourceTypeCounts: aggregateArmResourceTypes(toInventoryResources(reusedResources)),
+                reusedResourceTypeCountsAvailable: false,
             };
             break;
         }
     }
     return { parsedOk: true, ...Object.fromEntries(Object.entries(metrics).filter(([, value]) => value !== undefined)) };
+}
+
+function mergeResourcesById(...groups: (JsonObject[] | undefined)[]): JsonObject[] {
+    const mergedById = new Map<string, JsonObject>();
+    const withoutIds: JsonObject[] = [];
+    for (const resource of groups.flatMap(group => group ?? [])) {
+        const id = token(resource.id ?? resource.resourceId);
+        if (!id) {
+            withoutIds.push(resource);
+            continue;
+        }
+        const existing = mergedById.get(id);
+        mergedById.set(id, existing ? mergeResourceFields(existing, resource) : resource);
+    }
+    return [...mergedById.values(), ...withoutIds];
+}
+
+function mergeResourceFields(first: JsonObject, second: JsonObject): JsonObject {
+    return {
+        ...first,
+        ...second,
+        ...(typeof first.id === 'string' ? { id: first.id } : {}),
+        ...(typeof first.resourceId === 'string' ? { resourceId: first.resourceId } : {}),
+        ...(typeof first.type === 'string' ? { type: first.type } : {}),
+    };
 }
 
 function object(value: unknown): JsonObject | undefined {

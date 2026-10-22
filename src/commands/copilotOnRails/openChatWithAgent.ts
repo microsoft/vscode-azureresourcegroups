@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { setCorErrorProp, setCorLifecycleState, setCorProp, withCorUserWait } from '../../utils/copilotOnRails/telemetryUtils';
+import { corId, reportCorBackgroundEvent, setCorErrorProp, setCorLifecycleState, setCorProp, withCorUserWait } from '../../utils/copilotOnRails/telemetryUtils';
 import { type CorWorkflowEntryPoint, recordCorModelRequest } from '../../utils/copilotOnRails/workflowContext';
 import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
@@ -190,7 +190,9 @@ export async function launchAgentChat(
 
     // Record the phase we just launched so an interrupted run can be resumed.
     try {
-        await recordAgentLaunch(agentName, phaseEntryPoint);
+        await recordAgentLaunch(agentName, phaseEntryPoint, async ({ transition }) => {
+            await reportCorBackgroundEvent(corId('phaseTerminal'), { phaseTransition: transition });
+        });
         setCorProp(context, 'chatAgentLaunchRecorded', true);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

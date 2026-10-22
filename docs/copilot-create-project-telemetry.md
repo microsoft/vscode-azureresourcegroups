@@ -15,7 +15,7 @@ and deployment terminal event can be joined through:
 | `workflowRunId` | Random id for the authoritative end-to-end Create Project run. It persists in `workspaceState` and crosses the short-lived `.azure/.pending-create` folder handoff. |
 | `phaseRunId` | Random id for the current plan/scaffold/integrate/debug/deploy attempt. |
 | `parentPhaseRunId` | Previous phase attempt, including the attempt resumed or retried. |
-| `attemptNumber` / `retryCount` | Per-phase attempt sequence. |
+| `attemptNumber` / `retryCount` | Per-phase attempt sequence. Programmatic handoffs between agents in the same phase retain the attempt; only a real resume/retry creates the next attempt. |
 | `entryPoint` / `workflowEntryPoint` / `phaseEntryPoint` | Normalized launch boundary such as `createProject`, `mcpTool`, `resume`, or `reloadResume`. |
 | `workflowMode` | `guided` or `autopilot`. |
 | `lifecycleState` | Terminal outcome of the telemetry action: `succeeded`, `failed`, `canceled`, or `skipped` (`started` while in flight). |
@@ -27,7 +27,10 @@ extension-owned approval/view wait immediately before the action. The workflow r
 `workflowDurationMs`, `workflowActiveDurationMs`, and `workflowUserWaitDurationMs`; terminal workflows
 also include `workflowCompletedTimestamp` and freeze those durations at completion. Approval/view
 wait is counted only at extension-owned UI boundaries; the extension does not guess whether time
-inside Copilot Chat was model execution or user think time.
+inside Copilot Chat was model execution or user think time. Background artifact observations do not
+end an approval wait; explicit continuation, cancellation, and folder-handoff boundaries do. The
+folder-handoff marker carries the already accumulated user-wait duration so reopening the selected
+folder does not reclassify that time as active execution.
 
 Failures use bounded `failureCategory` values (`authentication`, `authorization`, `notFound`,
 `conflict`, `rateLimited`, `timeout`, `network`, `validation`, `canceled`, or `unknown`).
@@ -73,8 +76,15 @@ Structured artifact telemetry uses allowlisted categories only:
   categories without ids, labels, names, paths, commands, prompt text, or free-form descriptions;
 - build/deployability, validation, preview, debug checklist, endpoint health, and deployment health
   outcomes are emitted only when an authoritative artifact or extension signal exists;
-- deployment inventory aggregates normalized ARM resource types and counts for created, failed, and
-  reused resources.
+- deployment inventory aggregates only repository-allowlisted ARM resource types and counts for
+  created and failed resources. Unknown or identifier-shaped types are omitted, and nested or
+  extension resources are derived from the final ARM provider boundary;
+- the current deployment phase is bound to the App Onboard session id before a terminal result can
+  complete it. Later inventory enrichment of the same artifact does not create another terminal
+  event, and historical results cannot complete a newer attempt;
+- `reusedResourceTypeCountsAvailable=false` is emitted because the current deploy-result producer
+  has no authoritative reused status. Adding reuse counts requires a producer/schema change rather
+  than inferring reuse from created or skipped resources.
 
 Telemetry must never include raw prompts, generated code, file paths, project/resource names, ARM
 resource ids, endpoint URLs, subscription/tenant ids, account details, or arbitrary error text.

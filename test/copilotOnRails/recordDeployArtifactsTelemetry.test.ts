@@ -56,6 +56,7 @@ suite('recordDeployArtifactsTelemetry', () => {
                 'deployResult.parsedOk': true,
                 'deployResult.status': 'failed',
                 'deployResult.partial': false,
+                'deployResult.reusedResourceTypeCountsAvailable': false,
             };
             assert.deepStrictEqual(context.diagnostics.properties, expected);
             assert.deepStrictEqual(context.telemetry.properties, {
@@ -102,6 +103,7 @@ suite('recordDeployArtifactsTelemetry', () => {
             const expected = {
                 'prereqOutput.parsedOk': false, 'scaffoldManifest.readFailed': true,
                 'deployResult.parsedOk': true, 'deployResult.status': 'succeeded',
+                'deployResult.reusedResourceTypeCountsAvailable': false,
             };
             assert.deepStrictEqual(context.diagnostics.properties, expected);
             for (const [key, value] of Object.entries(expected)) {

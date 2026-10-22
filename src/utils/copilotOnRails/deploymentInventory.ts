@@ -99,6 +99,56 @@ export function normalizeResourceId(id: string): string {
     return id.trim().replace(/\/+$/, '').toLowerCase();
 }
 
+const supportedArmResourceTypes = new Set([
+    'microsoft.alertsmanagement/smartdetectoralertrules',
+    'microsoft.apimanagement/service',
+    'microsoft.app/containerapps',
+    'microsoft.app/jobs',
+    'microsoft.app/managedenvironments',
+    'microsoft.app/managedenvironments/storages',
+    'microsoft.authorization/roleassignments',
+    'microsoft.cache/redis',
+    'microsoft.cache/redis/accesspolicyassignments',
+    'microsoft.cognitiveservices/accounts',
+    'microsoft.cognitiveservices/accounts/deployments',
+    'microsoft.communication/communicationservices',
+    'microsoft.compute/virtualmachines',
+    'microsoft.containerregistry/registries',
+    'microsoft.dbformysql/flexibleservers',
+    'microsoft.dbformysql/flexibleservers/administrators',
+    'microsoft.dbformysql/flexibleservers/configurations',
+    'microsoft.dbformysql/flexibleservers/databases',
+    'microsoft.dbformysql/flexibleservers/firewallrules',
+    'microsoft.dbforpostgresql/flexibleservers',
+    'microsoft.dbforpostgresql/flexibleservers/administrators',
+    'microsoft.dbforpostgresql/flexibleservers/configurations',
+    'microsoft.dbforpostgresql/flexibleservers/databases',
+    'microsoft.dbforpostgresql/flexibleservers/firewallrules',
+    'microsoft.documentdb/databaseaccounts',
+    'microsoft.documentdb/databaseaccounts/sqlroleassignments',
+    'microsoft.eventhub/namespaces',
+    'microsoft.insights/components',
+    'microsoft.insights/diagnosticsettings',
+    'microsoft.keyvault/vaults',
+    'microsoft.managedidentity/userassignedidentities',
+    'microsoft.network/virtualnetworks',
+    'microsoft.network/virtualnetworks/subnets',
+    'microsoft.operationalinsights/workspaces',
+    'microsoft.resources/deployments',
+    'microsoft.resources/resourcegroups',
+    'microsoft.search/searchservices',
+    'microsoft.servicebus/namespaces',
+    'microsoft.signalrservice/signalr',
+    'microsoft.sql/servers',
+    'microsoft.sql/servers/databases',
+    'microsoft.storage/storageaccounts',
+    'microsoft.storage/storageaccounts/blobservices/containers',
+    'microsoft.web/serverfarms',
+    'microsoft.web/sites',
+    'microsoft.web/sites/basicpublishingcredentialspolicies',
+    'microsoft.web/staticsites',
+]);
+
 /**
  * Extracts the resource group name from a full ARM resource ID. Returns `undefined` for IDs that
  * are not scoped to a resource group (e.g. subscription-level resources).
@@ -129,16 +179,34 @@ export function aggregateArmResourceTypes(resources: readonly Pick<InventoryReso
             .join(',');
 }
 
-function normalizeArmResourceType(value: string | undefined): string | undefined {
-    const trimmed = value?.trim();
-    return trimmed && /^Microsoft\.[A-Za-z0-9.]+(?:\/[A-Za-z0-9._-]+)+$/i.test(trimmed)
-        ? trimmed.toLowerCase()
-        : undefined;
+export function normalizeArmResourceType(value: string | undefined): string | undefined {
+    const trimmed = value?.trim().split('@', 1)[0];
+    if (!trimmed || !/^Microsoft\.[A-Za-z0-9.]+(?:\/[A-Za-z0-9._-]+)+$/i.test(trimmed)) {
+        return undefined;
+    }
+    const normalized = trimmed.toLowerCase();
+    return supportedArmResourceTypes.has(normalized) ? normalized : undefined;
 }
 
 function armResourceTypeFromId(value: string): string | undefined {
-    const match = /\/providers\/(Microsoft\.[^/]+)\/([^/]+)/i.exec(value);
-    return match ? normalizeArmResourceType(`${match[1]}/${match[2]}`) : undefined;
+    const segments = value.split('/').filter(Boolean);
+    let providersIndex = -1;
+    for (let i = 0; i < segments.length; i++) {
+        if (segments[i].toLowerCase() === 'providers') {
+            providersIndex = i;
+        }
+    }
+    if (providersIndex >= 0 && providersIndex + 2 < segments.length) {
+        const typeSegments: string[] = [];
+        for (let i = providersIndex + 2; i < segments.length; i += 2) {
+            typeSegments.push(segments[i]);
+        }
+        return normalizeArmResourceType([segments[providersIndex + 1], ...typeSegments].join('/'));
+    }
+    const resourceGroupsIndex = segments.findIndex((segment) => segment.toLowerCase() === 'resourcegroups');
+    return resourceGroupsIndex >= 0 && resourceGroupsIndex + 1 < segments.length
+        ? 'microsoft.resources/resourcegroups'
+        : undefined;
 }
 
 /**

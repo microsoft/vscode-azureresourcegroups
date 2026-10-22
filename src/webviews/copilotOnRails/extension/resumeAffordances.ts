@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from '../../../tree/project/projectPlanFiles';
 import { corId, reportCorBackgroundEvent } from '../../../utils/copilotOnRails/telemetryUtils';
-import { completeCorPhase, markCorWorkflowWaiting, resumeCorWorkflow } from '../../../utils/copilotOnRails/workflowContext';
+import { completeCorPhase, completeCorWorkflow, markCorWorkflowWaiting, resumeCorWorkflow } from '../../../utils/copilotOnRails/workflowContext';
 import { clearSession, onDidChangeSession, phaseLabel, readSessionState, shouldOfferResume } from './projectSession';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -54,6 +54,7 @@ async function clearSessionIfWorkspaceEmptied(): Promise<void> {
     if (!(await getProjectPlanFiles()).hasAny) {
         await resumeCorWorkflow();
         await completeCorPhase(state.phase, 'canceled', { cancelReason: 'workspaceArtifactsMissing' });
+        await completeCorWorkflow('canceled', { cancelReason: 'workspaceArtifactsMissing' });
         await clearSession();
     }
 }
@@ -102,6 +103,7 @@ async function promptToResumeOnActivation(): Promise<void> {
     } else if (choice === notNow) {
         // The user declined to resume — clear the record so we stop offering it.
         await completeCorPhase(state.phase, 'canceled', { cancelReason: 'resumeDeclined' });
+        await completeCorWorkflow('canceled', { cancelReason: 'resumeDeclined' });
         await clearSession();
     } else {
         // The status-bar affordance remains available, so continue classifying the

@@ -62,18 +62,21 @@ function registerCopilotOnRailsCommand<A extends unknown[]>(
     commandId: string,
     command: (context: CopilotOnRailsContext, ...args: A) => unknown,
 ): void {
-    registerCommand(commandId, (context: IActionContext, ...args: A) =>
-        callWithDiagnosticsAndTelemetryHandling(
+    registerCommand(commandId, (context: IActionContext, ...args: A) => {
+        const createProjectEntryPoint = commandId === copilotOnRailsCommandIds.createProjectWithCopilot
+            ? (args[0] === 'folderHandoff' ? 'folderHandoff' as const : 'createProject' as const)
+            : undefined;
+        return callWithDiagnosticsAndTelemetryHandling(
             context,
             {
                 type: 'extensionAction',
                 name: commandId,
-                ...(commandId === copilotOnRailsCommandIds.createProjectWithCopilot ? { entryPoint: 'createProject' as const } : {}),
+                ...(createProjectEntryPoint ? { entryPoint: createProjectEntryPoint } : {}),
                 ...(commandId === copilotOnRailsCommandIds.resumeProjectWithCopilot ? { entryPoint: 'resume' as const } : {}),
             },
             async (corContext) => await command(corContext, ...args),
-        ),
-    );
+        );
+    });
 }
 
 export function startProjectScaffoldCommand(context: CopilotOnRailsContext): Promise<void> {

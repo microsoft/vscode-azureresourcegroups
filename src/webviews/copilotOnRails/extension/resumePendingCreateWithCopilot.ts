@@ -103,6 +103,9 @@ export function parsePendingCreateMarker(raw: Uint8Array, now: number = Date.now
             ? parsed.projectId
             : undefined;
         const workflow = parseCorWorkflowHandoff(parsed.workflow);
+        if (parsed.workflow !== undefined && !workflow) {
+            return undefined;
+        }
         return {
             createdAt: parsed.createdAt,
             ...(projectId ? { projectId } : {}),

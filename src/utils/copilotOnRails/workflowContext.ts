@@ -22,6 +22,7 @@ export type CorWorkflowEntryPoint =
     | 'phaseHandoff'
     | 'reloadResume'
     | 'resume'
+    | 'retry'
     | 'webview';
 
 export type CorWorkflowPhase = 'plan' | 'scaffold' | 'integrate' | 'debug' | 'deploy';
@@ -31,6 +32,7 @@ export interface CorPhaseRunState {
     phase: CorWorkflowPhase;
     phaseRunId: string;
     parentPhaseRunId?: string;
+    artifactId?: string;
     attemptNumber: number;
     retryCount: number;
     entryPoint: CorWorkflowEntryPoint;
@@ -49,6 +51,9 @@ export interface CorWorkflowState {
     lifecycleState: CorLifecycleState;
     startedAt: number;
     completedAt?: number;
+    failureCategory?: string;
+    cancelReason?: string;
+    skipReason?: string;
     phaseAttempts: Partial<Record<CorWorkflowPhase, number>>;
     currentPhase?: CorPhaseRunState;
     modelRequestCount: number;
@@ -64,6 +69,7 @@ export interface CorWorkflowHandoff {
     workflowRunId: string;
     entryPoint: CorWorkflowEntryPoint;
     startedAt: number;
+    userWaitDurationMs: number;
 }
 
 export interface CorWorkflowTelemetry {
@@ -80,6 +86,7 @@ const workflowEntryPoints = new Set<CorWorkflowEntryPoint>([
     'phaseHandoff',
     'reloadResume',
     'resume',
+    'retry',
     'webview',
 ]);
 
@@ -137,6 +144,12 @@ export function beginCorPhaseInState(
     now: number = Date.now(),
     phaseRunId: string = uuidv4(),
 ): CorWorkflowState {
+    if (state.lifecycleState !== 'started') {
+        return state;
+    }
+    if (state.currentPhase?.phase === phase && state.currentPhase.lifecycleState === 'started' && entryPoint !== 'resume' && entryPoint !== 'retry') {
+        return state;
+    }
     const attemptNumber = (state.phaseAttempts[phase] ?? 0) + 1;
     return {
         ...state,
@@ -163,20 +176,95 @@ export function completeCorPhaseInState(
     details: Pick<CorPhaseRunState, 'failureCategory' | 'cancelReason' | 'skipReason'> = {},
     now: number = Date.now(),
 ): CorWorkflowState {
-    if (!state.currentPhase || state.currentPhase.phase !== phase || state.currentPhase.lifecycleState !== 'started') {
+    const currentPhase = state.currentPhase;
+    if (state.lifecycleState !== 'started' || !currentPhase || currentPhase.phase !== phase || currentPhase.lifecycleState !== 'started') {
         return state;
     }
-    const workflowIsTerminal = phase === 'deploy' || lifecycleState === 'failed' || lifecycleState === 'canceled';
+    const settledState = settleCorWorkflowWaitInState(state, now);
+    const workflowIsTerminal = phase === 'deploy';
     return {
-        ...state,
+        ...settledState,
         ...(workflowIsTerminal ? { lifecycleState, completedAt: now } : {}),
         currentPhase: {
-            ...state.currentPhase,
+            ...currentPhase,
             lifecycleState,
             completedAt: now,
             ...details,
         },
     };
+}
+
+export function completeCorWorkflowInState(
+    state: CorWorkflowState,
+    lifecycleState: Exclude<CorLifecycleState, 'started'>,
+    details: Pick<CorWorkflowState, 'failureCategory' | 'cancelReason' | 'skipReason'> = {},
+    now: number = Date.now(),
+): CorWorkflowState {
+    if (state.lifecycleState !== 'started') {
+        return state;
+    }
+    const settledState = settleCorWorkflowWaitInState(state, now);
+    return {
+        ...settledState,
+        lifecycleState,
+        completedAt: now,
+        ...details,
+    };
+}
+
+export function ensureCorWorkflowInState(
+    state: CorWorkflowState | undefined,
+    entryPoint: CorWorkflowEntryPoint,
+    now: number = Date.now(),
+    workflowRunId: string = uuidv4(),
+): CorWorkflowState {
+    return !state || entryPoint === 'createProject'
+        ? createCorWorkflowState(entryPoint, now, workflowRunId)
+        : state;
+}
+
+export function restoreCorWorkflowHandoffInState(
+    state: CorWorkflowState | undefined,
+    handoff: CorWorkflowHandoff,
+): CorWorkflowState {
+    if (state?.workflowRunId === handoff.workflowRunId) {
+        return state;
+    }
+    return {
+        ...createCorWorkflowState(handoff.entryPoint, handoff.startedAt, handoff.workflowRunId),
+        userWaitDurationMs: handoff.userWaitDurationMs,
+    };
+}
+
+export function markCorWorkflowWaitingInState(state: CorWorkflowState, now: number = Date.now()): CorWorkflowState {
+    return state.lifecycleState === 'started' && state.waitingSince === undefined
+        ? { ...state, waitingSince: now }
+        : state;
+}
+
+export function recordCorUserWaitInState(state: CorWorkflowState, durationMs: number): CorWorkflowState {
+    if (state.lifecycleState !== 'started' || !Number.isFinite(durationMs) || durationMs <= 0) {
+        return state;
+    }
+    return {
+        ...state,
+        userWaitDurationMs: state.userWaitDurationMs + Math.round(durationMs),
+    };
+}
+
+export function shouldConsumeCorUserWait(entryPoint: CorWorkflowEntryPoint, override?: boolean): boolean {
+    return override ?? entryPoint !== 'background';
+}
+
+export function isCorPhaseBoundToArtifact(
+    state: CorWorkflowState | undefined,
+    phase: CorWorkflowPhase,
+    artifactId: string,
+): boolean {
+    return state?.lifecycleState === 'started'
+        && state.currentPhase?.lifecycleState === 'started'
+        && state.currentPhase.phase === phase
+        && state.currentPhase.artifactId === artifactId;
 }
 
 export function recordCorToolCallInState(state: CorWorkflowState, toolName: string, durationMs: number): CorWorkflowState {
@@ -217,6 +305,15 @@ export function getCorWorkflowTelemetryFromState(state: CorWorkflowState, now: n
     };
     if (state.completedAt !== undefined) {
         properties.workflowCompletedTimestamp = new Date(state.completedAt).toISOString();
+    }
+    if (state.failureCategory) {
+        properties.workflowFailureCategory = state.failureCategory;
+    }
+    if (state.cancelReason) {
+        properties.workflowCancelReason = state.cancelReason;
+    }
+    if (state.skipReason) {
+        properties.workflowSkipReason = state.skipReason;
     }
     const measurements: Record<string, number> = {
         workflowDurationMs,
@@ -265,7 +362,8 @@ export function parseCorWorkflowHandoff(value: unknown): CorWorkflowHandoff | un
         || value.schemaVersion !== COR_TELEMETRY_SCHEMA_VERSION
         || !isUuid(value.workflowRunId)
         || !isEntryPoint(value.entryPoint)
-        || !isNonnegativeFinite(value.startedAt)) {
+        || !isValidTimestamp(value.startedAt)
+        || (value.userWaitDurationMs !== undefined && !isNonnegativeFinite(value.userWaitDurationMs))) {
         return undefined;
     }
     return {
@@ -273,6 +371,7 @@ export function parseCorWorkflowHandoff(value: unknown): CorWorkflowHandoff | un
         workflowRunId: value.workflowRunId,
         entryPoint: value.entryPoint,
         startedAt: value.startedAt,
+        userWaitDurationMs: value.userWaitDurationMs ?? 0,
     };
 }
 
@@ -287,20 +386,16 @@ export function getCorWorkflowHandoff(): CorWorkflowHandoff | undefined {
         workflowRunId: state.workflowRunId,
         entryPoint: state.entryPoint,
         startedAt: state.startedAt,
+        userWaitDurationMs: state.userWaitDurationMs,
     };
 }
 
 export async function ensureCorWorkflow(entryPoint: CorWorkflowEntryPoint): Promise<CorWorkflowState> {
-    return await updateCorWorkflow((state) => {
-        if (!state || (entryPoint === 'createProject' && state.lifecycleState !== 'started')) {
-            return createCorWorkflowState(entryPoint);
-        }
-        return state;
-    });
+    return await updateCorWorkflow((state) => ensureCorWorkflowInState(state, entryPoint));
 }
 
 export async function restoreCorWorkflowHandoff(handoff: CorWorkflowHandoff): Promise<CorWorkflowState> {
-    return await updateCorWorkflow((state) => state ?? createCorWorkflowState(handoff.entryPoint, handoff.startedAt, handoff.workflowRunId));
+    return await updateCorWorkflow((state) => restoreCorWorkflowHandoffInState(state, handoff));
 }
 
 export async function beginCorPhase(phase: CorWorkflowPhase, entryPoint: CorWorkflowEntryPoint): Promise<CorWorkflowState> {
@@ -324,6 +419,44 @@ export async function completeCorPhase(
     return changed;
 }
 
+export async function completeCorWorkflow(
+    lifecycleState: Exclude<CorLifecycleState, 'started'>,
+    details?: Pick<CorWorkflowState, 'failureCategory' | 'cancelReason' | 'skipReason'>,
+): Promise<boolean> {
+    let changed = false;
+    await updateCorWorkflow((state) => {
+        const current = state ?? createCorWorkflowState('background');
+        const completed = completeCorWorkflowInState(current, lifecycleState, details);
+        changed = completed !== current;
+        return completed;
+    });
+    return changed;
+}
+
+export async function bindCorPhaseArtifactId(phase: CorWorkflowPhase, artifactId: string): Promise<boolean> {
+    if (!isBoundedArtifactId(artifactId)) {
+        return false;
+    }
+    let changed = false;
+    await updateCorWorkflow((state) => {
+        if (!state || state.lifecycleState !== 'started' || state.currentPhase?.phase !== phase || state.currentPhase.lifecycleState !== 'started') {
+            return state ?? createCorWorkflowState('background');
+        }
+        if (state.currentPhase.artifactId === artifactId || state.currentPhase.artifactId !== undefined) {
+            return state;
+        }
+        changed = true;
+        return {
+            ...state,
+            currentPhase: {
+                ...state.currentPhase,
+                artifactId,
+            },
+        };
+    });
+    return changed;
+}
+
 export async function recordCorModelRequest(): Promise<CorWorkflowState> {
     return await updateCorWorkflow((state) => {
         const current = state ?? createCorWorkflowState('background');
@@ -337,25 +470,24 @@ export async function recordCorToolCall(toolName: string, durationMs: number): P
 
 export async function markCorWorkflowWaiting(now: number = Date.now()): Promise<void> {
     await updateCorWorkflow((state) => {
-        if (!state || state.waitingSince !== undefined) {
-            return state ?? createCorWorkflowState('background');
+        if (!state) {
+            return createCorWorkflowState('background');
         }
-        return { ...state, waitingSince: now };
+        return markCorWorkflowWaitingInState(state, now);
     });
 }
 
 export async function resumeCorWorkflow(now: number = Date.now()): Promise<number> {
     let waitedMs = 0;
     await updateCorWorkflow((state) => {
-        if (!state?.waitingSince) {
+        if (!state) {
+            return createCorWorkflowState('background', now);
+        }
+        if (state.lifecycleState !== 'started' || state.waitingSince === undefined) {
             return state ?? createCorWorkflowState('background', now);
         }
         waitedMs = Math.max(0, now - state.waitingSince);
-        return {
-            ...state,
-            userWaitDurationMs: state.userWaitDurationMs + waitedMs,
-            waitingSince: undefined,
-        };
+        return settleCorWorkflowWaitInState(state, now);
     });
     return waitedMs;
 }
@@ -366,10 +498,10 @@ export async function recordCorUserWait(durationMs: number): Promise<void> {
     }
     await updateCorWorkflow((state) => {
         const current = state ?? createCorWorkflowState('background');
-        return {
-            ...current,
-            userWaitDurationMs: current.userWaitDurationMs + Math.round(durationMs),
-        };
+        if (current.lifecycleState !== 'started') {
+            return current;
+        }
+        return recordCorUserWaitInState(current, durationMs);
     });
 }
 
@@ -394,8 +526,8 @@ function parseCorWorkflowState(value: unknown): CorWorkflowState | undefined {
         || !isUuid(value.workflowRunId)
         || !isEntryPoint(value.entryPoint)
         || !isLifecycleState(value.lifecycleState)
-        || !isNonnegativeFinite(value.startedAt)
-        || (value.completedAt !== undefined && !isNonnegativeFinite(value.completedAt))
+        || !isValidTimestamp(value.startedAt)
+        || (value.completedAt !== undefined && !isValidTimestamp(value.completedAt))
         || !isObject(value.phaseAttempts)
         || !isNonnegativeFinite(value.modelRequestCount)
         || !isNonnegativeFinite(value.toolCallCount)
@@ -427,6 +559,9 @@ function parseCorWorkflowState(value: unknown): CorWorkflowState | undefined {
         lifecycleState: value.lifecycleState,
         startedAt: value.startedAt,
         ...(value.completedAt !== undefined ? { completedAt: value.completedAt } : {}),
+        ...(typeof value.failureCategory === 'string' ? { failureCategory: value.failureCategory } : {}),
+        ...(typeof value.cancelReason === 'string' ? { cancelReason: value.cancelReason } : {}),
+        ...(typeof value.skipReason === 'string' ? { skipReason: value.skipReason } : {}),
         phaseAttempts,
         ...(currentPhase ? { currentPhase } : {}),
         modelRequestCount: value.modelRequestCount,
@@ -434,7 +569,7 @@ function parseCorWorkflowState(value: unknown): CorWorkflowState | undefined {
         toolDurationMs: value.toolDurationMs,
         toolDurationsMs,
         userWaitDurationMs: value.userWaitDurationMs,
-        ...(isNonnegativeFinite(value.waitingSince) ? { waitingSince: value.waitingSince } : {}),
+        ...(isValidTimestamp(value.waitingSince) ? { waitingSince: value.waitingSince } : {}),
     };
 }
 
@@ -443,18 +578,20 @@ function parsePhaseRun(value: unknown): CorPhaseRunState | undefined {
         || !isPhase(value.phase)
         || !isUuid(value.phaseRunId)
         || (value.parentPhaseRunId !== undefined && !isUuid(value.parentPhaseRunId))
+        || (value.artifactId !== undefined && !isBoundedArtifactId(value.artifactId))
         || !isNonnegativeFinite(value.attemptNumber)
         || !isNonnegativeFinite(value.retryCount)
         || !isEntryPoint(value.entryPoint)
         || !isLifecycleState(value.lifecycleState)
-        || !isNonnegativeFinite(value.startedAt)
-        || (value.completedAt !== undefined && !isNonnegativeFinite(value.completedAt))) {
+        || !isValidTimestamp(value.startedAt)
+        || (value.completedAt !== undefined && !isValidTimestamp(value.completedAt))) {
         return undefined;
     }
     return {
         phase: value.phase,
         phaseRunId: value.phaseRunId,
         ...(value.parentPhaseRunId ? { parentPhaseRunId: value.parentPhaseRunId } : {}),
+        ...(value.artifactId ? { artifactId: value.artifactId } : {}),
         attemptNumber: value.attemptNumber,
         retryCount: value.retryCount,
         entryPoint: value.entryPoint,
@@ -489,6 +626,25 @@ function isLifecycleState(value: unknown): value is CorLifecycleState {
 
 function isNonnegativeFinite(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function isValidTimestamp(value: unknown): value is number {
+    return isNonnegativeFinite(value) && value <= 8_640_000_000_000_000;
+}
+
+function isBoundedArtifactId(value: unknown): value is string {
+    return typeof value === 'string' && value.length > 0 && value.length <= 128 && /^[A-Za-z0-9._-]+$/.test(value);
+}
+
+export function settleCorWorkflowWaitInState(state: CorWorkflowState, now: number): CorWorkflowState {
+    if (state.lifecycleState !== 'started' || state.waitingSince === undefined) {
+        return state;
+    }
+    return {
+        ...state,
+        userWaitDurationMs: state.userWaitDurationMs + Math.max(0, now - state.waitingSince),
+        waitingSince: undefined,
+    };
 }
 
 function nonnegativeFinite(value: number): number {
