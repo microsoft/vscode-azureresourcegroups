@@ -7,7 +7,8 @@ import { ext } from "../../extensionVariables";
 import { projectSubmissionState } from "../../tree/project/projectSubmissionState";
 import { disableAutopilot } from "../../webviews/copilotOnRails/extension/autopilot";
 import { recordCreatedAt, recordPrompt, recordSystemInfo } from "./diagnosticUtils";
-import { getSystemInfo } from "./telemetryUtils";
+import { COR_PROJECT_ID_KEY, getSystemInfo } from "./telemetryUtils";
+import { COR_WORKFLOW_STATE_KEY } from "./workflowContext";
 
 /**
  * Prepares a new Copilot on Rails project to be run in the current workspace
@@ -24,10 +25,11 @@ export async function prepareNewCorProject(prompt: string): Promise<void> {
 }
 
 const corStateKeyPattern: RegExp = /copilotOnRails/i;
+const preservedCorrelationKeys = new Set([COR_PROJECT_ID_KEY, COR_WORKFLOW_STATE_KEY]);
 
 async function clearCorWorkspaceState(): Promise<void> {
     for (const key of ext.context.workspaceState.keys()) {
-        if (corStateKeyPattern.test(key)) {
+        if (corStateKeyPattern.test(key) && !preservedCorrelationKeys.has(key)) {
             await ext.context.workspaceState.update(key, undefined);
         }
     }

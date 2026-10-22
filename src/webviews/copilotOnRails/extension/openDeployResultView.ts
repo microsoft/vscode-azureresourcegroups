@@ -3,23 +3,30 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { createHash } from "crypto";
 import * as vscode from "vscode";
+import { ext } from "../../../extensionVariables";
 import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, createProjectPlanFileWatcher, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorLifecycleState, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
+import { completeCorPhase, getCorWorkflowState, isCorPhaseBoundToArtifact } from "../../../utils/copilotOnRails/workflowContext";
 import { isJsonObject } from "../shared/jsonUtils";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
 import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
-import { disarmDeployProgressWatcher, isTrackedDeployResult } from "./deployProgressWatcher";
+import { deployResultSessionId, disarmDeployProgressWatcher, isTrackedDeployResult } from "./deployProgressWatcher";
 import { closeLoadingView } from "./openLoadingView";
 import { parseDeployResultStatus } from "./utils/deployProgressSteps";
+import { recordDeployArtifactsTelemetry } from "./utils/deployArtifactTelemetryUtils";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeployResultData, DeployResultViewController>({
     createController: (data, uri) => new DeployResultViewController(data, uri),
     updateController: (controller, data, uri) => controller.updateDeployResultData(data, uri),
 });
+const recordingDeployTerminalKeys = new Set<string>();
 
 export function isDeployResultViewOpen(): boolean {
     return host.isOpen;
@@ -177,16 +184,98 @@ async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
     openDeployResultViewWithContent(await readFileText(uri), uri);
     surfacedDeployResults.add(uri.toString());
 
-    host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
+    host.setWatcher(watchSingleFile(uri, () => void reconcileDeployResult(uri)));
     await ensureDeployInventoryCaptured(uri);
+    await recordDeployTerminalTelemetry(uri);
 }
 
-async function reloadDeployResult(uri: vscode.Uri): Promise<void> {
+async function recordDeployTerminalTelemetry(uri: vscode.Uri): Promise<void> {
+    let content: string;
     try {
-        openDeployResultViewWithContent(await readFileText(uri), uri);
+        content = await readFileText(uri);
+    } catch {
+        return;
+    }
+    const status = parseDeployResultStatus(content);
+    if (status !== 'succeeded' && status !== 'failed') {
+        return;
+    }
+
+    const workflow = getCorWorkflowState();
+    if (workflow?.lifecycleState !== 'started' || workflow.currentPhase?.phase !== 'deploy' || workflow.currentPhase.lifecycleState !== 'started') {
+        return;
+    }
+    const resultSessionId = deployResultSessionId(content) ?? deploymentSessionIdFromUri(uri);
+    if (!resultSessionId) {
+        return;
+    }
+    if (!isCorPhaseBoundToArtifact(workflow, 'deploy', resultSessionId)) {
+        return;
+    }
+    const key = getDeployTerminalTelemetryKey(
+        workflow.workflowRunId,
+        workflow.currentPhase.phaseRunId,
+        resultSessionId,
+    );
+    if (ext.context.workspaceState.get<boolean>(key) === true || recordingDeployTerminalKeys.has(key)) {
+        return;
+    }
+
+    recordingDeployTerminalKeys.add(key);
+    try {
+        const recorded = await callWithTelemetryAndErrorHandling(corId('deploymentTerminal'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            return await callWithDiagnosticsAndTelemetryHandling(
+                actionContext,
+                { type: 'extensionAction', name: 'deploymentTerminal', entryPoint: 'background' },
+                async (corContext) => {
+                    await recordDeployArtifactsTelemetry(corContext, uri);
+                    if (!(await completeCorPhase('deploy', status, status === 'failed' ? { failureCategory: 'unknown' } : undefined))) {
+                        actionContext.telemetry.suppressIfSuccessful = true;
+                        return false;
+                    }
+                    setCorLifecycleState(corContext, status, status === 'failed' ? 'unknown' : undefined);
+                    setCorProp(corContext, 'deploymentLifecycleState', status);
+                    return true;
+                },
+            );
+        });
+        if (recorded) {
+            await ext.context.workspaceState.update(key, true);
+        }
+    } finally {
+        recordingDeployTerminalKeys.delete(key);
+    }
+}
+
+export function getDeployTerminalTelemetryKey(
+    workflowRunId: string,
+    phaseRunId: string,
+    deploymentSessionId: string,
+): string {
+    const terminalIdentity = [
+        workflowRunId,
+        phaseRunId,
+        deploymentSessionId,
+    ].join('\n');
+    return `copilotOnRails.deployTerminal.${createHash('sha256').update(terminalIdentity).digest('hex')}`;
+}
+
+async function reconcileDeployResult(uri: vscode.Uri): Promise<void> {
+    try {
+        host.update(tryParseDeployResult(await readFileText(uri), uri), uri);
+        await ensureDeployInventoryCaptured(uri);
+        host.update(tryParseDeployResult(await readFileText(uri), uri), uri);
+        await recordDeployTerminalTelemetry(uri);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
     }
+}
+
+function deploymentSessionIdFromUri(uri: vscode.Uri): string | undefined {
+    const segments = uri.path.split('/').filter(Boolean);
+    const sessionsIndex = segments.lastIndexOf('sessions');
+    return sessionsIndex >= 0 && sessionsIndex + 1 < segments.length ? segments[sessionsIndex + 1] : undefined;
 }
 
 /**

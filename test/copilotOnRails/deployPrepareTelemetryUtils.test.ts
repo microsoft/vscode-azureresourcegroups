@@ -12,6 +12,7 @@ import { getWorkspaceFolderUri } from '../testUtils';
 suite('deployPrepareTelemetryUtils', () => {
     test('scrapbook project', () => {
         const telemetry = loadPrepareTelemetry('copilotOnRails-scrapbook');
+        const { serviceArchitecture, ...summary } = telemetry;
         const expected: DeployArtifactTelemetry = {
             parsedOk: true,
             serviceCount: 9,
@@ -21,11 +22,13 @@ suite('deployPrepareTelemetryUtils', () => {
             insufficientQuotaCount: 0,
         };
 
-        assert.deepStrictEqual(telemetry, expected);
+        assert.deepStrictEqual(summary, expected);
+        assert.strictEqual((JSON.parse(serviceArchitecture ?? '[]') as unknown[]).length, 9);
     });
 
     test('attendance project uses service kinds and quota status', () => {
         const telemetry = loadPrepareTelemetry('copilotOnRails-attendance');
+        const { serviceArchitecture, ...summary } = telemetry;
         const expected: DeployArtifactTelemetry = {
             parsedOk: true,
             serviceCount: 7,
@@ -34,7 +37,16 @@ suite('deployPrepareTelemetryUtils', () => {
             quotaStatus: 'skipped',
         };
 
-        assert.deepStrictEqual(telemetry, expected);
+        assert.deepStrictEqual(summary, expected);
+        assert.deepStrictEqual(JSON.parse(serviceArchitecture ?? '[]'), [
+            { role: 'backend', type: 'functions', runtime: 'node', framework: 'unknown' },
+            { role: 'frontend', type: 'staticwebapp', runtime: 'unknown', framework: 'unknown' },
+            { role: 'database', type: 'postgresflexibleserver', runtime: 'unknown', framework: 'unknown' },
+            { role: 'unknown', type: 'storageaccount', runtime: 'unknown', framework: 'unknown' },
+            { role: 'unknown', type: 'loganalyticsworkspace', runtime: 'unknown', framework: 'unknown' },
+            { role: 'unknown', type: 'applicationinsights', runtime: 'unknown', framework: 'unknown' },
+            { role: 'unknown', type: 'userassignedidentity', runtime: 'unknown', framework: 'unknown' },
+        ]);
     });
 
     test('empty plan omits unavailable metrics', () => {
@@ -62,10 +74,12 @@ suite('deployPrepareTelemetryUtils', () => {
             parsedOk: true,
             serviceCount: 2,
             serviceTypes: 'functions,unknown',
+            serviceArchitecture: '[{"role":"backend","type":"functions","runtime":"unknown","framework":"unknown"},{"role":"unknown","type":"unknown","runtime":"unknown","framework":"unknown"}]',
             iacFormat: 'unknown',
             insufficientQuotaCount: 1,
             healingAttemptCount: 1,
         });
+        assert.doesNotMatch(telemetry.serviceArchitecture ?? '', /private|resourceName/i);
     });
 });
 

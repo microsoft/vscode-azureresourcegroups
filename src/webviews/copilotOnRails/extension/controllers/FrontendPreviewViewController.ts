@@ -13,7 +13,7 @@ import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, reportCorBackgroundEvent, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
@@ -42,6 +42,7 @@ interface IncomingMessage {
 export class FrontendPreviewViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private devServer: RunningDevServer | undefined;
     private state: PreviewState = { status: 'starting' };
+    private previewAttempt = 0;
 
     constructor(private readonly frontendFolder: vscode.Uri) {
         super(
@@ -100,6 +101,8 @@ export class FrontendPreviewViewController extends CopilotOnRailsWebviewControll
     }
 
     private async launchDevServer(): Promise<void> {
+        const startedAt = Date.now();
+        const attemptNumber = ++this.previewAttempt;
         this.devServer?.dispose();
         this.devServer = undefined;
         this.state = { status: 'starting' };
@@ -122,6 +125,17 @@ export class FrontendPreviewViewController extends CopilotOnRailsWebviewControll
             this.state = { status: 'error', error };
         }
         this.postState();
+        const previewOutcome = this.state.status === 'ready' ? 'succeeded' : 'failed';
+        await reportCorBackgroundEvent(
+            corId('frontendPreviewTerminal'),
+            {
+                lifecycleState: previewOutcome,
+                previewOutcome,
+                previewAttempt: attemptNumber,
+                ...(previewOutcome === 'failed' ? { failureCategory: 'unknown' } : {}),
+            },
+            { previewDurationMs: Math.max(0, Date.now() - startedAt) },
+        );
     }
 
     private postState(): void {
