@@ -6,7 +6,7 @@
 
 ## Port Assignment
 
-Services sharing runtime need unique debug ports. From `runtimes/{rt}.md` `Base debug port`, assign sequentially: base, base + 1, base + 2, etc., subject to the project type's Runtime Wiring constraints. Resolve any provider or workspace-scope conflict before composing services; changing an attach port alone does not reconfigure a listener.
+Services sharing runtime need unique debug ports. From `runtimes/{rt}.md` `Base debug port`, assign sequentially: base, base + 1, base + 2, etc., subject to the project type's Runtime Wiring constraints. Configure each worker to listen on the same port its debugger attaches to. Resolve any provider or workspace-scope conflict before composing services.
 
 > Browser project types (e.g., Frontend SPA) use dev server URL, not debug ports.
 

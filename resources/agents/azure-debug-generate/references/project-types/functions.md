@@ -110,7 +110,7 @@ Startup `dependsOn`:
 1. Runtime build/watch label from `runtimes/{rt}.md` § Build Chain (e.g., `{service-id}: npm watch` for node-ts, `{service-id}: dotnet build` for dotnet)
 2. `"Start Emulators"` only when plan has checked emulators
 
-> Python's native task uses the runtime's base debug port. Changing only `connect.port` does not reconfigure the worker listener; validate provider-selected ports before composing multiple services.
+> Python's native task provider selects the worker listener port, defaulting to the runtime's base debug port. Changing only `connect.port` does not reconfigure it; verify the provider uses the assigned port before composing multiple Python Functions services.
 
 ### VS Code Task Configuration
 
