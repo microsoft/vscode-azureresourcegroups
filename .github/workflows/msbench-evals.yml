@@ -306,7 +306,7 @@ jobs:
     concurrency:
       group: msbench-paid-eval
       cancel-in-progress: false
-    timeout-minutes: 120
+    timeout-minutes: 180
     permissions:
       contents: read
       id-token: write
