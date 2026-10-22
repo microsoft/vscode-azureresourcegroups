@@ -232,6 +232,8 @@ For Python, the inventory checks a compatible interpreter and its own pip, not a
 incompatible system Python. New Functions services use a service-local `.venv`; existing compatible
 environments are retained. Debug prerequisites include the **Python**, **Python Debugger**, and **Azure
 Functions** extensions, separately from Python/pip and Functions Core Tools.
+The generated plan preserves Python tooling choices including `uv` and `unittest`, with a test command
+matching the selected runner.
 
 <p align="center">
   <img src="images/copilot-create-project/05-plan-preview.png" alt="Plan preview — plan document" />
@@ -320,9 +322,8 @@ existing workspace customizations are preserved.
 
 Native task execution, debugger readiness/attachment, and HTTP route availability are separate checks.
 The agent reports any native-debug verification it cannot perform instead of calling a terminal-only launch
-an F5 pass. Multiple Functions services with conflicting folder-scoped language/venv settings or Python
-debugger ports need an explicitly resolved workspace scope; a Python API plus frontend uses the normal
-compound flow.
+an F5 pass. For multi-service debugging, assign unique debug ports and keep each worker's listener and
+debugger attach port in sync.
 
 The emulators run in containers, so the plan records a **container runtime** — **Podman** (preferred when available) or
 **Docker** — plus its Compose command (`docker compose` / `podman compose`) in the plan's *Orchestrator* table.

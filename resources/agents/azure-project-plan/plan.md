@@ -68,13 +68,15 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 | **Language** | {TypeScript / Python / C#} |
 | **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
 | **Framework** | {Azure Functions or this service's confirmed custom framework answer} |
-| **Package Manager** | {npm / pnpm / pip / poetry / dotnet (NuGet)} |
-| **Test Runner** | {vitest / jest / pytest / xUnit} |
+| **Package Manager** | {npm / pnpm / pip / poetry / uv / dotnet (NuGet)} |
+| **Test Runner** | {vitest / jest / pytest / unittest / xUnit} |
 | **Mocking Library** | {vi.mock / jest.mock / sinon / unittest.mock / **NSubstitute** (.NET — never Moq, see runtimes/dotnet.md)} |
-| **Test Command** | {npm test / <venv-python> -m pytest / dotnet test} |
+| **Test Command** | {npm test / <venv-python> -m pytest / <venv-python> -m unittest discover / dotnet test} |
 | **Orchestration** | docker-compose |
 
 > **Language vs Runtime**: `Language` is the source language the user picked in this service's `language` question. `Runtime` is the execution runtime — default `Node` for TypeScript/JavaScript, `CPython` for Python, `.NET` for C#. Only deviate from the default (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (e.g. C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`). The `Orchestration` row is recorded for the scaffold step but hidden in the plan UI — always keep it set to `docker-compose`.
+
+> Tooling alternatives in the template are examples, not an allowlist. Preserve the user's confirmed package manager and test runner, and derive a matching test command rather than replacing their selection with a default.
 
 > **Runtime names only:** write just the runtime name in the Runtime row, such as `CPython`, never `CPython 3.12; Azure Functions runtime v4, Python v2 programming model`. Assume the latest version supported by the chosen framework unless the user explicitly requires an older version. Keep host/programming-model details and explicit version constraints outside this row; detected tool versions belong in Prerequisites.
 

@@ -376,7 +376,7 @@ For **each** route in plan:
 > **✅ Post-Step 6 Build Check (MANDATORY — after ALL routes)**:
 >
 > 1. Run the selected runtime build gate with zero errors. For Node, `TS2307` means shared package exports are broken. For Python, confirm service-root `function_app.py` explicitly registers every handler Blueprint and no handler imports `app` from it.
-> 2. **Verify `main` field** — List `dist/`, confirm `main` glob matches compiled handlers. If `rootDir` set to parent, output nests deeper (Rule 12). Fix before proceeding.
+> 2. **Node services only: verify `main` field** - List `dist/`, confirm `main` glob matches compiled handlers. If `rootDir` set to parent, output nests deeper (Rule 12).
 >
 > ⚠️ The integrate agent runs the `func start` smoke test, endpoint checks, and migrations after scaffolding — the scaffold's job ends at a clean build.
 
