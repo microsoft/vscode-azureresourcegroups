@@ -15,7 +15,6 @@
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
         "allowImportingTsExtensions": true,
-        "noEmit": true,
         "types": [
             "node",
             "@microsoft/vscode-azext-eng/mocha/test-globals"
