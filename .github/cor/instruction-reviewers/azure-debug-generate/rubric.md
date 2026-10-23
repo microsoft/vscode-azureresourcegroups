@@ -113,6 +113,7 @@ Request changes:
 
 - The same facts are copied across implementations and must be updated separately.
 - Details for one implementation are stated as rules for all implementations, or a shared rule has more than one owner.
+- Implementation-specific policy duplicates shared rules or restricts supported choices without a concrete technical need. For example, Python Functions should reuse shared debug-port assignment rather than add a separate multi-service restriction; only native-provider listener configuration belongs in the Functions reference.
 
 ### AR-06: Shared modules simplify callers
 

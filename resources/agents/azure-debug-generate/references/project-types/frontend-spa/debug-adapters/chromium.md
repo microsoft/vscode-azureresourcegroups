@@ -20,7 +20,7 @@ Pick `type` from the browser recorded in plan Prerequisites; see [prerequisites.
   "name": "{id} (debug)",
   "type": "{chrome or msedge}",
   "request": "launch",
-  "url": "http://localhost:{port from Framework Lookup Table}",
+  "url": "http://localhost:{resolved dev-server port}",
   "webRoot": "${workspaceFolder}/{service-root}",
   "preLaunchTask": "{id} dev"
 }
@@ -29,7 +29,7 @@ Pick `type` from the browser recorded in plan Prerequisites; see [prerequisites.
 | Field | Source |
 |-------|--------|
 | `type` | Browser Debugger Type above, matching plan Prerequisites (`chrome` for Chrome, `msedge` for Edge) |
-| `url` | Default Port in [frontend-spa.md § Framework Lookup Table](../frontend-spa.md) |
+| `url` | Actual task port from approved plan/existing framework config; use [frontend-spa.md § Framework Lookup Table](../frontend-spa.md) only as its default |
 | `webRoot` | **Framework root** — see `webRoot` Resolution below |
 | `preLaunchTask` | `{id} dev` — dev server task from [frontend-spa.md § VS Code Task Configuration](../frontend-spa.md) |
 

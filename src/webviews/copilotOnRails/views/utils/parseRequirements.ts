@@ -232,7 +232,32 @@ export function parseRequirementsJson(content: string): RequirementsData {
         executionMode,
         workspaceSignals,
         services: services.length > 0 ? services : undefined,
-        questions,
+        questions: questions.map(question => {
+            const service = services.find(service => service.id === question.serviceId);
+            const isFramework = question.id.endsWith(':framework') || question.header?.trim().toLowerCase() === 'framework';
+            if (service?.role !== 'backend' || !isFramework) {
+                return question;
+            }
+            let answer: string | null = null;
+            if (typeof question.answer === 'string') {
+                answer = question.answer;
+            } else if (Array.isArray(question.answer) && question.answer.length === 1) {
+                answer = question.answer[0];
+            }
+            const invalidAnswer = !isAnswerEmpty(question.answer) && answer === null;
+            return {
+                ...question,
+                answer,
+                status: isAnswerEmpty(answer) ? 'needs_input' : question.status,
+                rationale: invalidAnswer
+                    ? `${question.rationale ? `${question.rationale}\n` : ''}The recorded framework must be a single name. Select Azure Functions or enter one custom framework.`
+                    : question.rationale,
+                options: [{ label: 'Azure Functions', description: 'Azure Functions API' }],
+                multiSelect: false,
+                allowFreeformInput: true,
+                recommendedChoice: invalidAnswer ? undefined : answer?.trim() ? answer : 'Azure Functions',
+            };
+        }),
     };
 }
 
