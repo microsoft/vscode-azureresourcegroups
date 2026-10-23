@@ -4,7 +4,7 @@ run-name: >-
   MSBench • ${{
     github.event_name == 'pull_request' && format('PR #{0} build-only', github.event.pull_request.number)
     || github.event_name == 'schedule' && github.event.schedule == '0 10 * * 0' && 'weekly core matrix'
-    || github.event_name == 'schedule' && 'daily tool canary'
+    || github.event_name == 'schedule' && 'daily plan lifecycle canary'
     || inputs.suite == 'full' && 'manual full suite'
     || inputs.suite == 'weekly-core' && 'manual core matrix'
     || format('{0} • {1}', inputs.stimulus, inputs.model)
@@ -22,8 +22,8 @@ run-name: >-
 #           resources/agents/ passes every other check in the repo and then shows
 #           up as an agent that mysteriously ignores its instructions. Needs no
 #           credentials, so it catches that on a PR instead of in an MSBench run.
-#   eval       - submits one manually selected stimulus, or the daily positive
-#                custom-tool canary, after MSBENCH_SCHEDULE_ENABLED is true.
+#   eval       - submits one manually selected stimulus, or the daily plan
+#                lifecycle canary, after MSBENCH_SCHEDULE_ENABLED is true.
 #   eval-suite - runs the weekly core matrix or an explicitly requested full
 #                suite, sequentially to protect the paid queue.
 #
@@ -57,7 +57,7 @@ on:
       stimulus:
         description: 'Stimulus for a single run. Ignored by weekly-core and full suites.'
         required: false
-        default: 'launch-report-debug-plan'
+        default: 'plan-approval-scrapbook'
       model:
         description: 'Exact model id from the checked-in MSBench sweep set'
         required: false
@@ -186,14 +186,14 @@ jobs:
       # STIMULUS is read from the environment by run.sh, the same way BENCHMARK
       # is, so `--stimulus` on the command line still wins for a local run.
       #
-      # The daily default is a positive custom-tool probe: it proves the VSIX,
-      # custom agent and MCP server loaded, rather than only proving a refusal
-      # path remained closed.
+      # The daily default exercises the first real product lifecycle boundary:
+      # requirements view → plan view → explicit approval → scaffold handoff.
+      # It proves multiple extension MCP tools and artifacts work together.
       - name: Run the MSBench eval
         run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
         env:
           BENCHMARK: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark || 'vscbench.say_hello' }}
-          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'launch-report-debug-plan' }}
+          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'plan-approval-scrapbook' }}
           MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gpt-5.6-sol' }}
           # Empty means the stock image, which is the default for every run that
           # is not specifically exercising the custom one. Note the CI identity
@@ -205,7 +205,7 @@ jobs:
       - name: Publish MSBench summary
         if: always()
         env:
-          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'launch-report-debug-plan' }}
+          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'plan-approval-scrapbook' }}
           MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gpt-5.6-sol' }}
           REPORT: ${{ runner.temp }}/report.json
         run: |
@@ -218,7 +218,7 @@ jobs:
             ' "$REPORT" 2>/dev/null || printf 'unknown\tunknown\n'
           )
           {
-            echo "## MSBench daily/single run"
+            echo "## MSBench daily lifecycle / single run"
             echo
             echo "- **Suite:** \`copilot-on-rails\`"
             echo "- **Stimulus:** \`$STIMULUS\`"
