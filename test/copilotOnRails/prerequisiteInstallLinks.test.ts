@@ -55,6 +55,28 @@ suite('prerequisiteInstallLinks', () => {
         assert.strictEqual(getPrerequisiteInstallLink('Microsoft Edge')?.url, 'https://www.microsoft.com/edge');
     });
 
+    test('resolves Python debug extensions before the Python runtime', () => {
+        for (const name of ['`ms-python.python`', 'Python extension (ms-python.python)']) {
+            assert.strictEqual(
+                getPrerequisiteInstallLink(name)?.url,
+                'https://marketplace.visualstudio.com/items?itemName=ms-python.python',
+            );
+        }
+        for (const name of ['`ms-python.debugpy`', 'Python Debugger']) {
+            assert.strictEqual(
+                getPrerequisiteInstallLink(name)?.url,
+                'https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy',
+            );
+        }
+        assert.strictEqual(getPrerequisiteInstallLink('Python 3.11')?.url, 'https://www.python.org/downloads/');
+        assert.strictEqual(getPrerequisiteInstallLink('Python -m pip')?.url, 'https://pip.pypa.io/en/stable/installation/');
+    });
+
+    test('resolves explicitly selected Python package managers', () => {
+        assert.strictEqual(getPrerequisiteInstallLink('Poetry')?.url, 'https://python-poetry.org/docs/#installation');
+        assert.strictEqual(getPrerequisiteInstallLink('uv')?.url, 'https://docs.astral.sh/uv/getting-started/installation/');
+    });
+
     test('resolves deploy CLIs, distinguishing azd from az', () => {
         assert.strictEqual(
             getPrerequisiteInstallLink('Azure Developer CLI (azd)')?.url,

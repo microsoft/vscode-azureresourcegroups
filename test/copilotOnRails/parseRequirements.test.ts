@@ -108,4 +108,92 @@ suite('parseRequirementsJson', () => {
         assert.strictEqual(result.services, undefined);
         assert.strictEqual(result.workspaceSignals, undefined);
     });
+
+    test('restricts backend framework suggestions while preserving explicit custom answers', () => {
+        const result = parseRequirementsJson(JSON.stringify({
+            services: [{ id: 'api', label: 'API', role: 'backend' }],
+            questions: [{
+                id: 'api:framework',
+                serviceId: 'api',
+                question: 'Which framework?',
+                status: 'confirmed',
+                answer: 'FastAPI',
+                options: [{ label: 'Express' }, { label: 'FastAPI' }],
+                recommendedChoice: 'Express',
+                multiSelect: true,
+                allowFreeformInput: false,
+            }],
+        }));
+
+        const question = result.questions[0];
+        assert.deepStrictEqual(question.options?.map(option => option.label), ['Azure Functions']);
+        assert.strictEqual(question.answer, 'FastAPI');
+        assert.strictEqual(question.recommendedChoice, 'FastAPI');
+        assert.strictEqual(question.status, 'confirmed');
+        assert.strictEqual(question.multiSelect, false);
+        assert.strictEqual(question.allowFreeformInput, true);
+    });
+
+    test('recommends Functions for unanswered backend questions, including malformed answer objects', () => {
+        for (const answer of [null, '', { framework: 'Express' }]) {
+            const result = parseRequirementsJson(JSON.stringify({
+                services: [{ id: 'api', label: 'API', role: 'backend' }],
+                questions: [{
+                    id: 'api:framework',
+                    serviceId: 'api',
+                    question: 'Which framework?',
+                    answer,
+                    recommendedChoice: 'Express',
+                }],
+            }));
+            assert.deepStrictEqual(result.questions[0].options?.map(option => option.label), ['Azure Functions']);
+            assert.strictEqual(result.questions[0].recommendedChoice, 'Azure Functions');
+            assert.strictEqual(result.questions[0].allowFreeformInput, true);
+        }
+    });
+
+    test('preserves a single legacy framework choice when converting to a single-select question', () => {
+        const result = parseRequirementsJson(JSON.stringify({
+            services: [{ id: 'api', label: 'API', role: 'backend' }],
+            questions: [{
+                id: 'api:framework', serviceId: 'api', answer: ['FastAPI'], status: 'confirmed', multiSelect: true,
+            }],
+        }));
+        assert.strictEqual(result.questions[0].answer, 'FastAPI');
+        assert.strictEqual(result.questions[0].recommendedChoice, 'FastAPI');
+        assert.strictEqual(result.questions[0].status, 'confirmed');
+        assert.strictEqual(result.questions[0].multiSelect, false);
+    });
+
+    test('requires review for nontext or ambiguous backend framework answers instead of silently selecting Functions', () => {
+        for (const answer of [true, 42, ['FastAPI', 'Flask']]) {
+            const result = parseRequirementsJson(JSON.stringify({
+                services: [{ id: 'api', label: 'API', role: 'backend' }],
+                questions: [{
+                    id: 'api:framework', serviceId: 'api', answer, status: 'confirmed', recommendedChoice: 'Express',
+                }],
+            }));
+            assert.strictEqual(result.questions[0].answer, null);
+            assert.strictEqual(result.questions[0].recommendedChoice, undefined);
+            assert.strictEqual(result.questions[0].status, 'needs_input');
+            assert.match(result.questions[0].rationale ?? '', /must be a single name/);
+        }
+    });
+
+    test('does not change frontend, worker, or unidentified-service framework choices', () => {
+        for (const role of ['frontend', 'worker', 'invalid']) {
+            const result = parseRequirementsJson(JSON.stringify({
+                services: [{ id: 'app', label: 'App', role }],
+                questions: [{
+                    id: 'app:framework',
+                    serviceId: 'app',
+                    question: 'Which framework?',
+                    answer: 'Custom',
+                    options: [{ label: 'Custom' }],
+                }],
+            }));
+            assert.deepStrictEqual(result.questions[0].options?.map(option => option.label), ['Custom']);
+            assert.strictEqual(result.questions[0].recommendedChoice, undefined);
+        }
+    });
 });

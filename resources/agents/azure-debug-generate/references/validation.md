@@ -28,9 +28,13 @@ For each **non-compound** `.vscode/launch.json` config:
    - **CLI tool invocations** (e.g., `rimraf`, `concurrently`) — Tool installed as project dependency
    - Missing dependency: add project dev dependency first (see [generate.md § Dependency Availability](generate.md))
 
+Resolve executables and dependency manifests using the selected runtime's Prerequisites and Build Chain, including environment compatibility checks.
+
 ### Step 3: Start Services
 
 - Run prerequisites first (install, clean, emulators), then start `preLaunchTask` in background
+
+Honor the selected project type's task-execution requirements. Custom task providers can add environment or debugger setup that a terminal command does not reproduce. When required controls are unavailable, record the limitation and leave the affected native behavior unverified; report terminal checks separately.
 
 ### Step 4: Verify Emulators
 
@@ -53,6 +57,8 @@ For each **non-compound** `.vscode/launch.json` config:
 
 > **HTTP verification not applicable:** If project-type HTTP Verification says "N/A" or lacks anonymous/public endpoint (e.g., all routes require auth keys), skip. Ready signal alone may pass ✅; checklist must say "HTTP verification skipped: {reason}".
 
+Run the project-type checklist's Live Validation Checks, when present, for provider-specific startup evidence beyond ready signals and HTTP.
+
 ### Step 7: Per-Debugger-Type Checks
 
 - Run checks for launch config `type`; see [Per-Runtime Validation Checks](#per-runtime-validation-checks). If none for debugger type, skip.
@@ -69,7 +75,7 @@ For each **compound**, run actual orchestration; never infer from individual con
 
 - **Confirm deduplicated startup graph.** Before run, verify every [multi-service.md § Deduplicated Startup Graph](multi-service.md) rule: effective graph starts each service once. Fix violations before run; never validate duplication-capable graph.
 
-- **Run compound orchestration.** Execute compound `preLaunchTask` sequenced chain like VS Code: its `dependsOn` members in `dependsOrder: "sequence"`. Use same terminal orchestration as individuals.
+- **Run compound orchestration.** Execute compound `preLaunchTask` sequenced chain like VS Code: its `dependsOn` members in `dependsOrder: "sequence"`. Honor each member's project-type task-execution requirements from Step 3.
 
 - **Assert each service starts once.** Task output must show one instance per top-level task. Repeated individual `preLaunchTask` on running service MUST silently no-op via `instancePolicy: "silent"`, never spawn second process. Double instance or occupied-port grab fails; fix before proceeding.
 
@@ -77,7 +83,7 @@ For each **compound**, run actual orchestration; never infer from individual con
 
 - **Record result.** Compound ✅ only when **each service started once AND reached ready AND, where applicable, passed HTTP**. Otherwise ❌ with duplicate/failure evidence.
 
-> **Known limitation:** Agent validates orchestration/readiness through terminal; it does not attach VS Code debuggers to compound members. Assert **started exactly once + ready + reachable**.
+> **Evidence scope:** Terminal orchestration proves only what it exercises, not task-provider setup or debugger attachment. Record native task/debug evidence separately when controls are available; otherwise state what remains unverified. Never infer one member's correctness from another member passing.
 
 - **Tear down compound.** Stop all started processes (member configs + full chains); confirm ports released per Step 8. Then final sweep below.
 

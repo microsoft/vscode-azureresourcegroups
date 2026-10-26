@@ -149,11 +149,20 @@ See [api-test-collections.md](../api-test-collections.md) for test script patter
 |-------------|-----------------|-------|
 | `http://localhost:{port}/{path}` | `{status}` | {notes} |
 
+### Startup Readiness Task
+
+<!-- Optional. If the background problem matcher signals before dependent services
+     can use this app, define a service-prefixed readiness task, bounded probe,
+     success/failure criteria, and required tooling here. multi-service.md inserts
+     it after this service's startup task; do not depend on or restart that task. -->
+
 ---
 
 ## Checklist — {Type} Project Validation
 
-<!-- Post-generation artifact check only; do not run or start anything. -->
+### Post-Generation Checks
+
+<!-- Artifact checks only; do not run or start anything. -->
 
 After generating `launch.json`, `tasks.json`, and `extensions.json`, verify:
 
@@ -163,3 +172,9 @@ After generating `launch.json`, `tasks.json`, and `extensions.json`, verify:
 4. ✅ `dependsOn` includes runtime build/watch task and `Start Emulators` when required
 
 > Runtime checks (e.g., build task, debugger type) are in `runtimes/{rt}.md`.
+
+### Live Validation Checks
+
+<!-- Optional project-type/provider checks. validation.md runs these after ready
+     signal and HTTP verification. State required execution controls and evidence;
+     runtime debugger checks stay in runtimes/{rt}.md. -->

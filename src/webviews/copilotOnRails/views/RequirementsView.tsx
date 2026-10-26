@@ -10,6 +10,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import './styles/requirementsView.scss';
 import { isLimitedSupportDataStore, limitedSupportWarningMessage } from './utils/emulatorSupport';
 import { inferInputType, isAnswerEmpty, toggleRequirementsOption, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
+import { isLimitedSupportBackendLanguage } from './utils/serviceStackOptions';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -81,8 +82,7 @@ function isPreviewBackendLanguage(answer: RequirementsAnswer): boolean {
     const values = Array.isArray(answer) ? answer : [answer];
     return values.some(value => {
         if (typeof value !== 'string') { return false; }
-        const normalized = value.toLowerCase();
-        return normalized.includes('python') || normalized.includes('.net') || normalized.includes('c#');
+        return isLimitedSupportBackendLanguage(value);
     });
 }
 
@@ -213,7 +213,7 @@ export const RequirementsView = (): JSX.Element => {
         }
         return data.questions.some(q => {
             // Language questions are per-service (`{serviceId}:language`, header
-            // "Language"); only backend/worker services can pick Python or .NET.
+            // "Language"); backend/worker .NET selections still need a warning.
             const isLanguageQuestion = q.id.endsWith(':language') || q.header?.trim() === 'Language';
             if (!isLanguageQuestion) {
                 return false;
@@ -332,7 +332,7 @@ export const RequirementsView = (): JSX.Element => {
                 <div className='banner banner--warning' role='note'>
                     <WarningRegular />
                     <div>
-                        <p>Python and .NET support is limited and may have compatibility issues.</p>
+                        <p>.NET support is limited and may have compatibility issues.</p>
                     </div>
                 </div>
             )}

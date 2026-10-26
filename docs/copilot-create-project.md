@@ -205,14 +205,24 @@ mock‑up) so you can see the proposed layout before any code is written. Read t
 type feedback to revise it). After feedback, the agent keeps the plan in `Planning`, updates any affected UI
 previews, reruns its structural check, and reopens or refocuses the Plan preview for another explicit approval.
 
-Editable service-stack choices follow the service role and language. API, backend, and worker sections offer
-backend frameworks, while web app and frontend sections offer frontend frameworks. The view also recognizes
-minor component-label variations such as `Framework` and `Backend Framework`.
+Editable service-stack choices follow the service role and language. API/backend framework controls offer
+**Azure Functions** or **Custom framework**, with a text field for the custom name. Enter a nonempty name
+before approving or submitting changes. Custom framework choices survive language edits; runtime/package
+manager/test-runner choices still adjust to the service language. The view recognizes component-label
+variations such as `Framework` and `Backend Framework` and shows an editable field even when the value cell
+is missing from the plan.
 
 The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
 **Install** link for each. Those links are not written by the agent — the extension resolves each link
 deterministically from a built‑in catalog by matching the tool name, so the plan markdown can never inject an
 arbitrary URL into the view.
+
+For Python, the inventory checks a compatible interpreter and its own pip, not an unrelated global pip or an
+incompatible system Python. New Functions services use a service-local `.venv`; existing compatible
+environments are retained. Debug prerequisites include the **Python**, **Python Debugger**, and **Azure
+Functions** extensions, separately from Python/pip and Functions Core Tools.
+The generated plan preserves Python tooling choices including `uv` and `unittest`, with a test command
+matching the selected runner.
 
 <p align="center">
   <img src="images/copilot-create-project/05-plan-preview.png" alt="Plan preview — plan document" />
@@ -250,6 +260,11 @@ an iframe, topped by an **Approve UI** header and a feedback box.
 For apps **with no frontend**, the preview gate is skipped and the scaffold agent hands off to integration
 directly via `start_project_integrate`.
 
+Python Functions scaffolds use the v2 programming model, explicit Blueprint registration in a service-root
+`function_app.py`, and production `requirements.txt`. Python application packages stay inside that service;
+JS/TS frontends use typed HTTP contracts from OpenAPI/JSON Schema rather than importing Python modules.
+The integration hand-off records the selected interpreter, venv, and runtime-specific commands.
+
 ## Stage 5 — Integration
 
 The **`azure-project-integrate`** agent runs in a fresh session and reads `.azure/integration-plan.md`. It:
@@ -258,6 +273,11 @@ The **`azure-project-integrate`** agent runs in a fresh session and reads `.azur
 - **Wires the frontend to live backend data**, replacing all mock data.
 - **Smoke‑tests the backend** so every endpoint responds.
 - Runs the frontend and backend together end‑to‑end.
+
+Python dependency checks, source compilation, and migrations use the same selected venv. Integration
+starts the local Functions host in that environment, verifies registered routes and real responses, and
+checks frontend CORS/storage configuration. A successful container fallback does not prove local Python
+debugging works.
 
 When done it opens the **Scaffold Next Steps** view — a "What's next?" card that drives the next hand‑off
 (set up **Local Development**, or **Deploy**).
@@ -277,6 +297,22 @@ section shows deterministic **Install** links resolved by the extension from its
 plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
 attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
 `https`, or `mailto` URLs. Mermaid diagrams use strict security mode.
+
+Python Functions debugging uses a native **`func` task**, **`$func-python-watch`**, and **`debugpy` attach**,
+normally on debugger port **9091** (separate from HTTP port **7071**). The required native-task settings select
+Python and its venv; the task's working directory selects the service root. Core Tools compatibility is
+checked through prerequisites rather than a Python-specific `projectRuntime` setting. For any language,
+`projectSubpath` is added only when extension project discovery needs an explicit root.
+`python.defaultInterpreterPath` alone is not enough to configure the Functions worker.
+Restore/compile tasks use that venv's interpreter, with the
+appropriate Windows or macOS/Linux executable path. Generated settings retain
+`debug.onTaskErrors: "debugAnyway"` to suppress the often-misleading blocking task-errors prompt;
+existing workspace customizations are preserved.
+
+Native task execution, debugger readiness/attachment, and HTTP route availability are separate checks.
+The agent reports any native-debug verification it cannot perform instead of calling a terminal-only launch
+an F5 pass. For multi-service debugging, assign unique debug ports and keep each worker's listener and
+debugger attach port in sync.
 
 Approving the debug plan authorizes creation of its checked artifacts and non-destructive merges into existing
 configuration, so generation does not ask for a second blanket file-change confirmation. It still asks before
@@ -628,6 +664,11 @@ before submitting.
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
 | F5 / *Start Emulators* fails with a connection or "cannot connect to the container runtime" error. | The container engine the plan selected isn't running. | For **Docker**, start Docker Desktop / the Docker service. For **Podman** on Windows/macOS, ensure a **Podman machine** exists and is started (`podman machine init` once, then `podman machine start`). Generation's preflight asks before starting a stopped machine but won't create one for you. |
+| Python F5 uses system Python, reports `ModuleNotFoundError`, or never attaches. | Native Functions settings do not select Python/the correct service venv, or Python debugger extensions are missing. | Confirm `azureFunctions.projectLanguage: "Python"`, `azureFunctions.pythonVenv` relative to the task's actual Functions service cwd, and compatible Core Tools. Install both `ms-python.python` and `ms-python.debugpy`; select the matching venv in **Python: Select Interpreter** if VS Code cached another one. Remove ad hoc worker/debugger argument overrides and retry the real VS Code task, not only a terminal command. Use `projectSubpath` only if extension project discovery needs it. |
+| Python functions compile but no endpoints register, or routes become `/api/api/...`. | Circular registration imports, an unregistered Blueprint, or a duplicated HTTP prefix. | Register every handler Blueprint explicitly from service-root `function_app.py`; handlers must not import its `app`. Read the actual host HTTP prefix and include it once when constructing route URLs. |
+| Functions host fails with an unhelpful disposed-`IServiceProvider` error. | Credentialed wildcard CORS can invalidate startup configuration. | Replace `Host.CORS: "*"` with the actual frontend origin(s) when `CORSCredentials` is `true`; keep the frontend dev port and debug URL aligned. Inspect host logs for other causes rather than assuming every such error is CORS. |
+| Azurite starts but Python Functions/storage requests fail authentication. | Custom `AZURITE_ACCOUNTS` or mapped ports do not match default development-storage shorthand. | Use the default account/ports with `UseDevelopmentStorage=true`, or explicit matching connection endpoints/account credentials for both host and clients. Review existing values before changing them. |
+| A Python migration container cannot run the interpreter or import binary dependencies. | A host `.venv` was mounted into a Linux image. | Use an image matching the service's Python major/minor, restore migration dependencies inside it, and run the container-native interpreter. Do not mount a macOS/Windows venv. |
 | Emulators start under Docker but not after switching the plan to **Podman**. | `podman compose` needs an external Compose provider, or the emulator isn't Podman‑certified. | Confirm `podman compose version` returns a version (it wraps `docker-compose`/`podman-compose`). Azurite and PostgreSQL are certified; other emulators generate best‑effort under Podman and emit a `⚠️ LIMITED SUPPORT` warning. |
 | The plan says *Podman (Docker-compatible)* but `docker compose` can't reach an engine. | Podman's Docker-compatible socket isn't up. | Enable **Docker compatibility** in Podman Desktop and make sure the **Podman machine** is started (`podman machine start`). `docker info` should then report the Podman server. The generated tasks keep using `docker compose` — that's the command that talks to the compatible socket. |
 | Podman containers run, but the app on the **Windows host** can't reach them (`/api/health` shows `database: error`; `Test-NetConnection localhost:5432` is `False`). | The Podman machine isn't forwarding container ports to the Windows host — common with the **Hyper‑V** machine provider (which also needs admin). | Use the **WSL** machine provider instead of Hyper‑V (no admin, and it auto‑forwards ports): `podman machine stop; podman machine rm; $env:CONTAINERS_MACHINE_PROVIDER = "wsl"; podman machine init; podman machine start`. You do **not** need to install Hyper‑V. |

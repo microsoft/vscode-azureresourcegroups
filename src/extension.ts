@@ -8,10 +8,10 @@
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { registerMcpHttpProvider } from '@microsoft/vscode-inproc-mcp/vscode';
-import { AzureSubscription } from '../api/src';
-import { GetApiOptions, apiUtils } from '../api/src/utils/apiUtils';
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../api/src';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
+import { GetApiOptions, apiUtils } from '../api/src/utils/apiUtils';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
@@ -68,8 +68,8 @@ import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/ex
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { registerDeployInventoryWatcher } from './webviews/copilotOnRails/extension/deployInventoryWatcher';
 import { registerDeployProgressWatcher } from './webviews/copilotOnRails/extension/deployProgressWatcher';
-import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerDeployResultAutoOpen } from './webviews/copilotOnRails/extension/openDeployResultView';
+import { registerDeploymentPlanAutoOpen } from './webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
