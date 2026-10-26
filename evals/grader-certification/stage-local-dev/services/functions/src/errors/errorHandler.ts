@@ -26,7 +26,7 @@ export function handleError(error: unknown, context: InvocationContext): HttpRes
 
   // Zod validation errors → map to ValidationError shape
   if (error instanceof ZodError) {
-    const details = error.errors.map(e => ({
+    const details = error.issues.map(e => ({
       field: e.path.join('.'),
       message: e.message,
     }));
