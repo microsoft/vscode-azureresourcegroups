@@ -5,7 +5,7 @@
 
 import { createContextValue, ISubscriptionContext, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../../api/src/index';
+import { AzExtResourceType, AzureResource, AzureSubscription } from '../../../../api/src/index';
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from '../../../utils/localize';
@@ -32,7 +32,7 @@ export class GroupingItem implements ResourceGroupsItem {
     public readonly parent?: ResourceGroupsItem;
 
     private readonly resourceItemFactory: ResourceItemFactory<AzureResource>;
-    private readonly branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>;
+    private readonly branchDataProviderFactory: BranchDataProviderFactory;
     private readonly onDidChangeBranchDataProviders: vscode.Event<AzExtResourceType>;
 
     protected readonly contextValues: string[] = ['groupingItem'];
@@ -116,7 +116,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                 const loads = (subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
                     try {
-                        const branchDataProvider = this.branchDataProviderFactory(resource);
+                        const branchDataProvider = await this.branchDataProviderFactory(resource, context);
                         const resourceItem = await branchDataProvider.getResourceItem(resource, context);
                         const options: BranchDataItemOptions = {
                             contextValues: ['azureResource'],

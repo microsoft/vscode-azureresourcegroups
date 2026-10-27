@@ -41,6 +41,9 @@ rather than re-resolving an unqualified ID through a cache shared by multiple id
   Only provider-specific child suffixes beyond that resource ID are case-sensitive.
 - Prefer the most-specific enumerated ARM resource before selecting a group or loading a provider.
   A nested resource and its provider children do not require loading a less-specific ARM parent's branch.
+- Await the target's branch-extension activation before explicit loading and return its registered provider model.
+  Concurrent requests share in-flight activation. Normal browsing remains lazy and can show the default provider
+  while activation completes; resource types without a registered provider retain the default fallback.
 
 Tenant-specific resolution queries that tenant directly. Requests without a tenant hint search authenticated tenants
 without the authentication library's ten-tenant browsing limit.

@@ -172,7 +172,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
         new DefaultAzureResourceBranchDataProvider(),
-        type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
+        type => extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(azureResourceBranchDataProviderManager);
 
@@ -331,6 +331,13 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 },
                 testing: {
                     registerOnActionStartHandler,
+                    overrideAzureBranchActivation: activate => {
+                        const originalActivate = extensionManager.activateApplicationResourceBranchDataProvider;
+                        extensionManager.activateApplicationResourceBranchDataProvider = activate;
+                        return new vscode.Disposable(() => {
+                            extensionManager.activateApplicationResourceBranchDataProvider = originalActivate;
+                        });
+                    },
                     overrideAzureResourceReveal: reveal => {
                         const originalReveal = ext.appResourceTreeView.reveal;
                         ext.appResourceTreeView.reveal = async item => {

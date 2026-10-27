@@ -7,6 +7,7 @@ import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import type { AzExtLocation } from "@microsoft/vscode-azext-azureutils";
 import { AzExtTreeDataProvider, IActionContext, IAzExtLogOutputChannel, ISubscriptionActionContext, registerOnActionStartHandler } from "@microsoft/vscode-azext-utils";
 import type { Disposable } from "vscode";
+import type { AzExtResourceType } from '../api/src';
 import { GroupingKind } from "./extensionVariables";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
@@ -77,6 +78,9 @@ export interface TestApi {
 
         /** Overrides native reveal so tests can deterministically request tree data during the reveal phase. */
         overrideAzureResourceReveal(reveal: (id: string) => Promise<void>): Disposable;
+
+        /** Supplies a controlled branch-extension activation promise inside the running extension. */
+        overrideAzureBranchActivation(activate: (type: AzExtResourceType) => Promise<void>): Disposable;
 
         /**
          * Override the Azure service factory for testing

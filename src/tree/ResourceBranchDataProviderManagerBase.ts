@@ -3,19 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase, ResourceTreeOperationContext } from '../../api/src/index';
 import { wrapFunctionsInTelemetry } from '../utils/wrapFunctionsInTelemetry';
+import { ext } from '../extensionVariables';
+import { localize } from '../utils/localize';
 
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
     private readonly branchDataProviderMap = new Map<TResourceType, { provider: TBranchDataProvider, listener: vscode.Disposable | undefined }>();
+    private readonly activations = new Map<TResourceType, Promise<void>>();
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceModelBase | ResourceModelBase[] | undefined | null>();
     private readonly onDidChangeBranchDataProvidersEmitter = new vscode.EventEmitter<TResourceType>();
 
     constructor(
         private readonly defaultProvider: TBranchDataProvider,
-        private readonly extensionActivator: (type: TResourceType) => void
+        private readonly extensionActivator: (type: TResourceType) => void | Promise<void>
     ) {
         super(
             () => {
@@ -54,10 +57,41 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             // NOTE: The default branch data provider will be returned until the extension is loaded.
             //       The extension will then register its branch data providers, resulting in a change event.
             //       The tree will then be refreshed, resulting in this method being called again.
-            this.extensionActivator(type);
+            void this.activateProvider(type);
         }
 
         return this.defaultProvider;
+    }
+
+    async getProviderForReveal(type: TResourceType | undefined): Promise<TBranchDataProvider> {
+        if (type) {
+            const pending = this.activations.get(type);
+            if (pending) {
+                await pending;
+            } else if (!this.branchDataProviderMap.has(type)) {
+                await this.activateProvider(type);
+            }
+            return this.branchDataProviderMap.get(type)?.provider ?? this.defaultProvider;
+        }
+        return this.defaultProvider;
+    }
+
+    private activateProvider(type: TResourceType): Promise<void> {
+        const pending = this.activations.get(type);
+        if (pending) {
+            return pending;
+        }
+        const activation = Promise.resolve().then(() => this.extensionActivator(type));
+        this.activations.set(type, activation);
+        // Observe lazy-activation failures without consuming the rejection awaited by explicit reveals.
+        void activation.then(
+            () => { this.activations.delete(type); },
+            error => {
+                this.activations.delete(type);
+                ext.outputChannel?.appendLog(localize('branchProviderActivationFailed',
+                    'Unable to activate the resource extension: {0}', parseError(error).message));
+            });
+        return activation;
     }
 
     removeProvider(type: TResourceType): void {
