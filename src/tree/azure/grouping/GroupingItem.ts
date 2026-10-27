@@ -9,6 +9,7 @@ import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, Azur
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from '../../../utils/localize';
+import { isResourceAncestor, TreeTraversalContext } from '../../../utils/treeOperations';
 import { createPortalUrl } from '../../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../../BranchDataItemWrapper';
 import { GenericItem } from '../../GenericItem';
@@ -77,9 +78,12 @@ export class GroupingItem implements ResourceGroupsItem {
         return resources;
     }
 
-    async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
+    async getChildren(context?: TreeTraversalContext): Promise<ResourceGroupsItem[] | undefined> {
 
-        const sortedResources = this.getResourcesToDisplay(this.resources).sort((a, b) => {
+        const sortedResources = this.getResourcesToDisplay(this.resources)
+            .filter(resource => !context?.targetId || isResourceAncestor(
+                getAccountAndTenantPrefix(resource.subscription) + resource.id, context.targetId))
+            .sort((a, b) => {
 
             if (a.subscription !== b.subscription) {
                 return a.subscription.name.localeCompare(b.subscription.name);
@@ -111,10 +115,10 @@ export class GroupingItem implements ResourceGroupsItem {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
-                await Promise.allSettled((subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
+                const loads = (subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
                     try {
                         const branchDataProvider = this.branchDataProviderFactory(resource);
-                        const resourceItem = await branchDataProvider.getResourceItem(resource);
+                        const resourceItem = await branchDataProvider.getResourceItem(resource, context);
                         const options: BranchDataItemOptions = {
                             contextValues: ['azureResource'],
                             defaultId: resource.id,
@@ -132,12 +136,20 @@ export class GroupingItem implements ResourceGroupsItem {
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));
                     } catch (e) {
+                        if (context?.propagateErrors) {
+                            throw e;
+                        }
                         const parsedError = parseError(e);
                         ext.outputChannel.appendLog(localize('errorResolving', 'Error resolving resource item for {0}: {1}', resource.id, parsedError.message));
                         items.push(new InvalidAzureResourceItem(resource, e));
                         throw parsedError;
                     }
-                }));
+                });
+                if (context?.propagateErrors) {
+                    await Promise.all(loads);
+                } else {
+                    await Promise.allSettled(loads);
+                }
 
                 return items.sort((a, b) => (a.id.split('/').pop() ?? '').localeCompare((b.id.split('/').pop() ?? '')));
             }));

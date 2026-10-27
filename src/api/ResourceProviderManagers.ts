@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
+import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, ResourceTreeOperationContext, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
 import { AzureResourceProvider } from '../hostapi.v2.internal';
 import { TenantResource, TenantResourceProvider } from '../tree/tenants/tenant';
 
@@ -59,12 +59,12 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
         }
     }
 
-    async getResources(source: TResourceSource): Promise<TResource[]> {
+    async getResources(source: TResourceSource, context?: ResourceTreeOperationContext): Promise<TResource[]> {
         await this.activateExtensions();
 
         const resourceProviders = Array.from(this.providers.keys());
 
-        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source)));
+        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source, context)));
 
         return resources.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
     }

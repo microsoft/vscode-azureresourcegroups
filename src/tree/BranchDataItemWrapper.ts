@@ -7,6 +7,7 @@ import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
+import { TreeTraversalContext } from '../utils/treeOperations';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
@@ -60,8 +61,8 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     get portalUrl(): vscode.Uri | undefined { return this.options?.portalUrl; }
     get viewProperties(): ViewPropertiesModel | undefined { return this.options?.viewProperties; }
 
-    async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
-        const children = await this.branchDataProvider.getChildren(this.branchItem);
+    async getChildren(context?: TreeTraversalContext): Promise<ResourceGroupsItem[] | undefined> {
+        const children = await this.branchDataProvider.getChildren(this.branchItem, context);
 
         const factory = createBranchDataItemFactory(this.itemCache);
 

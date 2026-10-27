@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -12,6 +12,9 @@ import { getDuplicateSubscriptionModeSetting, getDuplicateSubscriptions, getDupl
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
+import { callWithTreeErrorHandling, TreeTraversalContext } from '../../utils/treeOperations';
+import { getSubscriptionsForReveal } from '../../utils/subscriptionsForReveal';
+import { getAccountAndTenantPrefix } from './idPrefix';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
@@ -25,6 +28,51 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
     private readonly groupingChangeSubscription: vscode.Disposable;
     private hasShownDuplicateWarning: boolean = false;
     private hasLoadedSubscriptions: boolean = false;
+    private readonly revealedSubscriptions = new Set<string>();
+
+    async resolveSubscriptionForReveal(context: IActionContext, subscriptionId: string, tenantId?: string, includeFilteredSubscription = false): Promise<string> {
+        const provider = await this.getAzureSubscriptionProvider();
+        let available: AzureSubscription[];
+        try {
+            available = await getSubscriptionsForReveal(provider, tenantId);
+        } catch (error) {
+            if (!isNotSignedInError(error)) {
+                throw error;
+            }
+            if (!await provider.signIn()) {
+                throw new UserCancelledError();
+            }
+            available = await getSubscriptionsForReveal(provider, tenantId, true);
+        }
+        const matching = available.filter(subscription =>
+            subscription.subscriptionId.toLowerCase() === subscriptionId.toLowerCase()
+            && (!tenantId || subscription.tenantId.toLowerCase() === tenantId.toLowerCase()));
+        if (matching.length === 0) {
+            throw new Error(localize('revealSubscriptionUnavailable', 'The requested subscription is not available in the requested tenant. Sign in to the appropriate account and try again.'));
+        }
+
+        const subscription = matching.length === 1 ? matching[0] : (await context.ui.showQuickPick(
+            matching.map(subscription => ({
+                label: subscription.name,
+                description: subscription.account.label,
+                detail: subscription.tenantId,
+                data: subscription
+            })),
+            { placeHolder: localize('selectRevealSubscription', 'Select the account and tenant to open this resource') }
+        )).data;
+        const id = this.getSubscriptionTreeId(subscription);
+
+        if (includeFilteredSubscription) {
+            this.revealedSubscriptions.add(id.toLowerCase());
+            this.notifyTreeDataChanged();
+        }
+
+        return id;
+    }
+
+    private getSubscriptionTreeId(subscription: AzureSubscription): string {
+        return `${getAccountAndTenantPrefix(subscription)}/subscriptions/${subscription.subscriptionId}`;
+    }
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -64,11 +112,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
     }
 
-    async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+    async onGetChildren(element?: ResourceGroupsItem | undefined, options?: TreeTraversalContext): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element?.getChildren) {
-            return await element.getChildren();
+            return await element.getChildren(options);
         } else {
-            return await this.getRootChildren();
+            return await this.getRootChildren(options);
         }
     }
 
@@ -76,8 +124,8 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
      * Gets the root children (subscriptions) for the Azure Resources tree.
      * Wrapped in telemetry to measure initial load performance.
      */
-    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
+    private async getRootChildren(options?: TreeTraversalContext): Promise<ResourceGroupsItem[] | null | undefined> {
+        return await callWithTreeErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
             const isFirstLoad = !this.hasLoadedSubscriptions;
@@ -96,7 +144,22 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache });
+                const subscriptions = getTenantFilteredSubscriptions(
+                    await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache }));
+                if (this.revealedSubscriptions.size > 0) {
+                    // Resolve against current authentication state, never retain credentials across sign-out.
+                    const tenantIds = new Set([...this.revealedSubscriptions].map(id => id.split('/')[4]));
+                    const available = (await Promise.all([...tenantIds].map(
+                        tenantId => getSubscriptionsForReveal(subscriptionProvider, tenantId)))).flat();
+                    const visibleIds = new Set(subscriptions.map(subscription => this.getSubscriptionTreeId(subscription).toLowerCase()));
+                    for (const subscription of available) {
+                        const id = this.getSubscriptionTreeId(subscription).toLowerCase();
+                        if (this.revealedSubscriptions.has(id) && !visibleIds.has(id)) {
+                            subscriptions.push(subscription);
+                            visibleIds.add(id);
+                        }
+                    }
+                }
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 context.telemetry.measurements.subscriptionCount = subscriptions.length;
@@ -160,9 +223,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         }
                     }
 
-                    const tenantFilteredSubcriptions = getTenantFilteredSubscriptions(subscriptions);
-                    if (tenantFilteredSubcriptions) {
-                        return tenantFilteredSubcriptions.map(
+                    return subscriptions.map(
                             subscription => {
                                 // for telemetry purposes, do not wait
                                 void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFiltedSubcription', async (context: IActionContext) => {
@@ -201,38 +262,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     this.resourceProviderManager,
                                     subscription);
                             });
-                    } else {
-                        return subscriptions.map(
-                            subscription => {
-                                // for telemetry purposes, do not wait
-                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscription', async (context: IActionContext) => {
-                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
-                                });
-                                if (duplicates.includes(subscription)) {
-                                    return new SubscriptionItem(
-                                        {
-                                            subscription: subscription,
-                                            subscriptionContext: createSubscriptionContext(subscription),
-                                            refresh: item => this.notifyTreeDataChanged(item),
-                                        },
-                                        this.resourceGroupingManager,
-                                        this.resourceProviderManager,
-                                        subscription,
-                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
-                                }
-                                return new SubscriptionItem(
-                                    {
-                                        subscription: subscription,
-                                        subscriptionContext: createSubscriptionContext(subscription),
-                                        refresh: item => this.notifyTreeDataChanged(item),
-                                    },
-                                    this.resourceGroupingManager,
-                                    this.resourceProviderManager,
-                                    subscription);
-                            });
-                    }
                 }
             } catch (error) {
+                if (options?.propagateErrors) {
+                    throw error;
+                }
                 if (isNotSignedInError(error)) {
                     context.telemetry.properties.outcome = 'notSignedIn';
                     return getSignInTreeItems(true);
@@ -244,7 +278,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 context.telemetry.properties.unhandledError = String(error);
                 return [];
             }
-        });
+        }, options);
     }
 
     private hasSentSubscriptionTelemetry = false;

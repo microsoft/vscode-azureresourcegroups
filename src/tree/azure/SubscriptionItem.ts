@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { createSubscriptionContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
+import { callWithTreeErrorHandling, TreeTraversalContext } from "../../utils/treeOperations";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
@@ -41,9 +42,9 @@ export class SubscriptionItem implements ResourceGroupsItem {
     private description?: string;
     public readonly subscription: ISubscriptionContext & AzureSubscription;
 
-    async getChildren(): Promise<ResourceGroupsItem[]> {
-        return await callWithTelemetryAndErrorHandling('subscriptionItem.getChildren', async (context: IActionContext) => {
-            const resources = await this.resourceProviderManager.getResources(this.subscription);
+    async getChildren(options?: TreeTraversalContext): Promise<ResourceGroupsItem[]> {
+        return await callWithTreeErrorHandling('subscriptionItem.getChildren', async (context: IActionContext) => {
+            const resources = await this.resourceProviderManager.getResources(this.subscription, options);
             context.telemetry.properties.subscriptionId = this.subscription.subscriptionId;
             context.telemetry.measurements.resourceCount = resources.length;
 
@@ -54,7 +55,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
             context.telemetry.measurements.groupCount = groupingItems.length;
 
             return groupingItems;
-        }) ?? [];
+        }, options) ?? [];
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {

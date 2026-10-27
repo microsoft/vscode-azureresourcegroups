@@ -3,8 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandlingSync, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import { ext } from "../extensionVariables";
+import { callWithTreeErrorHandling } from "./treeOperations";
 
 function stringifyError(e: unknown): string {
     const error = parseError(e);
@@ -28,6 +29,7 @@ function handleError(e: unknown, functionName: string): never {
 }
 
 interface WrapFunctionsInTelemetryOptions {
+    propagateErrors?(args: readonly unknown[]): boolean;
     /**
      * Called before each function is executed. Intended for adding telemetry properties.
      */
@@ -61,7 +63,7 @@ export function wrapFunctionsInTelemetry<TFunctions extends ObjectWithFunctions>
 
     Object.entries(functions as Record<string, (...args: unknown[]) => unknown>).forEach(([functionName, func]) => {
         wrappedFunctions[functionName] = (...args: Parameters<typeof func>): ReturnType<typeof func> => {
-            return callWithTelemetryAndErrorHandling((options?.callbackIdPrefix ?? '') + functionName, async (context) => {
+            return callWithTreeErrorHandling((options?.callbackIdPrefix ?? '') + functionName, async (context) => {
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
@@ -71,7 +73,7 @@ export function wrapFunctionsInTelemetry<TFunctions extends ObjectWithFunctions>
                 } catch (e) {
                     handleError(e, (options?.callbackIdPrefix ?? '') + functionName);
                 }
-            });
+            }, { propagateErrors: options?.propagateErrors?.(args) });
         };
     });
 
@@ -109,4 +111,3 @@ export function wrapFunctionsInTelemetrySync<TFunctions extends ObjectWithFuncti
 
     return wrappedFunctions as TFunctions;
 }
-

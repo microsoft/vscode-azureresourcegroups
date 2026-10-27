@@ -25,6 +25,34 @@ For the Workspace view, clients can contribute root level tree items to the view
 
 <br clear="right"/>
 
+### Explicit resource reveals
+
+`resources.revealAzureResourceWithResult(id, options)` explicitly loads an ARM resource before requesting its
+reveal in VS Code. It returns `{ id, resource }`: the fully qualified tree ID
+and the exact branch-provider model (when the target belongs to a branch provider). Consumers should use that model
+rather than re-resolving an unqualified ID through a cache shared by multiple identities.
+
+- Set `tenantId` to resolve the subscription in a specific tenant, including delegated access.
+- Set `includeFilteredSubscription: true` for explicit deep links. Only the selected subscription is added
+  to the visible tree for the current window session, across refreshes, without changing saved subscription
+  or tenant filters. Other subscriptions in the same tenant remain filtered.
+- Use `revealOptions` for VS Code's focus, selection, and expansion options.
+
+Tenant-specific resolution queries that tenant directly. Requests without a tenant hint search authenticated tenants
+without the authentication library's ten-tenant browsing limit.
+If no Azure account is signed in, the user is prompted to sign in and subscription resolution is retried
+with fresh data. If multiple accounts or tenants match, the user chooses one.
+Cancellation during sign-in, identity selection, resource enumeration, or loading the target's branch
+returns `undefined`; cancellation from unrelated sibling resources does not cancel the reveal.
+Other explicit loading and VS Code reveal-request failures reject. Normal tree browsing retains its
+existing error handling. Background rendering or refresh requests are independent and cannot cancel another operation.
+Providers receive an optional `ResourceTreeOperationContext` with `propagateErrors: true` during explicit loading.
+Participating providers must throw their original errors/cancellation instead of substituting empty results or error nodes.
+The host cannot recover errors that a provider consumes internally without honoring this context.
+Rendering-only failures handled by VS Code's normal tree callbacks do not change a successful result.
+Visibility overrides do not retain credentials or expose signed-out subscriptions.
+Clients supporting older hosts should feature-detect the method; the legacy reveal behavior is unchanged.
+
 ### Create Resource command
 
 <img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/create-resource.png?raw=true" width="60%" />

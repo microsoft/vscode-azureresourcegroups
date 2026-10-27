@@ -5,7 +5,7 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/src/index';
+import { BranchDataProvider, ResourceBase, ResourceModelBase, ResourceTreeOperationContext } from '../../api/src/index';
 import { wrapFunctionsInTelemetry } from '../utils/wrapFunctionsInTelemetry';
 
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
@@ -77,9 +77,9 @@ function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<R
         ...wrapFunctionsInTelemetry(
             {
                 getChildren: branchDataProvider.getChildren.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
-                getTreeItem: branchDataProvider.getTreeItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
-                getResourceItem: async (element: ResourceBase) => {
-                    const result = await branchDataProvider.getResourceItem(element);
+                getTreeItem: branchDataProvider.getTreeItem.bind(branchDataProvider),
+                getResourceItem: async (element: ResourceBase, context?: ResourceTreeOperationContext) => {
+                    const result = await branchDataProvider.getResourceItem(element, context);
                     if (!result) {
                         throw new NullishGetResourceItemResultError(result);
                     }
@@ -89,6 +89,11 @@ function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<R
             },
             {
                 callbackIdPrefix: 'branchDataProvider.',
+                propagateErrors: args => {
+                    const context = args[1];
+                    return !!context && typeof context === 'object'
+                        && 'propagateErrors' in context && context.propagateErrors === true;
+                },
                 beforeHook: (context: IActionContext) => {
                     context.telemetry.properties.branchDataProviderType = String(type);
                 }
