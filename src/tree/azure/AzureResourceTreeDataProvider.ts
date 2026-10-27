@@ -183,7 +183,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         .map(id => id.split('/').slice(0, 5).join('/')))];
                     const lookups = await Promise.allSettled(identities.map(identity => {
                         const [, , accountId, , tenantId] = identity.split('/');
-                        return getSubscriptionsForReveal(subscriptionProvider, tenantId, false, accountId);
+                        return getSubscriptionsForReveal(subscriptionProvider, tenantId, shouldClearCache, accountId);
                     }));
                     const available: AzureSubscription[] = [];
                     for (let i = 0; i < lookups.length; i++) {

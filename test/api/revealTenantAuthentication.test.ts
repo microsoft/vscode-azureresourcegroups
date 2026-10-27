@@ -86,6 +86,7 @@ suite('Tenant-specific reveal authentication and discovery isolation', () => {
     let subscription: AzureSubscription;
     let tree: AzureResourceTreeDataProvider;
     let revealOverride: vscode.Disposable;
+    let nativeReveals: number;
 
     setup(async () => {
         const resources = createMockSubscriptionWithFunctions();
@@ -95,7 +96,8 @@ suite('Tenant-specific reveal authentication and discovery isolation', () => {
         provider.subscriptions = [subscription];
         getCachedTestApi().testing.setOverrideAzureSubscriptionProvider(() => provider);
         tree = api().azureResourceTreeDataProvider as AzureResourceTreeDataProvider;
-        revealOverride = getCachedTestApi().testing.overrideAzureResourceReveal(async () => { /* accepted by VS Code */ });
+        nativeReveals = 0;
+        revealOverride = getCachedTestApi().testing.overrideAzureResourceReveal(async () => { nativeReveals++; });
     });
 
     teardown(() => {
@@ -200,6 +202,30 @@ suite('Tenant-specific reveal authentication and discovery isolation', () => {
         await assert.rejects(reveal(subscription), candidate => candidate === error);
         assert.strictEqual(provider.signIns.length, 0);
     });
+
+    for (const stage of ['tenant enumeration', 'subscription enumeration']) {
+        for (const kind of ['user', 'VS Code']) {
+            test(`${kind} cancellation during ${stage} aborts discovery despite a healthy matching account`, async () => {
+                const cancelled = {
+                    ...subscription,
+                    account: { ...subscription.account, id: 'cancelled-account', label: 'Cancelled account' }
+                };
+                provider.subscriptions.unshift(cancelled);
+                const error = kind === 'user' ? new UserCancelledError() : new vscode.CancellationError();
+                if (stage === 'tenant enumeration') {
+                    provider.accountErrors.set(cancelled.account.id, error);
+                } else {
+                    provider.subscriptionErrors.set(identity(cancelled), error);
+                }
+                const before = (await tree.getChildren())?.map(item => item.id);
+
+                assert.strictEqual(await reveal(subscription), undefined);
+                assert.strictEqual(nativeReveals, 0);
+                assert.strictEqual(provider.signIns.length, 0);
+                assert.deepStrictEqual((await tree.getChildren())?.map(item => item.id), before);
+            });
+        }
+    }
 
     for (const relationship of ['another tenant', 'another account in the same tenant']) {
         test(`an unavailable remembered identity in ${relationship} leaves healthy roots and reveals intact`, async () => {

@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, AzureSubscriptionProvider, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
+import { isUserCancelledError } from '@microsoft/vscode-azext-utils';
+import { CancellationError } from 'vscode';
 
 export interface SubscriptionDiscoveryFailure {
     tenant: TenantIdAndAccount;
@@ -42,6 +44,9 @@ export async function getSubscriptionsForReveal(
                     failures: []
                 };
             } catch (error) {
+                if (isUserCancelledError(error) || error instanceof CancellationError) {
+                    throw error;
+                }
                 // Keep identity and failure separate from successful results; only the explicit resolver may prompt.
                 return { subscriptions: [], failures: [{ tenant: { account, tenantId }, error }] };
             }

@@ -53,6 +53,9 @@ If existing accounts require authentication for the hinted tenant and no authent
 the resolver selects an account and offers tenant-specific sign-in once. Its fresh retry stays on that account.
 Expired secondary accounts do not block healthy matches. Refresh-time discovery never initiates sign-in;
 failures for remembered identities are logged without discarding healthy roots or failing unrelated explicit requests.
+Explicit refresh also refreshes remembered identities in filtered-out tenants. Recognized cancellation during
+explicit discovery aborts that request even if another account finds the subscription; it is not treated as an
+isolated account failure and does not add a visibility exception.
 Cancellation during sign-in, identity selection, resource enumeration, or loading the target's branch
 returns `undefined`; cancellation from unrelated sibling resources does not cancel the reveal.
 Other explicit loading and VS Code reveal-request failures reject. Normal tree browsing retains its
