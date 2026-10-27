@@ -60,7 +60,7 @@ suite('Explicit subscription discovery', () => {
         assert.ok(provider.tenantReads.every(tenant => tenant === 'tenant-11'));
 
         const all = await getSubscriptionsForReveal(provider);
-        assert.ok(all.some(subscription => subscription.tenantId === 'tenant-11'),
+        assert.ok(all.subscriptions.some(subscription => subscription.tenantId === 'tenant-11'),
             'Requests without hints must enumerate beyond the browsing limit');
     });
 });

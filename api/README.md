@@ -44,6 +44,10 @@ Tenant-specific resolution queries that tenant directly. Requests without a tena
 without the authentication library's ten-tenant browsing limit.
 If no Azure account is signed in, the user is prompted to sign in and subscription resolution is retried
 with fresh data. If multiple accounts or tenants match, the user chooses one.
+If existing accounts require authentication for the hinted tenant and no authenticated match is available,
+the resolver selects an account and offers tenant-specific sign-in once. Its fresh retry stays on that account.
+Expired secondary accounts do not block healthy matches. Refresh-time discovery never initiates sign-in;
+failures for remembered identities are logged without discarding healthy roots or failing unrelated explicit requests.
 Cancellation during sign-in, identity selection, resource enumeration, or loading the target's branch
 returns `undefined`; cancellation from unrelated sibling resources does not cancel the reveal.
 Other explicit loading and VS Code reveal-request failures reject. Normal tree browsing retains its
