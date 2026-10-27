@@ -39,6 +39,8 @@ rather than re-resolving an unqualified ID through a cache shared by multiple id
 - Use `revealOptions` for VS Code's focus, selection, and expansion options.
 - Match the full enumerated ARM resource ID case-insensitively, including nested ARM resources.
   Only provider-specific child suffixes beyond that resource ID are case-sensitive.
+- Prefer the most-specific enumerated ARM resource before selecting a group or loading a provider.
+  A nested resource and its provider children do not require loading a less-specific ARM parent's branch.
 
 Tenant-specific resolution queries that tenant directly. Requests without a tenant hint search authenticated tenants
 without the authentication library's ten-tenant browsing limit.

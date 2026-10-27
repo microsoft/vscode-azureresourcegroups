@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { ResourceTreeOperationContext } from '../../api/src';
+import { AzureResource, ResourceTreeOperationContext } from '../../api/src';
+import { getAccountAndTenantPrefix } from '../tree/azure/idPrefix';
 
 export interface TreeTraversalContext extends ResourceTreeOperationContext {
     targetId?: string;
@@ -56,4 +57,11 @@ export function normalizeTreeId(id: string, armResourceId?: string): string {
 export function isResourceAncestor(resourceId: string, targetId: string): boolean {
     return targetId.slice(0, resourceId.length).toLowerCase() === resourceId.toLowerCase()
         && (targetId.length === resourceId.length || targetId[resourceId.length] === '/');
+}
+
+export function getMostSpecificResources(resources: AzureResource[], targetId: string): AzureResource[] {
+    const matching = resources.filter(resource =>
+        isResourceAncestor(getAccountAndTenantPrefix(resource.subscription) + resource.id, targetId));
+    const longestId = matching.reduce((length, resource) => Math.max(length, resource.id.length), 0);
+    return matching.filter(resource => resource.id.length === longestId);
 }

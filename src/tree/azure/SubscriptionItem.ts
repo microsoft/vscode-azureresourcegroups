@@ -9,7 +9,7 @@ import { AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
-import { callWithTreeErrorHandling, TreeTraversalContext } from "../../utils/treeOperations";
+import { callWithTreeErrorHandling, getMostSpecificResources, TreeTraversalContext } from "../../utils/treeOperations";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
@@ -51,7 +51,12 @@ export class SubscriptionItem implements ResourceGroupsItem {
             const groupBySetting = settingUtils.getWorkspaceSetting<string>('groupBy');
             context.telemetry.properties.groupBySetting = groupBySetting?.startsWith('armTag') ? 'armTag' : groupBySetting;
 
-            const groupingItems = this.resourceGroupingManager.groupResources(this, this.context, resources ?? [], groupBySetting).sort((a, b) => a.label.localeCompare(b.label));
+            const selected = options?.targetId ? getMostSpecificResources(resources, options.targetId) : undefined;
+            // Keep resource groups as grouping scaffolding, but do not route through a less-specific ARM parent.
+            const groupingResources = selected ? resources.filter(resource =>
+                resource.azureResourceType.type.toLowerCase() === 'microsoft.resources/resourcegroups'
+                || selected.includes(resource)) : resources;
+            const groupingItems = this.resourceGroupingManager.groupResources(this, this.context, groupingResources, groupBySetting).sort((a, b) => a.label.localeCompare(b.label));
             context.telemetry.measurements.groupCount = groupingItems.length;
 
             return groupingItems;

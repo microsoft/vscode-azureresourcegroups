@@ -9,7 +9,7 @@ import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, Azur
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from '../../../utils/localize';
-import { isResourceAncestor, TreeTraversalContext } from '../../../utils/treeOperations';
+import { getMostSpecificResources, TreeTraversalContext } from '../../../utils/treeOperations';
 import { createPortalUrl } from '../../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../../BranchDataItemWrapper';
 import { GenericItem } from '../../GenericItem';
@@ -80,10 +80,9 @@ export class GroupingItem implements ResourceGroupsItem {
 
     async getChildren(context?: TreeTraversalContext): Promise<ResourceGroupsItem[] | undefined> {
 
-        const sortedResources = this.getResourcesToDisplay(this.resources)
-            .filter(resource => !context?.targetId || isResourceAncestor(
-                getAccountAndTenantPrefix(resource.subscription) + resource.id, context.targetId))
-            .sort((a, b) => {
+        const displayedResources = this.getResourcesToDisplay(this.resources);
+        const sortedResources = (context?.targetId
+            ? getMostSpecificResources(displayedResources, context.targetId) : displayedResources).sort((a, b) => {
 
             if (a.subscription !== b.subscription) {
                 return a.subscription.name.localeCompare(b.subscription.name);
