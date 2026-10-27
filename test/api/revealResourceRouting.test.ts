@@ -7,6 +7,7 @@ import { UserCancelledError } from '@microsoft/vscode-azext-utils';
 import assert from 'assert';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from '../../api/src';
+import type { TreeDataItem } from '../../src/tree/ResourceGroupsItem';
 import { AzureResourceTreeDataProvider } from '../../src/tree/azure/AzureResourceTreeDataProvider';
 import { getAccountAndTenantPrefix } from '../../src/tree/azure/idPrefix';
 import { getCachedTestApi } from '../utils/testApiAccess';
@@ -38,6 +39,7 @@ suite('Most-specific enumerated ARM resource routing', () => {
                     const service = createMockAzureResourcesServiceFactory(resources)();
                     const serverId = `${resources.sub1.rg1.id}/providers/Microsoft.Sql/servers/Server`;
                     const databaseId = `${serverId}/databases/Zoo`;
+                    const siblingDatabaseId = `${serverId}/databases/Alpha`;
                     const schemaId = `${databaseId}/schemas`;
                     const childId = `${schemaId}/orders`;
                     let parentLoads = 0;
@@ -46,7 +48,8 @@ suite('Most-specific enumerated ARM resource routing', () => {
                         ...service,
                         listResources: async (_context, subscription) => subscription.subscriptionId === resources.sub1.subscriptionId ? [
                             { id: serverId, name: 'Server', type: 'Microsoft.Sql/servers', location: 'westus2' },
-                            { id: databaseId, name: 'Server/Zoo', type: 'Microsoft.Sql/servers/databases', location: 'westus2' }
+                            { id: databaseId, name: 'Server/Zoo', type: 'Microsoft.Sql/servers/databases', location: 'westus2' },
+                            { id: siblingDatabaseId, name: 'Server/Alpha', type: 'Microsoft.Sql/servers/databases', location: 'westus2' }
                         ] : []
                     }));
                     const parentProvider: BranchDataProvider<AzureResource, RevealNode> = {
@@ -91,13 +94,31 @@ suite('Most-specific enumerated ARM resource routing', () => {
                     assert.strictEqual(parentLoads, 0);
                     assert.strictEqual(databaseLoads, 1);
 
-                    if (grouping === 'resourceGroup' && parentBehavior === 'empty') {
+                    if (parentBehavior === 'empty') {
                         const tree = api().azureResourceTreeDataProvider as AzureResourceTreeDataProvider;
-                        const group = await tree.findItemById(resources.sub1.rg1.id);
+                        const navigation: vscode.TreeDataProvider<TreeDataItem> = tree;
+                        const qualifiedTarget = getAccountAndTenantPrefix(subscription) + targetId;
+                        let node: TreeDataItem | null | undefined = await tree.findItemById(qualifiedTarget,
+                            { propagateErrors: true, targetId: qualifiedTarget });
+                        assert.ok(node);
+                        while (node.id !== getAccountAndTenantPrefix(subscription) + databaseId) {
+                            node = await navigation.getParent?.(node);
+                            assert.ok(node);
+                        }
+                        // Use the parent retained by explicit resolution, not a fresh lookup of the group.
+                        const group = await navigation.getParent?.(node);
                         assert.ok(group);
                         const children = await tree.getChildren(group);
-                        assert.ok(children?.some(item => item.id === getAccountAndTenantPrefix(subscription) + serverId));
                         assert.ok(children?.some(item => item.id === getAccountAndTenantPrefix(subscription) + databaseId));
+                        assert.ok(children?.some(item => item.id === getAccountAndTenantPrefix(subscription) + siblingDatabaseId));
+                        if (grouping === 'resourceGroup') {
+                            assert.ok(children?.some(item => item.id === getAccountAndTenantPrefix(subscription) + serverId));
+                        }
+
+                        if (grouping === 'resourceGroup') {
+                            assert.strictEqual((await api().revealAzureResourceWithResult(resources.sub1.rg1.id))?.id,
+                                getAccountAndTenantPrefix(subscription) + resources.sub1.rg1.id);
+                        }
                     }
                 });
             }

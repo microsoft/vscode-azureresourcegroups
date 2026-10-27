@@ -51,12 +51,14 @@ export class SubscriptionItem implements ResourceGroupsItem {
             const groupBySetting = settingUtils.getWorkspaceSetting<string>('groupBy');
             context.telemetry.properties.groupBySetting = groupBySetting?.startsWith('armTag') ? 'armTag' : groupBySetting;
 
-            const selected = options?.targetId ? getMostSpecificResources(resources, options.targetId) : undefined;
-            // Keep resource groups as grouping scaffolding, but do not route through a less-specific ARM parent.
-            const groupingResources = selected ? resources.filter(resource =>
-                resource.azureResourceType.type.toLowerCase() === 'microsoft.resources/resourcegroups'
-                || selected.includes(resource)) : resources;
-            const groupingItems = this.resourceGroupingManager.groupResources(this, this.context, groupingResources, groupBySetting).sort((a, b) => a.label.localeCompare(b.label));
+            const targetId = options?.targetId;
+            const selected = targetId ? getMostSpecificResources(resources, targetId) : undefined;
+            const allGroups = this.resourceGroupingManager.groupResources(this, this.context, resources, groupBySetting);
+            // Retain full parent groups for later browsing; restrict only this explicit traversal's candidates.
+            const groupingItems = (selected ? allGroups.filter(group =>
+                group.id.toLowerCase() === targetId?.toLowerCase()
+                || group.resources.some(resource => selected.includes(resource))) : allGroups)
+                .sort((a, b) => a.label.localeCompare(b.label));
             context.telemetry.measurements.groupCount = groupingItems.length;
 
             return groupingItems;
