@@ -40,11 +40,17 @@ export async function callWithTreeErrorHandling<T>(
     return result;
 }
 
-export function normalizeTreeId(id: string): string {
-    // ARM and account/tenant IDs are case-insensitive; provider child IDs after the ARM resource are not.
-    return id.replace(
-        /^(?:\/accounts\/[^/]+\/tenants\/[^/]+)?\/subscriptions\/[^/]+(?:\/resourceGroups\/[^/]+)?(?:\/providers\/[^/]+\/[^/]+\/[^/]+)?/i,
-        prefix => prefix.toLowerCase());
+export function normalizeTreeId(id: string, armResourceId?: string): string {
+    if (!armResourceId) {
+        return id.toLowerCase();
+    }
+
+    const identityPrefix = id.match(/^\/accounts\/[^/]+\/tenants\/[^/]+(?=\/)/i)?.[0] ?? '';
+    const resourceId = id.slice(identityPrefix.length);
+    // The enumerated ARM ID defines the boundary, including nested and extension resources.
+    const armLength = isResourceAncestor(armResourceId, resourceId) ? armResourceId.length : 0;
+    const boundary = identityPrefix.length + armLength;
+    return id.slice(0, boundary).toLowerCase() + id.slice(boundary);
 }
 
 export function isResourceAncestor(resourceId: string, targetId: string): boolean {

@@ -19,6 +19,7 @@ export type BranchDataItemOptions = {
     portalUrl?: vscode.Uri;
     viewProperties?: ViewPropertiesModel;
     idPrefix?: string;
+    armResourceId?: string;
 };
 
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
@@ -60,6 +61,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 
     get portalUrl(): vscode.Uri | undefined { return this.options?.portalUrl; }
     get viewProperties(): ViewPropertiesModel | undefined { return this.options?.viewProperties; }
+    get armResourceId(): string | undefined { return this.options?.armResourceId; }
 
     async getChildren(context?: TreeTraversalContext): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem, context);
@@ -77,6 +79,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
                 // recursively prefix child items with the account and tenant id
                 // this ensures that items provided by branch data providers are prefixed
                 idPrefix: this.options?.idPrefix,
+                armResourceId: this.armResourceId,
             })
         );
     }

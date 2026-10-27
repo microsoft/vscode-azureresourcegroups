@@ -58,10 +58,26 @@ suite('explicit tree error handling', () => {
         });
     }
 
-    test('ARM identity matching does not lowercase case-sensitive child IDs', () => {
-        const root = '/accounts/A/tenants/T/subscriptions/S/resourceGroups/R/providers/Microsoft.Web/sites/App';
-        assert.strictEqual(normalizeTreeId(root + '/orders'), root.toLowerCase() + '/orders');
-        assert.notStrictEqual(normalizeTreeId(root + '/orders'), normalizeTreeId(root + '/Orders'));
+    for (const armResourceId of [
+        '/subscriptions/S/resourceGroups/R/providers/Microsoft.Web/sites/App',
+        '/subscriptions/S/resourceGroups/R/providers/Microsoft.Sql/servers/Server/databases/Inventory',
+        '/subscriptions/S/resourceGroups/R/providers/Microsoft.Web/sites/App/providers/Microsoft.Insights/diagnosticSettings/Logs'
+    ]) {
+        test(`uses the complete enumerated ARM boundary: ${armResourceId}`, () => {
+            const root = '/accounts/A/tenants/T' + armResourceId;
+            assert.strictEqual(normalizeTreeId(root.toUpperCase(), armResourceId), root.toLowerCase());
+            assert.strictEqual(normalizeTreeId(armResourceId.toUpperCase(), armResourceId), armResourceId.toLowerCase());
+            assert.strictEqual(normalizeTreeId(root + '/orders', armResourceId), root.toLowerCase() + '/orders');
+            assert.notStrictEqual(normalizeTreeId(root + '/orders', armResourceId), normalizeTreeId(root + '/Orders', armResourceId));
+        });
+    }
+
+    test('does not interpret ARM-like provider child names as part of the enumerated resource', () => {
+        const armResourceId = '/subscriptions/S/resourceGroups/R/providers/Microsoft.DocumentDB/databaseAccounts/Account';
+        assert.strictEqual(normalizeTreeId(armResourceId + '/databases/Inventory', armResourceId),
+            armResourceId.toLowerCase() + '/databases/Inventory');
+        assert.notStrictEqual(normalizeTreeId(armResourceId + '/DATABASES/INVENTORY', armResourceId),
+            normalizeTreeId(armResourceId + '/databases/Inventory', armResourceId));
     });
 });
 

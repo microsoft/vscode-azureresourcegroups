@@ -25,6 +25,64 @@ suite('Azure resource identity prefix traversal', () => {
     });
 
     for (const grouping of ['resourceGroup', 'resourceType']) {
+        test(`reveals nested ARM resources case-insensitively with ${grouping} grouping`, async () => {
+            const mocks = createMockSubscriptionWithFunctions();
+            const service = createMockAzureResourcesServiceFactory(mocks)();
+            const resourceId = `${mocks.sub1.rg1.id}/providers/Microsoft.Sql/servers/Server/databases/Inventory`;
+            const schemaId = `${resourceId}/schemas`;
+            const childId = `${schemaId}/orders`;
+            getCachedTestApi().testing.setOverrideAzureServiceFactory(() => ({
+                ...service,
+                listResources: async (_context, subscription) => subscription.subscriptionId === mocks.sub1.subscriptionId ? [{
+                    id: resourceId,
+                    name: 'Server/Inventory',
+                    type: 'Microsoft.Sql/servers/databases',
+                    location: 'westus2'
+                }] : []
+            }));
+            const provider: BranchDataProvider<AzureResource, RevealNode> = {
+                getResourceItem: resource => ({ id: resource.id }),
+                getTreeItem: node => new vscode.TreeItem(node.id,
+                    node.id === resourceId || node.id === schemaId
+                        ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None),
+                getChildren: node => {
+                    if (node.id === resourceId) {
+                        return [{ id: schemaId, parent: node }];
+                    }
+                    if (node.id === schemaId) {
+                        return [{ id: `${schemaId}/Orders`, parent: node }, { id: childId, parent: node }];
+                    }
+                    return [];
+                },
+                getParent: node => node.parent
+            };
+            const disposable = api().registerAzureResourceBranchDataProvider(AzExtResourceType.SqlDatabases, provider);
+            try {
+                await vscode.commands.executeCommand(`azureResourceGroups.groupBy.${grouping}`);
+                const subscriptions = await new MockAzureSubscriptionProvider(mocks).getAvailableSubscriptions();
+                const subscription = subscriptions.find(item => item.subscriptionId === mocks.sub1.subscriptionId);
+                assert.ok(subscription);
+                const prefix = getAccountAndTenantPrefix(subscription);
+                const options = { revealOptions: { focus: false, select: false, expand: false } };
+
+                assert.strictEqual((await api().revealAzureResourceWithResult(resourceId.toUpperCase(), options))?.id,
+                    prefix + resourceId);
+                const result = await api().revealAzureResourceWithResult(`${resourceId.toUpperCase()}/schemas/orders`, options);
+                assert.strictEqual(result?.id, prefix + childId);
+                assert.strictEqual(result?.resource?.id, childId);
+
+                const tree = api().azureResourceTreeDataProvider as AzureResourceTreeDataProvider;
+                assert.strictEqual((await tree.findItemById(resourceId.toUpperCase(),
+                    { propagateErrors: true }))?.id, prefix + resourceId);
+                await assert.rejects(api().revealAzureResourceWithResult(`${resourceId}/schemas/ORDERS`, options),
+                    /could not be found/);
+                await assert.rejects(api().revealAzureResourceWithResult(`${resourceId}/SCHEMAS/orders`, options),
+                    /could not be found/);
+            } finally {
+                disposable.dispose();
+            }
+        });
+
         for (const scenario of ['resource group named tenants', 'nested resource under an account named tenants']) {
             test(`reveals a ${scenario} with ${grouping} grouping`, async () => {
                 const nested = scenario === 'nested resource under an account named tenants';

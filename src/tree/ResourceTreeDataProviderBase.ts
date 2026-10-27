@@ -128,8 +128,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async findItemById(id: string, options?: TreeTraversalContext): Promise<TreeDataItem | undefined> {
         let element: TreeDataItem | undefined = undefined;
-        const normalize = options?.propagateErrors ? normalizeTreeId : (value: string) => value.toLowerCase();
-        const requestedId = normalize(id);
         outerLoop: while (true) {
             const children: TreeDataItem[] | null | undefined = await this.getChildren(element, options);
 
@@ -138,6 +136,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             }
 
             for (const child of children) {
+                const normalize = (value: string) => this.normalizeItemId(value, child, options);
+                const requestedId = normalize(id);
                 if (child.id && normalize(child.id) === requestedId) {
                     return child;
                 } else if (child.id && normalize(removePrefix(child.id)) === requestedId) {
@@ -155,8 +155,14 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     protected isAncestorOf(element: TreeDataItem, id: string, options?: TreeTraversalContext): boolean {
         // remove accounts / <accountId>/tenant/<tenantId> from the beginning of the id
         const elementId = (/^\/accounts\//i.test(id) ? element.id : removePrefix(element.id)) + '/';
-        const normalize = options?.propagateErrors ? normalizeTreeId : (value: string) => value.toLowerCase();
+        const normalize = (value: string) => this.normalizeItemId(value, element, options);
         return normalize(id).startsWith(normalize(elementId));
+    }
+
+    private normalizeItemId(id: string, element: TreeDataItem, options?: TreeTraversalContext): string {
+        return options?.propagateErrors
+            ? normalizeTreeId(id, element instanceof BranchDataItemWrapper ? element.armResourceId : undefined)
+            : id.toLowerCase();
     }
 
     protected abstract onGetChildren(element?: TreeDataItem | undefined, options?: TreeTraversalContext): Promise<TreeDataItem[] | null | undefined>;

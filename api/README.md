@@ -37,6 +37,8 @@ rather than re-resolving an unqualified ID through a cache shared by multiple id
   to the visible tree for the current window session, across refreshes, without changing saved subscription
   or tenant filters. Other subscriptions in the same tenant remain filtered.
 - Use `revealOptions` for VS Code's focus, selection, and expansion options.
+- Match the full enumerated ARM resource ID case-insensitively, including nested ARM resources.
+  Only provider-specific child suffixes beyond that resource ID are case-sensitive.
 
 Tenant-specific resolution queries that tenant directly. Requests without a tenant hint search authenticated tenants
 without the authentication library's ten-tenant browsing limit.

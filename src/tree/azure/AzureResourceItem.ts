@@ -21,7 +21,7 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
         itemCache: BranchDataItemCache,
         private readonly parent?: ResourceGroupsItem,
         options?: BranchDataItemOptions) {
-        super(branchItem, branchDataProvider, itemCache, options);
+        super(branchItem, branchDataProvider, itemCache, { ...options, armResourceId: resource.id });
 
         this._id = `${getAccountAndTenantPrefix(resource.subscription)}${resource.id}`;
         this.tagsModel = new ResourceTags(this.resource);
