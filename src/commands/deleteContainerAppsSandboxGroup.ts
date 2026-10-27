@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, ExecuteActivityContext, IActionContext, ISubscriptionContext, createSubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, ExecuteActivityContext, IActionContext, ISubscriptionContext, azureResourceExperience, createSubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import type { AzExtResourceType as PickerAzExtResourceType } from '@microsoft/vscode-azureresources-api';
 import { Progress } from 'vscode';
-import { AzureResource } from '../../api/src/index';
+import { AzExtResourceType, AzureResource } from '../../api/src/index';
 import { markAzureResourceDeleted } from '../api/DefaultAzureResourceProvider';
 import { ext } from '../extensionVariables';
 import { AzureResourceItem } from '../tree/azure/AzureResourceItem';
@@ -20,7 +21,15 @@ interface DeleteSandboxGroupContext extends IActionContext, ExecuteActivityConte
     subscription: ISubscriptionContext;
 }
 
-export async function deleteContainerAppsSandboxGroup(context: IActionContext, node: AzureResourceItem<AzureResource>): Promise<void> {
+export async function deleteContainerAppsSandboxGroup(context: IActionContext, node?: AzureResourceItem<AzureResource>): Promise<void> {
+    if (!node) {
+        node = await azureResourceExperience<AzureResourceItem<AzureResource>>(
+            { ...context, dontUnwrap: true },
+            ext.v2.api.resources.azureResourceTreeDataProvider,
+            AzExtResourceType.ContainerAppsSandboxGroups as PickerAzExtResourceType,
+        );
+    }
+
     const { resourceGroup, resourceName } = parseAzureResourceId(node.resource.id);
     const confirmMessage = localize(
         'confirmDeleteSandboxGroup',

@@ -60,6 +60,10 @@ export function markAzureResourceDeleted(resourceId: string): void {
     deletedAzureResourceIds.add(resourceId.toLowerCase());
 }
 
+export function clearAzureResourceDeleted(resourceId: string): void {
+    deletedAzureResourceIds.delete(resourceId.toLowerCase());
+}
+
 export function filterDeletedAzureResources(subscriptionId: string, resources: GenericResource[]): GenericResource[] {
     const subscriptionPrefix = `/subscriptions/${subscriptionId}/`.toLowerCase();
     const listedResourceIds = new Set(resources.flatMap(resource => resource.id ? [resource.id.toLowerCase()] : []));

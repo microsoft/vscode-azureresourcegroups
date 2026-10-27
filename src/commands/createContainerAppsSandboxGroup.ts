@@ -8,6 +8,7 @@ import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromp
 import { randomBytes } from 'crypto';
 import { Progress, l10n } from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
+import { clearAzureResourceDeleted } from '../api/DefaultAzureResourceProvider';
 import { ext } from '../extensionVariables';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { createActivityContext } from '../utils/activityUtils';
@@ -95,6 +96,7 @@ class SandboxGroupCreateStep extends AzureWizardExecuteStepWithActivityOutput<Cr
         const client = await createContainerAppsSandboxClient(context.subscription);
         const poller = client.sandboxGroups.beginCreateOrUpdate(resourceGroupName, name, { location: location.name });
         await poller.pollUntilDone();
+        clearAzureResourceDeleted(`/subscriptions/${context.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.App/sandboxGroups/${name}`);
     }
 
     shouldExecute(): boolean {

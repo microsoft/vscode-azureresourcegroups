@@ -27,6 +27,7 @@ export class TreeItemStateStore implements vscode.Disposable {
     private readonly disposables: vscode.Disposable[] = [];
     private readonly onDidUpdateStateEmitter = new vscode.EventEmitter<string>();
     private readonly onDidUpdateStateEvent: vscode.Event<string> = this.onDidUpdateStateEmitter.event;
+    private nextTemporaryChildId = 0;
 
     /**
      * Notify a resource that its children have changed.
@@ -84,16 +85,18 @@ export class TreeItemStateStore implements vscode.Disposable {
 
     async showCreatingChild<T = void>(id: string, label: string, callback: () => Promise<T>, refresh?: () => void): Promise<T> {
         const creatingItem = new GenericItem(label, {
-            id: `${id}/creating/${label}`,
+            id: `${id}/creating/${this.nextTemporaryChildId++}`,
             description: vscode.l10n.t('Creating...'),
             iconPath: new vscode.ThemeIcon('loading~spin'),
         });
-        this.update(id, { ...this.getState(id), temporaryChildren: [creatingItem] });
+        const temporaryChildren = this.getState(id).temporaryChildren ?? [];
+        this.update(id, { temporaryChildren: [...temporaryChildren, creatingItem] });
         refresh?.();
         try {
             return await callback();
         } finally {
-            this.update(id, { ...this.getState(id), temporaryChildren: undefined });
+            const remainingChildren = this.getState(id).temporaryChildren?.filter(child => child !== creatingItem);
+            this.update(id, { temporaryChildren: remainingChildren?.length ? remainingChildren : undefined });
             refresh?.();
         }
     }
