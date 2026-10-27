@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import type { AzureDevOpsSubscriptionProviderInitializer } from "@microsoft/vscode-azext-azureauth/azdo";
+import { AzureDevOpsSubscriptionProvider, type AzureDevOpsSubscriptionProviderInitializer } from "@microsoft/vscode-azext-azureauth/azdo";
 
 /**
  * Reads Azure DevOps federated credential configuration from environment variables
@@ -41,9 +41,9 @@ export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<Az
 
     return () => {
         providerPromise ??= (async () => {
-            // Dynamic import so the AzDO-specific module (and its @azure/identity dependency)
-            // is only loaded when federated credentials are actually in use.
-            const { AzureDevOpsSubscriptionProvider } = await import("@microsoft/vscode-azext-azureauth/azdo");
+            // Note: the AzDO provider lazily imports its heavy `@azure/identity`
+            // dependency internally, so it is only loaded when federated
+            // credentials are actually used to create a credential.
             const provider = new AzureDevOpsSubscriptionProvider(initializer);
             const signedIn = await provider.signIn();
             if (!signedIn) {

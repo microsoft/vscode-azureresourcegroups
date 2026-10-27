@@ -5,7 +5,7 @@
 
 import { AzureAccount, AzureSubscriptionProvider, isNotSignedInError, type RefreshSuggestedEvent } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
-import { ResourceModelBase } from 'api/src';
+import { ResourceModelBase } from '../../../api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';

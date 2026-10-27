@@ -1,0 +1,11 @@
+# expect: gatePredicateUnknownFact
+# requires a fact no stack declares; it would never match, unwiring the gate everywhere — which reads as a clean run.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: typo fact
+    phases: [plan]
+    requires:
+      project.frontent: [spa]

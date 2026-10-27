@@ -1,0 +1,23 @@
+# expect: stackForeignKey
+# Reaches into base.yaml. modelSelector.id is half the CES queueing key, so this
+# would move runs into a different queue — invisible in the result, unrecoverable
+# afterwards.
+schemaVersion: 1
+id: overrides-model
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan]
+modelSelector:
+  id: some-other-model
+  vendor: copilot

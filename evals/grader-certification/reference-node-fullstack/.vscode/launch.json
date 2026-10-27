@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Golden App (debug)",
+            "type": "pwa-node",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/server.js",
+            "cwd": "${workspaceFolder}",
+            "runtimeArgs": [
+                "--inspect=9229"
+            ],
+            "env": {
+                "PORT": "7071"
+            },
+            "preLaunchTask": "prepare",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

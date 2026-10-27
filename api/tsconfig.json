@@ -9,7 +9,7 @@
         ],
         "declaration": true,
         "declarationMap": true,
+        "allowImportingTsExtensions": false,
         "rootDir": ".",
-        "baseUrl": "./",
     },
 }

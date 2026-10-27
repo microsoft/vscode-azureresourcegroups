@@ -1,0 +1,31 @@
+{
+    "sessionId": "grader-reference-iac-deployed",
+    "subscriptionId": "00000000-0000-0000-0000-000000000000",
+    "resourceGroupName": "rg-grader-reference-iac-deployed",
+    "status": "succeeded",
+    "deploymentNames": [
+        "grader-reference-iac-deployed-20260914"
+    ],
+    "endpointUrl": "https://ca-tasks-grader.example.azurecontainerapps.io",
+    "healthStatus": "healthy",
+    "duration": {
+        "completedUtc": "2026-09-14T00:00:00Z"
+    },
+    "createdResources": [
+        {
+            "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-grader-reference-iac-deployed/providers/Microsoft.App/managedEnvironments/cae-tasks-grader",
+            "name": "cae-tasks-grader",
+            "type": "Microsoft.App/managedEnvironments",
+            "resourceGroup": "rg-grader-reference-iac-deployed",
+            "classification": "expected"
+        },
+        {
+            "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-grader-reference-iac-deployed/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-tasks-grader",
+            "name": "id-tasks-grader",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "resourceGroup": "rg-grader-reference-iac-deployed",
+            "classification": "expected"
+        }
+    ],
+    "orphanedResourceGroups": []
+}

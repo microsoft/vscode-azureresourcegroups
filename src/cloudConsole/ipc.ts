@@ -31,7 +31,7 @@ export async function createServer(ipcHandlePrefix: string, onRequest: http.Requ
 
     const ipcHandlePath = getIPCHandlePath(`${ipcHandlePrefix}-${nonce}`);
     const server = new Server(ipcHandlePath, onRequest);
-    server.listen();
+    await server.listen();
     return server;
 }
 
@@ -48,8 +48,15 @@ export class Server {
         this.server.on('error', err => console.error(err));
     }
 
-    listen(): void {
-        this.server.listen(this.ipcHandlePath);
+    listen(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const onError = (error: Error) => reject(error);
+            this.server.once('error', onError);
+            this.server.listen(this.ipcHandlePath, () => {
+                this.server.off('error', onError);
+                resolve();
+            });
+        });
     }
 
     dispose(): void {
@@ -62,19 +69,26 @@ export class Server {
  * On Windows, it returns a named pipe path. On Unix-like systems, it returns a socket path.
  * If the XDG_RUNTIME_DIR environment variable is set, it uses that directory for the socket path.
  * Otherwise, it uses the temporary directory.
+ * Socket names are shortened when necessary to stay within the platform's Unix socket path limit.
  */
-function getIPCHandlePath(id: string): string {
+export function getIPCHandlePath(id: string, runtimeDir: string = process.env['XDG_RUNTIME_DIR'] || os.tmpdir()): string {
     if (process.platform === 'win32') {
         return `\\\\.\\pipe\\${id}-sock`;
     }
 
-    // XDG_RUNTIME_DIR is a Unix specific directory where user-specific non-essential
-    // runtime files and other file objects (such as sockets, named pipes, etc.) should be stored
-    if (process.env['XDG_RUNTIME_DIR']) {
-        return path.join(process.env['XDG_RUNTIME_DIR'], `${id}.sock`);
+    const ipcHandlePath = path.join(runtimeDir, `${id}.sock`);
+    const maxSocketPathLength = process.platform === 'darwin' ? 103 : 107;
+    if (Buffer.byteLength(ipcHandlePath) <= maxSocketPathLength) {
+        return ipcHandlePath;
     }
 
-    return path.join(os.tmpdir(), `${id}.sock`);
+    const shortenedId = crypto.createHash('sha256').update(id).digest('hex').slice(0, 32);
+    const shortenedIpcHandlePath = path.join(runtimeDir, `${shortenedId}.sock`);
+    if (Buffer.byteLength(shortenedIpcHandlePath) <= maxSocketPathLength) {
+        return shortenedIpcHandlePath;
+    }
+
+    return path.join('/tmp', `${shortenedId}.sock`);
 }
 
 export class Queue<T> {

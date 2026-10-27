@@ -21,6 +21,7 @@ import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { createContainerAppsSandboxGroup } from './createContainerAppsSandboxGroup';
+import { registerCopilotOnRailsCommands } from './copilotOnRails/registerCopilotOnRailsCommands';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteContainerAppsSandboxGroup } from './deleteContainerAppsSandboxGroup';
@@ -160,6 +161,9 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    // Copilot on Rails
+    registerCopilotOnRailsCommands();
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

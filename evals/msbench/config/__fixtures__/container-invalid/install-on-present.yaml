@@ -1,0 +1,6 @@
+# expect: containerBinaryInstallOnPresent
+# Dead text: an install command for something already on PATH.
+schemaVersion: 1
+verifiedOn: '2026-08-25'
+binaries:
+  node: { status: present, evidence: measured, install: apt-get install node }

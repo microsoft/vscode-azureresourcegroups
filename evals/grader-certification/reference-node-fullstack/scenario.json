@@ -1,0 +1,98 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-reference-node-fullstack",
+    "prompt": "Build a small project tracker with a browser UI and a persistent Node.js API.",
+    "baselinePrompt": "Create a runnable project tracker with a browser UI and persistent Node.js API. Include build, test, lint, launch, and deployment files.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "html",
+        "backend": "node",
+        "database": "file",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "File storage"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 60,
+            "probes": [
+                {
+                    "name": "Golden app health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200,
+                    "bodyIncludes": "\"status\":\"ok\"",
+                    "debugPort": 9229,
+                    "debugProtocol": "cdp"
+                },
+                {
+                    "name": "Golden project UI",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "expectedText": "Golden Project Tracker",
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "actions": [
+                            {
+                                "kind": "fill",
+                                "selector": "Project name",
+                                "selectorType": "label",
+                                "value": "Certified project"
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Add project",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "li",
+                                "value": "Certified project"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": [
+                                "backend"
+                            ],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "li",
+                                    "value": "Certified project"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "debugParity": {
+                "target": "backend",
+                "sourceGlob": "src/server.js",
+                "lineIncludes": "requestUrl.pathname === '/api/health'",
+                "triggerUrl": "http://127.0.0.1:7071/api/health",
+                "timeoutSeconds": 30
+            }
+        }
+    }
+}

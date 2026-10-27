@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `agent-launch` — launch-report contract only.
+#
+# Each stimulus supplies its custom agent as a per-step chatMode. Keeping these
+# probes out of `plan` matters to phase reachability: a debug or integrate agent
+# mentioned by a plan-phase stimulus would make unrelated plan assertions appear
+# able to produce artifacts that only those agents own.
+
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/

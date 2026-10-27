@@ -1,0 +1,18 @@
+# Placeholder only.
+#
+# This image is a *base* for the Copilot-on-Rails suite, not a benchmark with its
+# own question. The real prompts and assertions arrive per run in
+# assets/user-overrides.yaml, which build-config.ts generates from
+# config/base.yaml + config/phases/<phase>.yaml + a stimulus or stack, and which
+# the harness layers on top of this file.
+#
+# It still has to exist and to parse: Dockerfile.vscbench copies it to
+# /drop/agent.benchmark.config.vscode.agent.yaml unconditionally, and
+# metadata.json's problem_statement points at it.
+promptSteps:
+  - text: Print the Azure Functions Core Tools version.
+    assertions:
+      - comment: func is on PATH in this image
+        exec: func --version
+installExtensions: []
+vscodeSettings: {}

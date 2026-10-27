@@ -1,0 +1,13 @@
+# expect: gatePredicateUnknownValue
+# The same typo inside a deny-list. `{ not: [nne] }` excludes nothing, so the gate
+# is wired everywhere including where it has nothing to look at — the deny-list
+# failing in the opposite direction to the allow-list.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: typo in deny-list
+    phases: [plan]
+    requires:
+      project.datastore: { not: [nne] }

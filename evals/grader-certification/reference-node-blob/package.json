@@ -1,0 +1,15 @@
+{
+    "name": "cor-grader-reference-node-blob",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "build": "node --check src/server.js && node --check public/app.js",
+        "start": "node src/server.js"
+    },
+    "dependencies": {
+        "@azure/storage-blob": "^12.26.0"
+    },
+    "engines": {
+        "node": ">=22"
+    }
+}

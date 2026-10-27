@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.13.2 - 2026-09-27
+
+### Added
+* [[1903]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1903) Add a **CI/CD** stage to the Azure Project view with a survey for users interested in the upcoming feature
+
+### Engineering
+* [[1892]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1892) Compress non-deployment Copilot on Rails agent instructions
+
+## 0.13.1 - 2026-09-18
+
+### Added
+* [[1881]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1881) Allow **Create New Project with Copilot** to create the project in a new subfolder or a selected empty folder. The project opens in a separate window so the current workspace remains unchanged.
+
+### Engineering
+* [[1875]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1875) Move Copilot on Rails artifact security guidance into dedicated instructions and documentation
+
+## 0.13.0 - 2026-09-15
+
+### Added
+* **Create New Project with Copilot.** Turn a one-sentence idea into a running, Azure-ready application. The extension drives GitHub Copilot through a fixed pipeline of specialized agents — plan → scaffold → integrate → debug → deploy — and surfaces each step in a native VS Code webview so you can review and approve the work as it happens. See [Create New Project with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/docs/copilot-create-project.md) for the full guide.
+* You can find the entrypoint in our new **Azure Project** view under the Explorer's tab. This view helps track how far the project has progressed and links to important artifacts produced at each stage.
+
+    <img src="docs/images/copilot-create-project/01-launch-azure-project-view.png" alt="Create New Project With Copilot in the Azure Project view" />
+
 ## 0.12.7 - 2026-06-11
 
 ### Added

@@ -1,0 +1,15 @@
+# expect: gateTableDuplicateId
+# the same gate id twice; which block wins would be silent.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: first
+    phases: [plan]
+    requires: {}
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: second
+    phases: [plan]
+    requires: {}

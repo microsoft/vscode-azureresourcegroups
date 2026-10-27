@@ -1,0 +1,19 @@
+# expect: stackBinaryUnavailable
+# Requires a binary marked unavailable. No declaration makes this stack runnable,
+# so it is refused rather than submitted.
+schemaVersion: 1
+id: needs-docker
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm, docker]
+knownGaps: []
+phases: [plan]

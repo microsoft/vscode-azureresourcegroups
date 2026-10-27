@@ -5,8 +5,8 @@
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "api/src/AzExtResourceType";
-import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
+import { AzExtResourceType } from "../api/src/AzExtResourceType";
+import type { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIdentityBranchDataProvider";
@@ -15,6 +15,7 @@ import { TreeDataItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 import { ActivityLogTreeDataProvider } from "./tree/activityLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
+import type { MigrationFirewallOperations } from "./utils/copilotOnRails/migrationFirewallAccess";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace extActions {
@@ -23,6 +24,7 @@ export namespace extActions {
     export let refreshFocusTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
     export let refreshTenantTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
     export let refreshActivityLogTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshProjectTree: () => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export namespace extActions {
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
     export let context: ExtensionContext;
+    export let version: string;
     // TODO: do we need this? only used by load more command
     export let appResourceTree: AzExtTreeDataProvider;
     export let appResourceTreeView: TreeView<unknown>;
@@ -91,6 +94,7 @@ export namespace ext {
     export namespace testing {
         export let overrideAzureServiceFactory: AzureResourcesServiceFactory | undefined;
         export let overrideAzureSubscriptionProvider: (() => AzureSubscriptionProvider) | undefined;
+        export let overrideMigrationFirewallOperations: MigrationFirewallOperations | undefined;
     }
 
     export let focusedGroup: GroupingKind | undefined;

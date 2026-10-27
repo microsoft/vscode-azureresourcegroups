@@ -1,0 +1,385 @@
+name: MSBench Evals
+
+run-name: >-
+  MSBench • ${{
+    github.event_name == 'pull_request' && format('PR #{0} build-only', github.event.pull_request.number)
+    || github.event_name == 'schedule' && github.event.schedule == '0 10 * * 0' && 'weekly core matrix'
+    || github.event_name == 'schedule' && 'daily tool canary'
+    || inputs.suite == 'full' && 'manual full suite'
+    || inputs.suite == 'weekly-core' && 'manual core matrix'
+    || format('{0} • {1}', inputs.stimulus, inputs.model)
+  }}
+
+# Runs the project-plan eval on MSBench against a real VSIX build of this
+# extension, rather than against agent instructions in isolation.
+#
+# Split into two jobs on purpose:
+#
+#   build - packages the VSIX and asserts what ended up inside it, using the same
+#           guards run.sh applies locally. The shared build template
+#           (microsoft/vscode-azuretools jobs.yml) already compiles and packages,
+#           but it never inspects the archive, so a .vscodeignore rule that drops
+#           resources/agents/ passes every other check in the repo and then shows
+#           up as an agent that mysteriously ignores its instructions. Needs no
+#           credentials, so it catches that on a PR instead of in an MSBench run.
+#   eval       - submits one manually selected stimulus, or the daily positive
+#                custom-tool canary, after MSBENCH_SCHEDULE_ENABLED is true.
+#   eval-suite - runs the weekly core matrix or an explicitly requested full
+#                suite, sequentially to protect the paid queue.
+#
+# Unlike the credential-free gates in agent-contracts.yml, this cannot ride on
+# GITHUB_TOKEN: MSBench runs on CES, which authenticates callers by Entra client id.
+on:
+  pull_request:
+    paths:
+      - 'evals/msbench/**'
+      - '.github/workflows/msbench-evals.yml'
+      # The build job's lasting value is asserting what ends up *inside* the
+      # VSIX, which the shared build template does not check. Both inputs to
+      # that live outside evals/, so they have to trigger it themselves.
+      - '.vscodeignore'
+      - 'resources/agents/**'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Paid workload. Full runs every checked-in stimulus on both models (112 runs); use deliberately.'
+        required: true
+        type: choice
+        default: 'single'
+        options:
+          - 'single'
+          - 'weekly-core'
+          - 'full'
+      benchmark:
+        description: 'Benchmark instance to borrow for its container image'
+        required: false
+        default: 'vscbench.say_hello'
+      stimulus:
+        description: 'Stimulus for a single run. Ignored by weekly-core and full suites.'
+        required: false
+        default: 'launch-report-debug-plan'
+      model:
+        description: 'Exact model id from the checked-in MSBench sweep set'
+        required: false
+        type: choice
+        default: 'gpt-5.6-sol'
+        options:
+          - 'gpt-5.6-sol'
+          - 'claude-sonnet-5'
+      dataset:
+        description: 'Repo-relative dataset naming a custom container image. Leave empty for the stock image. Use evals/msbench/container/dataset.jsonl together with benchmark=corbench.cor_functions_host to get one with func.'
+        required: false
+        default: ''
+  # GitHub schedules are UTC. 09:00 UTC is 02:00 Pacific during daylight time
+  # and 01:00 during standard time.
+  schedule:
+    - cron: '0 9 * * *'
+    # Sunday at 10:00 UTC: representative product coverage on both model families.
+    - cron: '0 10 * * 0'
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  validate-dispatch:
+    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main for paid GitHub runs
+        run: |
+          echo "::error::Paid MSBench workflow dispatches must select the main branch because the OIDC credential is scoped to refs/heads/main."
+          exit 1
+
+  # Everything that can be verified without credentials.
+  build:
+    if: github.event_name != 'schedule' || vars.MSBENCH_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # `stage-graders.ts` copies an allowlist of dependency-free packages out of
+      # evals/node_modules into the staged tree, so a grader's bare import (today
+      # `jsonc-parser`, for the JSON-with-comments in launch.json) resolves inside
+      # the container, which has no install step. It hard-errors rather than
+      # staging a partial tree, so without this the build job fails before the
+      # VSIX assertions it exists to run.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Build and verify the VSIX
+        run: ./evals/msbench/run.sh --build-only
+
+      - name: Check scheduled suite matrix
+        run: npm run suite:matrix:self-test
+        working-directory: evals
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions/*.vsix
+          retention-days: 7
+
+  eval:
+    # PR execution remains excluded because every eval submits a paid run and
+    # the OIDC credential is intentionally restricted to main.
+    if: >-
+      (github.event_name == 'workflow_dispatch'
+        && inputs.suite == 'single'
+        && github.ref == 'refs/heads/main')
+      || (github.event_name == 'schedule'
+        && github.event.schedule == '0 9 * * *'
+        && vars.MSBENCH_SCHEDULE_ENABLED == 'true')
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: msbench-paid-eval
+      cancel-in-progress: false
+    # A cold run is ~15 min; the timeout is generous so a slow queue does not
+    # look like a product failure.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write # Fetch an OIDC token for azure/login.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions
+
+      # Needed here too, not just in `build`: `--skip-build` skips the VSIX, but
+      # graders are staged on every invocation because they are read straight off
+      # the working tree, and staging them needs evals/node_modules for the
+      # allowlisted packages.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      # run.sh mints the MSBench feed token with `az account get-access-token`,
+      # so it only needs an already-authenticated az. A self-hosted runner that
+      # is already signed in can skip this step entirely.
+      - name: Azure login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.MSBENCH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
+
+      # STIMULUS is read from the environment by run.sh, the same way BENCHMARK
+      # is, so `--stimulus` on the command line still wins for a local run.
+      #
+      # The daily default is a positive custom-tool probe: it proves the VSIX,
+      # custom agent and MCP server loaded, rather than only proving a refusal
+      # path remained closed.
+      - name: Run the MSBench eval
+        run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
+        env:
+          BENCHMARK: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark || 'vscbench.say_hello' }}
+          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'launch-report-debug-plan' }}
+          MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gpt-5.6-sol' }}
+          # Empty means the stock image, which is the default for every run that
+          # is not specifically exercising the custom one. Note the CI identity
+          # needs no registry permission either way: CES pulls the image with its
+          # own service principal, so the AcrPull grant is on that principal and
+          # nothing about it is caller- or machine-specific.
+          DATASET: ${{ github.event_name == 'workflow_dispatch' && inputs.dataset || '' }}
+
+      - name: Publish MSBench summary
+        if: always()
+        env:
+          STIMULUS: ${{ github.event_name == 'workflow_dispatch' && inputs.stimulus || 'launch-report-debug-plan' }}
+          MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gpt-5.6-sol' }}
+          REPORT: ${{ runner.temp }}/report.json
+        run: |
+          IFS=$'\t' read -r run_id resolved < <(
+            node -e '
+              const fs = require("fs");
+              const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const verdicts = Object.values(report.resolved ?? {}).flatMap(Object.values);
+              process.stdout.write(`${report.run_id ?? "unknown"}\t${verdicts.length ? verdicts.every(Boolean) : "unknown"}\n`);
+            ' "$REPORT" 2>/dev/null || printf 'unknown\tunknown\n'
+          )
+          {
+            echo "## MSBench daily/single run"
+            echo
+            echo "- **Suite:** \`copilot-on-rails\`"
+            echo "- **Stimulus:** \`$STIMULUS\`"
+            echo "- **Model:** \`$MODEL\`"
+            echo "- **Resolved:** \`$resolved\`"
+            echo "- **MSBench run:** \`$run_id\`"
+            if [[ "$run_id" != "unknown" ]]; then
+              echo "- **Analysis:** https://msbenchapp.azurewebsites.net/run-analysis/$run_id"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Keep the report and per-instance data so a failure can be diagnosed from
+      # the transcript and patch rather than by re-running.
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: msbench-results
+          path: |
+            ${{ runner.temp }}/report.json
+            ${{ runner.temp }}/msbench-data/**
+          if-no-files-found: ignore
+
+  prepare-suite:
+    if: >-
+      (github.event_name == 'workflow_dispatch'
+        && inputs.suite != 'single'
+        && github.ref == 'refs/heads/main')
+      || (github.event_name == 'schedule'
+        && github.event.schedule == '0 10 * * 0'
+        && vars.MSBENCH_SCHEDULE_ENABLED == 'true')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      suite: ${{ steps.matrix.outputs.suite }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - id: matrix
+        name: Build paid suite matrix
+        env:
+          REQUESTED_SUITE: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'weekly-core' }}
+        run: |
+          matrix="$(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/msbench/build-suite-matrix.ts "$REQUESTED_SUITE")"
+          echo "suite=$REQUESTED_SUITE" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Publish planned matrix
+        env:
+          MATRIX: ${{ steps.matrix.outputs.matrix }}
+          SUITE: ${{ steps.matrix.outputs.suite }}
+        run: |
+          count="$(node -e 'console.log(JSON.parse(process.env.MATRIX).include.length)')"
+          {
+            echo "## Planned MSBench matrix"
+            echo
+            echo "- **Suite:** \`$SUITE\`"
+            echo "- **Paid runs:** \`$count\`"
+            echo
+            node -e '
+              for (const entry of JSON.parse(process.env.MATRIX).include) {
+                console.log(`- \`${entry.stimulus}\` on \`${entry.model}\``);
+              }
+            '
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  eval-suite:
+    name: ${{ matrix.stimulus }} • ${{ matrix.model }}
+    if: needs.prepare-suite.result == 'success'
+    needs:
+      - build
+      - prepare-suite
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.prepare-suite.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: msbench-paid-eval
+      cancel-in-progress: false
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Azure login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.MSBENCH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run ${{ matrix.stimulus }} on ${{ matrix.model }}
+        run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
+        env:
+          BENCHMARK: ${{ matrix.benchmark }}
+          STIMULUS: ${{ matrix.stimulus }}
+          MODEL: ${{ matrix.model }}
+          DATASET: ${{ matrix.dataset }}
+
+      - name: Publish MSBench summary
+        if: always()
+        env:
+          SUITE: ${{ needs.prepare-suite.outputs.suite }}
+          STIMULUS: ${{ matrix.stimulus }}
+          MODEL: ${{ matrix.model }}
+          REPORT: ${{ runner.temp }}/report.json
+        run: |
+          IFS=$'\t' read -r run_id resolved < <(
+            node -e '
+              const fs = require("fs");
+              const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const verdicts = Object.values(report.resolved ?? {}).flatMap(Object.values);
+              process.stdout.write(`${report.run_id ?? "unknown"}\t${verdicts.length ? verdicts.every(Boolean) : "unknown"}\n`);
+            ' "$REPORT" 2>/dev/null || printf 'unknown\tunknown\n'
+          )
+          {
+            echo "## MSBench matrix run"
+            echo
+            echo "- **Suite:** \`$SUITE\`"
+            echo "- **Stimulus:** \`$STIMULUS\`"
+            echo "- **Model:** \`$MODEL\`"
+            echo "- **Resolved:** \`$resolved\`"
+            echo "- **MSBench run:** \`$run_id\`"
+            if [[ "$run_id" != "unknown" ]]; then
+              echo "- **Analysis:** https://msbenchapp.azurewebsites.net/run-analysis/$run_id"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ${{ matrix.stimulus }} results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: msbench-results-${{ matrix.stimulus }}-${{ matrix.model }}
+          path: |
+            ${{ runner.temp }}/report.json
+            ${{ runner.temp }}/msbench-data/**
+          if-no-files-found: ignore

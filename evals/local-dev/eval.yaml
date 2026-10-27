@@ -1,0 +1,141 @@
+name: azure-local-dev-contracts
+description: >
+  Verify the local development phase — azure-debug-plan scans a real scaffolded
+  workspace and produces a valid debug plan, stops at the approval gate, and
+  azure-debug-generate emits launch/tasks/compose artifacts that conform to it.
+type: capability
+
+defaults:
+  runs: 1
+  # Scaffolding a real project before the debug phase runs is slow; this is a
+  # chained multi-agent suite, not a single-turn one.
+  timeout: 45m
+  # No `executor:` key — see the note in project-plan/eval.yaml. The agent runs on
+  # MSBench; this spec defines the stimuli and graders.
+
+# Chain the *real* scaffold agent so the debug agents analyse genuine generated
+# output rather than a hand-written fixture that can drift from what scaffold emits.
+# Only the approved plan is seeded: azure-project-scaffold requires
+# `.azure/project-plan.md` to exist and be Approved, but does not require the
+# azure-project-plan agent to have produced it — so we skip the cost and flakiness
+# of the requirements phase without giving up scaffold fidelity.
+environment:
+  files:
+    - src: ${REPO_ROOT=../..}/evals/local-dev/fixtures/functions-postgres/.azure/project-plan.md
+      dest: .azure/project-plan.md
+  env:
+    # The executor loads every agent named here, so skill activation is chosen by
+    # the model from the shipped descriptions, exactly as it is in VS Code.
+    AZURE_EVAL_AGENTS: azure-project-scaffold,azure-debug-plan,azure-debug-generate
+
+stimuli:
+  # ─── 2.1 Debug plan stops at the approval gate ────────────────────────────
+  - name: debug-plan-approval-gate
+    turns:
+      - |
+        The project plan has been approved. Execute the approved
+        `.azure/project-plan.md` and scaffold the project.
+      - |
+        Now set up local debugging for this project so I can hit F5 in VS Code.
+    graders:
+      - type: file-exists
+        name: debug-plan-exists
+        config:
+          path: .azure/vscode-debug-plan.md
+      - type: program
+        name: debug-plan-contract-valid
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts]
+      - type: program
+        name: stops-at-approval-gate
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-gate.ts]
+      - type: tool-calls
+        name: opens-local-plan-view
+        config:
+          required: [workflow-tools-open_local_plan_view]
+      - type: tool-calls
+        name: no-premature-generate-handoff
+        config:
+          disallowed: [workflow-tools-start_azure_debug_generate]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 2.2 Approved plan generates conforming artifacts ─────────────────────
+  - name: debug-generate-artifacts
+    turns:
+      - |
+        The project plan has been approved. Execute the approved
+        `.azure/project-plan.md` and scaffold the project.
+      - |
+        Now set up local debugging for this project so I can hit F5 in VS Code.
+      - "The debug plan looks good, approved. Generate the configuration."
+      # azure-debug-plan is contracted to call start_azure_debug_generate and STOP
+      # (azure-debug-plan.agent.md step 4). In VS Code that tool call spawns the
+      # generate agent; the harness MCP tool is a stub, so this turn carries the
+      # exact hand-off prompt the tool would have sent, verbatim from that step.
+      - "The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."
+    graders:
+      - type: file-exists
+        name: launch-json-exists
+        config:
+          path: .vscode/launch.json
+      - type: program
+        name: debug-plan-implemented
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-status=Implemented, --assert-checklist]
+      - type: program
+        name: debug-config-structurally-sound
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-config.ts]
+      - type: program
+        name: artifacts-conform-to-plan
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-artifacts.ts]
+      - type: tool-calls
+        name: generate-handoff
+        config:
+          required: [workflow-tools-start_azure_debug_generate]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 2.3 Podman selected → plan records the runtime, stops at the gate ─────
+  # Verifies the container-runtime is a plan value, not a hard-coded default: when
+  # the user asks for Podman, the plan's Orchestrator must record the podman runtime
+  # (and its `podman compose` command). Stops at the approval gate, so this stimulus
+  # does NOT require Podman to be installed in the eval environment — it only checks
+  # the plan the agent wrote, before any generation runs.
+  - name: debug-plan-podman-runtime
+    turns:
+      - |
+        The project plan has been approved. Execute the approved
+        `.azure/project-plan.md` and scaffold the project.
+      - |
+        Now set up local debugging for this project so I can hit F5 in VS Code.
+        I use Podman, not Docker Desktop — plan the emulators to run on Podman.
+    graders:
+      - type: file-exists
+        name: debug-plan-exists
+        config:
+          path: .azure/vscode-debug-plan.md
+      - type: program
+        name: debug-plan-records-podman
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-runtime=podman]
+      - type: program
+        name: stops-at-approval-gate
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-gate.ts]
+      - type: tool-calls
+        name: opens-local-plan-view
+        config:
+          required: [workflow-tools-open_local_plan_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]

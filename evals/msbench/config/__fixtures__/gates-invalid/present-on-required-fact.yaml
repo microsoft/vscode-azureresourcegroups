@@ -1,0 +1,11 @@
+# expect: gatePredicatePresentOnRequiredFact
+# uses 'present' on a fact every stack always sets, so the condition is always true and states nothing.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: vacuous present
+    phases: [plan]
+    requires:
+      project.frontend: present

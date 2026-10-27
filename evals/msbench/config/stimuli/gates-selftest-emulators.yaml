@@ -1,0 +1,119 @@
+# ⚠️  HARNESS SELF-TEST. NOT A PRODUCT SIGNAL. ⚠️
+#
+# Same warning as `gates-selftest-prescaffolded.yaml`, for the same reason: this
+# stimulus seeds a **finished** project from
+# `evals/grader-certification/reference-node-postgres`, so the gates below grade
+# files the *fixture* supplied, not anything an agent produced. A green result here
+# means "the emulator path works inside the container". It means NOTHING about the
+# product, and quoting it as evidence about the agent would be the vacuous pass this
+# suite exists to prevent.
+#
+# ── The one question this asks ────────────────────────────────────────────────────
+#
+# Can a gate complete a real database round-trip, in a real MSBench run, against a
+# datastore the phase preamble started?
+#
+# That was covered at two points and joined at neither:
+#
+#   the preamble starts PostgreSQL in a real run   run 2026083057881445 —
+#                                                  "postgres: ready on 127.0.0.1:5432"
+#   the gate round-trips against the same setup    container/verify-emulators.sh —
+#                                                  PG_RUNNING_EXIT 0 / PG_STOPPED_EXIT 3
+#
+# Both halves, never the composition. This is the composition, and it is the only
+# place a disagreement between preamble and gate could actually surface.
+#
+# ── Why not just run a stack ──────────────────────────────────────────────────────
+#
+# That was tried. Run 2026083057881445 ran `react-functions-postgres` on the custom
+# image with both emulators up, and `runtime-crud` still never reached the database:
+# the generated app did not start, because a tsconfig path alias emitted a specifier
+# Node cannot resolve (#1757). All five runtime gates died on that one defect.
+#
+# A seeded app that is known to start takes the product out of a question that was
+# never about the product. When #1757 is fixed, the stack run answers this too — and
+# this file stays useful, because it will keep answering it when the next scaffold
+# regression lands.
+#
+# ── Why this fixture and not the file-backed one ──────────────────────────────────
+#
+# `reference-node-fullstack` persists through `fs.readFile`/`writeFile`. That is what
+# lets it certify `runtime-crud` offline with no server, and it is exactly why it
+# cannot answer the question above: no database is involved at any point.
+#
+# `reference-node-postgres` declares `pg` and has no fallback path — no in-memory
+# array, no "if the connection fails, serve []". If PostgreSQL is not there, it fails.
+# That is deliberate: a fixture that degraded gracefully would go green with the
+# emulator stopped, which would make this whole file worthless.
+#
+# ── Cost ──────────────────────────────────────────────────────────────────────────
+#
+# One turn, no scaffold, same as the sibling self-test.
+#
+# phase: local
+# seed: prescaffolded-postgres
+
+promptSteps:
+  # A deliberately trivial ask; the agent is not the subject of this run. Asking for
+  # real work would spend tokens on output nothing grades, and would let the agent
+  # modify the fixture the gates are supposed to be reading.
+  - text: |
+      List the files in this workspace and tell me what the project does. Do not
+      create, edit or delete any files.
+    assertions:
+      # Liveness sentinel — must come first. With a pre-seeded workspace every exec
+      # gate below would pass on a completely dead run, which is the failure mode
+      # this file could most easily become.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # Proof the seed arrived. If this is red, every gate below is answering a
+      # question about the wrong directory and none of their verdicts count.
+      - comment: the pre-scaffolded fixture reached the container
+        exec: 'test -f package.json && test -f src/server.js'
+
+      # Proof the DATASTORE arrived, recorded before anything depends on it. Without
+      # this line a red `runtime-crud` has two indistinguishable explanations — the
+      # gate is broken, or the preamble never started PostgreSQL — and separating
+      # them afterwards means reading customScript/output.log by hand.
+      #
+      # `pg_isready` and `curl` rather than the obvious `(echo > /dev/tcp/host/port)`.
+      # That redirection is a **bash** feature and MSBench runs `exec:` under `sh`,
+      # where it fails for every port and reports DOWN unconditionally. This file
+      # shipped with that bug for exactly one run: 2026083068733550 recorded
+      # `postgres=DOWN azurite=DOWN` while `runtime-crud` was round-tripping through
+      # `pg` to 127.0.0.1:5432 in the same container. A triage line that lies is worse
+      # than no triage line, because it sends the next reader after an outage that
+      # never happened.
+      #
+      # curl treats an HTTP error as success, which is what is wanted here: Azurite
+      # answers `GET /` with 400, and the question is whether anything is listening.
+      - comment: Triage; the emulators the preamble was asked to start
+        exec: 'pg_isready -h 127.0.0.1 -p 5432 >/dev/null 2>&1 && echo "postgres=listening" || echo "postgres=DOWN"; curl -s -m 5 -o /dev/null http://127.0.0.1:10000/ && echo "azurite=listening" || echo "azurite=DOWN"'
+        assertZeroExitCode: false
+
+      # The install has to happen before the app can start. Unlike the sibling
+      # self-test's fixture this one has a real dependency, so `npm ci` is doing
+      # something here and needs the checked-in lockfile.
+      - comment: scaffolded project installs and builds
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-builds.ts
+
+      - comment: the application actually starts
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-app-starts.ts
+
+      - comment: the health endpoint answers
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-health.ts
+
+      # The point of the file. On this fixture `runtime-crud` cannot pass without a
+      # live PostgreSQL: the round-trip goes through `pg`, and the gate stands down
+      # rather than passing if nothing is listening on 5432.
+      - comment: a record can be written and read back
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-runtime-crud.ts
+
+      - comment: Triage; what the seed put in the workspace
+        exec: 'ls -la . src public 2>&1 | head -50'
+        assertZeroExitCode: false
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done'
+        assertZeroExitCode: false

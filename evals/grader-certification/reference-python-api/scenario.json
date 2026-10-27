@@ -1,0 +1,27 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-python-api-fidelity",
+    "prompt": "Build a Python HTTP API for tracking tickets, backed by PostgreSQL.",
+    "baselinePrompt": "Create a Python HTTP API for tracking tickets, backed by PostgreSQL. Expose health, list and create endpoints, and include the dependency manifest needed to install and run it.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "none",
+        "backend": "python",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "small"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ]
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": false,
+        "test": false,
+        "lint": "skip",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}

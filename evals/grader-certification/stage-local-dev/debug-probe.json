@@ -1,0 +1,11 @@
+{
+    "launchConfig": "Task Tracker API (debug)",
+    "breakpoint": {
+        "glob": "services/functions/src/functions/*.ts",
+        "pattern": "status\\s*=\\s*['\"]healthy['\"]"
+    },
+    "trigger": {
+        "url": "http://127.0.0.1:7071/api/health"
+    },
+    "timeoutMs": 180000
+}

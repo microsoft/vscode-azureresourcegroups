@@ -1,0 +1,20 @@
+# expect: stackBinaryAbsentUndeclared
+# The live failure, as a fixture: requires func, which the container does not
+# have, and says nothing about it. This is exactly how five missing-binary reds
+# came to be read as five broken gates.
+schemaVersion: 1
+id: needs-func-undeclared
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: functions
+runtime:
+  binaries: [node, npm, func]
+knownGaps: []
+phases: [plan]

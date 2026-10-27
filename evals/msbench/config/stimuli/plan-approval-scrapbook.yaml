@@ -1,0 +1,62 @@
+# Stimulus 1.6 `plan-approval-scrapbook` from evals/project-plan/eval.yaml.
+#
+# Three turns exercise the whole plan approval boundary: gather requirements,
+# write and show the plan, then hand off only after the user approves it.
+
+promptSteps:
+  - text: |
+      I'd like to create an app. I want it to have a sign in page with
+      authentication. I want it to be an app where you can upload photos under
+      your account. You are coupled with another user and all of your photos
+      can be uploaded together. You have a UI that looks like a scrapbook where
+      the photos automatically go with an AI generated caption for the photo.
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - text: "Requirements submitted at .azure/requirements.json. All confirmed."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: project-plan.md satisfies the plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Planning
+
+      - comment: project-plan.md renders in the plan webview
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-webview-parseable.ts
+
+      - comment: Agent should have opened the plan webview after confirmation
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+
+      - comment: Agent should not hand off to the scaffold agent before the plan is approved
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  - text: "Looks good, approved."
+    assertions:
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: The approved project plan still satisfies its contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Approved
+
+      - comment: Agent should hand off to the scaffold agent after approval
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'
+
+      - comment: Agent should not scaffold inline after handing off
+        query: SELECT COUNT(*) = 0 FROM llm_responses WHERE response LIKE '%creating file%'
+
+      - comment: Agent should not fall back to the chat question tool (turn 2)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure 2>&1 | head -40'
+        assertZeroExitCode: false

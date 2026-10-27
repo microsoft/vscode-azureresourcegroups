@@ -1,0 +1,10 @@
+# expect: gateGraderMissing
+# points at a grader that does not exist; the gate would be wired into a run and fail there instead of here.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: not-a-grader
+    grader: evals/graders/validate-not-a-grader.ts
+    summary: missing
+    phases: [plan]
+    requires: {}

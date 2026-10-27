@@ -1,0 +1,18 @@
+# expect: stackKnownGapsMissing
+# knownGaps is omitted rather than empty. `knownGaps: []` is a claim that there
+# are none; leaving it out is an oversight, and the two must not look the same.
+schemaVersion: 1
+id: missing-known-gaps
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+phases: [plan]

@@ -14,13 +14,11 @@
         "noImplicitReturns": true,
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
-        "baseUrl": "./",
-        "paths": {
-            "*": [
-                "node_modules/@types/*",
-                "*"
-            ],
-        },
+        "allowImportingTsExtensions": true,
+        "types": [
+            "node",
+            "@microsoft/vscode-azext-eng/mocha/test-globals"
+        ],
         "skipLibCheck": true
     },
     "exclude": [
@@ -28,6 +26,8 @@
         ".vscode-test",
         "gulpfile.ts",
         "**/dist",
-        "**/out"
+        "**/out",
+        "evals",
+        "src/webviews/copilotOnRails/views"
     ]
 }

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `probe-smoke` — infrastructure only. The product is not under test.
+#
+# Every other phase drives the product through one of its stages. This one
+# deliberately drives nothing: it exists so a run can answer a question about the
+# *harness* without paying for a product run to do it.
+#
+# Two things follow from that, and both are deliberate:
+#
+#   No `chatMode`. The stimulus must not load `azure-project-plan`, because that
+#   agent would start doing real work — asking requirements questions, writing
+#   artifacts — and turn a near-free infrastructure check into a full-price
+#   product run whose result answers a different question.
+#
+#   No agent seeding. The `plan` phase unpacks resources/agents out of the VSIX
+#   so the custom mode resolves. Nothing here needs it.
+#
+# The question this phase serves is answered *before the first turn*: the probe
+# extension activates on `onStartupFinished`, which happens during workspace
+# setup. By the time the agent says anything, the evidence already exists on
+# disk. The prompt is therefore a formality, not the experiment.
+
+script: |
+  set -eux
+  # Inventory what was actually staged into the container. If the probe VSIX is
+  # missing here, the run's real finding is a `run.sh` staging bug rather than
+  # anything about installExtensions, and these two lines are the difference
+  # between knowing that and guessing.
+  ls -la /agent/assets/extensions/ || true
+  ls -la /workspace || true

@@ -1,0 +1,157 @@
+# Stimulus 2.1 `debug-plan-approval-gate` from evals/local-dev/eval.yaml.
+#
+# phase: local
+# seed: approved-fullstack
+#
+# Ports the first local-development stimulus: `azure-debug-plan` scans a real
+# scaffolded workspace, writes `.azure/vscode-debug-plan.md`, opens the plan
+# webview, and STOPS. Generating debug artifacts before the user approves is the
+# failure being graded.
+#
+# ── Why the scaffold is chained rather than seeded ────────────────────────────
+#
+# The graded agent needs a whole scaffolded project to scan, and the obvious way
+# to get one is to seed it. eval.yaml deliberately does not, and says why: chain
+# the real scaffold agent "so the debug agents analyse genuine generated output
+# rather than a hand-written fixture that can drift from what scaffold emits".
+#
+# That argument is much stronger here than for the plan document. A seeded plan is
+# one file that no grader reads (see stage-workspace.ts); a seeded *project* is a
+# whole tree that every debug grader reads directly — validate-debug-artifacts
+# checks generated configuration against the project it was generated for. Freeze
+# that tree and the debug graders start certifying that the debug agent works on a
+# project shape the scaffold agent stopped producing months ago, with nothing to
+# say so.
+#
+# eval.yaml also explains why the requirements phase is skipped but scaffolding is
+# not: azure-project-scaffold "requires `.azure/project-plan.md` to exist and be
+# Approved, but does not require the azure-project-plan agent to have produced it
+# — so we skip the cost and flakiness of the requirements phase without giving up
+# scaffold fidelity". Hence `# seed: approved-fullstack`, the same seed the
+# scaffold stimuli use.
+#
+# ── Per-step chatMode, and the better mechanism we are not using ──────────────
+#
+# The setup turn has to run as azure-project-scaffold while the graded turn runs
+# as azure-debug-plan, in ONE chat session. `promptSteps[].chatMode` does exactly
+# that: the schema describes it as "Override the test-level chatMode for this
+# step", and a step without one inherits the top-level value — which
+# config/phases/local.yaml sets to azure-debug-plan.
+#
+# There is a strictly more faithful mechanism, and it is deliberately not used.
+# The schema also defines a `promptSteps[].handoff: { id }` step type — "Execute a
+# handoff to another agent/mode. The handoff carries its own prompt, so no text is
+# needed", with ids in the form `<target-agent>:<slugified-label>`, discovered via
+# `workbench.action.chat.getHandoffs`. That is the product's real hand-off path,
+# and it would exercise the transition itself rather than simulating it.
+#
+# It is not used for the same reason `enableImpliedStepIndexFilter: false` is not
+# used elsewhere in this folder: the ids cannot be discovered without running
+# VS Code, and a config the runner rejects costs a whole paid run to find out.
+# Plain YAML that cannot fail schema validation is worth the lower fidelity until
+# someone has enumerated the handoff ids from a live instance. Upgrade to it then.
+#
+# ── snapshotWorkspace is false, so file-exists becomes exec: ──────────────────
+#
+# config/phases/local.yaml disables snapshotting because the chained scaffold
+# runs a real `npm install`. `files` is therefore empty and the schema fails the
+# run fast if anything queries it, so eval.yaml's `file-exists debug-plan-exists`
+# does not port to SQL. It is not ported to a bare `test -f` either: the contract
+# grader below reads the same file and fails if it is absent, so a separate
+# existence check would be a strictly weaker duplicate.
+
+# eval.yaml seeds the plan through `environment.files`; here that is the `# seed:`
+# directive plus this precondition. A seed that silently failed to copy would make
+# the scaffold setup turn refuse to scaffold, leaving azure-debug-plan with an
+# empty workspace and every assertion below red for a reason that has nothing to
+# do with the local-dev phase — after the run was paid for. The schema:
+# "Assertions to validate before running any prompts. If these fail, the benchmark
+# will not proceed."
+preConditions:
+  - comment: The approved plan seed must be present before the agent starts
+    exec: 'test -f /workspace/.azure/project-plan.md && grep -q "^\*\*Status\*\*: Approved" /workspace/.azure/project-plan.md'
+
+promptSteps:
+  # ─── Turn 0: SETUP, not the phase under test ──────────────────────────────
+  #
+  # Runs in the scaffold agent so the workspace the debug agent scans is real
+  # generated output. Nothing here is graded — the assertions on this step are
+  # the liveness sentinel and the per-turn constraint copy, both of which are
+  # properties of the harness rather than claims about the scaffold agent. The
+  # scaffold agent's own contract is graded by config/stimuli/scaffold-*.yaml.
+  - chatMode: azure-project-scaffold
+    text: |
+      The project plan has been approved. Execute the approved
+      `.azure/project-plan.md` and scaffold the project.
+    assertions:
+      # Liveness sentinel, turn 0. One per turn is mandatory in a multi-turn
+      # stimulus: a run that dies after turn 0 leaves every later negative
+      # assertion vacuously true, and a single step-0 sentinel would still pass.
+      # See README.md, "Multi-turn stimuli".
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      #
+      # A Vally constraint applies to the whole trajectory, but the implied
+      # stepIndex filter makes each ported copy see exactly one turn — so one
+      # copy would leave the other turn unchecked while still reading green. The
+      # duplicate also buys attribution: the failing assertion names the turn.
+      - comment: Agent should not fall back to the chat question tool (turn 0)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Turn 1: the phase under test ─────────────────────────────────────────
+  #
+  # No `chatMode`, so this inherits azure-debug-plan from
+  # config/phases/local.yaml. That inheritance is the whole reason the phase
+  # layer sets a top-level chatMode rather than every step naming its own.
+  - text: |
+      Now set up local debugging for this project so I can hit F5 in VS Code.
+    assertions:
+      # Liveness sentinel, turn 1 — the one that actually catches the multi-turn
+      # failure. A run throttled or stalled on the second turn leaves
+      # `llm_responses` non-empty, so the step-0 sentinel above still passes while
+      # every negative assertion here passes vacuously. Bound to :stepIndex = 1,
+      # this asserts the second turn happened at all.
+      - comment: Sentinel; this turn must have produced a response or its checks are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: program debug-plan-contract-valid
+      # Header, table integrity, required sections. Also subsumes eval.yaml's
+      # `file-exists debug-plan-exists`, which cannot be ported as a `files`
+      # query under snapshotWorkspace: false — this grader reads the same
+      # artifact and fails when it is missing.
+      - comment: vscode-debug-plan.md satisfies the debug plan contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts
+
+      # vally: program stops-at-approval-gate
+      # The gate itself: the plan is present and reviewable (status defaults to
+      # Planning), and none of `.vscode/launch.json`, `.vscode/tasks.json` or
+      # `api-test-collections` exists yet. Compose files are deliberately not
+      # checked by that grader — a scaffolded project may ship one already.
+      - comment: Debug planning stopped at the approval gate
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-gate.ts
+
+      # vally: tool-calls required [workflow-tools-open_local_plan_view]
+      # Scoped to turn 1, so this is the gate opening on the turn that asked for
+      # debugging — not merely at some point in the session.
+      - comment: Agent should have opened the local plan webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_local_plan_view%'
+
+      # vally: tool-calls disallowed [workflow-tools-start_azure_debug_generate]
+      # The tool-call half of the gate, and not redundant with the grader above:
+      # validate-debug-gate looks for artifacts on disk, this looks for the
+      # hand-off. An agent that called generate and produced nothing yet would
+      # satisfy the grader and fail here, correctly.
+      - comment: Agent should not hand off to the generate agent before approval
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_azure_debug_generate%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions] — turn 1 copy.
+      - comment: Agent should not fall back to the chat question tool (turn 1)
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. On the last step, where the `exec:` graders run.
+      # See config/stimuli/photo-app-requirements.yaml.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java azurite psql postgres mongod redis-server; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'
+        assertZeroExitCode: false

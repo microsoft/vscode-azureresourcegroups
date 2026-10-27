@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { TenantIdDescription } from '@azure/arm-resources-subscriptions';
-import { AzureSubscriptionProvider, AzureTenant, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureSubscriptionProvider, AzureTenant, getConfiguredAzureEnv, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
 import { default as FormData } from 'form-data';
@@ -159,6 +159,22 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
 }
 
 export const shells: CloudShellInternal[] = [];
+
+export async function getTenantsForSignedInAccounts(subscriptionProvider: Pick<AzureSubscriptionProvider, 'getTenantsForAccount'>, accounts: AzureAccount[]): Promise<AzureTenant[]> {
+    const tenantResults = await Promise.all(accounts.map(async account => {
+        try {
+            return await subscriptionProvider.getTenantsForAccount(account, { filter: false });
+        } catch (error) {
+            if (isNotSignedInError(error)) {
+                return [];
+            }
+            throw error;
+        }
+    }));
+
+    return tenantResults.flat();
+}
+
 export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvider, osName: OSName, terminalProfileToken?: CancellationToken): CloudShellInternal {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return (callWithTelemetryAndErrorHandlingSync('azureResourceGroups.createCloudConsole', (context: IActionContext) => {
@@ -334,18 +350,18 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
             liveServerQueue = serverQueue;
 
-            const tenants: AzureTenant[] = [];
             const accounts = await subscriptionProvider.getAccounts({ filter: false });
-            const tenantResults = await Promise.all(accounts.map(account =>
-                subscriptionProvider.getTenantsForAccount(account, { filter: false })
-            ));
-            for (const result of tenantResults) {
-                tenants.push(...result);
-            }
+            const tenants = await getTenantsForSignedInAccounts(subscriptionProvider, accounts);
             let selectedTenant: TenantIdDescription | undefined = undefined;
 
+            if (tenants.length === 0) {
+                serverQueue.push({ type: 'log', args: [localize('noAuthenticatedTenants', `Error: No authenticated Azure tenants found.`)] });
+                updateStatus('Disconnected');
+                return;
+            }
+
             const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
-            if (tenants.length <= 1) {
+            if (tenants.length === 1) {
                 serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
                 // if they have only one tenant, use it
                 selectedTenant = tenants[0];

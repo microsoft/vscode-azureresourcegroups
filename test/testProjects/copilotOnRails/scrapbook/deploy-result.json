@@ -1,0 +1,68 @@
+{
+    "sessionId": "5381e26f-f598-415f-bd03-e3678f1060bc",
+    "status": "succeeded",
+    "resourceGroupName": "rg-scrapbook-dev-5381",
+    "region": "eastus2",
+    "subscriptionId": "9b5c7ccb-9857-4307-843b-8875e83f65e9",
+    "startedUtc": "2026-08-12T00:00:00Z",
+    "completedUtc": "2026-08-13T18:19:13Z",
+    "deploymentNames": [
+        "scrapbook-dev-5381-20260813102142",
+        "1dde6097-0900-4456-ba62-f45906ce6305",
+        "3672a9ef-0a38-4c64-b88e-78033af3d3a1"
+    ],
+    "endpoints": {
+        "api": "https://func-scrapbook-dev-5381.azurewebsites.net",
+        "health": "https://func-scrapbook-dev-5381.azurewebsites.net/api/health",
+        "web": "https://nice-pebble-007cd0f0f.7.azurestaticapps.net"
+    },
+    "resources": {
+        "functionApp": "func-scrapbook-dev-5381",
+        "staticWebApp": "swa-scrapbook-dev-5381",
+        "storage": "stscrapbookdev5381",
+        "postgres": "psql-scrapbook-dev-5381",
+        "keyVault": "kv-scrapbook-dev-5381",
+        "openAI": "cog-scrapbook-dev-5381",
+        "appInsights": "appi-scrapbook-dev-5381",
+        "logAnalytics": "log-scrapbook-dev-5381",
+        "managedIdentity": "id-scrapbook-dev-5381"
+    },
+    "healthStatus": "healthy",
+    "healthDetail": {
+        "endpoint": "/api/health",
+        "checkedUtc": "2026-08-13T18:19:13Z",
+        "services": [
+            { "name": "postgres", "state": "up", "essential": true },
+            { "name": "blob", "state": "up", "essential": true },
+            { "name": "queue", "state": "up", "essential": true },
+            { "name": "openai", "state": "up", "essential": false }
+        ]
+    },
+    "networkPolicy": {
+        "mainSite": "Allow (public)",
+        "scmSite": "Deny all",
+        "basicPublishing": { "scm": false, "ftp": false }
+    },
+    "healingAttempts": [
+        {
+            "attempt": 1,
+            "issue": "az functionapp deployment source config-zip hung on FlexConsumption",
+            "resolution": "Abandoned; switched to direct blob upload + OneDeploy REST call"
+        },
+        {
+            "attempt": 2,
+            "issue": "az functionapp deploy --type zip returned 415 Unsupported Media Type",
+            "resolution": "Called SCM /api/publish directly with Content-Type: application/zip + AAD Bearer"
+        },
+        {
+            "attempt": 3,
+            "issue": "OneDeploy 202 succeeded but /api/health returned 404 and no functions registered",
+            "resolution": "Inspected zip; @scrapbook/shared was empty (npm created a Windows junction which Compress-Archive does not follow). Rewrote build-api.ps1 to npm pack shared and install from tarball so real files ship. Re-deployed as 3672a9ef-0a38-4c64-b88e-78033af3d3a1; 14 functions registered; health 200 OK."
+        },
+        {
+            "attempt": 4,
+            "issue": "Initial post-deploy lockdown set main site to Deny-all, blocking SWA -> API traffic (403).",
+            "resolution": "Restored main site defaultAction to Allow (public) and kept scm defaultAction Deny; verified /api/health 200 from external client."
+        }
+    ]
+}

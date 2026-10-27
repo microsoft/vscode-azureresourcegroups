@@ -1,0 +1,12 @@
+name: cor-grader-reference
+metadata:
+  template: cor-grader-reference@1.0.0
+services:
+  app:
+    project: .
+    host: containerapp
+    language: js
+hooks:
+  prepackage:
+    shell: sh
+    run: npm run build

@@ -17,11 +17,11 @@ export namespace settingUtils {
     }
 
     /**
-     * Uses ext.prefix 'azureResourceGroups' unless otherwise specified
+     * Uses ext.prefix 'azureResourceGroups' unless otherwise specified.
      */
-    export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string, prefix: string = ext.prefix): Promise<void> {
+    export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string, prefix: string = ext.prefix, target?: ConfigurationTarget): Promise<void> {
         const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, Uri.file(fsPath));
-        await projectConfiguration.update(section, value);
+        await projectConfiguration.update(section, value, target);
     }
 
     /**

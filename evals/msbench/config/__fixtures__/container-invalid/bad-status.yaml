@@ -1,0 +1,6 @@
+# expect: containerBinaryStatus
+# "maybe" is the state this file was written to eliminate.
+schemaVersion: 1
+verifiedOn: '2026-08-25'
+binaries:
+  node: { status: maybe, evidence: measured }

@@ -1,0 +1,20 @@
+# expect: stackHealthPathWithoutApi
+# Two individually valid fields that cannot both be true. One of them is wrong,
+# and either way the derivation would wire the wrong gates without saying so.
+schemaVersion: 1
+id: health-without-api
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: none
+  datastore: none
+  hosting: appService
+  healthPath: /api/health
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan]

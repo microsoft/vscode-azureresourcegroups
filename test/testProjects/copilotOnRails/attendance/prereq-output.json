@@ -1,0 +1,145 @@
+{
+  "$schema": "prereq-output.v1",
+  "generatedUtc": "2026-09-11T00:00:00Z",
+  "sessionId": "00000000-0000-4000-8000-000000000001",
+  "overallHealth": "ready",
+  "readyForPipeline": true,
+  "routeToSkill": null,
+  "routeReason": null,
+  "repo": {
+    "root": "/workspace/attendance",
+    "isMonorepo": true,
+    "workspaceManager": "npm workspaces",
+    "workspaces": [
+      "services/shared",
+      "services/attendance-api",
+      "services/attendance-web"
+    ],
+    "lastScanCommit": "0000000000000000000000000000000000000000",
+    "hasCiCd": false,
+    "hasTests": false
+  },
+  "cloudSdkFindings": [],
+  "detectedInfra": [],
+  "detectedServices": [
+    {
+      "id": "postgres-local",
+      "source": "docker-compose.yml",
+      "kind": "postgres",
+      "image": "postgres:16-alpine",
+      "azureMapping": "Azure Database for PostgreSQL Flexible Server (v16)"
+    },
+    {
+      "id": "azurite-local",
+      "source": "docker-compose.yml",
+      "kind": "azure-storage-emulator",
+      "image": "mcr.microsoft.com/azure-storage/azurite:latest",
+      "azureMapping": "Azure Storage Account (Blob/Queue/Table) — required by Functions runtime"
+    }
+  ],
+  "components": [
+    {
+      "id": "attendance-api",
+      "path": "services/attendance-api",
+      "kind": "azure-functions",
+      "language": "typescript",
+      "runtime": "node",
+      "runtimeVersion": "22",
+      "framework": "@azure/functions v4 (v4 programming model)",
+      "extensionBundle": "Microsoft.Azure.Functions.ExtensionBundle [4.*, 5.0.0)",
+      "buildCommand": "npm run build",
+      "buildOutput": "dist/",
+      "entrypoint": "dist/src/main.js",
+      "envVars": [
+        {"name": "DATABASE_URL", "required": true, "kind": "connection-string", "target": "postgres"},
+        {"name": "MOCK_AUTH_SECRET", "required": true, "kind": "secret", "notes": "dev-only mock JWT signing key"},
+        {"name": "STORAGE_CONNECTION_STRING", "required": false, "kind": "connection-string", "target": "storage"},
+        {"name": "AzureWebJobsStorage", "required": true, "kind": "connection-string", "target": "storage", "notes": "Functions runtime storage"},
+        {"name": "FUNCTIONS_WORKER_RUNTIME", "required": true, "value": "node"}
+      ],
+      "dependencies": {
+        "runtime": ["@azure/functions ^4.5.0", "@attendance/shared", "pg ^8.12.0", "pino ^9.3.2", "zod ^3.23.8"],
+        "dev": ["typescript ^5.5.4", "@types/node ^22.5.0", "@types/pg ^8.11.6"]
+      },
+      "verdicts": {
+        "build": {"status": "PASS", "notes": "tsc build script present; standard Functions v4 layout"},
+        "completeness": {"status": "PASS", "notes": "host.json, local.settings.json, migrations, 8 HTTP function handlers, config validation via zod"},
+        "deployability": {"status": "PASS", "notes": "Native Azure Functions v4 Node 22; no cloud SDK migration required"}
+      },
+      "verdict": "PASS",
+      "buildRequirements": {
+        "nodeVersion": "22",
+        "packageManager": "npm",
+        "installCommand": "npm ci",
+        "buildCommand": "npm run build",
+        "outputDir": "dist"
+      },
+      "azureTargetRecommendation": "Azure Functions on Flex Consumption (Linux, Node 22)",
+      "warnings": [
+        {
+          "code": "mock-auth",
+          "severity": "warn",
+          "message": "Uses `MOCK_AUTH_SECRET` for a mock JWT auth flow (see `postMockToken` + `mockAuth.ts`). Fine for demo/staging; replace with Entra ID (Easy Auth) or MSAL before real production use.",
+          "fixPhase": "post-deploy"
+        }
+      ]
+    },
+    {
+      "id": "attendance-web",
+      "path": "services/attendance-web",
+      "kind": "spa",
+      "language": "typescript",
+      "framework": "React 18 + Vite 5",
+      "buildCommand": "npm run build",
+      "buildOutput": "dist/",
+      "envVars": [
+        {"name": "VITE_API_BASE_URL", "required": true, "kind": "url", "notes": "Points to attendance-api Function App base URL"}
+      ],
+      "dependencies": {
+        "runtime": ["react ^18.3.1", "react-dom ^18.3.1", "react-router-dom ^6.26.1", "@fluentui/react-components ^9.54.0", "@fluentui/react-icons ^2.0.245", "@attendance/shared"],
+        "dev": ["vite ^5.4.1", "@vitejs/plugin-react ^4.3.1", "typescript ^5.5.4"]
+      },
+      "verdicts": {
+        "build": {"status": "PASS", "notes": "Standard Vite React build → dist/"},
+        "completeness": {"status": "PASS", "notes": "index.html, entry components, pages, routing, API client all present"},
+        "deployability": {"status": "PASS", "notes": "Static assets; suitable for Azure Static Web Apps or Storage static website hosting"}
+      },
+      "verdict": "PASS",
+      "buildRequirements": {
+        "nodeVersion": "22",
+        "packageManager": "npm",
+        "installCommand": "npm ci",
+        "buildCommand": "npm run build",
+        "outputDir": "dist"
+      },
+      "azureTargetRecommendation": "Azure Static Web Apps (Standard) OR Storage static website + Front Door"
+    },
+    {
+      "id": "shared",
+      "path": "services/shared",
+      "kind": "library",
+      "language": "typescript",
+      "verdict": "PASS",
+      "verdicts": {
+        "build": {"status": "PASS"},
+        "completeness": {"status": "PASS"},
+        "deployability": {"status": "PASS", "notes": "Consumed via workspace symlink; built as part of API/web builds"}
+      }
+    }
+  ],
+  "blockers": [],
+  "warnings": [
+    {
+      "code": "no-tests",
+      "severity": "info",
+      "message": "No test suites detected. Not a deploy blocker."
+    },
+    {
+      "code": "no-cicd",
+      "severity": "info",
+      "message": "No CI/CD workflow files detected. Not a deploy blocker."
+    }
+  ],
+  "f1Viable": false,
+  "notes": "Standard Azure-native monorepo: Azure Functions v4 API + React/Vite SPA + Postgres. No migration or code changes required to reach an initial Azure deployment."
+}

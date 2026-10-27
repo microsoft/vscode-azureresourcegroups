@@ -1,0 +1,14 @@
+{
+    "name": "cor-grader-reference-node-fullstack",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "build": "node --check src/server.js && node --check public/app.js",
+        "test": "node --test",
+        "lint": "node scripts/lint.js",
+        "start": "node src/server.js"
+    },
+    "engines": {
+        "node": ">=22"
+    }
+}

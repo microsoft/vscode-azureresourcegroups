@@ -1,0 +1,16 @@
+{
+  "name": "task-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Task tracker with React frontend, Azure Functions backend, and PostgreSQL database",
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

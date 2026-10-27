@@ -1,0 +1,20 @@
+# expect: stackFunctionsRequiresFunc
+# A Functions app that does not admit it needs the Functions host. This is the
+# rule written directly from the injury: the requirement existed, was written
+# down nowhere a tool could read, and cost five red gates on every run.
+schemaVersion: 1
+id: functions-without-func
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontend: none
+  api: http
+  datastore: none
+  hosting: functions
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan]
