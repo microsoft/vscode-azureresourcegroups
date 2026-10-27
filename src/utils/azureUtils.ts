@@ -104,7 +104,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     AzureDocumentDb: { displayName: localize('azureDocumentDB', 'Azure DocumentDB') },
     BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
     ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps') },
-    ContainerAppsSandboxGroups: { displayName: localize('containerAppsSandboxGroups', 'Container Apps sandboxes') },
+    ContainerAppsSandboxGroups: { displayName: localize('containerAppsSandboxGroups', 'Container Apps Sandboxes') },
     ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
     Disks: { displayName: localize('disks', 'Disks') },
     DurableTaskScheduler: { displayName: localize('durableTaskScheduler', 'Durable Task Scheduler') },

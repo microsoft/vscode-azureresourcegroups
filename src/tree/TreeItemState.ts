@@ -5,6 +5,7 @@
 
 import { TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { GenericItem } from './GenericItem';
 
 interface TreeItemState {
     /**
@@ -15,6 +16,10 @@ interface TreeItemState {
      * Set the tree item icon to a spinner
      */
     spinner?: boolean;
+    /**
+     * Add temporary children to the tree item.
+     */
+    temporaryChildren?: TreeElementBase[];
 }
 
 export class TreeItemStateStore implements vscode.Disposable {
@@ -34,13 +39,21 @@ export class TreeItemStateStore implements vscode.Disposable {
 
     wrapItemInStateHandling(item: TreeElementBase, refresh: (item: TreeElementBase) => void): TreeElementBase {
         const getTreeItem = item.getTreeItem.bind(item) as typeof item.getTreeItem;
+        const getChildren = item.getChildren?.bind(item);
         item.getTreeItem = async () => {
             const treeItem = await getTreeItem();
             if (treeItem.id) {
-                return this.applyToTreeItem({ ...treeItem, id: treeItem.id });
+                return this.applyToTreeItem(treeItem.id, treeItem);
             }
             return treeItem;
         };
+        if (getChildren) {
+            item.getChildren = async () => {
+                const children = await getChildren();
+                const temporaryChildren = item.id ? this.getState(item.id).temporaryChildren : undefined;
+                return temporaryChildren?.length ? [...temporaryChildren, ...children ?? []] : children;
+            };
+        }
 
         this.onDidRequestRefresh(item.id, () => refresh(item));
 
@@ -56,15 +69,38 @@ export class TreeItemStateStore implements vscode.Disposable {
     /**
      * @param id id needs to include the account and tenant id
      */
-    async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
+    async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>, refresh?: () => void): Promise<T> {
         let result: T;
         this.update(id, { ...this.getState(id), temporaryDescription: description, spinner: true });
+        refresh?.();
         try {
             result = await callback();
         } finally {
             this.update(id, { ...this.getState(id), temporaryDescription: undefined, spinner: false });
+            refresh?.();
         }
         return result;
+    }
+
+    async showCreatingChild<T = void>(id: string, label: string, callback: () => Promise<T>, refresh?: () => void): Promise<T> {
+        const creatingItem = new GenericItem(label, {
+            id: `${id}/creating/${label}`,
+            description: vscode.l10n.t('Creating...'),
+            iconPath: new vscode.ThemeIcon('loading~spin'),
+        });
+        this.update(id, { ...this.getState(id), temporaryChildren: [creatingItem] });
+        refresh?.();
+        try {
+            return await callback();
+        } finally {
+            this.update(id, { ...this.getState(id), temporaryChildren: undefined });
+            refresh?.();
+        }
+    }
+
+    applyToTreeItem(id: string, treeItem: vscode.TreeItem): vscode.TreeItem {
+        const state = this.getState(id);
+        return this.applyStateToTreeItem(state, { ...treeItem, id });
     }
 
     private applyStateToTreeItem(state: Partial<TreeItemState>, treeItem: vscode.TreeItem): vscode.TreeItem {
@@ -85,11 +121,6 @@ export class TreeItemStateStore implements vscode.Disposable {
                 callback();
             }
         }));
-    }
-
-    private applyToTreeItem(treeItem: vscode.TreeItem & { id: string }): vscode.TreeItem {
-        const state = this.getState(treeItem.id);
-        return this.applyStateToTreeItem(state, { ...treeItem });
     }
 
     private getState(id: string): Partial<TreeItemState> {
