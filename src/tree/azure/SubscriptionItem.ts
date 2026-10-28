@@ -52,12 +52,13 @@ export class SubscriptionItem implements ResourceGroupsItem {
             context.telemetry.properties.groupBySetting = groupBySetting?.startsWith('armTag') ? 'armTag' : groupBySetting;
 
             const targetId = options?.targetId;
-            const selected = targetId ? getMostSpecificResources(resources, targetId) : undefined;
             const allGroups = this.resourceGroupingManager.groupResources(this, this.context, resources, groupBySetting);
+            const selected = targetId ? getMostSpecificResources(
+                allGroups.flatMap(group => group.getResourcesToDisplay(group.resources)), targetId) : undefined;
             // Retain full parent groups for later browsing; restrict only this explicit traversal's candidates.
             const groupingItems = (selected ? allGroups.filter(group =>
                 group.id.toLowerCase() === targetId?.toLowerCase()
-                || group.resources.some(resource => selected.includes(resource))) : allGroups)
+                || group.getResourcesToDisplay(group.resources).some(resource => selected.includes(resource))) : allGroups)
                 .sort((a, b) => a.label.localeCompare(b.label));
             context.telemetry.measurements.groupCount = groupingItems.length;
 

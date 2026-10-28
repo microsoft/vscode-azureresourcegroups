@@ -39,8 +39,9 @@ rather than re-resolving an unqualified ID through a cache shared by multiple id
 - Use `revealOptions` for VS Code's focus, selection, and expansion options.
 - Match the full enumerated ARM resource ID case-insensitively, including nested ARM resources.
   Only provider-specific child suffixes beyond that resource ID are case-sensitive.
-- Prefer the most-specific enumerated ARM resource before selecting a group or loading a provider.
-  A nested resource and its provider children do not require loading a less-specific ARM parent's branch.
+- Prefer the most-specific ARM resource displayed by the current grouping before loading a provider.
+  A visible nested resource uses its own branch; when its type is hidden from the grouping, resolution can continue
+  through the nearest visible parent's branch without exposing the hidden type as a separate group.
 - Restrict only explicit traversal candidates and provider loads; grouping parents retain their full resource lists
   so ordinary browsing through a revealed node's parent still shows its siblings without requiring a refresh.
 - Await the target's branch-extension activation before explicit loading and return its registered provider model.

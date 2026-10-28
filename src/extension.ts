@@ -42,6 +42,7 @@ import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIden
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { TestApi } from './testApi';
+import { overrideResourceTypeForTesting } from './utils/getResourceTypeOverrides';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { TreeDataItem } from './tree/ResourceGroupsItem';
@@ -331,6 +332,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 },
                 testing: {
                     registerOnActionStartHandler,
+                    overrideResourceType: overrideResourceTypeForTesting,
                     overrideAzureBranchActivation: activate => {
                         const originalActivate = extensionManager.activateApplicationResourceBranchDataProvider;
                         extensionManager.activateApplicationResourceBranchDataProvider = activate;

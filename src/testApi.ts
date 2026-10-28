@@ -7,6 +7,7 @@ import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import type { AzExtLocation } from "@microsoft/vscode-azext-azureutils";
 import { AzExtTreeDataProvider, IActionContext, IAzExtLogOutputChannel, ISubscriptionActionContext, registerOnActionStartHandler } from "@microsoft/vscode-azext-utils";
 import type { Disposable } from "vscode";
+import type { ResourceTypeOverride } from './utils/getResourceTypeOverrides';
 import type { AzExtResourceType } from '../api/src';
 import { GroupingKind } from "./extensionVariables";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
@@ -81,6 +82,9 @@ export interface TestApi {
 
         /** Supplies a controlled branch-extension activation promise inside the running extension. */
         overrideAzureBranchActivation(activate: (type: AzExtResourceType) => Promise<void>): Disposable;
+
+        /** Overrides contribution metadata in the running extension for grouping/reveal tests. */
+        overrideResourceType(resourceType: AzExtResourceType, override: ResourceTypeOverride): Disposable;
 
         /**
          * Override the Azure service factory for testing
