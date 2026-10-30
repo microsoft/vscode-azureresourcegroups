@@ -2596,10 +2596,18 @@ cache every 30 seconds for up to 15 minutes. A fresh cache is load-bearing:
 `msbench-cli` treats any readable cached ZIP as complete, including a metadata-only one.
 `MSBENCH_RESULTS_WAIT_SECONDS` and `MSBENCH_RESULTS_POLL_SECONDS` tune the wait.
 
-**The daily workload is the positive `launch-report-debug-plan` custom-tool canary on
-the default model, at 09:00 UTC** (02:00 Pacific during daylight time, 01:00 during
-standard time). Unlike the old refusal canary, its green result visibly requires our
-VSIX, custom agent and `report_agent_launch` MCP tool to load.
+**The daily workload is the `plan-approval-scrapbook` lifecycle canary on the default
+model, at 09:00 UTC** (02:00 Pacific during daylight time, 01:00 during standard
+time). It starts from a real app request and proves the beginning of the product flow:
+
+1. open the Requirements view,
+2. generate and validate the plan,
+3. open the Plan view,
+4. keep the scaffold handoff closed before approval,
+5. call `start_project_scaffold` only after approval.
+
+The startup report also proves the custom agent and MCP server loaded. This costs more
+than a one-tool launch probe, but its green result is meaningful product evidence.
 
 **A weekly core matrix runs Sunday at 10:00 UTC.** It covers seven representative
 workflow stimuli on both model families (14 paid runs), sequentially:
@@ -2626,13 +2634,12 @@ GitHub OIDC setup — `az login` plus the MSBench runner entitlement is enough.
 | `weekly-core` | 14 | The scheduled representative matrix on GPT and Claude. |
 | `full` | 112 | Every checked-in stimulus on both models. Manual only because of cost and duration. |
 
-The single-run stimulus defaults to **`launch-report-debug-plan`**. The model choices
+The single-run stimulus defaults to **`plan-approval-scrapbook`**. The model choices
 are the two exact ids in `models.ts`, `gpt-5.6-sol` and `claude-sonnet-5`.
 
-That default is deliberate: it is cheap, its answer is established, and it positively
-calls a registered Copilot on Rails MCP tool. A red can therefore distinguish a broken
-VSIX/custom-tool pipeline from the sparse-but-correct tool list produced by a refusal
-stimulus.
+That default is deliberate: its answer is established, and it positively exercises
+multiple Copilot on Rails surfaces across the approval boundary. The cheaper
+`launch-report-*` probes remain available for focused plumbing checks.
 
 Pass any other stimulus once the pipeline is proven on `main`. `STIMULUS` is read from
 the environment by `run.sh` exactly as `BENCHMARK` is, so `--stimulus` still wins
