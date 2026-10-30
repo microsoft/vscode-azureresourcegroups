@@ -15,10 +15,12 @@ Create **structure**, not **content**. Allowed: `CREATE TABLE`, `ALTER TABLE`, c
 | Stack | Tool | Create | Apply | Roll back |
 |-------|------|--------|-------|-----------|
 | Node.js / TypeScript | Knex | `knex migrate:make <name>` | `knex migrate:latest` | `knex migrate:rollback` |
-| Python | Alembic | `alembic revision -m "<name>"` | `alembic upgrade head` | `alembic downgrade -1` |
+| Python | Alembic | `<venv-python> -m alembic revision -m "<name>"` | `<venv-python> -m alembic upgrade head` | `<venv-python> -m alembic downgrade -1` |
 | C# / .NET | EF Core | `dotnet ef migrations add <Name>` | `dotnet ef database update` | `dotnet ef database update <Prev>` |
 
 If scaffold lacks them, add apply/rollback scripts (`"migrate"`, `"migrate:rollback"`).
+
+For Python, restore migration tooling into the service environment recorded in the hand-off and run from its service root. Preserve an existing native runner; never use global pip/Alembic or a Node wrapper to select Python.
 
 ---
 

@@ -29,8 +29,10 @@ Dependencies required for local runs; a missing run tool prevents startup. Examp
 | npm | Package manager | `npm --version` | Node dependency management |
 | pnpm | Package manager | `pnpm --version` | Node dependency management (pnpm projects) |
 | yarn | Package manager | `yarn --version` | Node dependency management (yarn projects) |
-| Python | Runtime | `python --version` (or `python3 --version`) | python stacks |
-| pip | Package manager | `pip --version` (or `pip3 --version`) | Python dependency management |
+| Python | Runtime | `<selected-python> --version` after Python compatibility checks below | python stacks |
+| pip | Package manager | `<selected-python> -m pip --version` | Python dependency management in that interpreter |
+| Poetry | Package manager | `poetry --version` | Existing or explicitly selected Poetry projects |
+| uv | Package manager | `uv --version` | Existing or explicitly selected uv projects |
 | .NET SDK | Runtime / SDK | `dotnet --version` | dotnet stacks |
 | Azure Functions Core Tools | Runtime | `func --version` | Azure Functions backends |
 
@@ -48,6 +50,8 @@ Prefer listed debug tools. Never list VS Code itself; plan already runs inside i
 | Docker Compose _or_ Podman Compose | Compose provider | Orchestrating emulators | `docker compose version` **or** `podman compose version` |
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
+| `ms-python.python` | VS Code extension | Has a Python service | extensions filesystem check (Phase 2); selects the interpreter and supplies native Functions debugger launch arguments |
+| `ms-python.debugpy` | VS Code extension | Has a Python service | extensions filesystem check (Phase 2); supplies the `debugpy` debug adapter |
 
 **Container runtime is Docker _or_ Podman—pick one, never both.** Docker Desktop and Podman are interchangeable emulator-container engines; generated `docker-compose.yml` is identical. Detect both (see [Container runtime detection](#container-runtime-detection) in Phase 2), then emit rows for **one** chosen runtime: Docker + Docker Compose, Podman + Podman Compose, or Podman via Docker's socket—see below. **Prefer ready Podman engine**: native Podman when `podman` CLI ready, even if Docker also ready; or Podman-in-Docker-compatibility mode when `docker` CLI is Podman-backed; unless user explicitly asks Docker. Fall back to Docker when Podman isn't ready; default Docker only when neither confirmed. Record chosen runtime + Compose command in plan Orchestrator table so generation emits matching task commands.
 
@@ -82,7 +86,7 @@ On **Windows**, registry system/user PATH usually exposes tools installed with `
 
 ### CLI tool detection
 
-Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, and all other catalog CLIs) in two stages; **stop at first success**. Any returned version means `✅` plus version. Only both failures mean `❓`.
+Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, and all other catalog CLIs) in two stages; **stop at first success**. Any returned version means `✅` plus version, except Python must also pass the compatibility checks below. Only unconfirmed or incompatible results mean `❓`.
 
 **Stage 1 — direct check.** Run catalog version command in current shell.
 
@@ -128,6 +132,17 @@ Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 ```
 
 For any `❓` CLI result, tell user it was unconfirmed and request a recheck. Recheck uses host default shell and may find version-manager runtimes hidden from initial sandboxed scan; confirmation changes it to `✅`.
+
+---
+
+### Python interpreter and environment compatibility
+
+1. Read each service's `.python-version`, `pyproject.toml` `requires-python`, lockfile, existing venv, and Python/Functions workspace settings. Prefer its existing compatible interpreter; for a new Python Functions service, default to a currently supported CPython release satisfying `>=3.11` and [Functions v4's supported Python versions](https://learn.microsoft.com/azure/azure-functions/functions-versions#languages). Do not infer compatibility from the executable name alone.
+2. Probe the actual interpreter's version and `sys.executable`. If `python`/`python3` resolves an incompatible version, keep looking: version-qualified commands such as `python3.11`, the Windows `py` launcher, and the initialized user shell can expose compatible installations. Unlike ordinary CLI discovery, finding system Python 3.9 does **not** end this search for a service targeting 3.11+.
+3. Confirm `venv` is available and probe pip with that same interpreter: `<selected-python> -m pip --version`. Once a service venv exists, use its interpreter for pip, compile checks, tests, and migrations. Never combine one Python executable's version with another global `pip` result.
+4. Mark Python/pip `✅` only when the service's compatible interpreter and its pip are confirmed. Otherwise use `❓`, retaining the discovered version and compatibility requirement in `Version` so the user sees what needs fixing. Never mark an incompatible version as usable and never silently downgrade the project to match it.
+5. Record the selected interpreter and venv path per service in the integration hand-off and runtime inventory. New scaffolds use a service-local `.venv`; preserve compatible existing Poetry/uv environments rather than creating a second environment. Their restore commands must target the interpreter that Functions will run.
+6. Python debugger extensions are separate prerequisites from Python, pip, and Functions Core Tools. Include both Python extension rows even in autopilot or when dependencies are already installed. The native Functions task gets its debugger launcher from the extensions; do not require a global `debugpy` install.
 
 ---
 

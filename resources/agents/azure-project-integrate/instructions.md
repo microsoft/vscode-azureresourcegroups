@@ -82,6 +82,7 @@ Requires scaffolded project. Before start verify:
 | Write the migration(s) | Each migration MUST have complete `up()` with `CREATE TABLE` (all columns, types) + reversing `down()`. **Empty migration files do NOT satisfy this step.** List directory afterward; verify every file non-zero. |
 | Add constraints | `UNIQUE` on business-unique fields, `FOREIGN KEY` with `ON DELETE`, `CHECK` for enums, `INDEX` on queried columns. See [migrations.md](.github/agents/azure-project-integrate/references/migrations.md). |
 | Create / confirm the migration runner | Script/command for forward apply + rollback. Add missing npm/poetry/dotnet script (e.g. `"migrate"`, `"migrate:rollback"`). |
+| Migration environment | Follow the selected stack's environment and runner requirements in [migrations.md](.github/agents/azure-project-integrate/references/migrations.md). |
 | Verify table names match handlers | Cross-reference every table with handler collection/table names. Document mapping when `collectionToTable` map exists. |
 | Apply the migrations | Run migrate command against local database; start documented local DB / emulator. Require **zero errors** + existing tables. |
 
@@ -102,8 +103,9 @@ Requires scaffolded project. Before start verify:
 | Task | Details |
 |------|---------|
 | Ensure config/env is present | Confirm `.env` / `local.settings.json` has backend values: Step 1 local DB connection string + required service vars. Use scaffold `.env.example` template. **Do not** commit secrets. |
-| Build the backend | Run backend build (`npm run build` / `tsc` / `dotnet build` / `python -m py_compile`). Require zero errors. `TS2307` import errors mean broken shared package exports; fix before continuing. |
+| Build the backend | Run the runtime gate from [smoke-test.md](.github/agents/azure-project-integrate/references/smoke-test.md). Require zero errors. |
 | Verify the `main`/entry field | Azure Functions Node v4: list `dist/`; confirm `main` glob matches compiled handlers (parent `rootDir` nests output deeper). Fix before host start. |
+| Verify the runtime entry point | Apply the selected runtime's entry-point and environment checks from [smoke-test.md](.github/agents/azure-project-integrate/references/smoke-test.md). |
 | Start the backend host | Actually execute artifact run command (e.g. `func start`, `npm start`, `dotnet run`); never skip. |
 | Verify all functions register | Read host console. **Every** inventory route must register. `No job functions found` or `ERR_MODULE_NOT_FOUND` means import/build bug; fix + restart. |
 | Hit the health endpoint | `GET /api/health` (or artifact health path) → expect `200`, proving app serves. |
@@ -130,7 +132,7 @@ Requires scaffolded project. Before start verify:
 | Task | Details |
 |------|---------|
 | Locate the seam | Scaffold provides stable `ApiClient` seam: `src/api/types.ts` (interface), `src/api/mockClient.ts` (mock impl), `src/api/index.ts` (one-line swap). Pages/hooks import only `api` from `src/api/`. Confirm via artifact + scan. |
-| Replace local types with shared types | Point `src/api/types.ts` at shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete duplicate frontend entity types. Keep `ApiClient` shape. **No `any` types.** |
+| Replace local types with shared contracts | Use the runtime's shared-contract approach from [architecture.md](.github/agents/shared-references/architecture.md) and its runtime reference. Keep the `ApiClient` shape; never cast unvalidated responses to conceal mismatches or use `any`. |
 | Build the live client | Add `src/api/client.ts`: second method-for-method implementation of **same `ApiClient` interface** (typed `: ApiClient`) against route inventory; env-based base URL. |
 | **Swap the seam (one file)** | Point `src/api/index.ts` `api` to live client (`mockClient` → `liveClient`). One line wires every page/hook; **no page or hook edits**. |
 | Configure the dev proxy | Point dev server `/api` proxy at backend host (e.g. `http://localhost:7071`) for development live endpoints. |
