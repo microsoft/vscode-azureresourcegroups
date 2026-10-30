@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+* [[1894]](https://github.com/microsoft/vscode-azureresourcegroups/issues/1894) Select the active session's deployment plan and prevent inactive sessions from replacing it or stealing focus.
+
 ## 0.13.2 - 2026-09-27
 
 ### Added
