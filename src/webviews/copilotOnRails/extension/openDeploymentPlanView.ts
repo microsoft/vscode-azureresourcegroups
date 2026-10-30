@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { findAppOnboardArtifact } from "../../../tree/project/findAppOnboardArtifact";
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, createProjectPlanFileWatcher, PREPARE_PLAN_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { createProjectPlanFileWatcher, findProjectFiles, PREPARE_PLAN_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
 import type { DeploymentPlanData, DeploymentPrerequisite } from "../views/utils/deploymentPlanTypes";
 import { getPreparePlanRenderIssue, parsePreparePlanJson } from "../views/utils/parsePreparePlanJson";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
@@ -15,12 +16,15 @@ import { getDeployPrerequisites, storeDeployPrerequisites } from "./utils/deploy
 import { isDeploymentPlanApproved } from "./utils/deploymentPlanApprovalState";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
+let displayedPlanUri: string | undefined;
+
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
     createController: (data, uri) => {
         closeLoadingView();
         return new DeploymentPlanViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updateDeploymentPlanData(data, uri),
+    onDidClose: () => { displayedPlanUri = undefined; },
 });
 
 export function isDeploymentPlanViewOpen(): boolean {
@@ -35,7 +39,7 @@ export function openDeploymentPlanViewWithContent(content: string, sourceFileUri
     void openDeploymentPlanViewWithContentAsync(content, sourceFileUri, prerequisites);
 }
 
-async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri, prerequisites?: DeploymentPrerequisite[]): Promise<void> {
+async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri, prerequisites?: DeploymentPrerequisite[], requireOpen = false): Promise<void> {
     const planData = tryParseDeploymentPlan(content, sourceFileUri);
 
     if (prerequisites && prerequisites.length > 0) {
@@ -55,7 +59,15 @@ async function openDeploymentPlanViewWithContentAsync(content: string, sourceFil
         planData.locationsUnavailable = locations.status;
     }
 
+    // Region discovery can outlive a session switch. Never let the old async open steal focus.
+    if (sourceFileUri && !(await isSelectedDeploymentPlan(sourceFileUri))) {
+        return;
+    }
+    if (requireOpen && !host.isOpen) {
+        return;
+    }
     host.show(planData, sourceFileUri);
+    displayedPlanUri = sourceFileUri?.toString();
 }
 
 
@@ -93,7 +105,7 @@ function emptyPlanData(): DeploymentPlanData {
 }
 
 export async function openDeploymentPlanViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
-    const preparePlan = await findLatestPreparePlan();
+    const preparePlan = await findAppOnboardArtifact('prepare-plan.json');
     if (!preparePlan) {
         void vscode.window.showInformationMessage(vscode.l10n.t('No deployment plan found in the workspace.'));
         return;
@@ -101,40 +113,29 @@ export async function openDeploymentPlanViewFromWorkspace(_context: CopilotOnRai
     await openDeploymentPlanViewAsync(preparePlan);
 }
 
-/**
- * Returns the most recently modified `prepare-plan.json` across every location the deploy agent
- * writes one to.
- */
-async function findLatestPreparePlan(): Promise<vscode.Uri | undefined> {
-    // Resolved against the file system rather than the search index: the deploy agent git-ignores
-    // `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
-    const matches = await Promise.all(PREPARE_PLAN_FILE_GLOBS.map(glob => findProjectFiles(glob)));
-    const files = matches.flat();
-
-    let latest: { uri: vscode.Uri; mtime: number } | undefined;
-    for (const uri of files) {
-        try {
-            const stat = await vscode.workspace.fs.stat(uri);
-            if (!latest || stat.mtime > latest.mtime) {
-                latest = { uri, mtime: stat.mtime };
-            }
-        } catch {
-            // The file may have been removed between the glob and the stat; skip it.
-        }
-    }
-    return latest?.uri;
+async function isSelectedDeploymentPlan(uri: vscode.Uri): Promise<boolean> {
+    return (await findAppOnboardArtifact('prepare-plan.json'))?.toString() === uri.toString();
 }
 
-async function openDeploymentPlanViewAsync(uri: vscode.Uri): Promise<void> {
+async function openDeploymentPlanViewAsync(uri: vscode.Uri, requireOpen = false): Promise<void> {
+    if (!(await isSelectedDeploymentPlan(uri))) {
+        return;
+    }
     const prerequisites = getDeployPrerequisites(uri);
-    openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
+    await openDeploymentPlanViewWithContentAsync(await readFileText(uri), uri, prerequisites, requireOpen);
+    if (displayedPlanUri !== uri.toString() || !host.isOpen) {
+        return;
+    }
     host.setWatcher(watchSingleFile(uri, () => void reloadDeploymentPlan(uri)));
 }
 
 async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
     try {
+        if (!host.isOpen || !(await isSelectedDeploymentPlan(uri))) {
+            return;
+        }
         const prerequisites = getDeployPrerequisites(uri);
-        openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
+        await openDeploymentPlanViewWithContentAsync(await readFileText(uri), uri, prerequisites, true);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
     }
@@ -142,11 +143,11 @@ async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
 
 /**
  * Records, in memory, the deploy prerequisites the `record_deploy_prerequisites` MCP tool collected for the
- * most recent `prepare-plan.json`, and refreshes the plan view when it is already open so the freshly
+ * selected `prepare-plan.json`, and refreshes the plan view when it is already open so the freshly
  * detected azd/az status replaces the "unknown" fallback. Returns false when no plan exists yet.
  */
 export async function recordDeployPrerequisites(prerequisites: DeploymentPrerequisite[]): Promise<boolean> {
-    const preparePlan = await findLatestPreparePlan();
+    const preparePlan = await findAppOnboardArtifact('prepare-plan.json');
     if (!preparePlan) {
         return false;
     }
@@ -170,12 +171,24 @@ export function registerDeploymentPlanAutoOpen(context: vscode.ExtensionContext)
     for (const glob of PREPARE_PLAN_FILE_GLOBS) {
         const watcher = createProjectPlanFileWatcher(glob);
         watcher.onDidCreate((uri) => {
-            if (isDeploymentPlanViewOpen()) {
-                // Already open — the per-file watcher handles content reload.
-                return;
-            }
             void openDeploymentPlanViewAsync(uri);
         });
         context.subscriptions.push(watcher);
     }
+
+    const pointerWatcher = createProjectPlanFileWatcher(APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB);
+    const refreshActivePlan = async (): Promise<void> => {
+        if (!host.isOpen) {
+            return;
+        }
+        const selected = await findAppOnboardArtifact('prepare-plan.json');
+        if (!selected) {
+            host.close();
+        } else if (selected.toString() !== displayedPlanUri) {
+            await openDeploymentPlanViewAsync(selected, true);
+        }
+    };
+    pointerWatcher.onDidCreate(() => void refreshActivePlan());
+    pointerWatcher.onDidChange(() => void refreshActivePlan());
+    context.subscriptions.push(pointerWatcher);
 }

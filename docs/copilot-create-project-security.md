@@ -43,6 +43,14 @@ API. Preview page slugs use kebab case and must match `[a-z0-9]+(?:-[a-z0-9]+)*`
 `../outside` must fail validation before the code constructs `<slug>.html`; joining first would let the
 artifact escape the preview directory.
 
+When resolving deployment plans, validate `active-session.json.activeSessionId` as a single safe
+directory segment before joining it to the sessions directory. Accept only
+`[a-zA-Z0-9][a-zA-Z0-9._-]*`; reject traversal, separators, and encoded path fragments. An active
+session's root-level plan fallback must carry a matching string session identity
+(`deploymentVariables.sessionId` in the canonical prepare-plan schema). Missing or malformed
+pointers may use the documented timestamp-based recovery path; they must never supply a path
+outside the workspace's sessions directory.
+
 When reading a `package.json` from the user's project workspace, require an object root. Require
 `dependencies`, `devDependencies`, and `scripts` to be object records when present. Preserve entries whose
 values are strings and drop entries with other value types. When key presence changes behavior, use an
