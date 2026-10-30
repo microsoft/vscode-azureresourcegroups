@@ -11,6 +11,8 @@ import { AzureResource, AzureSubscription, getAzExtResourceType } from '../../ap
 import { AzureResourceProvider } from '../hostapi.v2.internal';
 import { getAzureResourcesService } from '../services/AzureResourcesService';
 
+const deletedAzureResourceIds = new Set<string>();
+
 export class DefaultAzureResourceProvider implements AzureResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
@@ -32,7 +34,8 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
      * @returns Deduped list of Azure resources in the specified subscription
      */
     private async listResources(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
-        const allResources = await getAzureResourcesService().listResources(context, subscription);
+        const listedResources = await getAzureResourcesService().listResources(context, subscription);
+        const allResources = filterDeletedAzureResources(subscription.subscriptionId, listedResources);
 
         // dedupe resources to fix https://github.com/microsoft/vscode-azureresourcegroups/issues/526
         const allResourcesDeduped: GenericResource[] = [...new Map(allResources.map((item) => [item.id, item])).values()];
@@ -51,6 +54,27 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
         context.telemetry.measurements.resourceGroupCount = allResourceGroups.length;
         return allResourceGroups.map(resource => createResourceGroup(subscription, resource));
     }
+}
+
+export function markAzureResourceDeleted(resourceId: string): void {
+    deletedAzureResourceIds.add(resourceId.toLowerCase());
+}
+
+export function clearAzureResourceDeleted(resourceId: string): void {
+    deletedAzureResourceIds.delete(resourceId.toLowerCase());
+}
+
+export function filterDeletedAzureResources(subscriptionId: string, resources: GenericResource[]): GenericResource[] {
+    const subscriptionPrefix = `/subscriptions/${subscriptionId}/`.toLowerCase();
+    const listedResourceIds = new Set(resources.flatMap(resource => resource.id ? [resource.id.toLowerCase()] : []));
+
+    for (const deletedResourceId of deletedAzureResourceIds) {
+        if (deletedResourceId.startsWith(subscriptionPrefix) && !listedResourceIds.has(deletedResourceId)) {
+            deletedAzureResourceIds.delete(deletedResourceId);
+        }
+    }
+
+    return resources.filter(resource => !resource.id || !deletedAzureResourceIds.has(resource.id.toLowerCase()));
 }
 
 export function createAzureResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {

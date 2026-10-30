@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FileChangeType, TreeItem, Uri } from 'vscode';
-import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../../api/src/index';
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../../api/src/index';
 import { ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
+import { getIconPath } from '../../utils/azureUtils';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataItemWrapper';
@@ -41,7 +42,10 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
     override async getTreeItem(): Promise<TreeItem> {
         const treeItem = await super.getTreeItem();
         treeItem.id = this.id;
-        return treeItem;
+        if (this.resource.resourceType === AzExtResourceType.ContainerAppsSandboxGroups) {
+            treeItem.iconPath = getIconPath(AzExtResourceType.ContainerAppsSandboxGroups);
+        }
+        return ext.azureTreeState.applyToTreeItem(this.id, treeItem);
     }
 
     protected override getExtraContextValues(): string[] {

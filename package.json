@@ -227,6 +227,18 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.createContainerAppsSandboxGroup",
+                "title": "%azureResourceGroups.createContainerAppsSandboxGroup%",
+                "category": "Azure",
+                "icon": "$(add)"
+            },
+            {
+                "command": "azureResourceGroups.deleteContainerAppsSandboxGroup",
+                "title": "%azureResourceGroups.deleteContainerAppsSandboxGroup%",
+                "category": "Azure",
+                "icon": "$(trash)"
+            },
+            {
                 "command": "azureResourceGroups.installExtension",
                 "title": "Install Azure extension",
                 "icon": "$(extensions)",
@@ -618,6 +630,21 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureResourceGroups.createContainerAppsSandboxGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup/ && viewItem =~ /ContainerAppsSandboxGroups/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.createContainerAppsSandboxGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup/ && viewItem =~ /ContainerAppsSandboxGroups/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.deleteContainerAppsSandboxGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/ && viewItem =~ /ContainerAppsSandboxGroups/",
+                    "group": "1@1"
+                },
                 {
                     "command": "azureResourceGroups.loadAllSubscriptionRoleAssignments",
                     "when": "view == azureResourceGroups && viewItem =~ /targetServiceRoleAssignmentItem(?!allLoaded)/",
@@ -1055,6 +1082,7 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
+        "@azure/containerapps-sandbox": "^1.0.0-beta.1",
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",

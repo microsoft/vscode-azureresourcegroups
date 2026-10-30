@@ -20,9 +20,11 @@ import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { createContainerAppsSandboxGroup } from './createContainerAppsSandboxGroup';
 import { registerCopilotOnRailsCommands } from './copilotOnRails/registerCopilotOnRailsCommands';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
+import { deleteContainerAppsSandboxGroup } from './deleteContainerAppsSandboxGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
 import { buildGroupByCommand } from './explorer/groupBy';
 import { showGroupOptions } from './explorer/showGroupOptions';
@@ -114,6 +116,8 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
+    registerCommand('azureResourceGroups.createContainerAppsSandboxGroup', createContainerAppsSandboxGroup);
+    registerCommand('azureResourceGroups.deleteContainerAppsSandboxGroup', deleteContainerAppsSandboxGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);

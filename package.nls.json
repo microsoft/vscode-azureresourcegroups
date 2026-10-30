@@ -8,6 +8,8 @@
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",
+    "azureResourceGroups.createContainerAppsSandboxGroup": "Create Sandbox Group...",
+    "azureResourceGroups.deleteContainerAppsSandboxGroup": "Delete Sandbox Group...",
     "azureResourceGroups.deleteResourceGroup": "Delete Resource Group...",
     "azureResourceGroups.editTags": "Edit Tags...",
     "azureResourceGroups.description": "An extension for viewing and managing Azure resources.",
