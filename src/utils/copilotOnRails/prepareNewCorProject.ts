@@ -6,8 +6,10 @@
 import { ext } from "../../extensionVariables";
 import { projectSubmissionState } from "../../tree/project/projectSubmissionState";
 import { disableAutopilot } from "../../webviews/copilotOnRails/extension/autopilot";
+import * as vscode from "vscode";
+import { writeCorProjectMarker } from "./corProjectMarker";
 import { recordCreatedAt, recordPrompt, recordSystemInfo } from "./diagnosticUtils";
-import { COR_PROJECT_ID_KEY, getSystemInfo } from "./telemetryUtils";
+import { COR_PROJECT_ID_KEY, getCorProjectId, getSystemInfo } from "./telemetryUtils";
 import { COR_WORKFLOW_STATE_KEY } from "./workflowContext";
 
 /**
@@ -18,6 +20,12 @@ export async function prepareNewCorProject(prompt: string): Promise<void> {
     await clearCorWorkspaceState();
     await disableAutopilot();
     projectSubmissionState.reset();
+
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        throw new Error('Create Project with Copilot requires an open workspace folder.');
+    }
+    await writeCorProjectMarker(workspaceFolder.uri, getCorProjectId());
 
     recordPrompt(prompt);
     recordCreatedAt();
