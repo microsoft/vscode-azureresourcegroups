@@ -99,7 +99,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    {absolute path}
    ```
    - **Expect:** IaC files written to `infra/`, file list returned for `scaffold-manifest.json.files[]`
-   - The tag `app-onboard-skill: 'true'` MUST appear verbatim in generated Bicep.
+   - The tags `app-onboard-skill: 'true'` and `created-by-cor: 'true'` MUST appear verbatim in generated Bicep. Preserve the other shared tags and merge resource-specific/existing tags with `union()`; apply the shared object to every taggable resource, and omit it only for resource types without tag support.
 
 5b. **Deploy checklist (parallel with Step 5)** — Dispatch as a `task` **in parallel** with the IaC gen subagent above. ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
    ```

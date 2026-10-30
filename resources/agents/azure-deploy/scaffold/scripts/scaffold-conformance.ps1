@@ -47,6 +47,9 @@ function Has-Service($re) { return [bool]($svcNames | Where-Object { $_ -match $
 if ($mainBicep -match 'appOnboard(Skill|SessionId)|createdAt:|deployedBy:') {
   Add-Fail 'TAGS-NO-CAMEL' "camelCase tag keys found — use hyphenated ('app-onboard-skill' ...)" 'infra/main.bicep'
 }
+if ($mainBicep -notmatch "'created-by-cor'\s*:\s*'true'") {
+  Add-Fail 'COR-TAG-MISSING' "main.bicep must merge the stable 'created-by-cor': 'true' tag into the shared tags object" 'infra/main.bicep'
+}
 
 # 12. DIAG-GATED — we don't scaffold diagnostic-settings; if the generator added one it must be gated behind
 #     enableDiagnostics (default false) or removed. Unconditional wiring blocks the first deploy (target/workspace not ready).
