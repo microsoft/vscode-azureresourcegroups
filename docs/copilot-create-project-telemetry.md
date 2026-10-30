@@ -21,6 +21,30 @@ and deployment terminal event can be joined through:
 | `lifecycleState` | Terminal outcome of the telemetry action: `succeeded`, `failed`, `canceled`, or `skipped` (`started` while in flight). |
 | `phaseLifecycleState` | Persisted outcome of the current workflow phase. |
 
+When project planning begins, the extension creates or restores `.azure/created-by-cor.json` in both
+same-folder and folder-handoff flows. The file makes the existing `corProjectId` portable outside
+VS Code workspace state. Its authoritative JSON payload contains exactly:
+
+```json
+{
+  "schemaVersion": 1,
+  "source": "copilot-on-rails",
+  "corProjectId": "<existing random CoR UUID>"
+}
+```
+
+This UUID is pseudonymous correlation data: it contains no user or Azure identity. It must never be
+copied into ARM tags, resource names, logs, or diagnostics. A downstream reader may use it only as
+the approved telemetry join key.
+
+The marker is a project-level correlation breadcrumb for a later Azure Attach deployment. The
+canonical Azure App Onboard consumer and telemetry owner lives in `microsoft/azure-skills` under
+`skills/azure-app-onboard/`, outside this repository. End-to-end CoR-to-Azure-Attach correlation
+must not be claimed until that consumer validates and uses the marker; this Resources extension
+change alone does not complete the downstream join. The marker is also distinct from the non-unique
+ARM tag `created-by-cor: true`: the tag classifies infrastructure as CoR-created, while the marker
+carries the specific project's random correlation identity.
+
 Actions include `startedTimestamp`, `completedTimestamp`, `actionDurationMs`,
 `actionActiveDurationMs`, `actionUserWaitDurationMs`, and `precedingUserWaitDurationMs` for the
 extension-owned approval/view wait immediately before the action. The workflow record also accumulates

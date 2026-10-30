@@ -119,7 +119,7 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 
 | Term | Meaning |
 | --- | --- |
-| **Copilot on Rails / CoR** | Internal codename for this feature; the command prefix is `copilotOnRails.`. |
+| **Copilot on Rails / CoR** | **CoR = Copilot on Rails = Create Project with Copilot.** It is the internal codename for this feature; the command prefix is `copilotOnRails.`. |
 | **Agent** | A single‑purpose Copilot chat agent defined by a `*.agent.md` file. Six agents form the pipeline. |
 | **Agent instructions** | The step‑by‑step files an agent follows. Bundled in the extension and copied into your workspace at `.github/agents/`. |
 | **MCP tool** | A tool the extension exposes to Copilot (via the `vscode-azureresourcegroups.mcp` server) that opens a view or triggers the next agent. |
@@ -366,7 +366,9 @@ Generated Bicep adds the stable ARM tag **`created-by-cor: true`** to the shared
 threads that object through every taggable resource. Existing AppOnboard and resource-specific tags
 are merged rather than replaced. Resource types that do not support ARM tags are left unchanged.
 The value is intentionally non-unique: it identifies CoR-created infrastructure without encoding a
-user, project, workflow, subscription, or tenant identifier.
+user, project, workflow, subscription, or tenant identifier. It is distinct from the project-level
+`.azure/created-by-cor.json` correlation breadcrumb: the ARM tag classifies resources but cannot
+identify which CoR project created them.
 
 > 📷 *Screenshot needed: the Deployment progress view while Azure resources are being provisioned.*
 
@@ -550,6 +552,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | Path | Written by | Contents |
 | --- | --- | --- |
 | `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, carries only random project/workflow correlation ids, timestamps, and accumulated user-wait duration, is consumed immediately, and expires after ten minutes. |
+| `.azure/created-by-cor.json` | extension | Durable project-level correlation breadcrumb, created or restored when project planning begins in both same-folder and folder-handoff flows. Its authoritative payload contains exactly `schemaVersion: 1`, `source: "copilot-on-rails"`, and `corProjectId`, which is the existing random CoR project UUID. The UUID is pseudonymous telemetry join data with no user or Azure identity; it must not be copied into ARM tags, resource names, logs, or diagnostics. This portable identity is distinct from the non-unique ARM tag `created-by-cor: true`. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
