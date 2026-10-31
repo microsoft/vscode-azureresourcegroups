@@ -4,9 +4,10 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from "../../../../api/src/AzExtResourceType";
-import type { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../../../api/src/resources/azure";
+import type { AzureResource } from "../../../../api/src/resources/azure";
 import * as vscode from 'vscode';
 import type { ResourceItemFactory } from "../AzureResourceItem";
+import type { BranchDataProviderFactory } from '../AzureResourceBranchDataProviderManager';
 import { GroupingItem, GroupingItemDisplayOptions, GroupingItemOptions } from "./GroupingItem";
 import { LocationGroupingItem } from "./LocationGroupingItem";
 import { ResourceGroupGroupingItem } from "./ResourceGroupGroupingItem";
@@ -14,7 +15,7 @@ import { ResourceTypeGroupingItem } from "./ResourceTypeGroupingItem";
 
 export interface GroupingItemFactoryOptions {
     resourceItemFactory: ResourceItemFactory<AzureResource>,
-    branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>,
+    branchDataProviderFactory: BranchDataProviderFactory,
     onDidChangeBranchDataProviders: vscode.Event<AzExtResourceType>,
     defaultDisplayOptions?: GroupingItemDisplayOptions,
 }

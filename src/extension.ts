@@ -6,7 +6,7 @@
 'use strict';
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerOnActionStartHandler, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { registerMcpHttpProvider } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../api/src';
@@ -42,6 +42,7 @@ import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIden
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { TestApi } from './testApi';
+import { overrideResourceTypeForTesting } from './utils/getResourceTypeOverrides';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { TreeDataItem } from './tree/ResourceGroupsItem';
@@ -172,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
         new DefaultAzureResourceBranchDataProvider(),
-        type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
+        type => extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(azureResourceBranchDataProviderManager);
 
@@ -330,6 +331,27 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getFocusViewTreeDataProvider: () => ext.focusViewTreeDataProvider,
                 },
                 testing: {
+                    registerOnActionStartHandler,
+                    overrideResourceType: overrideResourceTypeForTesting,
+                    overrideAzureBranchActivation: activate => {
+                        const originalActivate = extensionManager.activateApplicationResourceBranchDataProvider;
+                        extensionManager.activateApplicationResourceBranchDataProvider = activate;
+                        return new vscode.Disposable(() => {
+                            extensionManager.activateApplicationResourceBranchDataProvider = originalActivate;
+                        });
+                    },
+                    overrideAzureResourceReveal: reveal => {
+                        const originalReveal = ext.appResourceTreeView.reveal;
+                        ext.appResourceTreeView.reveal = async item => {
+                            if (!item || typeof item !== 'object' || !('id' in item) || typeof item.id !== 'string') {
+                                throw new Error('The test reveal override requires a tree item with a string ID.');
+                            }
+                            await reveal(item.id);
+                        };
+                        return new vscode.Disposable(() => {
+                            ext.appResourceTreeView.reveal = originalReveal;
+                        });
+                    },
                     setOverrideAzureServiceFactory: (factory) => {
                         ext.testing.overrideAzureServiceFactory = factory;
                     },
