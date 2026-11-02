@@ -360,6 +360,10 @@ as a recovery fallback, with URI order breaking timestamp ties. Updates or newly
 inactive sessions cannot replace the active plan or steal focus. Changing the active session updates
 an already-open plan view; it does not reopen a view you closed. If the new session has no plan yet,
 the previous plan closes rather than leaving the wrong session's plan available for approval.
+Plan and active-session watchers cover every workspace folder, including folders added while the
+window is open. Pointer changes reload the selected plan even when sessions reuse the same
+root-level file, and delayed reads cannot overwrite or close a newer selection. Plans completed
+while Azure regions are loading are reread before display.
 
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
 
