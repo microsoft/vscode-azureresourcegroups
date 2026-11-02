@@ -351,6 +351,16 @@ machine** — if it isn't started, generation asks before starting it. You can s
 Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
 `.copilot-azure/sessions/{id}/prepare-plan.json` and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. Existing service boundaries are preserved: for example, a scaffolded SPA and Azure Functions API remain a frontend service and a separate Function App. Static Web Apps can host the frontend, but the agent must not convert the Functions project into an SWA-managed API or switch its authentication provider to `azureStaticWebApps`. After you approve, the agent generates and validates Bicep or Terraform, provisions it through Azure Resource Manager, deploys each application service through its service-specific channel, and health-checks the result. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built-in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
+The deployment plan is selected using `.copilot-azure/sessions/active-session.json`, not whichever
+plan was edited most recently. The active session's plan takes precedence; a root-level
+`.azure/prepare-plan.json` is used only when its session identity matches. While an existing active
+session is still preparing its plan, an older session's plan is not shown in its place. If the
+pointer is missing, invalid, or names a removed session, the most recently modified plan is used
+as a recovery fallback, with URI order breaking timestamp ties. Updates or newly created plans in
+inactive sessions cannot replace the active plan or steal focus. Changing the active session updates
+an already-open plan view; it does not reopen a view you closed. If the new session has no plan yet,
+the previous plan closes rather than leaving the wrong session's plan available for approval.
+
 Once you approve a plan, **reopening it keeps the Approve Plan button disabled** (with a *"Plan already approved"* tooltip) — matching how the project and debug plan previews behave — so reopening an already-approved plan can't accidentally re-approve it and re-trigger the deploy agent. Approval is tracked per plan by the extension (the deployment plan is the pipeline's `prepare-plan.json`, which the agent doesn't mark as approved). You can still request changes: if you submit feedback and Copilot regenerates the plan, the new plan is no longer "approved" and the **Approve Plan** button re-enables.
 
 <p align="center">
@@ -545,6 +555,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
+| `.copilot-azure/sessions/active-session.json` | deploy agent | Names the active App Onboard session. Deployment-plan selection and its watchers use this pointer before considering timestamp-based recovery. |
 | `.copilot-azure/sessions/{id}/prepare-plan.json` | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. It reads every field dialect the agent emits — services keyed by `name`, by `kind`, or by ARM type (`azureService`), resource names taken from `naming.resources`, components from `componentMapping[]`, costs from `breakdown`/`items`/`byService`, and recommendations as objects or plain strings — so any of those shapes renders instead of reporting that the plan lists no services. |
 | `.copilot-azure/sessions/{id}/context.json` | deploy agent | Current phase and completed phases. Drives the Deployment progress view. |
 | `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | In-progress and final deployment status, target, endpoints, resources, and recovery attempts. Drives Deployment progress and backs Deployment results. A workspace can hold several; the active session's result is used. |
