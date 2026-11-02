@@ -26,6 +26,12 @@ documentation and artifact-security instructions remain applicable alongside the
   `AzureWizard`, subscription-selection helpers, and activity helpers where that flow already uses
   them. Preserve cancellation and error propagation; do not convert failures into successful empty
   results or add duplicate notifications.
+- Azure Resources owns the shared Azure authentication/subscription integration for consuming
+  extensions: its provider delegates to `@microsoft/vscode-azext-azureauth`, which uses
+  `vscode.authentication` and VS Code's built-in Microsoft Authentication provider. Preserve
+  account, tenant, cloud, scope, and silent-versus-interactive session behavior; follow
+  [the authentication flow](instructions/azure-workflows.instructions.md#authentication-ownership-and-token-flow)
+  rather than substituting Azure CLI login or a new credential chain.
 - Keep TypeScript strict. Narrow untrusted values and optional API fields rather than adding `any`,
   unchecked casts, non-null assertions, or compiler/linter exemptions to hide a problem.
 - Follow the surrounding localization mechanism: `src/utils/localize.ts` for existing `vscode-nls`

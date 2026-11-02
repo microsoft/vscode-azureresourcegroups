@@ -25,6 +25,15 @@ resource/subscription service or branch provider -> tree refresh, activity/outpu
 
 ## Important boundaries
 
+- Azure Resources supplies the shared Azure sign-in/subscription path used by consuming extensions.
+  `src/extension.ts` -> `getSubscriptionProviderFactory.ts` -> Resources'
+  `VSCodeAzureSubscriptionProvider.ts` -> `@microsoft/vscode-azext-azureauth` ->
+  `vscode.authentication` -> VS Code's built-in Microsoft Authentication provider
+  (`microsoft`, or `microsoft-sovereign-cloud` for non-public clouds). The package discovers
+  accounts, tenants, and subscriptions and exposes subscription-bound session access; SDK
+  credentials adapt those sessions. This is not Azure CLI login, nor the v4 extension-to-extension
+  API credential handshake. See [authentication guidance](.github/instructions/azure-workflows.instructions.md#authentication-ownership-and-token-flow)
+  for interactive consent, cloud/account scope, and the explicit federated-provider exception.
 - `api/src` is the client library/contract; `src/api` implements the host and compatibility layers.
   `api/docs` contains documentation snapshots, not implementation imports.
 - Resource providers enumerate resources; branch data providers supply their tree representation.

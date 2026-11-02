@@ -5,6 +5,45 @@ applyTo: "src/commands/accounts/**, src/commands/createResource*.ts, src/command
 
 # Azure operations, authentication, and Cloud Shell
 
+## Authentication ownership and token flow
+
+- Azure Resources is the shared authentication/subscription integration consumed by other Azure
+  extensions. Activation assigns `ext.subscriptionProviderFactory` in `src/extension.ts`;
+  `src/services/getSubscriptionProviderFactory.ts` normally selects the cached Resources subclass
+  in `src/services/VSCodeAzureSubscriptionProvider.ts`. That subclass extends the
+  `@microsoft/vscode-azext-azureauth` provider and adds Accounts & Tenants selection filtering.
+- The auth package, not this extension, implements the normal session acquisition:
+  `AzureSubscriptionProviderBase` -> `getSessionFromVSCode` -> `vscode.authentication.getSession`.
+  Its `getConfiguredAuthProviderId` selects VS Code's built-in Microsoft Authentication provider:
+  `microsoft` for public Azure, `microsoft-sovereign-cloud` otherwise. Cloud configuration comes
+  from `microsoft-sovereign-cloud.environment` / `customEnvironment`; do not hard-code authority,
+  ARM endpoints, or token audiences.
+- Accounts come from `vscode.authentication.getAccounts`; tenants and subscriptions are discovered
+  through the Azure subscription SDK using session-backed credentials. An account is not a tenant
+  or subscription, and a signed-in account does not guarantee every tenant is authenticated or
+  that any subscription is selected. Preserve account identity, tenant scope, filtering, and cache
+  invalidation across sign-in, session changes, cloud changes, and tree refresh.
+- Returned subscriptions expose `authentication.getSession()` and `getSessionWithScopes(...)`.
+  The package normalizes resource scopes to `.default`, uses the configured environment's
+  `managementEndpointUrl` for default scopes, and adds `VSCODE_TENANT:<tenantId>`. Plain scope
+  requests are silent by default; `createIfNone: true` allows interactive consent, and
+  WWW-Authenticate challenges allow prompting. Preserve these distinctions, cancellation, and
+  missing-session errors; do not turn background enumeration into unsolicited sign-in.
+- `createSubscriptionContext` / `createCredential` from `@microsoft/vscode-azext-utils` adapt
+  subscription session access into SDK credentials (`getToken` returns the session access token).
+  They do not establish another login. Keep using the selected subscription and existing client
+  factories; `AzureResourcesService.ts` has tenant/account-specific session handling for duplicate
+  subscriptions. Never log sessions, tokens, or credential payloads.
+- Azure CLI / azd login is a separate process credential context, not proof of VS Code sign-in
+  (or vice versa). The explicit alternative here is
+  `src/services/AzureDevOpsSubscriptionProvider.ts`, selected by the factory's federated-credential
+  environment flags for pipeline scenarios. Test provider overrides and mocks are additional
+  test seams, not the normal Microsoft Authentication flow or a production credential fallback.
+- Diagnose session acquisition, tenant/subscription discovery, filtering, and SDK token use at
+  their owning boundaries. Inspect the installed auth package's `providers` and `utils` modules
+  before changing assumptions about scopes or prompting; its implementation lives in
+  `microsoft/vscode-azuretools`, not in a consuming extension.
+
 ## Account and cloud context
 
 - Obtain subscriptions through `ext.subscriptionProviderFactory`, configured by
