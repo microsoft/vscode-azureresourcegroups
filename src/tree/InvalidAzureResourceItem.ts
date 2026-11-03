@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { createContextValue, parseError } from '@microsoft/vscode-azext-utils';
-import { AzureResource } from 'api/src/resources/azure';
+import { AzureResource } from '../../api/src/resources/azure';
 import * as vscode from 'vscode';
 import { getIconPath } from '../utils/azureUtils';
 import { localize } from '../utils/localize';

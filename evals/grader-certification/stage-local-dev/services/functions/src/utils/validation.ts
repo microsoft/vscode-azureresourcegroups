@@ -18,7 +18,7 @@ export async function validateBody<T>(request: HttpRequest, schema: ZodSchema<T>
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    const details = result.error.errors.map(e => ({
+    const details = result.error.issues.map(e => ({
       field: e.path.join('.'),
       message: e.message,
     }));
@@ -27,14 +27,14 @@ export async function validateBody<T>(request: HttpRequest, schema: ZodSchema<T>
   return result.data;
 }
 
-export function validatePathParam(param: string | undefined, name: string, schema: ZodSchema): string {
+export function validatePathParam(param: string | undefined, name: string, schema: ZodSchema<string>): string {
   if (!param) {
     throw new ValidationError(`Missing required path parameter: ${name}`);
   }
   
   const result = schema.safeParse(param);
   if (!result.success) {
-    throw new ValidationError(`Invalid ${name} format`, result.error.errors);
+    throw new ValidationError(`Invalid ${name} format`, result.error.issues);
   }
   
   return result.data;

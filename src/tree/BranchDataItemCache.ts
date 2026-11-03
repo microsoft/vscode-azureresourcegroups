@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceModelBase } from 'api/src/resources/base';
+import { ResourceModelBase } from '../../api/src/resources/base';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 

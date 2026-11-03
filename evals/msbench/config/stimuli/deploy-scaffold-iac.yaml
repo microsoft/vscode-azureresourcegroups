@@ -90,8 +90,8 @@ promptSteps:
       - comment: Sentinel; this turn must have produced a response or its checks are vacuous
         query: SELECT COUNT(*) > 0 FROM llm_responses
 
-      - comment: Agent should report its launch
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%'
+      - comment: The deploy agent should report its launch with the correct name
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%report_agent_launch%' AND json_extract(args, '$.agentName') = 'azure-deploy'
 
       # The approval gate itself, graded. `approval-gates.md` requires the agent to
       # stop before generating infrastructure, so a template existing at this point

@@ -23,6 +23,7 @@ resources/readme/**
 resources/changelog/**
 src/**
 stats.json
+esbuild.*.meta.json
 test-results.xml
 test/**
 testWorkspace/**

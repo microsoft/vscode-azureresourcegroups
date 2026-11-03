@@ -31,14 +31,17 @@ Check script runners (`package.json`, `Makefile`, etc.) for migration commands; 
 
 ### Synthesis
 
-1. Cross-reference all three layers; they should agree
-2. Use an existing migration command; don't invent one
-3. If layers conflict, ask user which tool is active
+1. Cross-reference all three layers — they should agree
+2. If an existing migration command exists, use it (don't invent a new one)
+3. Project plans, integration plans, and other prose are not evidence that migration automation exists. Do not mark migration generation `[x]` from a planned tool unless its files, dependency, or command exists in the workspace.
+4. If layers conflict, record the candidates as an unchecked plan row and explain that the user can resolve it by editing the plan before approval. Do not ask a chat question; the plan view is the review surface.
 
 ### Insufficient Evidence
 
 If database dependency exists but no strategy appears across all three layers:
 
 1. Do not guess
-2. Ask via `ask_user` how user manages schema changes
-3. Record plan Migrations gap as `⚠️ Not detected`
+2. Do not call `ask_user` or `vscode_askQuestions`; plan generation must complete without a parallel chat-input gate
+3. Record the gap in the plan's Migrations section as an unchecked (`[ ]`) row with `⚠️ Not detected`
+4. Explain that migration automation remains disabled until the user implements a strategy or edits the plan before approval
+5. Do not add or check a migration convenience script (such as `db:migrate`) when no matching workspace command exists

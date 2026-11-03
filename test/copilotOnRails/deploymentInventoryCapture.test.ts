@@ -5,7 +5,7 @@
 
 import { DeploymentOperation, GenericResource } from '@azure/arm-resources';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import type { AzureSubscription } from 'api/src/resources/azure';
+import type { AzureSubscription } from '../../api/src/resources/azure';
 import assert from 'assert';
 import { AzureResourcesService } from '../../src/services/AzureResourcesService';
 import { captureInventory } from '../../src/utils/copilotOnRails/deploymentInventoryCapture';

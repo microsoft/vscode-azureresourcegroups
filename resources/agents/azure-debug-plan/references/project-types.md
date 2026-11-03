@@ -19,6 +19,10 @@
 
 For Azure Functions projects, scan bindings for Azure dependencies. Parse `function.json` or source decorator/attribute bindings.
 
+For Python v2, inspect Blueprints registered by `function_app.py` and map decorator names such as `blob_trigger` and `cosmos_db_trigger` to the corresponding bindings below.
+
+Functions task-provider settings are folder-scoped. Record any conflicting per-service language/environment requirements in the plan for explicit resolution.
+
 > **Implicit dependency:** Every Azure Functions project requires Azure Storage for host runtime trigger management, lease coordination, and internal state. Always add an Azurite emulator plan entry, regardless of application-level storage SDK detection.
 
 | Binding | Azure Service | Emulator |

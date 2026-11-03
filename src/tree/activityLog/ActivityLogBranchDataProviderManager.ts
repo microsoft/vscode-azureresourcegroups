@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from "api/src";
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../../../api/src";
 import { ResourceBranchDataProviderManagerBase } from "../ResourceBranchDataProviderManagerBase";
 
 export class ActivityLogResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<string, BranchDataProvider<ResourceBase, ResourceModelBase>> {

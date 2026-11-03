@@ -1,0 +1,24 @@
+# Isolates the post-generation deploy hand-off from the expensive five-turn
+# scaffold → plan → generate chain. The seed supplies only a certified
+# `Implemented` debug plan; assertions grade the agent's response and MCP call,
+# never the fixture.
+#
+# phase: local
+# seed: implemented-debug-plan
+
+preConditions:
+  - comment: The completed debug plan context must be present
+    exec: 'test -f /workspace/.azure/vscode-debug-plan.md && grep -q "^> \*\*Status:\*\* Implemented" /workspace/.azure/vscode-debug-plan.md'
+
+promptSteps:
+  - chatMode: azure-debug-generate
+    text: "The debug plan is Implemented and the next-steps view was already presented. Deploy to Azure. Use the `start_deployment` hand-off now and stop; do not initialize or act as the deployment agent in this chat."
+    assertions:
+      # The required positive tool assertion is also the liveness proof. This
+      # handler is contracted to STOP immediately after the hand-off, so requiring
+      # a separate response row would reject the correct tool-only completion.
+      - comment: Agent should start deployment after the user selects Deploy to Azure
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_deployment%'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

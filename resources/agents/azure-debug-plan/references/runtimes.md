@@ -28,3 +28,11 @@ Derive plan Service Label assembly name:
 
 1. If `<AssemblyName>` set → use its value
 2. Otherwise → `.csproj` filename without extension (e.g. `Functions.csproj` → `Functions`)
+
+---
+
+## python
+
+Read `.python-version`, `pyproject.toml` `requires-python`, lockfiles, the integration hand-off, and existing workspace interpreter/Functions settings. Resolve compatibility through [prerequisites.md](../../shared-references/prerequisites.md#python-interpreter-and-environment-compatibility); a manifest constraint is not a detected installation.
+
+Record the service root, entry point (`function_app.py` for Python v2 Functions), production/dev requirements files, package manager, interpreter version/path, and venv path for generation. Detect service-local `.venv` first but preserve a compatible existing workspace-root or manager-owned venv. pip, compile, tests, and migrations must all use that interpreter.

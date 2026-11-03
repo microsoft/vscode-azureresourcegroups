@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "api/src/AzExtResourceType";
-import type { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "api/src/resources/azure";
+import { AzExtResourceType } from "../../../../api/src/AzExtResourceType";
+import type { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../../../api/src/resources/azure";
 import * as vscode from 'vscode';
 import type { ResourceItemFactory } from "../AzureResourceItem";
 import { GroupingItem, GroupingItemDisplayOptions, GroupingItemOptions } from "./GroupingItem";

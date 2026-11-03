@@ -6,7 +6,7 @@
 import { Identity } from "@azure/arm-msi";
 import { GenericResource } from "@azure/arm-resources";
 import { createContextValue } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "api/src";
+import { AzureSubscription } from "../../api/src";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { createAzureResource } from "../api/DefaultAzureResourceProvider";
 import { DefaultAzureResourceItem } from "../tree/azure/DefaultAzureResourceItem";

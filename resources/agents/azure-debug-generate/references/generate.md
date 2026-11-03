@@ -94,7 +94,7 @@ Assemble `.vscode/launch.json` + `.vscode/tasks.json` from detected **project ty
 
 | Concern | Server-side project source | Browser SPA source |
 |---------|---------------------------|-------------------|
-| Debugger type (`node`, `coreclr`) | `runtimes/{rt}.md` § Debugger Properties | `project-types/frontend-spa/debug-adapters/{adapter}.md` |
+| Debugger type (`node`, `coreclr`, `debugpy`) | `runtimes/{rt}.md` § Debugger Properties | `project-types/frontend-spa/debug-adapters/{adapter}.md` |
 | Debug port | `runtimes/{rt}.md` § Debugger Properties | N/A (uses dev server URL) |
 | Request mode (`attach` / `launch`) | `project-types/{type}.md` § Runtime Wiring | `project-types/frontend-spa/frontend-spa.md` § Runtime Wiring |
 | Top-level startup task (type, command, problem matcher) | `project-types/{type}.md` § VS Code Task Configuration | `project-types/frontend-spa/frontend-spa.md` § VS Code Task Configuration |

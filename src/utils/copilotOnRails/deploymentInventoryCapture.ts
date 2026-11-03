@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import type { AzureSubscription } from "api/src/resources/azure";
+import type { AzureSubscription } from "../../../api/src/resources/azure";
 import { ext } from "../../extensionVariables";
 import { AzureResourcesService, DeploymentOperationsUnavailableReason, getAzureResourcesService } from "../../services/AzureResourcesService";
 import { computeDeploymentInventory, DeploymentInventoryResult, DeploymentTarget, normalizeResourceId } from "./deploymentInventory";

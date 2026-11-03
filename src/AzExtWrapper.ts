@@ -5,7 +5,7 @@
 
 import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
-import { AzExtResourceType, AzureResource } from "api/src";
+import { AzExtResourceType, AzureResource } from "../api/src";
 import { Extension, commands, extensions } from "vscode";
 import { apiUtils } from '../api/src/utils/apiUtils';
 import { IAzExtMetadata, IAzExtTutorial, azureExtensions } from "./azureExtensions";

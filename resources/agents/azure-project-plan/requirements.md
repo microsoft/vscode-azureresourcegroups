@@ -119,10 +119,12 @@ For **each service**, emit these with `"serviceId": "{service.id}"`:
 | `id` pattern | `header` | `question` | Options / Type | Notes |
 |---|---|---|---|---|
 | `{serviceId}:language` | Language | Which programming language for {label}? | `TypeScript`, `Python`, `C# (.NET)` for backends/workers; `TypeScript`, `JavaScript` for frontends | `allowFreeformInput: false` |
-| `{serviceId}:framework` | Framework | Which framework for {label}? | Frontends: `React + Vite`, `Vue + Vite`, `Angular`, `Svelte`; Backends: `Azure Functions`, etc. | `allowFreeformInput: true`; omit for backends when Azure Functions is the only option |
+| `{serviceId}:framework` | Framework | Which framework for {label}? | Frontends: `React + Vite`, `Vue + Vite`, `Angular`, `Svelte`; Backends in every language: only `Azure Functions` | `allowFreeformInput: true`; always emit for backends so users can enter a custom framework |
 | `{serviceId}:features` | Features | Describe the features or API routes for {label}. | Free text (omit `options`) | |
 
 Use `category: "service"` for every per-service question. Webview groups them by service card, not category.
+
+For APIs, recommend Azure Functions unless the user explicitly requested another framework or the existing service uses one. Preserve that custom value in `answer` and `recommendedChoice`, but keep `options` limited to Azure Functions. Never suggest Express, Fastify, Flask, FastAPI, or ASP.NET Core as additional API options, and never replace an explicit custom choice with Functions. Custom frameworks retain their own best-effort support warning; Python on Azure Functions does not.
 
 ##### Shared questions (no `serviceId`)
 
@@ -184,6 +186,16 @@ Write `.azure/requirements.json` (filename has no leading dot; extension file wa
       ],
       "recommendedChoice": "TypeScript", "status": "inferred", "answer": "TypeScript",
       "rationale": "Detected package.json with TypeScript devDependency."
+    },
+    {
+      "id": "functions-api:framework", "category": "service", "serviceId": "functions-api",
+      "header": "Framework", "question": "Which framework for Functions API?",
+      "multiSelect": false, "allowFreeformInput": true,
+      "options": [
+        { "label": "Azure Functions", "description": "Azure Functions API" }
+      ],
+      "recommendedChoice": "Azure Functions", "status": "inferred", "answer": "Azure Functions",
+      "rationale": "The existing backend is an Azure Functions service."
     },
     {
       "id": "functions-api:features", "category": "service", "serviceId": "functions-api",
@@ -253,6 +265,7 @@ Write `.azure/requirements.json` (filename has no leading dot; extension file wa
 
 - **Services & IDs:** one `services` entry per detected/planned service. Per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`); `serviceId` matches service.
 - **Language options:** frontend services offer only `TypeScript` / `JavaScript`; backend/worker services offer `TypeScript`, `Python`, `C# (.NET)`.
+- **API framework options:** always emit the backend framework question, with only `Azure Functions` in `options` and `allowFreeformInput: true`. Explicit custom answers remain authoritative.
 - **Always emit both shared questions** (`dataStores`, `auth`); **never emit an `appType`, identity-provider, or Azure credential question**. Derive App Type from `services` per table above.
 - **`auth` is strictly binary:** only options, answer values, and recommendation values: `Yes` and `No`. Never put provider, protocol, token type, or Azure credential here.
 - **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` `false`. Omit for free-text feature questions.

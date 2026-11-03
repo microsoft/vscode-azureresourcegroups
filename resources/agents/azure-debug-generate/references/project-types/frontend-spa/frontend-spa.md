@@ -40,7 +40,7 @@ Frontend SPAs call backends through HTTP, never Azure emulators directly. In mon
 
 ## Backend Proxy Dependencies
 
-Dev servers often proxy APIs to local backends. In multi-service setups, when proxy config targets another local service, make its startup task a frontend dev-server dependency to prevent initial-load `ECONNREFUSED`.
+Dev servers often proxy APIs to local backends. Record a local proxy dependency for the sequenced compound task in [multi-service.md](../../multi-service.md); that task owns cross-service ordering. Do not duplicate the backend start as a frontend task dependency.
 
 | Framework | Proxy Config Location |
 |-----------|----------------------|
@@ -54,6 +54,8 @@ Dev servers often proxy APIs to local backends. In multi-service setups, when pr
 ## Startup Command
 
 Resolve each framework's startup command from **Framework Lookup Table** (e.g., Vite `npm run dev`, Angular `npm start`).
+
+For debugging, resolve an explicit service port from the approved plan/existing config (the table is only a default). Keep the task, browser launch URL, proxy targets, and backend allowed origins aligned. With Vite, pass `--port {resolved-port} --strictPort` through the existing package-manager dev command so an occupied port fails instead of silently moving the app. Apply this to the debug task, not the scaffold-preview server configuration.
 
 ---
 
@@ -162,7 +164,7 @@ Use detected framework's `Ready Pattern (begins)` and `Ready Pattern (ends)` fro
 
 | Curl Target | Expected Status | Notes |
 |-------------|-----------------|-------|
-| `http://localhost:{dev-server-port}` | `200` or `301` | Use Framework Lookup Table port. Verify dev server without launching browser. Accept framework redirects (e.g., Next.js `301`). |
+| `http://localhost:{dev-server-port}` | `200` or `301` | Use the resolved plan/config port. Verify the task's actual URL matches the browser launch URL; reject silent port fallback. Accept framework redirects (e.g., Next.js `301`). |
 
 ---
 
@@ -172,7 +174,7 @@ After generating `launch.json` and `tasks.json`, verify:
 
 1. ✅ Dev-server task exists in `tasks.json` with custom `background` problem matcher and correct Framework Lookup Table begin/end patterns
 2. ✅ `launch.json` uses plan browser adapter (`chrome` or `msedge`) with `"request": "launch"`
-3. ✅ `launch.json` `url` matches Framework Lookup Table default port
+3. ✅ `launch.json` `url` matches the resolved debug-task port; Vite uses strict port selection
 4. ✅ `launch.json` `preLaunchTask` targets dev-server task
 
 > Runtime checks (e.g., build task, debugger type): `runtimes/{rt}.md`.

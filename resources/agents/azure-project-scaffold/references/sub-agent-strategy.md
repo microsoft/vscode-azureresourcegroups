@@ -52,6 +52,8 @@ Create sequentially — dependencies for everything else:
 
 Build shared package to produce `dist/`. Verify cross-workspace imports resolve.
 
+The paths and `dist` gate above describe Node services. For other runtimes, use their layout and contract rules from [architecture.md](../../shared-references/architecture.md) and the selected runtime reference. Carry its environment and hand-off requirements into the backend brief.
+
 ---
 
 ## Phase B: Parallel Implementation via Sub-Agents
@@ -70,7 +72,7 @@ Once contracts exist on disk, launch backend sub-agent:
 
 - The **Frontend Agent** and the backend track (Phase A → Phase B) launch together after Step 0 and run concurrently.
 - The **Backend API Agent** receives the full project plan and the contracts created in Phase A as context.
-- After the Backend agent completes, run the final build gate (`npm run build` in all workspaces).
+- After the Backend agent completes, run each service's build gate from its selected runtime reference.
 - The scaffold does **not** start a dev server or open Simple Browser — the frontend is generated and built only; running it locally is out of scope for scaffolding.
 - **Completion gate**: Step 11 (Wrap Up) writes the hand-off artifact only after BOTH: (a) frontend generated and building cleanly — the Frontend sub-agent returned — AND (b) Phase B backend agent completed. If one track finishes first, wait for the other.
 - Then proceed to Step 11 (Wrap Up)

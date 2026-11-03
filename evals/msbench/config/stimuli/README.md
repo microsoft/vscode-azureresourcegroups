@@ -14,15 +14,11 @@ See [`../../README.md`](../../README.md) for everything else — the layering, t
 assertion rules, and the liveness sentinel every step carries.
 
 The original scaffold and local-development stimuli have now all been exercised;
-the run history lives in [`../../README.md`](../../README.md). Newly added or
-materially strengthened stimuli still require a fresh run before their assertions
-can be described as observed behaviour: `plan-approval-scrapbook`,
-`plan-feedback-recipe-app`, `scaffold-api-only`, and the fifth deployment-handoff
-turn in `debug-generate-artifacts`. The launch-report additions also require fresh
-runs for `plan-generation-task-app`, `scaffold-fullstack`, and
-`deploy-scaffold-iac`. The three `launch-report-*` probes likewise need their first
-runs; they start directly in agents that functional chains only reach through a
-mid-chat mode switch.
+the run history lives in [`../../README.md`](../../README.md). The materially
+strengthened plan, scaffold, launch-report, blocked-debug, and deploy-handoff
+stimuli also have fresh runs recorded there. The deploy follow-up is the dedicated
+`debug-generate-deploy-handoff` stimulus, not a fifth turn of
+`debug-generate-artifacts`; the latter ends at the blocked preflight boundary.
 
 ## Falsifiable pairs
 

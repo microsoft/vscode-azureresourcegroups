@@ -47,10 +47,18 @@ promptSteps:
         exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-project-plan.ts --expect-status=Planning
 
       - comment: The revised plan records the Cosmos DB feedback
-        exec: 'grep -qi "Cosmos" /workspace/.azure/project-plan.md'
+        exec: >-
+          node -e "const fs=require('fs'); const plan=fs.readFileSync('.azure/project-plan.md','utf8'); process.exit(/cosmos/i.test(plan) ? 0 : 1)"
 
-      - comment: Agent should have opened the plan webview after confirmation
-        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_plan_view%'
+      # OTel can omit main-agent MCP calls after a subagent returns even though
+      # the panel export records the executed tool and its result. Grade this
+      # feedback-only reopen from that exported response; the initial open above
+      # still asserts the normal toolCalls path.
+      - comment: Agent should have reopened the plan webview after feedback
+        query: >-
+          SELECT COUNT(*) > 0 FROM llm_responses
+          WHERE response LIKE '%<name>mcp_copilot_azure_open_plan_view</name>%'
+          AND response LIKE '%<output>{"message":"Opened the Plan view."}</output>%'
 
       - comment: Agent should not hand off to the scaffold agent before the plan is approved
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_scaffold%'

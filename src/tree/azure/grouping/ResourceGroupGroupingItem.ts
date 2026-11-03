@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext, createSubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "api/src/AzExtResourceType";
-import { AzureResource, AzureSubscription, ViewPropertiesModel } from "api/src/resources/azure";
+import { AzExtResourceType } from "../../../../api/src/AzExtResourceType";
+import { AzureResource, AzureSubscription, ViewPropertiesModel } from "../../../../api/src/resources/azure";
 import * as vscode from 'vscode';
 import { azureExtensions } from "../../../azureExtensions";
 import { ITagsModel, ResourceTags } from "../../../commands/tags/TagFileSystem";

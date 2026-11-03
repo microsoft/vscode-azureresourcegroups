@@ -6,7 +6,7 @@
 
 ## Port Assignment
 
-Services sharing runtime need unique debug ports. From `runtimes/{rt}.md` `Base debug port`, assign sequentially: base, base + 1, base + 2, etc.
+Services sharing runtime need unique debug ports. From `runtimes/{rt}.md` `Base debug port`, assign sequentially: base, base + 1, base + 2, etc., subject to the project type's Runtime Wiring constraints. Configure each worker to listen on the same port its debugger attaches to. Resolve any provider or workspace-scope conflict before composing services.
 
 > Browser project types (e.g., Frontend SPA) use dev server URL, not debug ports.
 
@@ -58,7 +58,7 @@ When frontend proxies local backend (e.g., API dev-server proxy), backend must b
 }
 ```
 
-List backend first. Its `problemMatcher` from `project-types/{type}.md` signals ready before frontend starts.
+List backend first. Use its project-type Validation Signals to determine readiness. If that reference requires a separate Startup Readiness Task, insert it between the backend and frontend labels in this sequence. The readiness task must not depend on the backend start task; this sequence already starts it.
 
 **2. Set compound `preLaunchTask`** to sequenced task:
 

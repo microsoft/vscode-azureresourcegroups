@@ -189,9 +189,21 @@ project-root/
 │   │   ├── host.json
 │   │   ├── local.settings.json
 │   │   ├── pyproject.toml          ← Python project config
+│   │   ├── requirements.txt        ← Production dependencies for this service
+│   │   ├── requirements-dev.txt    ← Development/migration tooling, when needed
+│   │   ├── .venv/                 ← Service-local environment (gitignored)
 │   │   ├── pytest.ini              ← Test config
 │   │   ├── openapi.yaml
 │   │   ├── function_app.py         ← Function registration
+│   │   ├── functions/             ← One Blueprint per handler module
+│   │   │   ├── __init__.py
+│   │   │   ├── get_items.py
+│   │   │   ├── create_item.py
+│   │   │   └── health.py
+│   │   ├── shared/                ← Python models bundled with the service
+│   │   │   ├── __init__.py
+│   │   │   ├── types.py
+│   │   │   └── validation.py
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── interfaces.py       ← ABC / Protocol definitions
@@ -226,10 +238,12 @@ project-root/
 │   ├── web/                        ← Frontend
 │   │   └── (same as TypeScript)
 │   └── shared/
-│       ├── types.py                ← Pydantic models
-│       └── validation.py           ← Validation schemas
+│       └── generated/
+│           └── api.ts              ← Typed frontend contract from OpenAPI
 └── data/
 ```
+
+Python application packages must live inside the deployable Functions root, or be real installed dependencies declared in its requirements. Keep a single service-root `function_app.py` registering all Blueprints. A sibling `services/shared/types.py` is not automatically importable or deployable: do not add `sys.path` workarounds. For a JS/TS frontend, share the HTTP schema (OpenAPI/JSON Schema) and generate or validate frontend types from it, not Python source modules. npm workspaces/builds apply only to Node services and TypeScript contract packages.
 
 ### C# (.NET 10) — SPA + Azure Functions
 
