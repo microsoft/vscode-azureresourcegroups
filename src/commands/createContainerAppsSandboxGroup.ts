@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { SandboxGroup } from '@azure/containerapps-sandbox';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, createSubscriptionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
 import { randomBytes } from 'crypto';
-import { Progress, l10n } from 'vscode';
+import { Progress, commands, l10n, window } from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { clearAzureResourceDeleted } from '../api/DefaultAzureResourceProvider';
 import { ext } from '../extensionVariables';
@@ -16,9 +17,12 @@ import { createContainerAppsSandboxClient } from '../utils/containerAppsSandboxC
 import { localize } from '../utils/localize';
 
 interface CreateSandboxGroupContext extends IResourceGroupWizardContext, ExecuteActivityContext {
+    createdSandboxGroup?: SandboxGroup;
     newSandboxGroupName?: string;
     subscription: ReturnType<typeof createSubscriptionContext>;
 }
+
+const createSandboxCommandId = 'containerApps.sandboxes.create';
 
 export async function createContainerAppsSandboxGroup(context: IActionContext, node?: GroupingItem): Promise<void> {
     let subscription: AzureSubscription | undefined = node?.subscription;
@@ -66,6 +70,27 @@ export async function createContainerAppsSandboxGroup(context: IActionContext, n
 
     ext.setClearCacheOnNextLoad('azure');
     ext.actions.refreshAzureTree();
+
+    const yes = l10n.t('Yes');
+    const no = l10n.t('No');
+    const createSandbox = await window.showInformationMessage(
+        l10n.t('Would you like to create a sandbox in sandbox group "{0}" now?', sandboxGroupName),
+        { modal: true },
+        yes,
+        no,
+    );
+    if (createSandbox === yes) {
+        const resourceGroupName = nonNullProp(nonNullProp(wizardContext, 'resourceGroup'), 'name');
+        const sandboxGroup = nonNullProp(wizardContext, 'createdSandboxGroup');
+        const resourceId = `/subscriptions/${wizardContext.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.App/sandboxGroups/${sandboxGroup.name}`;
+        await commands.executeCommand(
+            createSandboxCommandId,
+            {
+                resourceId,
+                location: sandboxGroup.location,
+            },
+        );
+    }
 }
 
 class SandboxGroupNameStep extends AzureWizardPromptStep<CreateSandboxGroupContext> {
@@ -95,7 +120,7 @@ class SandboxGroupCreateStep extends AzureWizardExecuteStepWithActivityOutput<Cr
 
         const client = await createContainerAppsSandboxClient(context.subscription);
         const poller = client.sandboxGroups.beginCreateOrUpdate(resourceGroupName, name, { location: location.name });
-        await poller.pollUntilDone();
+        context.createdSandboxGroup = await poller.pollUntilDone();
         clearAzureResourceDeleted(`/subscriptions/${context.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.App/sandboxGroups/${name}`);
     }
 
