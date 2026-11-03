@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { SandboxGroup } from '@azure/containerapps-sandbox';
-import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, createSubscriptionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
+import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, resourceGroupNamingRules } from '@microsoft/vscode-azext-azureutils';
+import { AzureNameStep, AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, createSubscriptionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
 import { randomBytes } from 'crypto';
 import { Progress, commands, l10n, window } from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
@@ -93,17 +93,22 @@ export async function createContainerAppsSandboxGroup(context: IActionContext, n
     }
 }
 
-class SandboxGroupNameStep extends AzureWizardPromptStep<CreateSandboxGroupContext> {
+class SandboxGroupNameStep extends AzureNameStep<CreateSandboxGroupContext> {
     async prompt(context: CreateSandboxGroupContext): Promise<void> {
         context.newSandboxGroupName = await context.ui.showInputBox({
             prompt: l10n.t('Enter a name for the sandbox group.'),
             value: generateSandboxGroupName(),
             validateInput: validateSandboxGroupName,
         });
+        context.relatedNameTask = this.generateRelatedName(context, context.newSandboxGroupName, resourceGroupNamingRules);
     }
 
     shouldPrompt(context: CreateSandboxGroupContext): boolean {
         return !context.newSandboxGroupName;
+    }
+
+    protected isRelatedNameAvailable(context: CreateSandboxGroupContext, name: string): Promise<boolean> {
+        return ResourceGroupListStep.isNameAvailable(context, name);
     }
 }
 
