@@ -45,7 +45,7 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
         if (this.resource.resourceType === AzExtResourceType.ContainerAppsSandboxGroups) {
             treeItem.iconPath = getIconPath(AzExtResourceType.ContainerAppsSandboxGroups);
         }
-        return ext.azureTreeState.applyToTreeItem(this.id, treeItem);
+        return treeItem;
     }
 
     protected override getExtraContextValues(): string[] {
