@@ -9,6 +9,7 @@ import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/frontendPreviewView.scss';
+import { getHttpUrl } from '../shared/httpUrl';
 
 type PreviewState =
     | { status: 'starting' }
@@ -36,7 +37,11 @@ export const FrontendPreviewView = (): JSX.Element => {
         const handler = (event: MessageEvent): void => {
             const message = event.data;
             if (message?.command === 'setPreviewState') {
-                setPreview(message.state as PreviewState);
+                if (message.state?.status === 'ready' && !getHttpUrl(message.state.url)) {
+                    setPreview({ status: 'error', error: 'The preview server returned an unsupported URL.' });
+                } else {
+                    setPreview(message.state as PreviewState);
+                }
             } else if (message?.command === 'feedbackSubmitted') {
                 setFeedbackSent(true);
                 setDrawerOpen(false);
@@ -158,7 +163,7 @@ export const FrontendPreviewView = (): JSX.Element => {
                             <iframe
                                 className='previewIframe'
                                 title='Frontend preview'
-                                src={preview.url}
+                                src={getHttpUrl(preview.url)}
                                 sandbox='allow-scripts allow-same-origin allow-forms allow-popups allow-modals'
                             />
                         </div>

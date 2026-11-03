@@ -59,6 +59,13 @@ attribute-bearing HTML as text.
 Mermaid output is still generated SVG inserted into the document. Initialize Mermaid with
 `securityLevel: "strict"` before rendering and keep that setting in place before inserting its SVG.
 
+Deployment endpoint anchors, the featured application link, and frontend preview URLs require absolute
+HTTP or HTTPS URLs without embedded credentials, control characters, whitespace, or backslashes.
+Unsupported deployment endpoint strings remain inert report text. Validate external-open messages again
+in the extension before calling `vscode.env.openExternal`; webview-side validation alone is insufficient.
+This scheme validation does not establish host trust and must not be used as an authenticated-request or
+Cloud Shell endpoint policy. Preserve loopback preview servers and remote port-forwarded HTTP(S) URLs.
+
 ## Audit checklist
 
 1. Find every JSON parse, file read, and deserializer used by the changed flow.

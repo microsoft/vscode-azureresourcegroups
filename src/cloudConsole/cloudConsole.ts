@@ -22,6 +22,7 @@ import { CloudShell, CloudShellInternal, CloudShellStatus, UploadOptions } from 
 import { Deferred, delay, logAttemptingToReachUrlMessage } from './cloudConsoleUtils';
 import { readJSON } from './cloudShellChildProcess/readJSON';
 import { Queue, Server, createServer } from './ipc';
+import { requireSecureCloudShellUrl } from './cloudShellUrl';
 
 function ensureEndingSlash(value: string): string {
     return value.endsWith('/') ? value : `${value}/`;
@@ -634,7 +635,7 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
 
         const consoleResource = await response.json() as { properties: { provisioningState: string, uri: string } };
         if (consoleResource.properties.provisioningState === 'Succeeded') {
-            return consoleResource.properties.uri;
+            return requireSecureCloudShellUrl(consoleResource.properties.uri, 'https:');
         } else if (consoleResource.properties.provisioningState === 'Failed') {
             break;
         }
@@ -680,9 +681,10 @@ export async function resetConsole(accessToken: string, armEndpoint: string) {
 }
 
 export async function connectTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size, progress: (i: number) => void): Promise<ConsoleUris> {
+    const secureConsoleUri = requireSecureCloudShellUrl(consoleUri, 'https:');
 
     for (let i = 0; i < 10; i++) {
-        const response = await initializeTerminal(accessToken, consoleUri, shellType, initialSize);
+        const response = await initializeTerminal(accessToken, secureConsoleUri, shellType, initialSize);
 
         const body = await response.json() as { error?: { message?: string }, id: string, socketUri: string };
         if (response.status < 200 || response.status > 299) {
@@ -698,10 +700,13 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
             continue;
         }
 
+        if (typeof body.id !== 'string' || body.id.length === 0 || body.id === '.' || body.id === '..') {
+            throw new Error('Cloud Shell returned an invalid terminal identifier.');
+        }
         return {
-            consoleUri,
-            terminalUri: `${consoleUri}/terminals/${body.id}`,
-            socketUri: body.socketUri
+            consoleUri: secureConsoleUri,
+            terminalUri: `${secureConsoleUri}/terminals/${encodeURIComponent(body.id)}`,
+            socketUri: requireSecureCloudShellUrl(body.socketUri, 'wss:')
         };
     }
 
