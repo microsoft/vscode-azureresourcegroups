@@ -25,18 +25,38 @@ suite('preparePreviewHtml in a browser', () => {
                 resolveDir: resolve(__dirname, '..', '..'),
                 contents: `
                     import { preparePreviewHtml } from './src/webviews/copilotOnRails/views/utils/preparePreviewHtml';
+                    import { handlePreviewClick } from './src/webviews/copilotOnRails/views/utils/previewNavigation';
                     const api = acquireVsCodeApi();
                     window.addEventListener('message', event => {
-                        const { id, html, themeCss, overrides } = event.data;
+                        const { id, html, themeCss, overrides, clickSelector } = event.data;
                         try {
                             const prepared = preparePreviewHtml(html, themeCss, ['dashboard', 'account-settings'], overrides);
                             const iframe = document.createElement('iframe');
                             iframe.setAttribute('sandbox', 'allow-same-origin');
-                            iframe.addEventListener('load', () => {
+                            iframe.style.height = '120px';
+                            iframe.addEventListener('load', async () => {
+                                try {
                                 const doc = iframe.contentDocument;
+                                const urlBeforeClick = doc.URL;
+                                const navigationSlugs = [];
+                                let clickPrevented;
+                                doc.addEventListener('click', clickEvent => {
+                                    handlePreviewClick(clickEvent, slug => navigationSlugs.push(slug));
+                                    clickPrevented = clickEvent.defaultPrevented;
+                                }, true);
+                                if (clickSelector) {
+                                    doc.querySelector(clickSelector).click();
+                                    await new Promise(resolve => setTimeout(resolve, 150));
+                                }
                                 const elements = [...doc.querySelectorAll('*')];
                                 api.postMessage({
                                     id,
+                                    clickPrevented,
+                                    navigationSlugs,
+                                    sameDocument: iframe.contentDocument === doc,
+                                    urlBeforeClick,
+                                    urlAfterClick: iframe.contentDocument?.URL,
+                                    scrollTop: doc.scrollingElement?.scrollTop,
                                     html: prepared,
                                     text: doc.body.textContent,
                                     tags: elements.map(element => element.localName),
@@ -55,7 +75,11 @@ suite('preparePreviewHtml in a browser', () => {
                                     firstHeadTag: doc.head.firstElementChild?.localName,
                                     bodyColor: iframe.contentWindow.getComputedStyle(doc.body).color,
                                 });
-                                iframe.remove();
+                                } catch (error) {
+                                    api.postMessage({ id, error: String(error) });
+                                } finally {
+                                    iframe.remove();
+                                }
                             }, { once: true });
                             iframe.srcdoc = prepared;
                             document.body.append(iframe);
@@ -145,6 +169,55 @@ suite('preparePreviewHtml in a browser', () => {
         }
     });
 
+    test('clicking the unsupported interactive-app footer or a placeholder never navigates the iframe', async () => {
+        for (const href of ['../../index.html', '#', 'https://example.invalid']) {
+            const result = await render(
+                `<p>Preview remains visible</p><a href="${href}"><span id="footer-label">Open the interactive app</span></a>`,
+                undefined, {}, '#footer-label',
+            );
+            assert.strictEqual(result.clickPrevented, true, href);
+            assert.strictEqual(result.sameDocument, true, href);
+            assert.strictEqual(result.urlAfterClick, result.urlBeforeClick, href);
+            assert.deepStrictEqual(result.navigationSlugs, [], href);
+            assert.ok(typeof result.text === 'string' && result.text.includes('Preview remains visible'), href);
+        }
+    });
+
+    test('clicking a known sibling link requests host navigation without loading another document', async () => {
+        const result = await render('<a id="sibling" href="account-settings.html">Settings</a>', undefined, {}, '#sibling');
+        assert.strictEqual(result.clickPrevented, true);
+        assert.strictEqual(result.sameDocument, true);
+        assert.deepStrictEqual(result.navigationSlugs, ['account-settings']);
+    });
+
+    test('clicking a local fragment scrolls within srcDoc without navigating to the parent webview', async () => {
+        const result = await render(
+            '<a id="jump" href="#delivery%20details">Details</a><p style="margin-top:1500px" id="delivery details">Delivery details</p>',
+            undefined, {}, '#jump',
+        );
+        assert.strictEqual(result.clickPrevented, true);
+        assert.strictEqual(result.sameDocument, true);
+        assert.strictEqual(result.urlAfterClick, result.urlBeforeClick);
+        assert.ok(typeof result.scrollTop === 'number' && result.scrollTop > 0);
+        assert.deepStrictEqual(result.navigationSlugs, []);
+    });
+
+    test('missing and malformed fragments remain inert without leaving the preview', async () => {
+        for (const href of ['#missing', '#bad%']) {
+            const result = await render(`<a id="fragment" href="${href}">Details</a>`, undefined, {}, '#fragment');
+            assert.strictEqual(result.clickPrevented, true, href);
+            assert.strictEqual(result.sameDocument, true, href);
+            assert.strictEqual(result.urlAfterClick, result.urlBeforeClick, href);
+        }
+    });
+
+    test('non-anchor controls retain their default click behavior', async () => {
+        const result = await render('<button id="button">Preview button</button>', undefined, {}, '#button');
+        assert.strictEqual(result.clickPrevented, false);
+        assert.strictEqual(result.sameDocument, true);
+        assert.deepStrictEqual(result.navigationSlugs, []);
+    });
+
     test('neutralizes encoded schemes, unquoted URLs and forged navigation attributes', async () => {
         const links = [
             '<a href="java&#x73;cript:alert(1)">Encoded</a>',
@@ -205,7 +278,7 @@ suite('preparePreviewHtml in a browser', () => {
         }
     });
 
-    async function render(html: string, themeCss?: string, overrides: Record<string, string> = {}): Promise<Record<string, unknown>> {
+    async function render(html: string, themeCss?: string, overrides: Record<string, string> = {}, clickSelector?: string): Promise<Record<string, unknown>> {
         const id = ++requestId;
         return new Promise((resolveResult, reject) => {
             const timeout = setTimeout(() => {
@@ -223,7 +296,7 @@ suite('preparePreviewHtml in a browser', () => {
                     }
                 }
             });
-            void panel.webview.postMessage({ id, html, themeCss, overrides });
+            void panel.webview.postMessage({ id, html, themeCss, overrides, clickSelector });
         });
     }
 });

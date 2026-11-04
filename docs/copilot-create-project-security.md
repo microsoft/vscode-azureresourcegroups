@@ -79,7 +79,10 @@ navigation/submission attributes. Do not replace it with regular-expression HTML
 
 Rewrite links on parsed elements: only known sibling `<slug>.html` pages become host-driven navigation;
 fragment anchors remain local and all other anchors are inert. Ignore author-supplied navigation data
-attributes. Inline only the shared `theme.css` stylesheet and remove other stylesheet links. Encode `<`
+attributes. Cancel default navigation for every preview anchor, including `href="#"`: a `srcDoc`
+document inherits its parent webview's base URL, so native fragment navigation can load the parent URL
+and blank the iframe. Trusted host code switches pages or scrolls to local fragment targets instead.
+Inline only the shared `theme.css` stylesheet and remove other stylesheet links. Encode `<`
 in CSS raw text so a stylesheet cannot close its `<style>` element during HTML serialization. Accept
 only color custom-property names and hex values for palette overrides, then sanitize the assembled
 document again.

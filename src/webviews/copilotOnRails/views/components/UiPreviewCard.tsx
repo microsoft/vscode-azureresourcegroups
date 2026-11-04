@@ -8,6 +8,7 @@ import { CommentEditRegular } from '@fluentui/react-icons';
 import { useMemo, useState, type JSX, type SyntheticEvent } from 'react';
 import { type PaletteEntry, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 import { preparePreviewHtml } from '../utils/preparePreviewHtml';
+import { handlePreviewClick } from '../utils/previewNavigation';
 
 interface UiPreviewCardProps {
     /** The parsed "Design System & UI" plan section containing palette entries, style direction, and other design tokens. */
@@ -100,26 +101,12 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
 
     const handlePreviewLoad = (event: SyntheticEvent<HTMLIFrameElement>): void => {
         event.currentTarget.contentDocument?.addEventListener('click', (clickEvent: MouseEvent): void => {
-            const target = clickEvent.target as Element | null;
-            const anchor = target?.closest?.('a');
-            if (!anchor) {
-                return;
-            }
-
-            const slug = anchor.getAttribute('data-preview-nav');
-            if (slug) {
-                clickEvent.preventDefault();
+            handlePreviewClick(clickEvent, slug => {
                 const idx = previewPages.findIndex(page => page.slug === slug);
                 if (idx >= 0) {
                     setActivePageIdx(idx);
                 }
-                return;
-            }
-
-            const href = anchor.getAttribute('href') ?? '';
-            if (href && !href.startsWith('#')) {
-                clickEvent.preventDefault();
-            }
+            });
         }, true);
     };
 
