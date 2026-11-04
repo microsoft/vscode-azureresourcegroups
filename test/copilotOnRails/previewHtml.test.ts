@@ -253,20 +253,57 @@ suite('preparePreviewHtml in a browser', () => {
         assert.deepStrictEqual(result.styles, []);
     });
 
-    test('keeps hostile theme CSS inside style raw text and rejects palette injection', async () => {
-        const themeCss = 'body { color: #123456; } /* </style><img src=x onerror=alert(1)><script>alert(2)</script> */';
-        const result = await render('<head><link rel=stylesheet href=theme.css></head><body>Kept</body>', themeCss, {
-            '--color-primary': '#abcdef',
-            '--color-text': '#000; } </style><img src=x onerror=alert(1)>',
-            '--color-accent: red; } </style>': '#ffffff',
-        });
-        assert.ok(Array.isArray(result.tags) && !result.tags.includes('img') && !result.tags.includes('script'));
-        assert.deepStrictEqual(result.dangerousAttributes, []);
-        assert.deepStrictEqual(result.styles, [
-            themeCss.replaceAll('<', '\\3c '),
-            ':root { --color-primary: #abcdef !important; }',
-        ]);
+    test('applies valid hex palette overrides, including four-digit alpha colors', async () => {
+        for (const [hex, color] of [
+            ['#0f0', 'rgb(0, 255, 0)'],
+            ['#0f08', 'rgba(0, 255, 0, 0.533)'],
+            ['#00FF00', 'rgb(0, 255, 0)'],
+            ['#00ff0088', 'rgba(0, 255, 0, 0.533)'],
+        ]) {
+            const result = await render(
+                '<head><link rel=stylesheet href=theme.css></head><body>Palette</body>',
+                ':root { --color-primary: #123456; } body { color: var(--color-primary); }',
+                { '--color-primary': hex, '--color-invalid': '#12345' },
+            );
+            assert.strictEqual(result.bodyColor, color, hex);
+            assert.ok(Array.isArray(result.styles) && result.styles.includes(`:root { --color-primary: ${hex} !important; }`), hex);
+        }
+    });
+
+    test('preserves CSS range queries through serialization and iframe parsing', async () => {
+        for (const range of ['width < 10000px', '0px<width<10000px']) {
+            const themeCss = `body { color: #123456; } @media (${range}) { body { color: #abcdef; } }`;
+            const result = await render('<head><link rel=stylesheet href=theme.css></head><body>Responsive</body>', themeCss);
+            assert.deepStrictEqual(result.styles, [themeCss]);
+            assert.strictEqual(result.bodyColor, 'rgb(171, 205, 239)');
+        }
+    });
+
+    test('ignores forged theme placeholders without an approved stylesheet link', async () => {
+        const result = await render(
+            '<head><style data-inlined="theme.css">body { color: #123456; }</style></head><body>Kept</body>',
+            'body { color: #abcdef; }',
+        );
+        assert.deepStrictEqual(result.styles, ['body { color: #123456; }']);
         assert.strictEqual(result.bodyColor, 'rgb(18, 52, 86)');
+    });
+
+    test('keeps hostile theme CSS inside style raw text and rejects palette injection', async () => {
+        for (const terminator of ['</style>', '</StYlE>', '</STYLE\t>', '</style/>']) {
+            const themeCss = `body { color: #123456; } /* ${terminator}<img src=x onerror=alert(1)><script>alert(2)</script> */`;
+            const result = await render('<head><link rel=stylesheet href=theme.css></head><body>Kept</body>', themeCss, {
+                '--color-primary': '#abcdef',
+                '--color-text': '#000; } </style><img src=x onerror=alert(1)>',
+                '--color-accent: red; } </style>': '#ffffff',
+            });
+            assert.ok(Array.isArray(result.tags) && !result.tags.includes('img') && !result.tags.includes('script'), terminator);
+            assert.deepStrictEqual(result.dangerousAttributes, []);
+            assert.deepStrictEqual(result.styles, [
+                `body { color: #123456; } /* \\3c ${terminator.slice(1)}<img src=x onerror=alert(1)><script>alert(2)</script> */`,
+                ':root { --color-primary: #abcdef !important; }',
+            ]);
+            assert.strictEqual(result.bodyColor, 'rgb(18, 52, 86)');
+        }
     });
 
     test('accepts empty and partially written HTML without requiring a theme', async () => {

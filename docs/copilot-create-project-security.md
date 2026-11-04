@@ -82,10 +82,13 @@ fragment anchors remain local and all other anchors are inert. Ignore author-sup
 attributes. Cancel default navigation for every preview anchor, including `href="#"`: a `srcDoc`
 document inherits its parent webview's base URL, so native fragment navigation can load the parent URL
 and blank the iframe. Trusted host code switches pages or scrolls to local fragment targets instead.
-Inline only the shared `theme.css` stylesheet and remove other stylesheet links. Encode `<`
-in CSS raw text so a stylesheet cannot close its `<style>` element during HTML serialization. Accept
-only color custom-property names and hex values for palette overrides, then sanitize the assembled
-document again.
+Inline only the shared `theme.css` stylesheet and remove other stylesheet links. Encode the opening `<`
+of every case-insensitive `</style` sequence in CSS raw text so a stylesheet cannot close its `<style>`
+element during HTML serialization and reparsing. Preserve other `<` characters, including CSS range-query
+operators. Accept only color custom-property names and 3-, 4-, 6- or 8-digit hex values for palette
+overrides. Sanitize the assembled markup again with empty, sanitizer-created theme style placeholders;
+only then insert the encoded theme text into those placeholders. Do not disable DOMPurify's XML safety
+checks to preserve CSS containing markup-like strings or comments.
 
 Preserve `sandbox="allow-same-origin"` without script, form, popup or top-navigation permissions. The
 same-origin permission lets trusted host code handle page switching; it must never be combined with

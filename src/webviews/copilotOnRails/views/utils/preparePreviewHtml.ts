@@ -35,7 +35,6 @@ export function preparePreviewHtml(
         if (isStylesheet && (href === 'theme.css' || href === './theme.css') && themeCss) {
             const style = root.ownerDocument.createElement('style');
             style.setAttribute('data-inlined', 'theme.css');
-            style.textContent = cssRawText(themeCss);
             link.replaceWith(style);
         } else {
             link.remove();
@@ -57,7 +56,7 @@ export function preparePreviewHtml(
     }
 
     const declarations = Object.entries(overrides)
-        .filter(([name, value]) => /^--color-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) && /^#(?:[a-f0-9]{3}|[a-f0-9]{6}|[a-f0-9]{8})$/i.test(value))
+        .filter(([name, value]) => /^--color-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) && /^#(?:[a-f0-9]{3,4}|[a-f0-9]{6}|[a-f0-9]{8})$/i.test(value))
         .map(([name, value]) => `${name}: ${value} !important;`);
     const head = root.querySelector('head');
     if (!head) {
@@ -79,6 +78,11 @@ export function preparePreviewHtml(
     if (!(sanitized instanceof HTMLElement)) {
         throw new Error('Preview sanitization did not produce an HTML document.');
     }
+    // DOMPurify also removes style text containing markup-like CSS strings/comments.
+    // Insert the theme only after sanitizing markup, encoding HTML style terminators.
+    for (const style of sanitized.querySelectorAll('style[data-inlined="theme.css"]')) {
+        style.textContent = cssRawText(themeCss ?? '');
+    }
     const sanitizedHead = sanitized.querySelector('head');
     if (!sanitizedHead) {
         throw new Error('Preview sanitization did not produce a document head.');
@@ -92,6 +96,7 @@ export function preparePreviewHtml(
 
 function cssRawText(css: string): string {
     // HTML serializers do not escape style text: a CSS string must not close
-    // its style element when srcDoc is parsed again.
-    return css.replaceAll('<', '\\3c ');
+    // its style element when srcDoc is parsed again. Preserve other '<' characters
+    // because CSS range queries require the literal comparison operator.
+    return css.replace(/<\/style/gi, match => `\\3c ${match.slice(1)}`);
 }
