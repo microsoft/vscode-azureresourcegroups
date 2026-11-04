@@ -7,6 +7,7 @@ import { Button, Spinner, Tooltip } from '@fluentui/react-components';
 import { CommentEditRegular } from '@fluentui/react-icons';
 import { useMemo, useState, type JSX, type SyntheticEvent } from 'react';
 import { type PaletteEntry, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
+import { preparePreviewHtml } from '../utils/preparePreviewHtml';
 
 interface UiPreviewCardProps {
     /** The parsed "Design System & UI" plan section containing palette entries, style direction, and other design tokens. */
@@ -16,8 +17,8 @@ interface UiPreviewCardProps {
     /**
      * HTML/CSS pages emitted by the planner agent into `.azure/.preview-temp/`
      * and pushed in by the controller. Each entry is either `pending` (no HTML
-     * yet — show a "Generating preview…" panel) or `ready` (drop the inlined
-     * HTML into an iframe via `srcDoc`).
+     * yet — show a "Generating preview…" panel) or `ready` (prepare and sanitize
+     * the HTML/CSS before rendering it via `srcDoc`).
      */
     previewPages: PreviewPage[];
     previewStatus?: PreviewStatus;
@@ -79,8 +80,10 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     // inlined as a trailing `:root { … }` block so the iframe recolors the moment
     // a hex is picked — no regeneration, no feedback round-trip.
     const displayedHtml = useMemo(
-        () => (activePage?.html ? applyOverrides(activePage.html, { ...baseOverrides, ...overrides }) : undefined),
-        [activePage?.html, baseOverrides, overrides],
+        () => (activePage?.html
+            ? preparePreviewHtml(activePage.html, activePage.themeCss, previewPages.map(page => page.slug), { ...baseOverrides, ...overrides })
+            : undefined),
+        [activePage?.html, activePage?.themeCss, previewPages, baseOverrides, overrides],
     );
 
     if (palette.length === 0 && !hasPages) {
@@ -280,27 +283,6 @@ function cssVarForToken(token: string): string {
         return '--color-danger';
     }
     return `--color-${t.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
-}
-
-/**
- * Inline the user's live color overrides as a trailing `:root { … }` block so
- * the iframe recolors instantly. A later same-specificity `:root` rule wins, and
- * `!important` guards against any inlined rule that might also be marked so.
- */
-function applyOverrides(html: string, overrides: Record<string, string>): string {
-    const vars = Object.keys(overrides);
-    if (vars.length === 0) {
-        return html;
-    }
-    const decls = vars.map(v => `${v}: ${overrides[v]} !important;`).join(' ');
-    const styleBlock = `<style id="__live-palette-overrides">:root { ${decls} }</style>`;
-    if (html.includes('</head>')) {
-        return html.replace('</head>', `${styleBlock}</head>`);
-    }
-    if (html.includes('</body>')) {
-        return html.replace('</body>', `${styleBlock}</body>`);
-    }
-    return html + styleBlock;
 }
 
 /**

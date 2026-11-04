@@ -205,6 +205,11 @@ mock‑up) so you can see the proposed layout before any code is written. Read t
 type feedback to revise it). After feedback, the agent keeps the plan in `Planning`, updates any affected UI
 previews, reruns its structural check, and reopens or refocuses the Plan preview for another explicit approval.
 
+UI mock-ups are static, offline previews. Their HTML and shared theme are sanitized in the webview before
+rendering; scripts, redirects, embedded pages, remote assets and form submissions are blocked. Inline SVG
+icons, styling, local anchors, links to known sibling preview pages and live palette changes remain
+supported. Only `theme.css` is loaded from the preview folder; other stylesheet links are discarded.
+
 Editable service-stack choices follow the service role and language. API/backend framework controls offer
 **Azure Functions** or **Custom framework**, with a text field for the custom name. Enter a nonempty name
 before approving or submitting changes. Custom framework choices survive language edits; runtime/package
