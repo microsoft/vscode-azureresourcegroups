@@ -41,7 +41,8 @@ suite('readPreviewPages', () => {
                 title: 'Dashboard',
                 route: '/',
                 status: 'ready',
-                html: '<head><style data-inlined="theme.css">body { color: blue; }</style></head>',
+                html: '<head><link rel="stylesheet" href="theme.css"></head>',
+                themeCss: 'body { color: blue; }',
             },
             {
                 slug: 'account-settings',
@@ -78,6 +79,25 @@ suite('readPreviewPages', () => {
             title: 'Valid page',
             route: '/valid',
             status: 'pending',
+        }]);
+    });
+
+    test('transports HTML and theme as untrusted text for browser-boundary sanitization', async () => {
+        const previewFolder = await writePreviewManifest({
+            pages: [{ slug: 'dashboard', title: 'Dashboard', route: '/', status: 'pending' }],
+        });
+        const html = '<head><link rel=stylesheet href=theme.css></head><body onload=alert(1)><script>alert(2)</script ></body>';
+        const themeCss = '/* </style><img src=x onerror=alert(1)> */';
+        await writeFile(join(previewFolder.fsPath, 'dashboard.html'), html);
+        await writeFile(join(previewFolder.fsPath, 'theme.css'), themeCss);
+
+        assert.deepStrictEqual((await readPreviewPages(previewFolder)).pages, [{
+            slug: 'dashboard',
+            title: 'Dashboard',
+            route: '/',
+            status: 'ready',
+            html,
+            themeCss,
         }]);
     });
 

@@ -69,6 +69,34 @@ in the extension before calling `vscode.env.openExternal`; webview-side validati
 This scheme validation does not establish host trust and must not be used as an authenticated-request or
 Cloud Shell endpoint policy. Preserve loopback preview servers and remote port-forwarded HTTP(S) URLs.
 
+### Static UI previews
+
+The preview reader transports `.azure/.preview-temp/*.html` and `theme.css` as untrusted text.
+`UiPreviewCard` must call `preparePreviewHtml` immediately before assigning iframe `srcDoc`. That
+browser-only helper uses a separate DOMPurify instance, preserving static HTML, inline SVG icons and
+styles while removing scripts, event handlers, document redirects, embedded browsing contexts and
+navigation/submission attributes. Do not replace it with regular-expression HTML filtering.
+
+Rewrite links on parsed elements: only known sibling `<slug>.html` pages become host-driven navigation;
+fragment anchors remain local and all other anchors are inert. Ignore author-supplied navigation data
+attributes. Cancel default navigation for every preview anchor, including `href="#"`: a `srcDoc`
+document inherits its parent webview's base URL, so native fragment navigation can load the parent URL
+and blank the iframe. Trusted host code switches pages or scrolls to local fragment targets instead.
+Inline only the shared `theme.css` stylesheet and remove other stylesheet links. Encode the opening `<`
+of every case-insensitive `</style` sequence in CSS raw text so a stylesheet cannot close its `<style>`
+element during HTML serialization and reparsing. Preserve other `<` characters, including CSS range-query
+operators. Accept only color custom-property names and 3-, 4-, 6- or 8-digit hex values for palette
+overrides. Sanitize the assembled markup again with empty, sanitizer-created theme style placeholders;
+only then insert the encoded theme text into those placeholders. Do not disable DOMPurify's XML safety
+checks to preserve CSS containing markup-like strings or comments.
+
+Preserve `sandbox="allow-same-origin"` without script, form, popup or top-navigation permissions. The
+same-origin permission lets trusted host code handle page switching; it must never be combined with
+script permission. Prepend a trusted iframe CSP (`default-src 'none'`, no scripts or form submission,
+inline styles and data-only images/fonts) in addition to the parent webview's existing CSP. This keeps
+CSS imports, remote assets and other preview network requests blocked. Do not weaken either policy
+to display workspace content.
+
 ## Audit checklist
 
 1. Find every JSON parse, file read, and deserializer used by the changed flow.
