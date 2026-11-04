@@ -12,5 +12,6 @@ export async function openExternalHttpUrl(value: unknown): Promise<void> {
         await vscode.window.showWarningMessage(vscode.l10n.t('Only absolute HTTP or HTTPS links without embedded credentials can be opened.'));
         return;
     }
+
     await vscode.env.openExternal(vscode.Uri.parse(url));
 }

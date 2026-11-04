@@ -9,18 +9,14 @@ export function getHttpUrl(value: unknown): string | undefined {
         return undefined;
     }
 
-    const text = value.trim();
-    if (!/^https?:\/\//i.test(text) || /[\p{Cc}\s\\]/u.test(text)) {
-        return undefined;
-    }
-
     try {
-        const url = new URL(text);
+        const url = new URL(value);
         if ((url.protocol === 'https:' || url.protocol === 'http:') && url.hostname && !url.username && !url.password) {
-            return text;
+            return url.href;
         }
     } catch {
         // Malformed artifact links remain displayable as text, but cannot be opened.
     }
+
     return undefined;
 }

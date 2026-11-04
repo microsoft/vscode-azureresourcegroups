@@ -60,7 +60,10 @@ Mermaid output is still generated SVG inserted into the document. Initialize Mer
 `securityLevel: "strict"` before rendering and keep that setting in place before inserting its SVG.
 
 Deployment endpoint anchors, the featured application link, and frontend preview URLs require absolute
-HTTP or HTTPS URLs without embedded credentials, control characters, whitespace, or backslashes.
+HTTP or HTTPS URLs without embedded credentials. Use the shared `getHttpUrl` helper: it parses with the
+native `URL` constructor without a base URL, checks the scheme and credentials, and returns the canonical
+`url.href`. Pass that result to webview URL sinks and the extension-host URI parser; do not validate one
+representation and then open the original string.
 Unsupported deployment endpoint strings remain inert report text. Validate external-open messages again
 in the extension before calling `vscode.env.openExternal`; webview-side validation alone is insufficient.
 This scheme validation does not establish host trust and must not be used as an authenticated-request or

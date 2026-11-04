@@ -13,13 +13,11 @@ suite('Copilot on Rails HTTP URLs', () => {
         undefined, null, {}, 42, '',
         'javascript:alert(1)', 'java\nscript:alert(1)', 'data:text/html,test',
         'vbscript:msgbox(1)', 'command:workbench.action.files.openFolder',
-        'file:///tmp/test', '//example.com', '/relative', 'https:example.com',
+        'file:///tmp/test', '//example.com', '/relative',
         'https://', 'https://user:password@example.com', 'https://user@example.com',
-        'https://example.com\\@other.example', 'https://example.com/\npath',
-        'https://example.com/\u0000path', 'https://example.com/a b',
     ];
 
-    test('rejects unsupported, ambiguous, malformed and credential-bearing URLs', () => {
+    test('rejects unsupported, relative, malformed and credential-bearing URLs', () => {
         for (const value of invalidUrls) {
             assert.strictEqual(getHttpUrl(value), undefined, String(value));
         }
@@ -28,14 +26,26 @@ suite('Copilot on Rails HTTP URLs', () => {
     test('preserves application links, local servers and remote forwarded URLs', () => {
         for (const url of [
             'https://example.com/app?q=a%20b#section',
-            'http://localhost:5173',
+            'http://localhost:5173/',
             'http://127.0.0.1:8080/',
             'http://[::1]:8080/',
-            'https://example-5173.app.github.dev',
-            'https://app.chinacloudsites.cn',
-            'HTTPS://example.com/',
+            'https://example-5173.app.github.dev/',
+            'https://app.chinacloudsites.cn/',
         ]) {
             assert.strictEqual(getHttpUrl(` ${url} `), url);
+        }
+    });
+
+    test('returns only canonical HTTP(S) URLs after browser normalization', () => {
+        for (const [value, expected] of [
+            ['https:example.com', 'https://example.com/'],
+            ['HTTPS://EXAMPLE.COM:443/', 'https://example.com/'],
+            ['https://example.com/a b', 'https://example.com/a%20b'],
+            ['https://example.com/\npath', 'https://example.com/path'],
+            ['https://example.com/\u0000path', 'https://example.com/%00path'],
+            ['https://example.com\\@other.example', 'https://example.com/@other.example'],
+        ]) {
+            assert.strictEqual(getHttpUrl(value), expected);
         }
     });
 
@@ -64,6 +74,10 @@ suite('Copilot on Rails HTTP URLs', () => {
             await openExternalHttpUrl('https://example.com/app');
             assert.strictEqual(opened.length, 1);
             assert.strictEqual(opened[0].toString(), 'https://example.com/app');
+            assert.strictEqual(warnings.length, invalidUrls.length);
+
+            await openExternalHttpUrl('HTTPS://EXAMPLE.COM:443/a b');
+            assert.strictEqual(opened[1].toString(), 'https://example.com/a%20b');
             assert.strictEqual(warnings.length, invalidUrls.length);
         } finally {
             Object.defineProperty(vscode.env, 'openExternal', originalOpen);

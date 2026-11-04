@@ -703,6 +703,7 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
         if (typeof body.id !== 'string' || body.id.length === 0 || body.id === '.' || body.id === '..') {
             throw new Error('Cloud Shell returned an invalid terminal identifier.');
         }
+
         return {
             consoleUri: secureConsoleUri,
             terminalUri: `${secureConsoleUri}/terminals/${encodeURIComponent(body.id)}`,

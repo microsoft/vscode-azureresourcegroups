@@ -117,6 +117,7 @@ export class FrontendPreviewViewController extends CopilotOnRailsWebviewControll
             if (!url) {
                 throw new Error(vscode.l10n.t('The preview server returned an unsupported URL.'));
             }
+
             this.state = {
                 status: 'ready',
                 url,

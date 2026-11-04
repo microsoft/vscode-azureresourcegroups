@@ -57,10 +57,9 @@ async function resize(accessToken: string, terminalUri: string) {
 
         const { cols, rows } = getWindowSize();
 
-        // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
         const uri = `${secureTerminalUri}/size?cols=${cols}&rows=${rows}`;
 
-        const response = await fetch(uri, { // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
+        const response = await fetch(uri, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -124,7 +123,6 @@ function connectSocket(ipcHandle: string, url: string) {
         agent = new HttpsProxyAgent(proxy);
     }
 
-    // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
     const ws = new WS(secureSocketUri, {
         agent
     });
