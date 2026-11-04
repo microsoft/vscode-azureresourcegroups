@@ -17,6 +17,7 @@ import {
     type DeployResultStatus,
 } from './deployResultTypes';
 import { isJsonObject } from '../../shared/jsonUtils';
+import { getHttpUrl } from '../../shared/httpUrl';
 
 type Json = Record<string, unknown>;
 
@@ -213,7 +214,7 @@ function readEndpoints(value: unknown): DeployResultEndpoint[] {
  * all), so a recognized front-end host wins even when the name says nothing.
  */
 function pickPrimaryEndpoint(endpoints: DeployResultEndpoint[]): DeployResultEndpoint | undefined {
-    const candidates = endpoints.filter(e => e.name.toLowerCase() !== 'health' && !isBackendUrl(e.url));
+    const candidates = endpoints.filter(e => getHttpUrl(e.url) && e.name.toLowerCase() !== 'health' && !isBackendUrl(e.url));
 
     for (const preferred of PRIMARY_ENDPOINT_PREFERENCE) {
         const match = candidates.find(e => e.name.toLowerCase() === preferred);

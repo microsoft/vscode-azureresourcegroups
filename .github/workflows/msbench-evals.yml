@@ -77,6 +77,8 @@ on:
     # Sunday at 10:00 UTC: representative product coverage on both model families.
     - cron: '0 10 * * 0'
 
+permissions: {}
+
 env:
   NODE_VERSION: '22'
   PYTHON_VERSION: '3.12'

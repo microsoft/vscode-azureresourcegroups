@@ -19,6 +19,8 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
 import { writeProjectPlanStatus } from "../utils/planStatus";
+import { getHttpUrl } from "../../shared/httpUrl";
+import { openExternalHttpUrl } from "../utils/openExternalHttpUrl";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -75,7 +77,7 @@ export class FrontendPreviewViewController extends CopilotOnRailsWebviewControll
                     return;
                 case 'openExternal':
                     if (this.state.status === 'ready') {
-                        void vscode.env.openExternal(vscode.Uri.parse(this.state.url));
+                        void openExternalHttpUrl(this.state.url);
                     }
                     return;
             }
@@ -111,12 +113,19 @@ export class FrontendPreviewViewController extends CopilotOnRailsWebviewControll
             // Resolve a URL usable from the webview host (handles remote /
             // Codespaces port forwarding; a no-op on the desktop).
             const externalUri = await vscode.env.asExternalUri(vscode.Uri.parse(running.url));
+            const url = getHttpUrl(externalUri.toString());
+            if (!url) {
+                throw new Error(vscode.l10n.t('The preview server returned an unsupported URL.'));
+            }
+
             this.state = {
                 status: 'ready',
-                url: externalUri.toString(),
+                url,
                 folderLabel: vscode.workspace.asRelativePath(this.frontendFolder),
             };
         } catch (err) {
+            this.devServer?.dispose();
+            this.devServer = undefined;
             const error = err instanceof Error ? err.message : String(err);
             ext.outputChannel.appendLog(`[FrontendPreview] failed to start dev server: ${error}`);
             this.state = { status: 'error', error };

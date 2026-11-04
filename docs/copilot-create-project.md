@@ -242,6 +242,10 @@ When it finishes, for apps **with a frontend** it writes `.azure/integration-pla
 **Frontend preview** view: it starts your app's dev server and renders the running app (with mock data) inside
 an iframe, topped by an **Approve UI** header and a feedback box.
 
+The preview supports HTTP and HTTPS web addresses, including remote port-forwarded addresses. If the
+dev server provides an unsupported address or one containing a username or password, the preview shows
+an error instead of loading the app.
+
 - Click **Approve UI** to continue — this calls `copilotOnRails.startProjectIntegrate` and hands off to
   integration.
 - Or type UI change requests in the feedback box to re‑open the scaffold agent; the dev server hot‑reloads as
@@ -396,6 +400,11 @@ were created (including their inventory classification and provisioning state), 
 along the way, and the command that deletes everything again. It
 opens on failure too, so you can see which resources or endpoints didn't make it. You can reopen it any time
 with **Azure: Open Deploy Results View**.
+
+Deployment endpoints are clickable only when they use HTTP or HTTPS and do not contain a username or
+password in the address. Other endpoint values remain visible as plain text. **Open app** is hidden
+when no supported app link is available. If you try to open an unsupported address, the extension shows
+a warning.
 
 > 📷 *Screenshot needed: the Deployment results view after a successful deploy.*
 
