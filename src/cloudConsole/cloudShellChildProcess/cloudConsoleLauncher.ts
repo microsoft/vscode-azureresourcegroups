@@ -45,7 +45,7 @@ function getWindowSize(): Size {
 }
 
 let resizeToken = {};
-async function resize(accessToken: string, terminalUri: string) {
+export async function resize(accessToken: string, terminalUri: string) {
     const secureTerminalUri = requireSecureCloudShellUrl(terminalUri, 'https:');
     const token = resizeToken = {};
     await delay(300);
@@ -61,6 +61,7 @@ async function resize(accessToken: string, terminalUri: string) {
 
         const response = await fetch(uri, {
             method: 'POST',
+            redirect: 'error',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -124,7 +125,8 @@ function connectSocket(ipcHandle: string, url: string) {
     }
 
     const ws = new WS(secureSocketUri, {
-        agent
+        agent,
+        followRedirects: false
     });
 
     ws.on('open', function () {

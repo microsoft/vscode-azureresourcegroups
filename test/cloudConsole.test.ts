@@ -5,10 +5,12 @@
 
 import { AzureAccount, AzureSubscriptionProvider, AzureTenant, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import assert from 'assert';
-import { connectTerminal, getTenantsForSignedInAccounts } from '../src/cloudConsole/cloudConsole';
+import { connectTerminal, getTenantsForSignedInAccounts, getUserSettings, provisionConsole, resetConsole, type UserSettings } from '../src/cloudConsole/cloudConsole';
 import { requireSecureCloudShellUrl } from '../src/cloudConsole/cloudShellUrl';
+import { resize } from '../src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher';
 import { createAzExtLogOutputChannel } from '@microsoft/vscode-azext-utils';
 import { ext } from '../src/extensionVariables';
+import { createServer } from 'http';
 
 suite('Cloud Console', () => {
     let previousOutputChannel: typeof ext.outputChannel;
@@ -87,6 +89,109 @@ suite('Cloud Console', () => {
             });
         } finally {
             globalThis.fetch = originalFetch;
+        }
+    });
+
+    test('rejects redirects on authenticated requests while preserving successful Cloud Shell operations', async () => {
+        const originalFetch = globalThis.fetch;
+        const settings: UserSettings = {
+            preferredLocation: 'westus',
+            preferredOsType: 'linux',
+            storageProfile: {},
+            sessionType: 'Ephemeral',
+        };
+        const consoleUri = 'https://console.custom.example:8443/console';
+        const socketUri = 'wss://socket.custom.example/terminal';
+        const responses = [
+            { properties: settings },
+            { properties: { provisioningState: 'Provisioning' } },
+            { properties: { provisioningState: 'Succeeded', uri: consoleUri } },
+            {},
+            { id: 'terminal', socketUri },
+            {},
+        ];
+        const methods: string[] = [];
+        globalThis.fetch = async (input, init) => {
+            const request = input instanceof Request ? input : new Request(input, init);
+            assert.strictEqual(request.redirect, 'error');
+            if (request.method === 'GET') {
+                assert.strictEqual(request.body, null);
+            }
+
+            methods.push(request.method);
+            assert.ok(responses.length > 0, 'Unexpected request');
+
+            return new Response(JSON.stringify(responses.shift()), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        };
+
+        try {
+            assert.deepStrictEqual(await getUserSettings('test-token'), settings);
+            assert.strictEqual(await provisionConsole('test-token', settings, 'linux'), consoleUri);
+            await resetConsole('test-token', 'https://management.custom.example');
+            const uris = await connectTerminal('test-token', consoleUri, 'bash', { cols: 80, rows: 24 }, () => undefined);
+            assert.strictEqual(uris.socketUri, socketUri);
+            await resize('test-token', uris.terminalUri);
+            assert.deepStrictEqual(methods, ['GET', 'PUT', 'GET', 'DELETE', 'POST', 'POST']);
+            assert.strictEqual(responses.length, 0);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+
+    test('terminal creation and resize never follow an HTTP redirect', async function () {
+        this.timeout(20_000);
+        const originalFetch = globalThis.fetch;
+        let redirectStatus = 302;
+        let redirects = 0;
+        let redirectedRequests = 0;
+        const server = createServer((req, res) => {
+            if (req.url === '/redirect') {
+                redirects++;
+                res.writeHead(redirectStatus, { Location: '/target' });
+                res.end();
+            } else {
+                redirectedRequests++;
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ id: 'terminal', socketUri: 'wss://example.com/socket' }));
+            }
+        });
+
+        await new Promise<void>((resolve, reject) => {
+            server.once('error', reject);
+            server.listen(0, '127.0.0.1', () => {
+                server.off('error', reject);
+                resolve();
+            });
+        });
+
+        try {
+            const address = server.address();
+            assert.ok(address && typeof address !== 'string');
+            const localUrl = `http://127.0.0.1:${address.port}/redirect`;
+            // Replace TLS transport with loopback HTTP, retaining the production request's redirect policy.
+            globalThis.fetch = async (input, init) => {
+                const request = input instanceof Request ? input : new Request(input, init);
+                return originalFetch(localUrl, { method: request.method, headers: request.headers, redirect: request.redirect });
+            };
+
+            for (redirectStatus of [301, 302, 303, 307, 308]) {
+                await assert.rejects(
+                    connectTerminal('test-token', 'https://example.com/console', 'bash', { cols: 80, rows: 24 }, () => undefined),
+                    TypeError,
+                );
+                await assert.rejects(resize('test-token', 'https://example.com/console/terminals/terminal'), TypeError);
+            }
+
+            assert.strictEqual(redirects, 10);
+            assert.strictEqual(redirectedRequests, 0);
+        } finally {
+            globalThis.fetch = originalFetch;
+            await new Promise<void>((resolve, reject) => {
+                server.close(error => error ? reject(error) : resolve());
+            });
         }
     });
 

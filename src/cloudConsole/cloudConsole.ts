@@ -605,6 +605,7 @@ export async function getUserSettings(accessToken: string): Promise<UserSettings
     const targetUri = `${getArmEndpoint()}/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=${consoleApiVersion}`;
     const response = await fetch(targetUri, {
         method: 'GET',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -646,23 +647,25 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
 async function createTerminal(accessToken: string, userSettings: UserSettings, osType: string, initial: boolean): Promise<Response> {
     return fetchWithLogging(getConsoleUri(getArmEndpoint()), {
         method: initial ? 'PUT' : 'GET',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
             'x-ms-console-preferred-location': userSettings.preferredLocation
         },
-        body: JSON.stringify(initial ? {
+        body: initial ? JSON.stringify({
             properties: {
                 osType
             }
-        } : {}),
+        }) : undefined,
     });
 }
 
 export async function resetConsole(accessToken: string, armEndpoint: string) {
     const response = await fetchWithLogging(getConsoleUri(armEndpoint), {
         method: 'DELETE',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -718,6 +721,7 @@ async function initializeTerminal(accessToken: string, consoleUri: string, shell
     const consoleUrl = new URL(consoleUri);
     const response = fetchWithLogging(consoleUri + '/terminals?cols=' + initialSize.cols + '&rows=' + initialSize.rows + '&shell=' + shellType, {
         method: 'POST',
+        redirect: 'error',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
