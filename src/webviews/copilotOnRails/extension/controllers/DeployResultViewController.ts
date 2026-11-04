@@ -11,6 +11,7 @@ import { type DeployResultViewConfiguration, type DeployResultViewStrings } from
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { openExternalHttpUrl } from "../utils/openExternalHttpUrl";
 
 export type { DeployResultViewConfiguration, DeployResultViewStrings };
 
@@ -107,9 +108,7 @@ export class DeployResultViewController extends CopilotOnRailsWebviewController<
                     void this.postDeployResultData();
                     break;
                 case 'openExternal':
-                    if (message.url) {
-                        void vscode.env.openExternal(vscode.Uri.parse(message.url));
-                    }
+                    void openExternalHttpUrl(message.url);
                     break;
                 case 'copyText':
                     if (message.text) {

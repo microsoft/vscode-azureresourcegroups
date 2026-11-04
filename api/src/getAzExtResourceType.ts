@@ -60,6 +60,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.resources/resourcegroups': AzExtResourceType.ResourceGroup,
     'microsoft.app/containerapps': AzExtResourceType.ContainerApps,
     'microsoft.app/managedenvironments': AzExtResourceType.ContainerAppsEnvironment,
+    'microsoft.app/sandboxgroups': AzExtResourceType.ContainerAppsSandboxGroups,
     'microsoft.compute/virtualmachines': AzExtResourceType.VirtualMachines,
     'microsoft.dbforpostgresql/flexibleservers': AzExtResourceType.PostgresqlServersFlexible,
     'microsoft.dbforpostgresql/servers': AzExtResourceType.PostgresqlServersStandard,

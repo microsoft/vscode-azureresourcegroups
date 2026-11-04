@@ -22,6 +22,7 @@ import { CloudShell, CloudShellInternal, CloudShellStatus, UploadOptions } from 
 import { Deferred, delay, logAttemptingToReachUrlMessage } from './cloudConsoleUtils';
 import { readJSON } from './cloudShellChildProcess/readJSON';
 import { Queue, Server, createServer } from './ipc';
+import { requireSecureCloudShellUrl } from './cloudShellUrl';
 
 function ensureEndingSlash(value: string): string {
     return value.endsWith('/') ? value : `${value}/`;
@@ -604,6 +605,7 @@ export async function getUserSettings(accessToken: string): Promise<UserSettings
     const targetUri = `${getArmEndpoint()}/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=${consoleApiVersion}`;
     const response = await fetch(targetUri, {
         method: 'GET',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -634,7 +636,7 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
 
         const consoleResource = await response.json() as { properties: { provisioningState: string, uri: string } };
         if (consoleResource.properties.provisioningState === 'Succeeded') {
-            return consoleResource.properties.uri;
+            return requireSecureCloudShellUrl(consoleResource.properties.uri, 'https:');
         } else if (consoleResource.properties.provisioningState === 'Failed') {
             break;
         }
@@ -645,23 +647,25 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
 async function createTerminal(accessToken: string, userSettings: UserSettings, osType: string, initial: boolean): Promise<Response> {
     return fetchWithLogging(getConsoleUri(getArmEndpoint()), {
         method: initial ? 'PUT' : 'GET',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
             'x-ms-console-preferred-location': userSettings.preferredLocation
         },
-        body: JSON.stringify(initial ? {
+        body: initial ? JSON.stringify({
             properties: {
                 osType
             }
-        } : {}),
+        }) : undefined,
     });
 }
 
 export async function resetConsole(accessToken: string, armEndpoint: string) {
     const response = await fetchWithLogging(getConsoleUri(armEndpoint), {
         method: 'DELETE',
+        redirect: 'error',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -680,9 +684,10 @@ export async function resetConsole(accessToken: string, armEndpoint: string) {
 }
 
 export async function connectTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size, progress: (i: number) => void): Promise<ConsoleUris> {
+    const secureConsoleUri = requireSecureCloudShellUrl(consoleUri, 'https:');
 
     for (let i = 0; i < 10; i++) {
-        const response = await initializeTerminal(accessToken, consoleUri, shellType, initialSize);
+        const response = await initializeTerminal(accessToken, secureConsoleUri, shellType, initialSize);
 
         const body = await response.json() as { error?: { message?: string }, id: string, socketUri: string };
         if (response.status < 200 || response.status > 299) {
@@ -698,10 +703,14 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
             continue;
         }
 
+        if (typeof body.id !== 'string' || body.id.length === 0 || body.id === '.' || body.id === '..') {
+            throw new Error('Cloud Shell returned an invalid terminal identifier.');
+        }
+
         return {
-            consoleUri,
-            terminalUri: `${consoleUri}/terminals/${body.id}`,
-            socketUri: body.socketUri
+            consoleUri: secureConsoleUri,
+            terminalUri: `${secureConsoleUri}/terminals/${encodeURIComponent(body.id)}`,
+            socketUri: requireSecureCloudShellUrl(body.socketUri, 'wss:')
         };
     }
 
@@ -712,6 +721,7 @@ async function initializeTerminal(accessToken: string, consoleUri: string, shell
     const consoleUrl = new URL(consoleUri);
     const response = fetchWithLogging(consoleUri + '/terminals?cols=' + initialSize.cols + '&rows=' + initialSize.rows + '&shell=' + shellType, {
         method: 'POST',
+        redirect: 'error',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',

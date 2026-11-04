@@ -211,6 +211,14 @@ mock‑up) so you can see the proposed layout before any code is written. Read t
 type feedback to revise it). After feedback, the agent keeps the plan in `Planning`, updates any affected UI
 previews, reruns its structural check, and reopens or refocuses the Plan preview for another explicit approval.
 
+UI mock-ups are static, offline previews. Their HTML and shared theme are sanitized in the webview before
+rendering; scripts, redirects, embedded pages, remote assets and form submissions are blocked. Inline SVG
+icons, styling, local anchors, links to known sibling preview pages and live palette changes remain
+supported, including 4-digit alpha hex colors and responsive CSS range queries. Only `theme.css` is
+loaded from the preview folder; other stylesheet links are discarded.
+Unsupported links and placeholder `#` links do nothing. Local fragment links scroll within the current
+preview without navigating or reloading the iframe.
+
 Editable service-stack choices follow the service role and language. API/backend framework controls offer
 **Azure Functions** or **Custom framework**, with a text field for the custom name. Enter a nonempty name
 before approving or submitting changes. Custom framework choices survive language edits; runtime/package
@@ -247,6 +255,10 @@ The scaffold agent reads the approved plan and generates the frontend, backend, 
 When it finishes, for apps **with a frontend** it writes `.azure/integration-plan.md` and opens the
 **Frontend preview** view: it starts your app's dev server and renders the running app (with mock data) inside
 an iframe, topped by an **Approve UI** header and a feedback box.
+
+The preview supports HTTP and HTTPS web addresses, including remote port-forwarded addresses. If the
+dev server provides an unsupported address or one containing a username or password, the preview shows
+an error instead of loading the app.
 
 - Click **Approve UI** to continue — this calls `copilotOnRails.startProjectIntegrate` and hands off to
   integration.
@@ -402,6 +414,11 @@ were created (including their inventory classification and provisioning state), 
 along the way, and the command that deletes everything again. It
 opens on failure too, so you can see which resources or endpoints didn't make it. You can reopen it any time
 with **Azure: Open Deploy Results View**.
+
+Deployment endpoints are clickable only when they use HTTP or HTTPS and do not contain a username or
+password in the address. Other endpoint values remain visible as plain text. **Open app** is hidden
+when no supported app link is available. If you try to open an unsupported address, the extension shows
+a warning.
 
 > 📷 *Screenshot needed: the Deployment results view after a successful deploy.*
 
