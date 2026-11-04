@@ -5,8 +5,8 @@
 
 import assert from 'assert';
 import { createTestActionContext } from '@microsoft/vscode-azext-utils';
-import { ConfigurationTarget, workspace } from 'vscode';
-import { buildAgentChatModeOptions, buildAgentChatOpenOptions, buildChatOpenOptions, resolveModelSelector } from '../../src/commands/copilotOnRails/openChatWithAgent';
+import { commands, ConfigurationTarget, lm, window, workspace } from 'vscode';
+import { buildAgentChatModeOptions, buildAgentChatOpenOptions, buildChatOpenOptions, launchAgentChat, resolveModelSelector } from '../../src/commands/copilotOnRails/openChatWithAgent';
 import { ext } from '../../src/extensionVariables';
 import { AUTO_CHAT_MODEL, DEFAULT_CHAT_MODEL } from '../../src/utils/copilotOnRails/modelSelection';
 import { settingUtils } from '../../src/utils/settingUtils';
@@ -39,6 +39,94 @@ suite('Copilot on Rails agent chat launch', () => {
             expected,
         );
     });
+
+    test('queries Agent Host models when resolving a named selection', async () => {
+        const originalSelectChatModels = lm.selectChatModels;
+        const selectors: unknown[] = [];
+        lm.selectChatModels = async (selector) => {
+            selectors.push(selector);
+            return [];
+        };
+        try {
+            assert.strictEqual(await resolveModelSelector('Claude Sonnet 5'), undefined);
+            assert.deepStrictEqual(selectors, [{ vendor: 'agent-host-copilotcli' }]);
+        } finally {
+            lm.selectChatModels = originalSelectChatModels;
+        }
+    });
+
+    for (const firstResult of ['accepted', 'rejected', 'throws', 'fallbackRejected', 'fallbackThrows'] as const) {
+        test(`starts with GPT-6.1 Sol despite broken discovery and handles ${firstResult}`, async () => {
+            const originalContext = Object.getOwnPropertyDescriptor(ext, 'context');
+            const originalExecuteCommand = commands.executeCommand;
+            const originalGetCommands = commands.getCommands;
+            const originalSelectChatModels = lm.selectChatModels;
+            const originalShowErrorMessage = window.showErrorMessage;
+            const state = new Map<string, unknown>();
+            const requests: ReturnType<typeof buildAgentChatOpenOptions>[] = [];
+            const errors: string[] = [];
+            let discoveryCalls = 0;
+            Object.defineProperty(ext, 'context', {
+                configurable: true,
+                value: {
+                    globalState: { get: () => undefined },
+                    workspaceState: {
+                        get: (key: string) => state.get(key),
+                        update: async (key: string, value: unknown) => { state.set(key, value); },
+                    },
+                },
+            });
+            commands.getCommands = async () => ['workbench.action.chat.openazure-project-plan'];
+            lm.selectChatModels = async () => { discoveryCalls++; throw new Error('CLI model catalog unavailable'); };
+            window.showErrorMessage = (async (message: string) => { errors.push(message); }) as typeof window.showErrorMessage;
+            commands.executeCommand = (async (_command: string, options?: ReturnType<typeof buildAgentChatOpenOptions>) => {
+                if (!options?.query) {
+                    return undefined;
+                }
+                requests.push(options);
+                if (requests.length === 1) {
+                    if (firstResult === 'throws') {
+                        throw new Error('Model unavailable');
+                    }
+                    if (firstResult !== 'accepted') {
+                        return false;
+                    }
+                }
+                if (firstResult === 'fallbackRejected') {
+                    return false;
+                }
+                if (firstResult === 'fallbackThrows') {
+                    throw new Error('Chat unavailable');
+                }
+                return undefined;
+            }) as typeof commands.executeCommand;
+            try {
+                await recordModel('GPT-6.1 Sol');
+                const context = await createTestActionContext();
+                const fallbackFailed = firstResult === 'fallbackRejected' || firstResult === 'fallbackThrows';
+                assert.strictEqual(await launchAgentChat(context, 'azure-project-plan', 'Build a project', 'GPT-6.1 Sol'), !fallbackFailed, context.telemetry.properties.chatLaunchError);
+                assert.strictEqual(discoveryCalls, 0);
+                const expected = { mode: 'azure-project-plan', query: 'Build a project', waitForRequestAcceptance: true };
+                assert.deepStrictEqual(requests, [
+                    { ...expected, modelSelector: { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' } },
+                    ...(firstResult === 'accepted' ? [] : [expected]),
+                ]);
+                assert.strictEqual(getSessionModel(), firstResult === 'accepted' || fallbackFailed ? 'GPT-6.1 Sol' : DEFAULT_CHAT_MODEL);
+                assert.strictEqual(context.telemetry.properties.chatLaunchOutcome, fallbackFailed ? 'error' : 'chatLaunched');
+                assert.strictEqual(errors.length, fallbackFailed ? 1 : 0);
+            } finally {
+                commands.executeCommand = originalExecuteCommand;
+                commands.getCommands = originalGetCommands;
+                lm.selectChatModels = originalSelectChatModels;
+                window.showErrorMessage = originalShowErrorMessage;
+                if (originalContext) {
+                    Object.defineProperty(ext, 'context', originalContext);
+                } else {
+                    Reflect.deleteProperty(ext, 'context');
+                }
+            }
+        });
+    }
 
     test('enables the Copilot Harness at workspace scope and honors explicit Auto', async () => {
         const folder = workspace.workspaceFolders?.[0];

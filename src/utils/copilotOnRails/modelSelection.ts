@@ -16,6 +16,9 @@ export const supportedModelNames = ['Opus', 'Sonnet', 'GPT Sol', 'GPT Terra'] as
 /** Defer to whatever model is already highlighted in VS Code Chat by omitting modelSelector (not the same as auto). */
 export const DEFAULT_CHAT_MODEL = 'default';
 export const AUTO_CHAT_MODEL = 'Auto';
+// Re-enable discovery once VS Code returns usable Agent Host Copilot CLI model identifiers.
+export const MODEL_PICKER_ENABLED = false;
+export const TEMPORARY_CHAT_MODEL = 'GPT-6.1 Sol';
 
 export function getModelPickerOptions(models: readonly AvailableChatModel[], initialModel?: string): string[] {
     const options = getSupportedModelOptions(models);

@@ -143,9 +143,10 @@ export const CreateProjectView = (): JSX.Element => {
                     />
                     <div className='promptActions'>
                         <div className='actionsLeft'>
-                            {config.modelOptions.length > 0 ? (
+                            {config.modelPickerEnabled && (config.modelOptions.length > 0 ? (
                                 <select
                                     className='modelDropdown'
+                                    aria-label={config.modelLabel}
                                     value={selectedModel}
                                     onChange={(e) => setSelectedModel(e.target.value)}
                                 >
@@ -160,7 +161,7 @@ export const CreateProjectView = (): JSX.Element => {
                                         {config.modelUnavailableMessage}
                                     </span>
                                 </Tooltip>
-                            )}
+                            ))}
                             <span className='hint'>{config.hint}</span>
                         </div>
                         <div className='buttonGroup'>

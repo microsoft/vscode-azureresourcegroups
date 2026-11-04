@@ -11,6 +11,7 @@ export type CreateProjectViewControllerType = {
     hint: string;
     planButtonLabel: string;
     modelLabel: string;
+    modelPickerEnabled: boolean;
     modelOptions: string[];
     defaultModelLabel: string;
     modelUnavailableMessage: string;

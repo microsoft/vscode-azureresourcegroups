@@ -8,12 +8,12 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { AUTO_CHAT_MODEL, DEFAULT_CHAT_MODEL, resolveCopilotHarnessModelSelector } from '../../utils/copilotOnRails/modelSelection';
+import { AUTO_CHAT_MODEL, DEFAULT_CHAT_MODEL, MODEL_PICKER_ENABLED, resolveCopilotHarnessModelSelector, TEMPORARY_CHAT_MODEL } from '../../utils/copilotOnRails/modelSelection';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { AUTOPILOT_QUERY_MARKER, isAutopilotActive } from '../../webviews/copilotOnRails/extension/autopilot';
 import { ensureCopilotHarnessOn, setCopilotCliAutoModelEnabled } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
-import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
+import { getSessionModel, recordAgentLaunch, recordModel } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
@@ -43,13 +43,18 @@ export function registerWorkspaceTrustTracking(): void {
  * modelSelector object that VS Code's chat commands expect.
  */
 export async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+    // TODO: Remove when https://github.com/microsoft/vscode/issues/340176 gets resolved
+    if (!MODEL_PICKER_ENABLED && displayName === TEMPORARY_CHAT_MODEL) {
+        return { id: 'gpt-6.1-sol', vendor: 'agent-host-copilotcli' };
+    }
+
     // If auto or default, defer to VS Code chat, since we don't need to provide any specific model
     if (displayName === DEFAULT_CHAT_MODEL || displayName === AUTO_CHAT_MODEL) {
         return resolveCopilotHarnessModelSelector(displayName, []);
     }
 
     try {
-        const models = await vscode.lm.selectChatModels({ vendor: 'copilotcli' });
+        const models = await vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' });
         return resolveCopilotHarnessModelSelector(displayName, models);
     } catch {
         // If the lm API isn't available, fall through
@@ -126,6 +131,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     }
 
     agentLaunchInProgress = true;
+    let usedDefaultModelFallback = false;
     try {
         const resolvedModel = model ?? getSessionModel();
         await ensureCopilotHarnessOn({ useAutoModel: resolvedModel === AUTO_CHAT_MODEL });
@@ -145,7 +151,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
             buildAgentChatModeOptions(agentName),
         );
 
-        setCorProp(context, 'chatModelSelectionSource', resolvedModel === DEFAULT_CHAT_MODEL ? 'default' : model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
+        setCorProp(context, 'chatModelSelectionSource', !MODEL_PICKER_ENABLED && resolvedModel === TEMPORARY_CHAT_MODEL ? 'temporaryDefault' : resolvedModel === DEFAULT_CHAT_MODEL ? 'default' : model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
 
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
@@ -154,15 +160,31 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
             setCorProp(context, 'chatModelSelectorVendor', selector.vendor);
         }
 
-        const result = await vscode.commands.executeCommand<false | undefined>(
-            OPEN_CHAT_COMMAND_ID,
-            buildAgentChatOpenOptions(agentName, query, selector, isAutopilotActive()),
-        );
-        if (result === false) {
-            throw new Error(vscode.l10n.t(
-                'The "{0}" Copilot agent request was rejected.',
-                agentName,
-            ));
+        const autopilot = isAutopilotActive();
+        const submitRequest = async (modelSelector?: { id?: string; vendor?: string }): Promise<void> => {
+            const result = await vscode.commands.executeCommand<false | undefined>(
+                OPEN_CHAT_COMMAND_ID,
+                buildAgentChatOpenOptions(agentName, query, modelSelector, autopilot),
+            );
+            if (result === false) {
+                throw new Error(vscode.l10n.t(
+                    'The "{0}" Copilot agent request was rejected.',
+                    agentName,
+                ));
+            }
+        };
+        try {
+            await submitRequest(selector);
+        } catch (error) {
+            if (MODEL_PICKER_ENABLED || resolvedModel !== TEMPORARY_CHAT_MODEL || !selector) {
+                throw error;
+            }
+            setCorErrorProp(context, 'chatModelFallbackError', parseError(error).message);
+            setCorProp(context, 'chatModelFallback', 'default');
+            await submitRequest();
+            usedDefaultModelFallback = true;
+            setCorProp(context, 'chatModelSelectionSource', 'default');
+            setCorProp(context, 'copilotModel', DEFAULT_CHAT_MODEL);
         }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -178,6 +200,9 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     // Record the phase we just launched so an interrupted run can be resumed.
     try {
+        if (usedDefaultModelFallback) {
+            await recordModel(DEFAULT_CHAT_MODEL);
+        }
         await recordAgentLaunch(agentName);
         setCorProp(context, 'chatAgentLaunchRecorded', true);
     } catch (err) {

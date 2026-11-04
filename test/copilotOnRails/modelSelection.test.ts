@@ -15,18 +15,12 @@ import {
     resolveCopilotHarnessModelSelector,
 } from '../../src/utils/copilotOnRails/modelSelection';
 
-const localModel: AvailableChatModel = {
+const cliModel: AvailableChatModel = {
     id: 'gpt-6.1-sol',
-    vendor: 'copilot',
+    vendor: 'agent-host-copilotcli',
     family: 'gpt-6.1-sol',
     version: '6.1',
     name: 'GPT-6.1 Sol',
-};
-
-const cliModel: AvailableChatModel = {
-    ...localModel,
-    id: 'cli-sol',
-    vendor: 'copilotcli',
 };
 
 suite('Copilot on Rails model selection', () => {
@@ -67,10 +61,9 @@ suite('Copilot on Rails model selection', () => {
         assert.deepStrictEqual(getModelPickerOptions([model]), []);
     });
 
-    test('resolves display names, IDs, and legacy vendor-qualified names', () => {
+    test('resolves display names, IDs, and vendor-qualified names', () => {
         assert.strictEqual(resolveAvailableChatModel(cliModel.name, [cliModel]), cliModel);
         assert.strictEqual(resolveAvailableChatModel(cliModel.id, [cliModel]), cliModel);
-        assert.strictEqual(resolveAvailableChatModel('GPT-6.1 Sol (copilot)', [localModel, cliModel]), localModel);
-        assert.strictEqual(resolveAvailableChatModel('GPT-6.1 Sol (copilotcli)', [localModel, cliModel]), cliModel);
+        assert.strictEqual(resolveAvailableChatModel('GPT-6.1 Sol (agent-host-copilotcli)', [cliModel]), cliModel);
     });
 });

@@ -136,9 +136,9 @@ session** running the next agent. Between hand‑offs, agents open **webviews** 
 
 - **VS Code** with **GitHub Copilot** enabled and signed in.
 - The **Copilot CLI** chat target. Copilot on Rails manages Auto through the workspace setting
-  `github.copilot.chat.cli.autoModel.enabled`, enabling it only when **Auto** is selected in the picker.
-- A Copilot plan. If no models load in time, the view shows **Models did not finish loading**.
-  You can still press **Plan** using **VS Code default** and change the model in Chat.
+  `github.copilot.chat.cli.autoModel.enabled`, enabling it only for an explicit **Auto** session selection.
+- A Copilot plan. Model selection is temporarily disabled while VS Code fixes its Copilot CLI model
+  discovery API. See the initial model and fallback behavior in **Stage 1** below.
 - **A clean project folder.** The flow needs an empty workspace root to build in. If the open folder already
   contains files, choose **Create in New Subfolder…** to create the project under the current folder, or
   **Choose Empty Folder…** to build elsewhere. Either choice opens the project in a separate window without
@@ -169,7 +169,12 @@ the create flow automatically. **Choose Empty Folder…** also opens the selecte
 ## Stage 1 — Describe your project
 
 The **Create with Copilot** view opens with the heading **"What would you like to build?"**. Type a
-description, optionally pick a **Model**, and press **Plan** (or `Ctrl+Enter`).
+description and press **Plan** (or `Ctrl+Enter`). The **Model** picker and its tooltip are temporarily hidden.
+The initial prompt requests **GPT-6.1 Sol** (`gpt-6.1-sol`) directly from Agent Host instead of relying on
+the broken discovery API. If that request is rejected or throws before acceptance, Copilot on Rails
+retries once without a model override, using the current Chat model. An accepted fallback is saved as
+**VS Code default** for subsequent phases. If both attempts fail, the flow reports a normal launch error
+and leaves the create view open. You can change the model in VS Code Chat.
 
 <p align="center">
   <img src="images/copilot-create-project/03-create-project-prompt.png" alt="Create with Copilot prompt view" />
@@ -461,7 +466,7 @@ new subfolder or an empty folder so unattended generation cannot write over exis
 
 | Surface | Command to open | Opened by (MCP tool) | Purpose |
 | --- | --- | --- | --- |
-| **Create with Copilot** prompt | `copilotOnRails.createProjectWithCopilot` | — (view controller) | Enter the project description + model, press **Plan**. |
+| **Create with Copilot** prompt | `copilotOnRails.createProjectWithCopilot` | — (view controller) | Enter the project description, press **Plan**. The model picker is temporarily hidden; see Stage 1. |
 | **Requirements** view | `copilotOnRails.openRequirementsView` | `open_requirements_view` | Answer per‑service + shared questions; **Submit**. |
 | **Plan preview** view | `copilotOnRails.openScaffoldPlanView` | `open_plan_view` | Review the plan + UI preview cards; **Approve**. |
 | **Frontend preview** (Approve UI) | `copilotOnRails.openFrontendPreviewView` | `open_frontend_preview_view` | See the running app (mock data); **Approve UI**. |
@@ -642,25 +647,29 @@ The diagnostics object has four fields:
 Pressing **Plan** resets cached CoR project state and records the submitted prompt, timestamp,
 system info, and telemetry-only `corProjectId`.
 
-An empty catalog gets one retry after one second; the retry budget resets on extension-host reload.
-Discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
+Model discovery and picker code remain in place behind `MODEL_PICKER_ENABLED` in `modelSelection.ts`.
+While disabled, the create view skips discovery and records `modelPickerOutcome: temporarilyDisabled`.
+When re-enabled, an empty catalog gets one retry after one second; the retry budget resets on
+extension-host reload. Discovery adds these properties to the `createProjectWithCopilot` event and CoR telemetry:
 
 | Property | Meaning |
 | --- | --- |
-| `modelPickerVendor` | The queried vendor, `copilotcli`. |
+| `modelPickerVendor` | The queried vendor, `agent-host-copilotcli`. |
 | `modelPickerAvailableModelCount` | Number of entries in `modelPickerAvailableModels`, before filtering. |
 | `modelPickerFilteredModelCount` | Number of entries in `modelPickerFilteredModels`, after filtering and deduplication. |
 | `modelPickerRetried` | Whether this invocation retried an empty catalog. |
-| `modelPickerOutcome` | `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, `queryFailed` when the API throws, or `ready` when supported models are available. |
+| `modelPickerOutcome` | `temporarilyDisabled` while the workaround is active; otherwise `querying` before discovery completes, `emptyCatalog` for no returned models, `noSupportedModels` when none pass the filter, `queryFailed` when the API throws, or `ready` when supported models are available. |
 
 The diagnostic-only lists `modelPickerAvailableModels` and `modelPickerFilteredModels` contain returned
 names and deduplicated supported names, respectively. Auto is excluded from the filtered list/count
 but remains in the available list/count if returned by the API. The `default` sentinel is never counted.
 Discovery errors record a masked `modelPickerError`.
 
-The fallback records `copilotModel: default`, `modelSelectedInView: false`, and
-`chatModelSelectionSource: default`, and omits `modelSelector`. Explicit selections record
-`chatModelSelectorId` and `chatModelSelectorVendor` in telemetry and diagnostics.
+The temporary default records `copilotModel: GPT-6.1 Sol`, `modelSelectedInView: false`, and
+`chatModelSelectionSource: temporaryDefault`. Selector attempts record `chatModelSelectorId` and
+`chatModelSelectorVendor` in telemetry and diagnostics. A fallback attempt records
+`chatModelFallback: default` and a masked `chatModelFallbackError`, and omits `modelSelector` on the retry.
+If accepted, it records `copilotModel: default` and `chatModelSelectionSource: default`.
 `chatModelResolved` confirms selector construction, not VS Code's final Chat selection.
 
 Privacy guarantees, by design:
@@ -681,8 +690,8 @@ before submitting.
 | --- | --- | --- |
 | *"Choose where to create your project."* | The open folder isn't empty. | Choose **Create in New Subfolder…** to build under the current folder, or **Choose Empty Folder…** to build elsewhere. Both open the project in a separate window. |
 | The new project window opens in Restricted Mode and the Azure Project view is unavailable. | Workspace Trust must be granted explicitly; extensions cannot trust a folder on your behalf. | Select **Trust** from the Restricted Mode banner or Workspace Trust editor. The pending create flow resumes automatically after the extension activates. |
-| The create view shows a model-unavailable message instead of the picker. | The CLI model catalog is empty, has no supported models, or discovery failed. | Submit the plan normally using VS Code's default, or wait a moment and reopen the page to rediscover models. Inspect the discovery properties described above to distinguish the cases, including `modelPickerError` when the API failed and `modelPickerRetried` for the one-time retry. |
-| Chat shows Auto after selecting a named model. | Wrong model pool or a selection change in VS Code. | Compare `copilotModel` with `chatModelSelectorId`; `chatModelSelectorVendor` should be `agent-host-copilotcli`. |
+| The create view's model picker is hidden. | Temporary workaround for VS Code's Copilot CLI model discovery API. | This is expected. See Stage 1 for the initial model and fallback behavior. Reopening the page will not enable discovery. |
+| Chat uses a model other than GPT-6.1 Sol. | The initial model request failed, or VS Code changed the selection. | Check `chatModelFallback` and `chatModelFallbackError`, then compare `copilotModel` with `chatModelSelectorId`; `chatModelSelectorVendor` should be `agent-host-copilotcli`. The selector properties describe the attempted override, not the accepted fallback. |
 | An agent says it needs its instruction files, or behaves oddly / follows outdated steps. | `.github/agents/` is missing or stale. | Accept the download prompt, or run **Download Azure Agent Instructions**. The version stamp auto‑refreshes stale copies. |
 | Chat opens with the wrong agent or generic Agent mode. | VS Code did not honor the requested custom mode, the custom instructions were not loaded, or the MCP tool was unavailable. | Inspect `diagnosticEvents` for a successful `report_agent_launch` event. Its `agentName` property identifies the agent that reported. If the event is missing, the startup report never reached the CoR MCP server. |
 | Frontend preview stuck on *"Starting…"*; **Approve UI** never enables (but the app loads in a normal browser). | A second dev server is contending for the preview port. | Stop **all** manually‑started dev servers, free the port, ensure the frontend's `vite.config` is the clean minimal version, then reopen the preview and let it own the server. Don't verify by starting your own server. |

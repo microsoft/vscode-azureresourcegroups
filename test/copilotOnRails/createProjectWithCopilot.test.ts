@@ -86,7 +86,7 @@ suite('Create Project with Copilot model picker diagnostics', () => {
 
     const sonnet: AvailableChatModel = {
         id: 'claude-sonnet-5',
-        vendor: 'copilotcli',
+        vendor: 'agent-host-copilotcli',
         name: 'Claude Sonnet 5',
         family: 'sonnet',
         version: '5',
@@ -109,7 +109,7 @@ suite('Create Project with Copilot model picker diagnostics', () => {
             assert.deepStrictEqual(await discoverModelPickerModels(context, async () => scenario.models), scenario.models);
 
             const expected = {
-                modelPickerVendor: 'copilotcli',
+                modelPickerVendor: 'agent-host-copilotcli',
                 modelPickerAvailableModelCount: scenario.models.length,
                 modelPickerFilteredModelCount: scenario.filtered.length,
                 modelPickerOutcome: scenario.outcome,

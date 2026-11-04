@@ -11,7 +11,7 @@ import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { DEFAULT_CHAT_MODEL } from "../../../../utils/copilotOnRails/modelSelection";
+import { DEFAULT_CHAT_MODEL, MODEL_PICKER_ENABLED, TEMPORARY_CHAT_MODEL } from "../../../../utils/copilotOnRails/modelSelection";
 import { prepareNewCorProject } from "../../../../utils/copilotOnRails/prepareNewCorProject";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType, type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
@@ -32,7 +32,7 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
                 switch (message.command) {
                     case 'plan':
                         if (message.prompt) {
-                            void this.planProject(message.prompt, message.model);
+                            void this.planProject(message.prompt, MODEL_PICKER_ENABLED ? message.model : TEMPORARY_CHAT_MODEL);
                         } else {
                             this.panel.dispose();
                         }
@@ -50,7 +50,7 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
     private async openChatWithQuery(query: string, model?: string): Promise<void> {
         await callWithTelemetryAndErrorHandling(corId('createProjectSubmitPrompt'), async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'createProjectSubmitPrompt' }, async (context: CopilotOnRailsContext) => {
-                setCorProp(context, 'modelSelectedInView', !!model && model !== DEFAULT_CHAT_MODEL);
+                setCorProp(context, 'modelSelectedInView', MODEL_PICKER_ENABLED && !!model && model !== DEFAULT_CHAT_MODEL);
                 if (model) {
                     await recordModel(model);
                     setCorProp(context, 'copilotModel', model);

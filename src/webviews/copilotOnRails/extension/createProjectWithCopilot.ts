@@ -9,7 +9,7 @@ import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openCha
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
+import { AvailableChatModel, DEFAULT_CHAT_MODEL, getDefaultOpusModelOption, getModelPickerOptions, getSupportedModelOptions, MODEL_PICKER_ENABLED, TEMPORARY_CHAT_MODEL } from "../../../utils/copilotOnRails/modelSelection";
 import { setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
@@ -81,11 +81,17 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         return;
     }
 
-    const availableModels = await discoverModelPickerModels(context, () => vscode.lm.selectChatModels({ vendor: 'copilotcli' }));
-    const modelOptions = getModelPickerOptions(availableModels, initialModel);
-    const selectedModel = initialModel && (initialModel === DEFAULT_CHAT_MODEL || modelOptions.includes(initialModel))
-        ? initialModel
-        : getDefaultOpusModelOption(availableModels) ?? modelOptions[0] ?? DEFAULT_CHAT_MODEL;
+    let modelOptions = [TEMPORARY_CHAT_MODEL];
+    let selectedModel = TEMPORARY_CHAT_MODEL;
+    if (MODEL_PICKER_ENABLED) {
+        const availableModels = await discoverModelPickerModels(context, () => vscode.lm.selectChatModels({ vendor: 'agent-host-copilotcli' }));
+        modelOptions = getModelPickerOptions(availableModels, initialModel);
+        selectedModel = initialModel && (initialModel === DEFAULT_CHAT_MODEL || modelOptions.includes(initialModel))
+            ? initialModel
+            : getDefaultOpusModelOption(availableModels) ?? modelOptions[0] ?? DEFAULT_CHAT_MODEL;
+    } else {
+        setCorProp(context, 'modelPickerOutcome', 'temporarilyDisabled');
+    }
 
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
@@ -95,6 +101,7 @@ async function openCreateProjectView(context: CopilotOnRailsContext, initialProm
         hint: vscode.l10n.t('Ctrl+Enter to plan'),
         planButtonLabel: vscode.l10n.t('Plan'),
         modelLabel: vscode.l10n.t('Model'),
+        modelPickerEnabled: MODEL_PICKER_ENABLED,
         modelOptions,
         defaultModelLabel: vscode.l10n.t('VS Code default'),
         modelUnavailableMessage: vscode.l10n.t('Models did not finish loading'),
@@ -110,7 +117,7 @@ export async function discoverModelPickerModels<T extends AvailableChatModel>(
     context: CopilotOnRailsContext,
     selectModels: () => Thenable<readonly T[]>,
 ): Promise<readonly T[]> {
-    setCorProp(context, 'modelPickerVendor', 'copilotcli');
+    setCorProp(context, 'modelPickerVendor', 'agent-host-copilotcli');
     setCorProp(context, 'modelPickerOutcome', 'querying');
     setCorProp(context, 'modelPickerRetried', false);
     let models: readonly T[];
