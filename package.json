@@ -1063,7 +1063,7 @@
         "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
-        "mermaid": "^11.15.0",
+        "mermaid": "^12.3.0",
         "semver": "^7.7.3",
         "uuid": "^14.0.0",
         "vscode-nls": "^5.0.1",
