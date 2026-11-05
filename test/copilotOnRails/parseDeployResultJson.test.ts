@@ -17,6 +17,18 @@ function readDeployResult(projectFolder: string): string {
 }
 
 suite('parseDeployResultJson', () => {
+    test('keeps unsupported endpoint URLs as report text but never selects them for Open app', () => {
+        for (const endpoints of [
+            { web: 'javascript:alert(1)', api: 'https://example.com/api' },
+            [{ name: 'web', url: 'command:workbench.action.files.openFolder' }, { name: 'api', url: 'https://example.com/api' }],
+            { web: { url: 'https://user:password@example.com' } },
+        ]) {
+            const result = parseDeployResultJson(JSON.stringify({ endpoints }));
+            assert.strictEqual(result.primaryEndpoint, undefined);
+            assert.ok(result.endpoints.length > 0, 'invalid links remain visible as report text');
+        }
+    });
+
     suite('object-map artifact (scrapbook fixture)', () => {
         const content = () => readDeployResult(scrapbookProjectFolder);
 

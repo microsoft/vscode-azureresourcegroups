@@ -9,10 +9,10 @@
 //
 // Note: Do not add any VS Code related dependencies to this file, as it is not run in the extension host.
 import * as http from 'http';
-import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { default as WS } from 'ws';
 import { readJSON } from './readJSON';
+import { requireSecureCloudShellUrl } from '../cloudShellUrl';
 
 function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {
     return new Promise(resolve => setTimeout(() => resolve(result), ms));
@@ -45,7 +45,8 @@ function getWindowSize(): Size {
 }
 
 let resizeToken = {};
-async function resize(accessToken: string, terminalUri: string) {
+export async function resize(accessToken: string, terminalUri: string) {
+    const secureTerminalUri = requireSecureCloudShellUrl(terminalUri, 'https:');
     const token = resizeToken = {};
     await delay(300);
 
@@ -56,11 +57,11 @@ async function resize(accessToken: string, terminalUri: string) {
 
         const { cols, rows } = getWindowSize();
 
-        // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
-        const uri = `${terminalUri}/size?cols=${cols}&rows=${rows}`;
+        const uri = `${secureTerminalUri}/size?cols=${cols}&rows=${rows}`;
 
-        const response = await fetch(uri, { // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
+        const response = await fetch(uri, {
             method: 'POST',
+            redirect: 'error',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -115,16 +116,17 @@ async function sendData(socketPath: string, data: string): Promise<http.Incoming
 
 // Connects to Azure Cloud Shell via websocket. Writes and reads data from the websocket in order to interact with the remote shell.
 function connectSocket(ipcHandle: string, url: string) {
+    const secureSocketUri = requireSecureCloudShellUrl(url, 'wss:');
 
     const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
     let agent: http.Agent | undefined = undefined;
     if (proxy) {
-        agent = url.startsWith('ws:') || url.startsWith('http:') ? new HttpProxyAgent(proxy) : new HttpsProxyAgent(proxy);
+        agent = new HttpsProxyAgent(proxy);
     }
 
-    // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
-    const ws = new WS(url, {
-        agent
+    const ws = new WS(secureSocketUri, {
+        agent,
+        followRedirects: false
     });
 
     ws.on('open', function () {

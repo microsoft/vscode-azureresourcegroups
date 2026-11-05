@@ -25,6 +25,7 @@ import {
     type DeployResultHealthStatus,
 } from './utils/deployResultTypes';
 import { type DeployResultViewConfiguration, type DeployResultViewStrings } from './utils/viewConfigTypes';
+import { getHttpUrl } from '../shared/httpUrl';
 
 export type { DeployResultData };
 
@@ -217,7 +218,9 @@ export const DeployResultView = (): JSX.Element => {
         );
     }
 
-    const primary: DeployResultEndpoint | undefined = result.primaryEndpoint;
+    const primary: DeployResultEndpoint | undefined = result.primaryEndpoint && getHttpUrl(result.primaryEndpoint.url)
+        ? result.primaryEndpoint
+        : undefined;
 
     return (
         <div className='deployResultView'>
@@ -234,7 +237,7 @@ export const DeployResultView = (): JSX.Element => {
                             {strings.openAppButton}
                         </Button>
                     )}
-                    {result.portalUrl && (
+                    {getHttpUrl(result.portalUrl) && (
                         <Button icon={<OpenRegular />} onClick={() => openExternal(result.portalUrl)}>
                             {strings.openPortalButton}
                         </Button>
@@ -282,12 +285,14 @@ export const DeployResultView = (): JSX.Element => {
                                 <tr key={endpoint.name}>
                                     <td>{endpoint.label}</td>
                                     <td>
-                                        <a
-                                            href={endpoint.url}
-                                            onClick={(e) => { e.preventDefault(); openExternal(endpoint.url); }}
-                                        >
-                                            {endpoint.url}
-                                        </a>
+                                        {getHttpUrl(endpoint.url) ? (
+                                            <a
+                                                href={getHttpUrl(endpoint.url)}
+                                                onClick={(e) => { e.preventDefault(); openExternal(endpoint.url); }}
+                                            >
+                                                {endpoint.url}
+                                            </a>
+                                        ) : endpoint.url}
                                     </td>
                                     <td>
                                         {endpoint.healthStatus

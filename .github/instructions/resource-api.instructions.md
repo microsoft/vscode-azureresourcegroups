@@ -21,6 +21,16 @@ applyTo: "api/**, src/api/**, src/hostapi.*.ts, src/utils/wrapFunctionsInTelemet
 
 ## Authentication and wrapping
 
+- Distinguish Azure user authentication from API-client authentication. Subscription
+  `authentication` in `api/src/resources/azure.ts` exposes VS Code sessions supplied through
+  Resources -> `@microsoft/vscode-azext-azureauth` -> `vscode.authentication` -> the built-in
+  Microsoft Authentication provider. SDK credentials adapt these subscription-bound sessions;
+  preserve account/tenant/cloud and requested audience/consent behavior. See
+  [the Azure authentication flow](azure-workflows.instructions.md#authentication-ownership-and-token-flow).
+- The v4 `azureResourcesCredential` / API-session handshake instead authenticates a calling
+  extension to the Resources host. Its credential-manager tokens are not Azure access tokens,
+  Microsoft sign-in sessions, or Azure SDK credentials; creating an API session does not sign a
+  user into Azure.
 - The v4 host factory is `src/api/auth/createAuthApiFactory.ts`. Keep credential verification,
   client-extension identity normalization, and session creation ahead of protected API access.
   Never log credentials or bypass verification to make a client integration work.
