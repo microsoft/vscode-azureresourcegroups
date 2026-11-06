@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { CopilotOnRailsContext } from '../../../../utils/copilotOnRails/CopilotOnRailsContext';
+import { aggregateArmResourceTypes } from '../../../../utils/copilotOnRails/deploymentInventory';
 import { setCorProp } from '../../../../utils/copilotOnRails/telemetryUtils';
 import { isJsonObject } from '../../shared/jsonUtils';
 import { parseDeployResultJson } from '../../views/utils/parseDeployResultJson';
@@ -17,6 +18,11 @@ type JsonObject = Record<string, unknown>;
 export interface DeployArtifactTelemetry {
     parsedOk: boolean;
     componentCount?: number;
+    componentArchitecture?: string;
+    buildPassedCount?: number;
+    buildFailedCount?: number;
+    deployabilityPassedCount?: number;
+    deployabilityFailedCount?: number;
     overallHealth?: string;
     fastTrackEligible?: boolean;
     warningCount?: number;
@@ -28,6 +34,7 @@ export interface DeployArtifactTelemetry {
     f1Viable?: boolean;
     serviceCount?: number;
     serviceTypes?: string;
+    serviceArchitecture?: string;
     iacFormat?: string;
     quotaStatus?: string;
     quotaVerified?: boolean;
@@ -54,6 +61,9 @@ export interface DeployArtifactTelemetry {
     orphanedResourceCount?: number;
     unverifiedResourceCount?: number;
     inventoryUnverified?: boolean;
+    createdResourceTypeCounts?: string;
+    failedResourceTypeCounts?: string;
+    reusedResourceTypeCountsAvailable?: boolean;
 }
 
 const serviceTypes: Record<string, string> = {
@@ -135,10 +145,16 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
         case 'prereq-output.json': {
             const warnings = records(data.warnings);
             const build = object(data.buildRequirements);
+            const components = records(data.components);
             metrics = {
                 overallHealth: category(data.overallHealth, ['ready', 'readyWithCaveats', 'blocked']),
                 fastTrackEligible: boolean(data.fastTrackEligible),
-                componentCount: records(data.components)?.length,
+                componentCount: components?.length,
+                componentArchitecture: serviceArchitecture(components),
+                buildPassedCount: verdictCount(components, 'build', 'PASS'),
+                buildFailedCount: verdictCount(components, 'build', 'FAIL'),
+                deployabilityPassedCount: verdictCount(components, 'deployability', 'PASS'),
+                deployabilityFailedCount: verdictCount(components, 'deployability', 'FAIL'),
                 warningCount: warnings?.length,
                 buildWarningCount: count(warnings, 'axis', 'build'),
                 completenessWarningCount: count(warnings, 'axis', 'completeness'),
@@ -155,6 +171,7 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
             metrics = {
                 serviceCount: services?.length,
                 serviceTypes: serviceCategories(services?.map(service => service.kind ?? service.name)),
+                serviceArchitecture: serviceArchitecture(services),
                 iacFormat: category(data.iacFormat, ['bicep', 'terraform']),
                 quotaStatus: category(quotaValidation?.status, ['verified', 'skipped', 'failed', 'unverified']),
                 quotaVerified: boolean(quotaValidation?.verified),
@@ -188,6 +205,11 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
             const result = parseDeployResultJson(content);
             const endpoints = records(data.endpoints) || object(data.endpoints) ? result.endpoints : undefined;
             const created = records(data.createdResources);
+            const resourceResults = records(data.resourceResults);
+            const failedResources = mergeResourcesById(
+                created?.filter(resource => category(resource.classification, ['failed']) === 'failed'),
+                resourceResults?.filter(resource => category(resource.status, ['failed']) === 'failed'),
+            );
             metrics = {
                 status: data.status === undefined ? undefined : result.status,
                 healthStatus: data.healthStatus === undefined ? undefined : result.healthStatus,
@@ -203,11 +225,39 @@ export function getDeployArtifactTelemetry(file: ArtifactFile, content: string):
                 unverifiedResourceCount: count(created, 'classification', 'unverified'),
                 inventoryUnverified: boolean(data.inventoryUnverified),
                 healingAttemptCount: records(data.healingAttempts)?.length,
+                createdResourceTypeCounts: aggregateArmResourceTypes(toInventoryResources(created)),
+                failedResourceTypeCounts: aggregateArmResourceTypes(toInventoryResources(failedResources)),
+                reusedResourceTypeCountsAvailable: false,
             };
             break;
         }
     }
     return { parsedOk: true, ...Object.fromEntries(Object.entries(metrics).filter(([, value]) => value !== undefined)) };
+}
+
+function mergeResourcesById(...groups: (JsonObject[] | undefined)[]): JsonObject[] {
+    const mergedById = new Map<string, JsonObject>();
+    const withoutIds: JsonObject[] = [];
+    for (const resource of groups.flatMap(group => group ?? [])) {
+        const id = token(resource.id ?? resource.resourceId);
+        if (!id) {
+            withoutIds.push(resource);
+            continue;
+        }
+        const existing = mergedById.get(id);
+        mergedById.set(id, existing ? mergeResourceFields(existing, resource) : resource);
+    }
+    return [...mergedById.values(), ...withoutIds];
+}
+
+function mergeResourceFields(first: JsonObject, second: JsonObject): JsonObject {
+    return {
+        ...first,
+        ...second,
+        ...(typeof first.id === 'string' ? { id: first.id } : {}),
+        ...(typeof first.resourceId === 'string' ? { resourceId: first.resourceId } : {}),
+        ...(typeof first.type === 'string' ? { type: first.type } : {}),
+    };
 }
 
 function object(value: unknown): JsonObject | undefined {
@@ -241,6 +291,152 @@ function serviceCategories(value: unknown): string | undefined {
     return Array.isArray(value) && value.every(item => typeof item === 'string')
         ? [...new Set(value.map(item => serviceTypes[item.toLowerCase()] ?? 'unknown'))].sort().join(',')
         : undefined;
+}
+
+function serviceArchitecture(services: JsonObject[] | undefined): string | undefined {
+    if (!services) {
+        return undefined;
+    }
+    const architecture = services.slice(0, 20).map((service) => {
+        const type = architectureType(service.kind ?? service.type ?? service.azureService ?? service.name);
+        return {
+            role: architectureRole(service.role, type),
+            type,
+            runtime: architectureRuntime(service.runtime ?? service.language),
+            framework: architectureFramework(service.framework),
+        };
+    });
+    return JSON.stringify(architecture);
+}
+
+function architectureRole(value: unknown, type: string): string {
+    const role = token(value);
+    if (['frontend', 'backend', 'worker', 'api', 'database', 'shared'].includes(role)) {
+        return role;
+    }
+    if (['spa', 'staticwebapp', 'web'].includes(type)) {
+        return 'frontend';
+    }
+    if (['functions', 'functionapp', 'api', 'appservice', 'containerapp'].includes(type)) {
+        return 'backend';
+    }
+    if (['postgresflexibleserver', 'mysqlflexibleserver', 'sqldatabase', 'cosmosdb', 'rediscache'].includes(type)) {
+        return 'database';
+    }
+    if (type === 'library') {
+        return 'shared';
+    }
+    return 'unknown';
+}
+
+function architectureType(value: unknown): string {
+    const normalized = token(value).replace(/[\s_-]+/g, '');
+    const known = serviceTypes[normalized] ?? serviceTypes[token(value)];
+    if (known) {
+        return known;
+    }
+    if (normalized === 'spa' || normalized === 'web' || normalized === 'api' || normalized === 'worker' || normalized === 'library') {
+        return normalized;
+    }
+    return 'unknown';
+}
+
+function architectureRuntime(value: unknown): string {
+    const runtime = token(value);
+    if (/\bnode(?:\.js|js)?\b|typescript|javascript/.test(runtime)) {
+        return 'node';
+    }
+    if (/python/.test(runtime)) {
+        return 'python';
+    }
+    if (/\.net|dotnet|c#/.test(runtime)) {
+        return 'dotnet';
+    }
+    if (/\bjava\b/.test(runtime)) {
+        return 'java';
+    }
+    if (/\bgo\b|golang/.test(runtime)) {
+        return 'go';
+    }
+    if (runtime === 'static') {
+        return 'static';
+    }
+    return 'unknown';
+}
+
+function architectureFramework(value: unknown): string {
+    const framework = token(value);
+    const hasReact = /\breact\b/.test(framework);
+    const hasVite = /\bvite\b/.test(framework);
+    if (hasReact && hasVite) {
+        return 'react-vite';
+    }
+    if (hasReact) {
+        return 'react';
+    }
+    if (/\bnext(?:\.js|js)?\b/.test(framework)) {
+        return 'nextjs';
+    }
+    if (/\bvue\b/.test(framework)) {
+        return 'vue';
+    }
+    if (/\bsvelte\b/.test(framework)) {
+        return 'svelte';
+    }
+    if (/angular/.test(framework)) {
+        return 'angular';
+    }
+    if (/azure\/functions|azure functions/.test(framework)) {
+        return 'azure-functions';
+    }
+    if (/\bexpress\b/.test(framework)) {
+        return 'express';
+    }
+    if (/\bfastify\b/.test(framework)) {
+        return 'fastify';
+    }
+    if (/\bfastapi\b/.test(framework)) {
+        return 'fastapi';
+    }
+    if (/\bdjango\b/.test(framework)) {
+        return 'django';
+    }
+    if (/\bflask\b/.test(framework)) {
+        return 'flask';
+    }
+    if (/asp\.?net/.test(framework)) {
+        return 'aspnetcore';
+    }
+    if (/\bspring\b/.test(framework)) {
+        return 'spring';
+    }
+    return 'unknown';
+}
+
+function verdictCount(components: JsonObject[] | undefined, axis: string, expected: string): number | undefined {
+    if (!components) {
+        return undefined;
+    }
+    return components.filter((component) => {
+        const verdicts = object(component.verdicts);
+        const verdict = object(verdicts?.[axis]);
+        return category(verdict?.status, ['PASS', 'WARN', 'FAIL']) === expected;
+    }).length;
+}
+
+function toInventoryResources(resources: JsonObject[] | undefined): { id: string; type?: string }[] {
+    return resources?.map((resource) => ({
+        id: typeof resource.id === 'string'
+            ? resource.id
+            : typeof resource.resourceId === 'string'
+                ? resource.resourceId
+                : '',
+        ...(typeof resource.type === 'string' ? { type: resource.type } : {}),
+    })) ?? [];
+}
+
+function token(value: unknown): string {
+    return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
 function durationSeconds(startedUtc: string, completedUtc: string): number | undefined {

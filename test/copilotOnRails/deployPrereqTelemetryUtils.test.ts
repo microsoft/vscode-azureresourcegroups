@@ -16,6 +16,11 @@ suite('deployPrereqTelemetryUtils', () => {
             parsedOk: true,
             overallHealth: 'ready',
             componentCount: 3,
+            componentArchitecture: '[{"role":"backend","type":"functions","runtime":"node","framework":"azure-functions"},{"role":"frontend","type":"spa","runtime":"node","framework":"react-vite"},{"role":"shared","type":"library","runtime":"node","framework":"unknown"}]',
+            buildPassedCount: 3,
+            buildFailedCount: 0,
+            deployabilityPassedCount: 3,
+            deployabilityFailedCount: 0,
             warningCount: 2,
             buildWarningCount: 0,
             completenessWarningCount: 0,
@@ -24,6 +29,7 @@ suite('deployPrereqTelemetryUtils', () => {
         };
 
         assert.deepStrictEqual(telemetry, expected);
+        assert.doesNotMatch(telemetry.componentArchitecture ?? '', /attendance|services\//i);
     });
 
     test('empty prereq omits unavailable metrics', () => {
@@ -61,6 +67,23 @@ suite('deployPrereqTelemetryUtils', () => {
             completenessWarningCount: 0,
             deployabilityWarningCount: 0,
         });
+    });
+
+    test('serializes only bounded architecture categories', () => {
+        const telemetry = getDeployArtifactTelemetry('prereq-output.json', JSON.stringify({
+            components: [{
+                id: 'private-service-name',
+                path: 'C:\\private\\project',
+                role: 'private-role',
+                kind: 'private-kind',
+                runtime: 'private-runtime',
+                framework: 'Private Framework',
+                verdicts: { build: { status: 'Private status' } },
+            }],
+        }));
+
+        assert.strictEqual(telemetry.componentArchitecture, '[{"role":"unknown","type":"unknown","runtime":"unknown","framework":"unknown"}]');
+        assert.doesNotMatch(JSON.stringify(telemetry), /private|C:\\\\/i);
     });
 });
 

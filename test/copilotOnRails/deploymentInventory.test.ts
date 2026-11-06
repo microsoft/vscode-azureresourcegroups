@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import { suite, test } from 'mocha';
-import { computeDeploymentInventory, DeploymentTarget, InventoryResource, parseResourceGroupFromId } from '../../src/utils/copilotOnRails/deploymentInventory';
+import { aggregateArmResourceTypes, computeDeploymentInventory, DeploymentTarget, InventoryResource, parseResourceGroupFromId } from '../../src/utils/copilotOnRails/deploymentInventory';
 
 const SUB = '00000000-0000-0000-0000-000000000000';
 
@@ -22,6 +22,34 @@ function target(id: string, provisioningState: string): DeploymentTarget {
 }
 
 suite('deploymentInventory', () => {
+    suite('aggregateArmResourceTypes', () => {
+        test('drops identifier-shaped and unsupported resource types', () => {
+            const result = aggregateArmResourceTypes([
+                { id: '', type: 'Microsoft.Web/sites/private-project-name' },
+                { id: '', type: 'Microsoft.Private/widgets' },
+                { id: '', type: 'Microsoft.Web/sites' },
+            ]);
+
+            assert.strictEqual(result, 'microsoft.web/sites=1');
+        });
+
+        test('preserves nested resource types derived from ARM IDs', () => {
+            const result = aggregateArmResourceTypes([{
+                id: `/subscriptions/${SUB}/resourceGroups/rg/providers/Microsoft.Sql/servers/private-server/databases/private-db`,
+            }]);
+
+            assert.strictEqual(result, 'microsoft.sql/servers/databases=1');
+        });
+
+        test('uses the final provider boundary for extension resources', () => {
+            const result = aggregateArmResourceTypes([{
+                id: `/subscriptions/${SUB}/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/private-vm/providers/Microsoft.Insights/diagnosticSettings/private-settings`,
+            }]);
+
+            assert.strictEqual(result, 'microsoft.insights/diagnosticsettings=1');
+        });
+    });
+
     suite('parseResourceGroupFromId', () => {
         test('extracts the resource group name', () => {
             assert.strictEqual(parseResourceGroupFromId(resourceId('rg-app', 'Microsoft.Web/sites', 'app1')), 'rg-app');

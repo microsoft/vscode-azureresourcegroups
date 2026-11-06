@@ -6,6 +6,7 @@
 import assert from 'assert';
 import { suite, test } from 'mocha';
 import { AgentLaunchReportTracker } from '../../src/chat/tools/copilotOnRails/agentLaunchReportTracker';
+import { normalizeAgentName } from '../../src/chat/tools/copilotOnRails/reportAgentLaunchTool';
 
 suite('AgentLaunchReportTracker', () => {
     test('starts only one report for the same agent in a chat session', () => {
@@ -30,5 +31,10 @@ suite('AgentLaunchReportTracker', () => {
         tracker.markFailed('session-1', 'azure-project-plan');
 
         assert.strictEqual(tracker.tryStart('session-1', 'azure-project-plan'), true);
+    });
+
+    test('normalizes untrusted agent names before telemetry and tracking', () => {
+        assert.strictEqual(normalizeAgentName('azure-project-plan'), 'azure-project-plan');
+        assert.strictEqual(normalizeAgentName('private-project-name@example.com'), 'unknown');
     });
 });
