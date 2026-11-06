@@ -13,6 +13,7 @@ import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
 import { GroupingItem } from './grouping/GroupingItem';
+import { TreeTraversalContext } from '../../utils/treeOperations';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
     constructor(
@@ -35,12 +36,14 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
             });
     }
 
-    abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
+    abstract onGetChildren(element?: ResourceGroupsItem | undefined, options?: TreeTraversalContext): Promise<ResourceGroupsItem[] | null | undefined>;
 
-    protected override isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+    protected override isAncestorOf(element: ResourceGroupsItem, id: string, options?: TreeTraversalContext): boolean {
         if (element instanceof GroupingItem) {
-            return element.resources.some(resource => id.toLowerCase().startsWith(resource.id.toLowerCase()));
+            const resourceId = id.replace(/^\/accounts\/[^/]+\/tenants\/[^/]+(?=\/)/i, '');
+            return element.resources.some(resource => resourceId.toLowerCase() === resource.id.toLowerCase()
+                || resourceId.toLowerCase().startsWith(resource.id.toLowerCase() + '/'));
         }
-        return super.isAncestorOf(element, id);
+        return super.isAncestorOf(element, id, options);
     }
 }

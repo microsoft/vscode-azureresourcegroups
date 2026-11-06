@@ -60,7 +60,9 @@ function createGroupingManager(azureResourceBranchDataProviderManager: AzureReso
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
     const groupingItemFactory = new GroupingItemFactory({
         resourceItemFactory: branchDataItemFactory,
-        branchDataProviderFactory: (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType),
+        branchDataProviderFactory: (r, context) => context?.propagateErrors
+            ? azureResourceBranchDataProviderManager.getProviderForReveal(r.resourceType)
+            : azureResourceBranchDataProviderManager.getProvider(r.resourceType),
         onDidChangeBranchDataProviders: azureResourceBranchDataProviderManager.onChangeBranchDataProviders,
         defaultDisplayOptions: {
             expandByDefault: false,
