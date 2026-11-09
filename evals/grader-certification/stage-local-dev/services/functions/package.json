@@ -2,6 +2,9 @@
   "name": "functions",
   "version": "1.0.0",
   "description": "Azure Functions backend for task tracker",
+  "engines": {
+    "node": "24.x"
+  },
   "main": "dist/functions/src/functions/*.js",
   "scripts": {
     "build": "tsc",

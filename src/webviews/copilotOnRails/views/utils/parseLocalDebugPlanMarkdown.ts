@@ -22,6 +22,12 @@ export interface LocalPlanSection {
     content: LocalPlanContent[];
 }
 
+export interface LocalPlanDevelopmentEnvironment {
+    mode: 'Host' | 'Sandbox';
+    detail: string;
+    warning?: string;
+}
+
 export interface SourceRange {
     /** 0-indexed inclusive line in the source markdown that this block starts at. */
     lineStart: number;
@@ -296,6 +302,69 @@ export function flattenContent(content: LocalPlanContent[]): LocalPlanContent[] 
 /** Returns the first table in a section (searching nested subsections), if any. */
 export function firstTable(section: LocalPlanSection): LocalPlanTableContent | undefined {
     return flattenContent(section.content).find((content): content is LocalPlanTableContent => content.type === 'table');
+}
+
+/**
+ * Derives the environment label shown by the plan view without changing the
+ * persisted artifact shape. A missing section is the legacy Host signal.
+ */
+export function getLocalPlanDevelopmentEnvironment(plan: LocalPlanData): LocalPlanDevelopmentEnvironment {
+    const section = findSection(plan, 'development environment');
+    if (!section) {
+        const prerequisites = findSection(plan, 'prerequisites');
+        const hostNote = prerequisites
+            ? flattenContent(prerequisites.content).find(
+                (content) => content.type === 'blockquote' && /development environment:\**\s*host/i.test(content.text),
+            )
+            : undefined;
+        const reason = hostNote?.type === 'blockquote'
+            ? hostNote.text.match(/sandbox was not selected because\s+(.+?)(?:\.\s*$|$)/i)?.[1]
+            : undefined;
+        return {
+            mode: 'Host',
+            detail: reason
+                ? `Runs application services with tools installed on this machine. Sandbox was not selected because ${stripMarkdown(reason)}.`
+                : 'Runs application services with tools installed on this machine.',
+        };
+    }
+
+    const table = firstTable(section);
+    const fieldIndex = table ? findColumnIndex(table.headers, 'field') : -1;
+    const valueIndex = table ? findColumnIndex(table.headers, 'value') : -1;
+    if (!table || fieldIndex === -1 || valueIndex === -1) {
+        return {
+            mode: 'Host',
+            detail: 'Runs application services with tools installed on this machine.',
+            warning: 'The Development Environment section is incomplete, so the plan is treated as Host.',
+        };
+    }
+
+    const values = new Map(
+        table.rows.map((row) => [
+            row[fieldIndex]?.trim().toLowerCase(),
+            row[valueIndex]?.trim(),
+        ]),
+    );
+    if (values.get('mode')?.toLowerCase() !== 'sandbox') {
+        return {
+            mode: 'Host',
+            detail: 'Runs application services with tools installed on this machine.',
+            warning: 'The Development Environment mode is not a valid Sandbox declaration, so the plan is treated as Host.',
+        };
+    }
+
+    const image = values.get('image') ?? '';
+    const nodeMajor = image.match(/javascript-node:(22|24)-bookworm/i)?.[1];
+    return {
+        mode: 'Sandbox',
+        detail: nodeMajor
+            ? `Runs application services in the pinned Node ${nodeMajor} development sandbox.`
+            : 'Runs application services in the pinned development sandbox.',
+    };
+}
+
+function stripMarkdown(value: string): string {
+    return value.replace(/[*_~`]/g, '').trim();
 }
 
 /** Finds the first table in a section (searching nested subsections) whose headers include every anchor. */

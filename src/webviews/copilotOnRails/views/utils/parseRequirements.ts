@@ -18,6 +18,17 @@ export type RequirementsRecommendedChoice = string | string[];
  * plan → scaffold → local debug chain end-to-end without further interaction.
  */
 export type RequirementsExecutionMode = 'guided' | 'auto';
+export type RequirementsDevelopmentEnvironment = 'sandbox' | 'regular';
+export type SandboxAzureStatus = 'checking' | 'available' | 'signedOut' | 'noSubscriptions' | 'error';
+
+export function parseSandboxAzureStatus(value: unknown): SandboxAzureStatus {
+    return value === 'available' ||
+        value === 'signedOut' ||
+        value === 'noSubscriptions' ||
+        value === 'error'
+        ? value
+        : 'checking';
+}
 
 export interface RequirementsOption {
     label: string;
@@ -69,6 +80,7 @@ export interface RequirementsData {
     mode?: string;
     summary?: string;
     executionMode?: RequirementsExecutionMode;
+    developmentEnvironment?: RequirementsDevelopmentEnvironment;
     workspaceSignals?: RequirementsWorkspaceSignals;
     /** Detected services (frontends, backends, workers). */
     services?: RequirementsService[];
@@ -223,6 +235,10 @@ export function parseRequirementsJson(content: string): RequirementsData {
         parsed.executionMode === 'auto' || parsed.executionMode === 'guided'
             ? parsed.executionMode
             : undefined;
+    const developmentEnvironment: RequirementsDevelopmentEnvironment | undefined =
+        parsed.developmentEnvironment === 'sandbox' || parsed.developmentEnvironment === 'regular'
+            ? parsed.developmentEnvironment
+            : undefined;
 
     return {
         schemaVersion: typeof parsed.schemaVersion === 'string' ? parsed.schemaVersion : undefined,
@@ -230,6 +246,7 @@ export function parseRequirementsJson(content: string): RequirementsData {
         mode: typeof parsed.mode === 'string' ? parsed.mode : undefined,
         summary: typeof parsed.summary === 'string' ? parsed.summary : undefined,
         executionMode,
+        developmentEnvironment,
         workspaceSignals,
         services: services.length > 0 ? services : undefined,
         questions: questions.map(question => {
@@ -258,6 +275,42 @@ export function parseRequirementsJson(content: string): RequirementsData {
                 recommendedChoice: invalidAnswer ? undefined : answer?.trim() ? answer : 'Azure Functions',
             };
         }),
+    };
+}
+
+export function selectedApplicationLanguages(requirements: RequirementsData): string[] {
+    return requirements.questions
+        .filter(question => question.id.toLowerCase().endsWith(':language'))
+        .flatMap(question => {
+            if (typeof question.answer === 'string') {
+                return [question.answer.trim().toLowerCase()];
+            }
+            if (Array.isArray(question.answer)) {
+                return question.answer.map(answer => answer.trim().toLowerCase());
+            }
+            return [];
+        })
+        .filter(Boolean);
+}
+
+export function supportsSandboxAutopilot(requirements: RequirementsData): boolean {
+    const languages = selectedApplicationLanguages(requirements);
+    return languages.length > 0 && languages.every(language => language === 'typescript' || language === 'python');
+}
+
+export function resolveRequirementsWorkflowSelection(
+    requirements: RequirementsData,
+    sandboxAzureStatus: SandboxAzureStatus,
+): {
+    developmentEnvironment: RequirementsDevelopmentEnvironment;
+    executionMode: RequirementsExecutionMode;
+} {
+    const useSandbox =
+        requirements.developmentEnvironment === 'sandbox' &&
+        sandboxAzureStatus === 'available';
+    return {
+        developmentEnvironment: useSandbox ? 'sandbox' : 'regular',
+        executionMode: useSandbox && supportsSandboxAutopilot(requirements) ? 'auto' : 'guided',
     };
 }
 

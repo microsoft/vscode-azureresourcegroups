@@ -1,14 +1,31 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `stage-local-dev`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `reference-iac-deployed`, `safety-boundaries-clean`, `reference-frontend-integrated`, `safety-boundaries-empty`
+- Fixtures: `stage-local-dev`, `debug-plan-node24-sandbox`, `debug-plan-undeclared-host`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `reference-iac-deployed`, `safety-boundaries-clean`, `reference-frontend-integrated`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 164/164 passed
+- Cases: 188/188 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
 | `golden-stage-local-dev-frontend-scaffold` | `stage-local-dev` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `golden-stage-local-dev-integration-plan` | `stage-local-dev` | `integration-plan` | `passed` | `passed` | PASS |
+| `golden-stage-local-dev-debug-plan-sandbox` | `stage-local-dev` | `debug-plan-sandbox` | `passed` | `passed` | PASS |
+| `golden-stage-local-dev-debug-plan-sandbox-node24` | `stage-local-dev` | `debug-plan-sandbox-node24` | `passed` | `passed` | PASS |
+| `golden-stage-local-dev-project-node24-engines` | `stage-local-dev` | `project-node24-engines` | `passed` | `passed` | PASS |
+| `debug-plan-sandbox-does-not-require-dev-containers` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxRequiresDevContainers` | `sandboxRequiresDevContainers` | PASS |
+| `debug-plan-development-environment-mode-invalid` | `stage-local-dev` | `debug-plan-sandbox` | `invalidDevelopmentEnvironmentMode` | `invalidDevelopmentEnvironmentMode` | PASS |
+| `debug-plan-sandbox-microsoft-image-pinned` | `stage-local-dev` | `debug-plan-sandbox` | `unpinnedSandboxImage` | `unpinnedSandboxImage` | PASS |
+| `debug-plan-sandbox-image-matches-runtime` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxImageRuntimeMismatch` | `sandboxImageRuntimeMismatch` | PASS |
+| `debug-plan-sandbox-base-tools-recorded` | `stage-local-dev` | `debug-plan-sandbox` | `missingBaseProvidedTool` | `missingBaseProvidedTool` | PASS |
+| `debug-plan-sandbox-functions-model-v4-required` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxFunctionsModelUnsupported` | `sandboxFunctionsModelUnsupported` | PASS |
+| `debug-plan-sandbox-cor-tools-recorded` | `stage-local-dev` | `debug-plan-sandbox` | `missingCorAddedTool` | `missingCorAddedTool` | PASS |
+| `debug-plan-sandbox-development-environment-required` | `stage-local-dev` | `debug-plan-sandbox` | `missingDevelopmentEnvironmentSection` | `missingDevelopmentEnvironmentSection` | PASS |
+| `stage-local-dev-web-node-engine-required` | `stage-local-dev` | `project-node24-engines` | `missingNodeEngineDeclaration` | `missingNodeEngineDeclaration` | PASS |
+| `golden-debug-plan-node24-sandbox-debug-plan-sandbox` | `debug-plan-node24-sandbox` | `debug-plan-sandbox` | `passed` | `passed` | PASS |
+| `golden-debug-plan-node24-sandbox-debug-plan-sandbox-node24` | `debug-plan-node24-sandbox` | `debug-plan-sandbox-node24` | `passed` | `passed` | PASS |
+| `debug-plan-node24-sandbox-image-pinned` | `debug-plan-node24-sandbox` | `debug-plan-sandbox` | `unpinnedSandboxImage` | `unpinnedSandboxImage` | PASS |
+| `golden-debug-plan-undeclared-host-debug-plan-host-unknown-runtime` | `debug-plan-undeclared-host` | `debug-plan-host-unknown-runtime` | `passed` | `passed` | PASS |
+| `debug-plan-undeclared-host-must-not-invent-node24` | `debug-plan-undeclared-host` | `debug-plan-host-unknown-runtime` | `unexpectedResolvedNodeVersion` | `unexpectedResolvedNodeVersion` | PASS |
 | `golden-sample-agent-output-requirements` | `sample-agent-output` | `requirements` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-project-plan` | `sample-agent-output` | `project-plan` | `passed` | `passed` | PASS |
 | `golden-sample-agent-output-plan-gate` | `sample-agent-output` | `plan-gate` | `passed` | `passed` | PASS |
@@ -18,6 +35,8 @@
 | `golden-sample-agent-output-project-builds` | `sample-agent-output` | `project-builds` | `passed` | `passed` | PASS |
 | `frontend-scaffold-dot-directory-ignored` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `requirements-schema-version` | `sample-agent-output` | `requirements` | `schemaVersion` | `schemaVersion` | PASS |
+| `requirements-development-environment` | `sample-agent-output` | `requirements` | `missingDevelopmentEnvironment` | `missingDevelopmentEnvironment` | PASS |
+| `requirements-autopilot-requires-eligible-sandbox` | `sample-agent-output` | `requirements` | `invalidSandboxAutopilot` | `invalidSandboxAutopilot` | PASS |
 | `project-plan-numbering` | `sample-agent-output` | `project-plan` | `nonSequentialHeading` | `nonSequentialHeading, nonSequentialHeading` | PASS |
 | `plan-gate-frontend-dropped` | `sample-agent-output` | `plan-gate` | `frontendIntentMismatch` | `frontendIntentMismatch` | PASS |
 | `plan-gate-preview-manifest-missing` | `sample-agent-output` | `plan-gate` | `previewManifestMissingAtGate` | `previewManifestMissingAtGate` | PASS |
@@ -64,6 +83,7 @@
 | `frontend-scaffold-preview-state-switcher-deletion-undetected` | `sample-agent-output` | `frontend-scaffold` | `passed` | `passed` | PASS |
 | `frontend-scaffold-absent-manifest-loses-the-reason` | `sample-agent-output` | `frontend-scaffold` | `frontendNotFound` | `frontendNotFound` | PASS |
 | `golden-reference-node-fullstack-debug-plan` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
+| `golden-reference-node-fullstack-debug-plan-host-current` | `reference-node-fullstack` | `debug-plan-host-current` | `passed` | `passed` | PASS |
 | `golden-reference-node-fullstack-debug-config` | `reference-node-fullstack` | `debug-config` | `passed` | `passed` | PASS |
 | `golden-reference-node-fullstack-debug-artifacts` | `reference-node-fullstack` | `debug-artifacts` | `passed` | `passed` | PASS |
 | `golden-reference-node-fullstack-runtime-app-starts` | `reference-node-fullstack` | `runtime-app-starts` | `passed` | `passed` | PASS |
@@ -71,6 +91,10 @@
 | `golden-reference-node-fullstack-runtime-frontend` | `reference-node-fullstack` | `runtime-frontend` | `passed` | `passed` | PASS |
 | `golden-reference-node-fullstack-runtime-frontend-api` | `reference-node-fullstack` | `runtime-frontend-api` | `passed` | `passed` | PASS |
 | `golden-reference-node-fullstack-runtime-crud` | `reference-node-fullstack` | `runtime-crud` | `passed` | `passed` | PASS |
+| `debug-plan-explicit-host-remains-compatible` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
+| `debug-plan-current-host-note-required` | `reference-node-fullstack` | `debug-plan-host-current` | `missingHostDevelopmentEnvironmentNote` | `missingHostDevelopmentEnvironmentNote` | PASS |
+| `debug-plan-legacy-host-note-remains-optional` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
+| `debug-plan-current-host-reason-required` | `reference-node-fullstack` | `debug-plan-host-current` | `missingHostDevelopmentEnvironmentNote` | `missingHostDevelopmentEnvironmentNote` | PASS |
 | `debug-plan-table-concatenated` | `reference-node-fullstack` | `debug-plan` | `tableRowConcatenated` | `tableRowConcatenated, invalidGenerateMarker` | PASS |
 | `debug-plan-checklist-entries-quoted` | `reference-node-fullstack` | `debug-plan` | `checklistMissingEntry` | `checklistMissingEntry` | PASS |
 | `debug-plan-checklist-stub` | `reference-node-fullstack` | `debug-plan` | `checklistStub` | `checklistStub` | PASS |

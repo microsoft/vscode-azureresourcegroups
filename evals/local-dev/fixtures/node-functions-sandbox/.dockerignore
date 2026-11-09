@@ -1,0 +1,5 @@
+.git
+.azure
+node_modules
+services/*/dist
+.azurite

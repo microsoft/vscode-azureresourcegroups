@@ -7,7 +7,27 @@
       "description": "The scaffold the agent actually emits — npm workspaces over services/{functions,web,shared}, an Azure Functions API behind `func`, and a React frontend on its own Vite dev server — plus the local-debug inputs needed to run it, reconstructed from run 2026083170541011. The other fixtures are idealised single packages that serve their own frontend, a shape the agent never produces, so a gate could certify green against them and score near zero in production. Its .vscode/**, debug-probe.json and services/functions/local.settings.json are HAND-WRITTEN inputs (see the fixture README for why local.settings.json in particular can never be harvested), so it deliberately does NOT certify debug-config or debug-artifacts, which would grade our own inputs. Its purpose is to give the debug probe live tier a realistic project.",
       "offlineValidators": [
         "frontend-scaffold",
-        "integration-plan"
+        "integration-plan",
+        "debug-plan-sandbox",
+        "debug-plan-sandbox-node24",
+        "project-node24-engines"
+      ]
+    },
+    {
+      "id": "debug-plan-node24-sandbox",
+      "path": "evals/grader-certification/debug-plan-node24-sandbox",
+      "description": "A minimal valid Node 24 Azure Functions programming model v4 Sandbox plan. It certifies that the runtime/image matrix accepts the pinned Node 24 Microsoft image rather than only recognizing the original Node 22 vertical slice.",
+      "offlineValidators": [
+        "debug-plan-sandbox",
+        "debug-plan-sandbox-node24"
+      ]
+    },
+    {
+      "id": "debug-plan-undeclared-host",
+      "path": "evals/grader-certification/debug-plan-undeclared-host",
+      "description": "A compatible Functions v4 topology that must remain Host because the runtime is undeclared and the CoR project marker is unavailable. It certifies that fallback does not invent Node 24 service versions.",
+      "offlineValidators": [
+        "debug-plan-host-unknown-runtime"
       ]
     },
     {
@@ -30,6 +50,7 @@
       "description": "A real, runnable Node full-stack app plus the local-debug artifacts generated for it. The debug validators grade artifacts against the project they describe, so they certify here rather than against the scaffold fixture.",
       "offlineValidators": [
         "debug-plan",
+        "debug-plan-host-current",
         "debug-config",
         "debug-artifacts",
         "runtime-app-starts",
@@ -195,6 +216,28 @@
       "search": "\"schemaVersion\": \"2\"",
       "replacement": "\"schemaVersion\": \"1\"",
       "expectedCode": "schemaVersion"
+    },
+    {
+      "id": "requirements-development-environment",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"developmentEnvironment\": \"regular\"",
+      "replacement": "\"developmentEnvironment\": \"unknown\"",
+      "expectedCode": "missingDevelopmentEnvironment"
+    },
+    {
+      "id": "requirements-autopilot-requires-eligible-sandbox",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "file": ".azure/requirements.json",
+      "operation": "replace",
+      "search": "\"executionMode\": \"guided\"",
+      "replacement": "\"executionMode\": \"auto\"",
+      "expectedCode": "invalidSandboxAutopilot"
     },
     {
       "id": "project-plan-numbering",
@@ -636,6 +679,185 @@
       "search": "| Port | 7071 (override with `PORT`) |\n| Health endpoint | `GET /api/health` |",
       "replacement": "| Health endpoint | `GET /api/health` |",
       "expectedCode": "missingBackendPort"
+    },
+    {
+      "comment": "Sandbox plans must keep VS Code on the host and invoke runtimes through Compose tasks. Reintroducing the Dev Containers extension turns an optional third-party dependency back into a required execution boundary.",
+      "id": "debug-plan-sandbox-does-not-require-dev-containers",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "| Host Prerequisites | Docker, Docker Compose, Chrome, Azure Functions extension |",
+      "replacement": "| Host Prerequisites | Docker, Docker Compose, Chrome, Azure Functions extension, ms-vscode-remote.remote-containers |",
+      "expectedCode": "sandboxRequiresDevContainers"
+    },
+    {
+      "id": "debug-plan-development-environment-mode-invalid",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "| Mode | Sandbox |",
+      "replacement": "| Mode | Sidecar |",
+      "expectedCode": "invalidDevelopmentEnvironmentMode"
+    },
+    {
+      "comment": "Generated sandbox projects must use a certified immutable Microsoft Node/bookworm multi-platform digest, not a floating MCR tag.",
+      "id": "debug-plan-sandbox-microsoft-image-pinned",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:1bc82e3350b0da52ca1a1b1b2e7527300bc6fdfd778287e0eed564203d66a68c",
+      "replacement": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+      "expectedCode": "unpinnedSandboxImage"
+    },
+    {
+      "comment": "A valid pinned image for a different Node major is still invalid when it does not match the project runtime recorded in the plan.",
+      "id": "debug-plan-sandbox-image-matches-runtime",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:1bc82e3350b0da52ca1a1b1b2e7527300bc6fdfd778287e0eed564203d66a68c",
+      "replacement": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm@sha256:33cc368bc8ce9dac872703c7b9ebf6dabcc7b14bbb8cfd2b64be0e7232e3a361",
+      "expectedCode": "sandboxImageRuntimeMismatch"
+    },
+    {
+      "comment": "Node 24 sandbox plans require the certified immutable Microsoft Node 24/bookworm multi-platform digest, not a floating MCR tag.",
+      "id": "debug-plan-node24-sandbox-image-pinned",
+      "tier": "offline",
+      "fixture": "debug-plan-node24-sandbox",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:1bc82e3350b0da52ca1a1b1b2e7527300bc6fdfd778287e0eed564203d66a68c",
+      "replacement": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+      "expectedCode": "unpinnedSandboxImage"
+    },
+    {
+      "comment": "The sandbox plan distinguishes tooling inherited from Microsoft's base from the thin CoR-owned additions.",
+      "id": "debug-plan-sandbox-base-tools-recorded",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": ", Git, certificates, build tools",
+      "replacement": ", certificates, build tools",
+      "expectedCode": "missingBaseProvidedTool"
+    },
+    {
+      "comment": "Node 22 and Node 24 sandbox routes require Azure Functions programming model v4 rather than treating every Functions project as compatible.",
+      "id": "debug-plan-sandbox-functions-model-v4-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "Azure Functions programming model v4",
+      "replacement": "Azure Functions",
+      "expectedCode": "sandboxFunctionsModelUnsupported"
+    },
+    {
+      "comment": "The sandbox plan must record the project-required tools installed by the CoR-owned Dockerfile layer.",
+      "id": "debug-plan-sandbox-cor-tools-recorded",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "Azure CLI 2.91.0, ",
+      "replacement": "",
+      "expectedCode": "missingCorAddedTool"
+    },
+    {
+      "comment": "Host plans may omit Development Environment, but Sandbox plans must retain the detailed pinned environment contract.",
+      "id": "debug-plan-sandbox-development-environment-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "## Development Environment",
+      "replacement": "## Environment Details Removed",
+      "expectedCode": "missingDevelopmentEnvironmentSection"
+    },
+    {
+      "comment": "Generation remains backward-compatible with plans produced while Host was recorded explicitly.",
+      "id": "debug-plan-explicit-host-remains-compatible",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "## Prerequisites",
+      "replacement": "## Development Environment\n\n| Field | Value |\n|---|---|\n| Mode | Host |\n| Image | N/A |\n| Match Rationale | Legacy explicit Host plan. |\n| Host Prerequisites | Node.js 22 and npm |\n| Sandbox-Provided Tools | None |\n| Supporting Emulators | None |\n| Forwarded Ports | 3000 application, 9229 Node inspector |\n| Workspace Topology | Application and debugger run directly on the host. |\n\n## Prerequisites",
+      "expectedCode": "passed"
+    },
+    {
+      "comment": "Newly generated Host plans must state the mode and fallback reason visibly instead of requiring users to infer Host from a missing section.",
+      "id": "debug-plan-current-host-note-required",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan-host-current",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "> **Development Environment:** Host — application runtimes and CLIs will run directly on this machine.\n> Sandbox was not selected because this project is a standalone Node server rather than Azure Functions programming model v4.\n\n",
+      "replacement": "",
+      "expectedCode": "missingHostDevelopmentEnvironmentNote"
+    },
+    {
+      "comment": "Plans created before the visible Host note was introduced remain valid for generation.",
+      "id": "debug-plan-legacy-host-note-remains-optional",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "> **Development Environment:** Host — application runtimes and CLIs will run directly on this machine.\n> Sandbox was not selected because this project is a standalone Node server rather than Azure Functions programming model v4.\n\n",
+      "replacement": "",
+      "expectedCode": "passed"
+    },
+    {
+      "comment": "A current Host plan must include a concrete fallback reason, not only the Host label.",
+      "id": "debug-plan-current-host-reason-required",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan-host-current",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "Sandbox was not selected because this project is a standalone Node server rather than Azure Functions programming model v4.",
+      "replacement": "Sandbox was not selected because",
+      "expectedCode": "missingHostDevelopmentEnvironmentNote"
+    },
+    {
+      "comment": "Rejecting the undeclared-runtime fallback must not leave the service rows labeled as Node 24.",
+      "id": "debug-plan-undeclared-host-must-not-invent-node24",
+      "tier": "offline",
+      "fixture": "debug-plan-undeclared-host",
+      "validator": "debug-plan-host-unknown-runtime",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "| node-ts | Unknown |",
+      "replacement": "| node-ts | 24.x |",
+      "expectedCode": "unexpectedResolvedNodeVersion"
+    },
+    {
+      "comment": "Every generated Node application manifest must preserve the approved Node 24 runtime declaration.",
+      "id": "stage-local-dev-web-node-engine-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "project-node24-engines",
+      "file": "services/web/package.json",
+      "operation": "replace",
+      "search": "  \"engines\": {\n    \"node\": \"24.x\"\n  },\n",
+      "replacement": "",
+      "expectedCode": "missingNodeEngineDeclaration"
     },
     {
       "id": "debug-plan-table-concatenated",

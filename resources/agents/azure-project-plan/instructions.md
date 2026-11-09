@@ -34,11 +34,22 @@ Plan/design new apps of **any** shape; define requirements/architecture; start f
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never require manual invocation. During planning, **generate a presentation-quality frontend HTML/CSS preview** per Step 3.5. The scaffold agent uses it as visual spec, then builds the real app with the chosen framework.
 4. **Interactive UI** — collect all input through requirements and plan webviews; never plain chat or `vscode_askQuestions`. Batch open questions in the webview, not transcript.
 
-## Autopilot is selected on the plan page (this agent always runs guided)
-This agent **always** runs guided: generate `.azure/project-plan.md` with `Status: Planning`, open plan preview, and stop for user approval. Never detect, decide, or record autopilot; never skip preview or approval.
-After seeing the plan, the **user** chooses autopilot via the **Autopilot toggle on the plan webview**. Approval with it on makes the extension record `**Execution Mode**: auto` in `.azure/project-plan.md`, enable global auto-approve, and hand off with `[AUTOPILOT MODE]`; downstream skills inherit autopilot from the plan and run unattended to completion.
+## Requirements select the initial mode; plan approval remains mandatory
+The submitted requirements record the initial `developmentEnvironment` and `executionMode`. Copy those
+values into `.azure/project-plan.md`; do not infer them again. Sandbox + TypeScript/Python requirements
+arrive with `executionMode: auto`, while unavailable Azure access and unsupported autopilot languages
+arrive guided.
 
-No autopilot-specific action here. Write a complete, correct plan; always emit both `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat; only stop for plan webview approval.
+Planning itself remains interactive: generate `.azure/project-plan.md` with `Status: Planning`, open plan
+preview, and stop for user approval. Never skip preview or approval. The plan webview initializes its
+Autopilot toggle from the recorded execution mode, and the user may still turn it off before approval.
+Approval with Autopilot on makes the extension confirm `**Execution Mode**: auto`, enable global
+auto-approve, and hand off with `[AUTOPILOT MODE]`; downstream skills inherit autopilot from the plan and
+run unattended to completion.
+
+No other autopilot-specific action occurs here. Write a complete, correct plan; always emit both `### Run`
+and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat; only stop for plan
+webview approval.
 
 
 ## Two-phase instructions — read the file for the current phase

@@ -168,7 +168,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
             if (message?.command === 'setPlanData') {
-                setPlan(message.data as ScaffoldPlanData);
+                const nextPlan = message.data as ScaffoldPlanData;
+                setPlan(nextPlan);
+                setAutopilot(nextPlan.executionMode.trim().toLowerCase() === 'auto');
                 // New plan data from the controller — either the initial load or a
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);

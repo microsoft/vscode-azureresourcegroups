@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { parseRequirementsJson } from '../../src/webviews/copilotOnRails/views/utils/parseRequirements';
+import { parseRequirementsJson, parseSandboxAzureStatus, resolveRequirementsWorkflowSelection, supportsSandboxAutopilot } from '../../src/webviews/copilotOnRails/views/utils/parseRequirements';
 
 suite('parseRequirementsJson', () => {
     test('rejects valid JSON roots that are not objects', () => {
@@ -195,5 +195,96 @@ suite('parseRequirementsJson', () => {
             assert.deepStrictEqual(result.questions[0].options?.map(option => option.label), ['Custom']);
             assert.strictEqual(result.questions[0].recommendedChoice, undefined);
         }
+    });
+
+    test('normalizes the development environment without breaking legacy artifacts', () => {
+        assert.strictEqual(parseRequirementsJson('{"questions":[]}').developmentEnvironment, undefined);
+        assert.strictEqual(
+            parseRequirementsJson('{"developmentEnvironment":"sandbox","questions":[]}').developmentEnvironment,
+            'sandbox',
+        );
+        assert.strictEqual(
+            parseRequirementsJson('{"developmentEnvironment":"container","questions":[]}').developmentEnvironment,
+            undefined,
+        );
+    });
+
+    test('enables sandbox autopilot only when every application language is TypeScript or Python', () => {
+        for (const languages of [
+            ['TypeScript'],
+            ['Python'],
+            ['TypeScript', 'Python'],
+        ]) {
+            assert.strictEqual(supportsSandboxAutopilot({
+                questions: languages.map((answer, index) => ({
+                    id: `service-${index}:language`,
+                    category: 'service',
+                    question: 'Language',
+                    answer,
+                    status: 'confirmed',
+                })),
+            }), true);
+        }
+
+        for (const languages of [
+            [],
+            ['JavaScript'],
+            ['TypeScript', 'C# (.NET)'],
+        ]) {
+            assert.strictEqual(supportsSandboxAutopilot({
+                questions: languages.map((answer, index) => ({
+                    id: `service-${index}:language`,
+                    category: 'service',
+                    question: 'Language',
+                    answer,
+                    status: 'confirmed',
+                })),
+            }), false);
+        }
+    });
+
+    test('accepts only known Azure availability states from webview messages', () => {
+        assert.strictEqual(parseSandboxAzureStatus('available'), 'available');
+        assert.strictEqual(parseSandboxAzureStatus('signedOut'), 'signedOut');
+        assert.strictEqual(parseSandboxAzureStatus('noSubscriptions'), 'noSubscriptions');
+        assert.strictEqual(parseSandboxAzureStatus('error'), 'error');
+        assert.strictEqual(parseSandboxAzureStatus('unknown'), 'checking');
+        assert.strictEqual(parseSandboxAzureStatus({ status: 'available' }), 'checking');
+    });
+
+    test('authoritatively selects sandbox autopilot only with Azure access and eligible languages', () => {
+        const typescriptSandbox = parseRequirementsJson(JSON.stringify({
+            developmentEnvironment: 'sandbox',
+            questions: [{
+                id: 'api:language',
+                category: 'runtime',
+                question: 'Language?',
+                answer: 'TypeScript',
+                status: 'confirmed',
+            }],
+        }));
+        assert.deepStrictEqual(resolveRequirementsWorkflowSelection(typescriptSandbox, 'available'), {
+            developmentEnvironment: 'sandbox',
+            executionMode: 'auto',
+        });
+        assert.deepStrictEqual(resolveRequirementsWorkflowSelection(typescriptSandbox, 'signedOut'), {
+            developmentEnvironment: 'regular',
+            executionMode: 'guided',
+        });
+
+        const javascriptSandbox = parseRequirementsJson(JSON.stringify({
+            developmentEnvironment: 'sandbox',
+            questions: [{
+                id: 'api:language',
+                category: 'runtime',
+                question: 'Language?',
+                answer: 'JavaScript',
+                status: 'confirmed',
+            }],
+        }));
+        assert.deepStrictEqual(resolveRequirementsWorkflowSelection(javascriptSandbox, 'available'), {
+            developmentEnvironment: 'sandbox',
+            executionMode: 'guided',
+        });
     });
 });

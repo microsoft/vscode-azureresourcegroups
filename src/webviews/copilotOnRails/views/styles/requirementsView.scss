@@ -125,6 +125,75 @@
         }
     }
 
+    .sandboxCard {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px 16px;
+        border: 1px solid var(--vscode-focusBorder, var(--vscode-widget-border));
+        border-radius: 6px;
+        background: var(--vscode-editorWidget-background, transparent);
+
+        &__summary {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: start;
+            gap: 10px;
+            min-width: 0;
+
+            >svg {
+                flex-shrink: 0;
+                margin-top: 2px;
+                color: var(--vscode-focusBorder);
+            }
+
+            strong {
+                display: block;
+                margin-bottom: 4px;
+                font-weight: 600;
+            }
+
+            p {
+                margin: 0;
+                color: var(--vscode-descriptionForeground);
+                font-size: 0.85em;
+                line-height: 1.4;
+            }
+        }
+
+        &__action {
+            display: grid;
+            grid-template-columns: max-content minmax(0, 1fr);
+            align-items: center;
+            gap: 12px;
+            padding-left: 26px;
+        }
+
+        &__details {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .sandboxStatus {
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .sandboxCard {
+            &__action {
+                grid-template-columns: 1fr;
+                gap: 6px;
+                padding-left: 26px;
+            }
+        }
+    }
+
     .sectionHeading {
         margin: 8px 0 4px;
         font-size: 0.8em;

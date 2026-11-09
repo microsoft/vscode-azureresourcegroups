@@ -46,6 +46,9 @@ const requiredSections = [
 ] as const;
 
 const executionModes = ['auto', 'guided'] as const;
+const developmentEnvironmentModes = ['sandbox', 'host'] as const;
+
+export type DevelopmentEnvironmentMode = typeof developmentEnvironmentModes[number];
 
 export interface LocalDebugPlanExpectations {
     /** Status the plan must record, e.g. `Planning` at the approval gate. */
@@ -62,6 +65,14 @@ export interface LocalDebugPlanExpectations {
     expectedRuntime?: ContainerRuntime;
     /** When set, the plan must (true) or must not (false) record Podman Docker-compatibility mode. */
     expectedDockerCompatible?: boolean;
+    /** Application runtime location selected by the plan. */
+    expectedDevelopmentEnvironment?: DevelopmentEnvironmentMode;
+    /** Require the visible Host fallback note used by newly generated Host plans. */
+    requireHostEnvironmentNote?: boolean;
+    /** Require the Sandbox image to use this exact supported Node major. */
+    expectedSandboxNodeMajor?: SandboxNodeMajor;
+    /** Require generated Node services to keep an unresolved runtime visibly unknown. */
+    requireUnknownNodeVersions?: boolean;
 }
 
 export interface DebugConfigRow {
@@ -70,8 +81,33 @@ export interface DebugConfigRow {
     serviceRoot: string;
     projectType: string;
     runtime: string;
+    version: string;
     isCompound: boolean;
 }
+
+const sandboxNodeImages = {
+    22: {
+        tag: 'mcr.microsoft.com/devcontainers/javascript-node:22-bookworm',
+        digest: 'sha256:33cc368bc8ce9dac872703c7b9ebf6dabcc7b14bbb8cfd2b64be0e7232e3a361',
+    },
+    24: {
+        tag: 'mcr.microsoft.com/devcontainers/javascript-node:24-bookworm',
+        digest: 'sha256:1bc82e3350b0da52ca1a1b1b2e7527300bc6fdfd778287e0eed564203d66a68c',
+    },
+} as const;
+
+const genericSandboxImages = [
+    {
+        tag: 'mcr.microsoft.com/devcontainers/python:3.12-bookworm',
+        digest: 'sha256:5ff1ba19e3b9273b24ec101055172d0e75046bc9ec40780643c530d2df2c75e5',
+    },
+    {
+        tag: 'mcr.microsoft.com/devcontainers/base:bookworm',
+        digest: 'sha256:99f5250dd2d5f8b11046d5662dd94c1e3c1dae56b560c7caad5ceb7edf349046',
+    },
+] as const;
+
+export type SandboxNodeMajor = keyof typeof sandboxNodeImages;
 
 export interface ParsedDebugPlan {
     data: LocalPlanData;
@@ -80,6 +116,8 @@ export interface ParsedDebugPlan {
     migrations: PlanChecklistRow[];
     apiTestCollections: PlanChecklistRow[];
     convenienceScripts: ConvenienceScriptRow[];
+    /** Application runtime location; plans without the optional section default to Host. */
+    developmentEnvironment: DevelopmentEnvironmentMode;
     /** Container **engine** recorded in the Orchestrator table, or undefined for an old plan that omits it. */
     containerRuntime?: ContainerRuntime;
     /**
@@ -124,7 +162,19 @@ export function validateLocalDebugPlanArtifact(
     }
 
     validatePrerequisites(data, issues);
+    validateDevelopmentEnvironment(data, expectations, issues);
     const debugConfigs = validateDebugConfigurations(data, expectations, issues);
+    if (expectations.requireUnknownNodeVersions) {
+        for (const row of debugConfigs.filter(row => row.generate && !row.isCompound && row.runtime.toLowerCase().includes('node'))) {
+            if (!/^(?:unknown|—|-|not declared)$/i.test(row.version.trim())) {
+                issues.push(issue(
+                    'unexpectedResolvedNodeVersion',
+                    '$.debugConfigurations.Version',
+                    `Host fallback must keep the unresolved Node version unknown, found "${row.version}" for "${row.name}".`,
+                ));
+            }
+        }
+    }
     validateEmulators(data, expectations, issues);
     validateOrchestrator(data, expectations, issues);
     validateArchitectureDiagram(data, issues);
@@ -147,10 +197,242 @@ export function parseDebugPlan(content: string): ParsedDebugPlan {
         migrations: readChecklistRows(data, 'migrations'),
         apiTestCollections: readChecklistRows(data, 'api test collections'),
         convenienceScripts: readConvenienceScriptRows(data),
+        developmentEnvironment: readDevelopmentEnvironmentMode(data) ?? 'host',
         containerRuntime: orchestrator.engine,
         dockerCompatible: orchestrator.dockerCompatible,
         composeCommand: orchestrator.composeCommand,
     };
+}
+
+function validateDevelopmentEnvironment(
+    data: LocalPlanData,
+    expectations: LocalDebugPlanExpectations,
+    issues: ArtifactValidationIssue[],
+): void {
+    const section = findSection(data, 'development environment');
+    const table = findTable(data, 'development environment');
+    if (!table) {
+        if (section) {
+            issues.push(issue(
+                'invalidDevelopmentEnvironmentTable',
+                '$.developmentEnvironment',
+                'Development Environment must use a "Field | Value" table.',
+            ));
+        } else if (expectations.expectedDevelopmentEnvironment === 'sandbox') {
+            issues.push(issue(
+                'missingDevelopmentEnvironmentSection',
+                '$.developmentEnvironment',
+                'Sandbox mode requires a detailed Development Environment section.',
+            ));
+        } else if (expectations.expectedDevelopmentEnvironment === 'host'
+            && expectations.requireHostEnvironmentNote
+            && !hasHostEnvironmentNote(data)) {
+            issues.push(issue(
+                'missingHostDevelopmentEnvironmentNote',
+                '$.developmentEnvironment',
+                'Newly generated Host plans must visibly state "Development Environment: Host" and the fallback reason.',
+            ));
+        }
+        return;
+    }
+
+    const fieldIndex = findColumnIndex(table.headers, 'field');
+    const valueIndex = findColumnIndex(table.headers, 'value');
+    if (fieldIndex === -1 || valueIndex === -1) {
+        issues.push(issue(
+            'invalidDevelopmentEnvironmentTable',
+            '$.developmentEnvironment',
+            'Development Environment must use a "Field | Value" table.',
+        ));
+        return;
+    }
+
+    const values = new Map(
+        table.rows
+            .filter(row => cell(row, fieldIndex))
+            .map(row => [cell(row, fieldIndex).toLowerCase(), cell(row, valueIndex)]),
+    );
+    for (const requiredField of [
+        'mode',
+        'image',
+        'match rationale',
+        'host prerequisites',
+        'supporting emulators',
+        'forwarded ports',
+        'workspace topology',
+    ]) {
+        if (!values.get(requiredField)) {
+            issues.push(issue(
+                'missingDevelopmentEnvironmentField',
+                '$.developmentEnvironment',
+                `Development Environment is missing a value for "${requiredField}".`,
+            ));
+        }
+    }
+
+    const mode = readDevelopmentEnvironmentMode(data);
+    if (!mode) {
+        issues.push(issue(
+            'invalidDevelopmentEnvironmentMode',
+            '$.developmentEnvironment.Mode',
+            `Mode must be Sandbox or Host, found "${values.get('mode') || 'missing'}".`,
+        ));
+        return;
+    }
+    if (expectations.expectedDevelopmentEnvironment && mode !== expectations.expectedDevelopmentEnvironment) {
+        issues.push(issue(
+            'unexpectedDevelopmentEnvironment',
+            '$.developmentEnvironment.Mode',
+            `Expected Development Environment "${expectations.expectedDevelopmentEnvironment}", found "${mode}".`,
+        ));
+    }
+
+    const image = values.get('image')?.toLowerCase() ?? '';
+    const matchRationale = values.get('match rationale')?.toLowerCase() ?? '';
+    const hostPrerequisites = values.get('host prerequisites')?.toLowerCase() ?? '';
+    if (mode === 'sandbox') {
+        const baseTools = values.get('base-provided tools')?.toLowerCase() ?? '';
+        const corTools = values.get('cor-added tools')?.toLowerCase() ?? '';
+        for (const requiredField of ['base-provided tools', 'cor-added tools']) {
+            if (!values.get(requiredField)) {
+                issues.push(issue(
+                    'missingDevelopmentEnvironmentField',
+                    '$.developmentEnvironment',
+                    `Sandbox Development Environment is missing a value for "${requiredField}".`,
+                ));
+            }
+        }
+        const imageMajor = readSandboxImageMajor(image);
+        if (!imageMajor && !isPinnedGenericSandboxImage(image)) {
+            issues.push(issue(
+                'unpinnedSandboxImage',
+                '$.developmentEnvironment.Image',
+                'Sandbox mode must record a certified pinned Microsoft runtime image or generic Bookworm development image and its immutable multi-platform digest.',
+            ));
+        } else if (imageMajor) {
+            if (expectations.expectedSandboxNodeMajor
+                && imageMajor !== expectations.expectedSandboxNodeMajor) {
+                issues.push(issue(
+                    'unexpectedSandboxNodeMajor',
+                    '$.developmentEnvironment.Image',
+                    `Expected the Node ${expectations.expectedSandboxNodeMajor} Sandbox image, found Node ${imageMajor}.`,
+                ));
+            }
+            const applicationRows = readDebugConfigRows(data)
+                .filter(row => row.generate && !row.isCompound);
+            const runtimeMajors = new Set(
+                applicationRows
+                    .map(row => readNodeMajor(row.version))
+                    .filter((major): major is number => major !== undefined),
+            );
+            const allRowsUseNode = applicationRows.length > 0
+                && applicationRows.every(row => row.runtime.toLowerCase().includes('node'));
+            if (!allRowsUseNode || runtimeMajors.size !== 1 || !runtimeMajors.has(imageMajor)) {
+                issues.push(issue(
+                    'sandboxImageRuntimeMismatch',
+                    '$.developmentEnvironment.Image',
+                    `Sandbox image Node ${imageMajor} must match the single Node major recorded by every generated application service.`,
+                ));
+            }
+            if (!matchRationale.includes('programming model v4')) {
+                issues.push(issue(
+                    'sandboxFunctionsModelUnsupported',
+                    '$.developmentEnvironment.MatchRationale',
+                    'Sandbox mode requires the Match Rationale to confirm Azure Functions programming model v4.',
+                ));
+            }
+        }
+        const requiredBaseTools = imageMajor ? ['node', 'npm', 'pnpm', 'yarn', 'git'] : ['git'];
+        for (const tool of requiredBaseTools) {
+            if (!baseTools.includes(tool)) {
+                issues.push(issue(
+                    'missingBaseProvidedTool',
+                    '$.developmentEnvironment.BaseProvidedTools',
+                    `Base-Provided Tools must include ${tool}.`,
+                ));
+            }
+        }
+        if (imageMajor) {
+            for (const tool of ['azure cli', 'functions core tools', 'postgresql']) {
+                if (!corTools.includes(tool)) {
+                    issues.push(issue(
+                        'missingCorAddedTool',
+                        '$.developmentEnvironment.CorAddedTools',
+                        `CoR-Added Tools must include ${tool}.`,
+                    ));
+                }
+            }
+        }
+
+        const prerequisites = findTable(data, 'prerequisites');
+        const toolIndex = prerequisites ? findColumnIndex(prerequisites.headers, 'tool') : -1;
+        const hostTools = toolIndex === -1
+            ? []
+            : prerequisites?.rows.map(row => cell(row, toolIndex).replace(/`/g, '').toLowerCase()) ?? [];
+        if (hostPrerequisites.includes('dev container')
+            || hostPrerequisites.includes('remote-container')
+            || hostTools.some(tool => tool.includes('remote-container') || tool.includes('dev container'))) {
+            issues.push(issue(
+                'sandboxRequiresDevContainers',
+                '$.developmentEnvironment.HostPrerequisites',
+                'Sandbox mode must run from the host VS Code workspace and must not require Dev Containers.',
+            ));
+        }
+        for (const sandboxOnlyTool of ['node.js', 'azure cli', 'azure functions core tools']) {
+            if (hostTools.some(tool => tool === sandboxOnlyTool)) {
+                issues.push(issue(
+                    'sandboxToolListedAsHostPrerequisite',
+                    '$.prerequisites',
+                    `${sandboxOnlyTool} is provided by the Sandbox image and must not be listed as a host prerequisite.`,
+                ));
+            }
+        }
+    }
+}
+
+function hasHostEnvironmentNote(data: LocalPlanData): boolean {
+    const notes = [
+        data.headerNote,
+        ...walkContent(data)
+            .filter(({ content }) => content.type === 'blockquote')
+            .map(({ content }) => content.type === 'blockquote' ? content.text : ''),
+    ].map(note => note.replace(/[*_`]/g, ''));
+    return notes.some(note =>
+        /development environment:\s*host/i.test(note)
+        && /sandbox was not selected because\s+\S/i.test(note),
+    );
+}
+
+function readDevelopmentEnvironmentMode(data: LocalPlanData): DevelopmentEnvironmentMode | undefined {
+    const table = findTable(data, 'development environment');
+    if (!table) {
+        return undefined;
+    }
+    const fieldIndex = findColumnIndex(table.headers, 'field');
+    const valueIndex = findColumnIndex(table.headers, 'value');
+    const row = table.rows.find(candidate => cell(candidate, fieldIndex).toLowerCase() === 'mode');
+    const value = cell(row ?? [], valueIndex).toLowerCase();
+    return developmentEnvironmentModes.includes(value as DevelopmentEnvironmentMode)
+        ? value as DevelopmentEnvironmentMode
+        : undefined;
+}
+
+function readSandboxImageMajor(image: string): SandboxNodeMajor | undefined {
+    for (const [majorText, contract] of Object.entries(sandboxNodeImages)) {
+        if (image.includes(contract.tag) && image.includes(contract.digest)) {
+            return Number(majorText) as SandboxNodeMajor;
+        }
+    }
+    return undefined;
+}
+
+function isPinnedGenericSandboxImage(image: string): boolean {
+    return genericSandboxImages.some(contract => image.includes(contract.tag) && image.includes(contract.digest));
+}
+
+function readNodeMajor(version: string): number | undefined {
+    const match = version.match(/(?:^|\D)(\d{2})(?:\.\d+|\.x|$)/);
+    return match ? Number(match[1]) : undefined;
 }
 
 function validateHeader(
@@ -614,6 +896,7 @@ function readDebugConfigRows(data: LocalPlanData): DebugConfigRow[] {
     const serviceRoot = findColumnIndex(table.headers, 'service root');
     const projectType = findColumnIndex(table.headers, 'project type');
     const runtime = findColumnIndex(table.headers, 'runtime');
+    const version = findColumnIndex(table.headers, 'version');
 
     return table.rows
         .filter(row => row.some(cell => cell.trim().length > 0))
@@ -625,6 +908,7 @@ function readDebugConfigRows(data: LocalPlanData): DebugConfigRow[] {
                 serviceRoot: cell(row, serviceRoot),
                 projectType: type,
                 runtime: cell(row, runtime),
+                version: cell(row, version),
                 isCompound: type.toLowerCase().includes('compound'),
             };
         });

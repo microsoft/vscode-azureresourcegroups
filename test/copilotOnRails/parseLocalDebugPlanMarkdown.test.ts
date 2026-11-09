@@ -13,6 +13,7 @@ import {
     firstTable,
     flattenContent,
     getDebugPlanStatus,
+    getLocalPlanDevelopmentEnvironment,
     isChecked,
     LocalDebugPlanStatus,
     type LocalPlanData,
@@ -70,6 +71,10 @@ suite('parseLocalDebugPlanMarkdown', () => {
             assert.deepStrictEqual(table.rows[0], ['Node.js', 'Runtime', '*', '✅', 'v24.18.0', '`brew install node`']);
             // The unconfirmed Docker Compose row keeps its ❓ marker intact.
             assert.ok(table.rows.some((row) => row.includes('❓')));
+        });
+
+        test('preserves the legacy Host plan shape without a Development Environment section', () => {
+            assert.strictEqual(findSection(parsedPlan, 'Development Environment'), undefined);
         });
 
         test('parses the Debug Configurations table and skips <details>/<summary> wrappers', () => {
@@ -165,6 +170,79 @@ suite('parseLocalDebugPlanMarkdown', () => {
             assert.strictEqual(plan.title, 'Title');
             assert.strictEqual(plan.sections.length, 1);
             assert.strictEqual(plan.sections[0].title, 'Section');
+        });
+
+        test('parses the optional Sandbox Development Environment section as generic markdown', () => {
+            const plan = parseLocalDebugPlanMarkdown([
+                '# Azure Debug Plan',
+                '',
+                '## Development Environment',
+                '',
+                '| Field | Value |',
+                '|---|---|',
+                '| Mode | Sandbox |',
+                '| Image | `mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:test` |',
+            ].join('\n'));
+            const table = getFirstTable(getSection(plan, 'Development Environment'));
+            assert.deepStrictEqual(table.headers, ['Field', 'Value']);
+            assert.deepStrictEqual(table.rows, [
+                ['Mode', 'Sandbox'],
+                ['Image', '`mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:test`'],
+            ]);
+            assert.deepStrictEqual(getLocalPlanDevelopmentEnvironment(plan), {
+                mode: 'Sandbox',
+                detail: 'Runs application services in the pinned Node 24 development sandbox.',
+            });
+        });
+
+        test('parses the Host development environment callout as a visible blockquote', () => {
+            const plan = parseLocalDebugPlanMarkdown([
+                '# Azure Debug Plan',
+                '',
+                '## Prerequisites',
+                '',
+                '> **Development Environment:** Host — application runtimes and CLIs will run directly on this machine.',
+                '> Sandbox was not selected because the project does not declare a supported Node runtime.',
+            ].join('\n'));
+            const quote = plan.sections[0].content.find(content => content.type === 'blockquote');
+            assert.ok(quote);
+            assert.match(quote.text, /Development Environment:\*\* Host/);
+            assert.match(quote.text, /Sandbox was not selected because/);
+            assert.deepStrictEqual(getLocalPlanDevelopmentEnvironment(plan), {
+                mode: 'Host',
+                detail: 'Runs application services with tools installed on this machine. Sandbox was not selected because the project does not declare a supported Node runtime.',
+            });
+        });
+
+        test('derives a visible Host environment for legacy plans without an environment section', () => {
+            const plan = parseLocalDebugPlanMarkdown([
+                '# Azure Debug Plan',
+                '',
+                '## Prerequisites',
+                '',
+                '| Tool | Installed |',
+                '|---|---|',
+                '| Node | ✅ |',
+            ].join('\n'));
+            assert.deepStrictEqual(getLocalPlanDevelopmentEnvironment(plan), {
+                mode: 'Host',
+                detail: 'Runs application services with tools installed on this machine.',
+            });
+        });
+
+        test('treats a malformed Development Environment section as Host with a warning', () => {
+            const plan = parseLocalDebugPlanMarkdown([
+                '# Azure Debug Plan',
+                '',
+                '## Development Environment',
+                '',
+                'Mode: Sandbox',
+            ].join('\n'));
+            assert.deepStrictEqual(getLocalPlanDevelopmentEnvironment(plan), {
+                mode: 'Host',
+                detail: 'Runs application services with tools installed on this machine.',
+                warning: 'The Development Environment section is incomplete, so the plan is treated as Host.',
+            });
         });
     });
 });

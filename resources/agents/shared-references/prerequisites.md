@@ -38,7 +38,12 @@ Dependencies required for local runs; a missing run tool prevents startup. Examp
 
 ### Debug Tools
 
-Local debugging needs three independent entry types; evaluate all every time: container tooling (runtime—**Docker or Podman**—plus Compose provider) for Azure-dependency emulators; Chromium browser (Chrome or Edge) for frontend types debugging in browser; and each matching VS Code debug-integration extension below. Extensions provide task types, problem matchers, and launch integration; required even without Azure emulator dependencies and when matching CLI/runtime already appears in Run group.
+Local debugging needs independent entry types; evaluate all every time: container tooling
+(runtime—**Docker or Podman**—plus Compose provider) for Azure-dependency emulators or Sandbox mode;
+Chromium browser (Chrome or Edge) for frontend types debugging in browser; and each matching VS Code
+debug-integration extension below. Extensions provide task types, problem matchers, and launch
+integration; required even without Azure emulator dependencies and when matching CLI/runtime already
+appears in Run group.
 
 This table is the **authoritative list**: include every row whose trigger matches. Maintainers must add new debug tools or extensions here. Some project types require a specific VS Code extension (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers); use this table, not memory.
 
@@ -46,8 +51,8 @@ Prefer listed debug tools. Never list VS Code itself; plan already runs inside i
 
 | Tool / Extension | Category | Trigger When | Detect with |
 |------------------|----------|----------------------|-------------|
-| Docker _or_ Podman | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` **or** `podman --version` |
-| Docker Compose _or_ Podman Compose | Compose provider | Orchestrating emulators | `docker compose version` **or** `podman compose version` |
+| Docker _or_ Podman | Container runtime | Project has Azure dependencies that run as local emulators, or Development Environment mode is Sandbox | `docker --version` **or** `podman --version` |
+| Docker Compose _or_ Podman Compose | Compose provider | Orchestrating emulators or the Sandbox `dev` service | `docker compose version` **or** `podman compose version` |
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 | `ms-python.python` | VS Code extension | Has a Python service | extensions filesystem check (Phase 2); selects the interpreter and supplies native Functions debugger launch arguments |
@@ -148,7 +153,10 @@ For any `❓` CLI result, tell user it was unconfirmed and request a recheck. Re
 
 ### Container runtime detection
 
-Only when the project has Azure dependencies that run as local emulators. The emulators run in containers, so the plan needs exactly one container runtime and its Compose provider. **Docker and Podman are interchangeable here** — detect both, then record the one the plan will use.
+Run when the project has Azure dependencies that use local emulators **or** the selected Development
+Environment mode is Sandbox. Emulators and the Sandbox `dev` service run in containers, so the plan
+needs exactly one container runtime and its Compose provider. **Docker and Podman are interchangeable
+here** — detect both, then record the one the plan will use.
 
 Follow the same two states as every other prerequisite: **installed (`✅`)** when a probe positively confirms the runtime is present *and ready*, **unknown (`❓`)** otherwise. Never `❌`.
 

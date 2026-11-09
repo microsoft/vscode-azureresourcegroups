@@ -8,6 +8,7 @@ import { projectSubmissionState } from "../../tree/project/projectSubmissionStat
 import { disableAutopilot } from "../../webviews/copilotOnRails/extension/autopilot";
 import { recordCreatedAt, recordPrompt, recordSystemInfo } from "./diagnosticUtils";
 import { getSystemInfo } from "./telemetryUtils";
+import { writeCorProjectMarker } from "./corProjectMarker";
 
 /**
  * Prepares a new Copilot on Rails project to be run in the current workspace
@@ -21,6 +22,7 @@ export async function prepareNewCorProject(prompt: string): Promise<void> {
     recordPrompt(prompt);
     recordCreatedAt();
     recordSystemInfo(getSystemInfo());
+    await writeCorProjectMarker();
 }
 
 const corStateKeyPattern: RegExp = /copilotOnRails/i;

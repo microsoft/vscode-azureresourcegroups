@@ -58,9 +58,42 @@ Quoting is always valid in mermaid and also protects labels containing `(`, `)`,
 
 ---
 
+<!-- Include the following section only when the selected mode is Sandbox. -->
+<!-- Host mode preserves the legacy section shape: omit this section, add the Host blockquote below, and put the complete host toolchain in Prerequisites. -->
+
+## Development Environment
+
+<!-- Records the supported Sandbox runtime. This section is required only for Sandbox mode. -->
+<!-- Mode is exactly Sandbox. Follow development-environments.md; do not invent additional modes. -->
+<!-- Use the supported locally built image contract. Never claim a published image exists. -->
+<!-- Host Prerequisites are the only tools that must exist on the host. -->
+<!-- Base-Provided Tools list tools inherited from the pinned Microsoft image. -->
+<!-- CoR-Added Tools list only tools installed by the generated Dockerfile. -->
+<!-- Supporting Emulators list separate Compose services, not tools installed in the dev container. -->
+<!-- Forwarded Ports must include application, debugger, and emulator ports exposed to the host. -->
+<!-- Workspace Topology explains the bind mount and container-only node_modules volume. -->
+<!-- ✏️ User can choose Host before approval by removing this section and restoring host runtime tools to Prerequisites. -->
+
+| Field | Value |
+|-------|-------|
+| Mode | Sandbox |
+| Image | {local Dockerfile + pinned runtime-specific or generic Microsoft base image and digest} |
+| Match Rationale | {why the workspace matches Sandbox, including requirements choice and exact runtime evidence/install strategy} |
+| Host Prerequisites | {host tools only} |
+| Base-Provided Tools | {Microsoft image toolchain with pinned versions} |
+| CoR-Added Tools | {tools and pinned versions installed by the generated Dockerfile} |
+| Supporting Emulators | {separate Compose services, or None} |
+| Forwarded Ports | {port and purpose list, or None} |
+| Workspace Topology | {bind mount, container-only dependency volume, and service layout} |
+
+---
+
 ## Prerequisites
 
-<!-- All required tools and VS Code extensions with install status — list both the Run and Debug tool sets defined in prerequisites.md. -->
+<!-- In Host mode (no Development Environment section), list both Run and Debug tool sets. In Sandbox mode, list only host requirements: the container runtime, Compose provider, browser, and runtime debug extensions; runtime CLIs belong in Development Environment. Never require Dev Containers. -->
+<!-- Host mode only: begin this section with the blockquote below instead of adding a Development Environment section. -->
+<!-- Keep the concrete fallback reason concise. Older Host plans without this note remain compatible. -->
+<!-- > **Development Environment:** Host — application runtimes and CLIs will run directly on this machine. Sandbox was not selected because {reason}. -->
 <!-- Service(s): the service(s) that need the tool (e.g. `api`, `worker`); use `*` for global toolchain shared by all services. -->
 <!-- Installed/Version come from the detection pass and must be re-run whenever the whole plan is (re)generated or the tool set changes — never leave a placeholder. Installed is only ✅ (found) or ❓ (couldn't confirm). ❓ is informational — it just prompts the user to double-check the tool is installed. -->
 <!-- Do NOT add an Install column or any install links/URLs. The plan webview appends an Install link deterministically from a built-in catalog keyed on the tool name; links authored here are ignored. -->
@@ -88,6 +121,8 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 | Generate | Debug Config Name | Service Label | Service Root | Project Type | Runtime | Version | Azure Dependencies |
 |----------|--------------------|---------------|--------------|--------------|---------|---------|-----|
 | {[x] / [ ]} | {e.g. Payments API (debug)} | {label} | {path} | {type} | {runtime} | {version} | {comma-separated azure service labels} |
+
+<!-- If an undeclared runtime cannot use the CoR-generated Node 24 default, keep Version as Unknown or —. Do not write 24.x in a Host fallback plan. -->
 
 <!-- Example: -->
 <!-- | [x] | Payments API (debug) | Payments API | ./api | functions | node-ts | 20.x | Azure Storage, Azure PostgreSQL | -->

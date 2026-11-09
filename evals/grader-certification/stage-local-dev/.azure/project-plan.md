@@ -33,7 +33,7 @@ task persist across restarts.
 
 ## 3. Prerequisites
 
-- Node.js 22
+- Node.js 24
 - npm
 - Docker (for the local PostgreSQL and Azurite containers)
 - Azure Functions Core Tools v4

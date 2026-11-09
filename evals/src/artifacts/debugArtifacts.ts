@@ -58,7 +58,7 @@ export async function validateDebugArtifacts(workspace: string): Promise<Artifac
     }
 
     await validateEmulatorArtifacts(workspace, plan, issues);
-    await validateExtensionRecommendations(workspace, issues);
+    await validateExtensionRecommendations(workspace, plan, issues);
     await validateConvenienceScripts(workspace, plan, issues);
     await validateApiTestCollections(workspace, plan, issues);
 
@@ -69,6 +69,9 @@ export async function validateDebugArtifacts(workspace: string): Promise<Artifac
     }, issues);
 
     validateComposeCommandConformance(plan, tasksText, issues);
+    if (plan.developmentEnvironment === 'sandbox') {
+        await validateSandboxHostWorkspaceArtifacts(workspace, plan, launchText, tasksText, issues);
+    }
 
     return createValidationResult(issues);
 }
@@ -138,7 +141,11 @@ function readTaskLabels(tasksText: string | undefined): Set<string> {
  * Without a recommendation for the debugger the scenario needs, the user is asked to
  * install nothing and F5 fails with an unresolved debug type.
  */
-async function validateExtensionRecommendations(workspace: string, issues: ArtifactValidationIssue[]): Promise<void> {
+async function validateExtensionRecommendations(
+    workspace: string,
+    plan: ParsedDebugPlan,
+    issues: ArtifactValidationIssue[],
+): Promise<void> {
     const raw = await readIfExists(path.join(workspace, EXTENSIONS_PATH));
     if (raw === undefined) {
         issues.push(issue('extensionRecommendationsMissing', '$.extensions', `${EXTENSIONS_PATH} was never generated.`));
@@ -156,6 +163,114 @@ async function validateExtensionRecommendations(workspace: string, issues: Artif
     if (entries.length === 0 || entries.some(entry => typeof entry !== 'string' || !entry.includes('.'))) {
         issues.push(issue('invalidExtensionRecommendations', '$.extensions', `${EXTENSIONS_PATH} must list at least one "publisher.extension" recommendation.`));
     }
+    if (plan.developmentEnvironment === 'sandbox'
+        && entries.some(entry => typeof entry === 'string' && entry.toLowerCase() === 'ms-vscode-remote.remote-containers')) {
+        issues.push(issue(
+            'sandboxRecommendsDevContainers',
+            '$.extensions',
+            'Sandbox host-workspace F5 must not recommend the Dev Containers extension.',
+        ));
+    }
+}
+
+async function validateSandboxHostWorkspaceArtifacts(
+    workspace: string,
+    plan: ParsedDebugPlan,
+    launchText: string | undefined,
+    tasksText: string | undefined,
+    issues: ArtifactValidationIssue[],
+): Promise<void> {
+    if (await readIfExists(path.join(workspace, '.devcontainer', 'devcontainer.json')) !== undefined) {
+        issues.push(issue(
+            'sandboxDevContainerGenerated',
+            '$.devcontainer',
+            'Sandbox mode must keep VS Code on the host and must not generate a required Dev Container.',
+        ));
+    }
+    if (launchText === undefined || tasksText === undefined) {
+        return;
+    }
+
+    let rawTasks: unknown;
+    let rawLaunch: unknown;
+    try {
+        rawTasks = parseJsonc(tasksText);
+        rawLaunch = parseJsonc(launchText);
+    } catch {
+        return;
+    }
+    const tasks = Array.isArray((rawTasks as { tasks?: unknown } | null)?.tasks)
+        ? (rawTasks as { tasks: Array<Record<string, unknown>> }).tasks
+        : [];
+    const configurations = Array.isArray((rawLaunch as { configurations?: unknown } | null)?.configurations)
+        ? (rawLaunch as { configurations: Array<Record<string, unknown>> }).configurations
+        : [];
+    const composeCommand = (plan.composeCommand || 'docker compose').toLowerCase();
+    const taskCommands = tasks.map(taskCommandText);
+
+    if (!taskCommands.some(command => command.includes(`${composeCommand} up`)
+        && command.includes('--build')
+        && command.includes('--wait')
+        && command.includes('dev'))) {
+        issues.push(issue(
+            'sandboxBootstrapTaskMissing',
+            '$.tasks',
+            `Sandbox tasks must run "${composeCommand} up --build --wait dev" from the host workspace.`,
+        ));
+    }
+    if (!taskCommands.some(command => command.includes(`${composeCommand} exec`) && command.includes(' dev '))) {
+        issues.push(issue(
+            'sandboxExecTaskMissing',
+            '$.tasks',
+            `Sandbox application tasks must invoke containerized tools through "${composeCommand} exec".`,
+        ));
+    }
+    if (!taskCommands.some(command => command.includes(`${composeCommand} down`))) {
+        issues.push(issue(
+            'sandboxTeardownTaskMissing',
+            '$.tasks',
+            `Sandbox tasks must provide deterministic teardown through "${composeCommand} down".`,
+        ));
+    }
+
+    const nodeAttach = configurations.find(config =>
+        config.type === 'node' && config.request === 'attach');
+    if (!nodeAttach
+        || nodeAttach.sourceMaps !== true
+        || typeof nodeAttach.localRoot !== 'string'
+        || !nodeAttach.localRoot.includes('${workspaceFolder}')
+        || typeof nodeAttach.remoteRoot !== 'string'
+        || !nodeAttach.remoteRoot.startsWith('/')
+        || !Array.isArray(nodeAttach.outFiles)
+        || nodeAttach.outFiles.length === 0) {
+        issues.push(issue(
+            'sandboxNodePathMappingMissing',
+            '$.launch',
+            'Sandbox Node attach must enable source maps and map host localRoot/outFiles to an absolute container remoteRoot.',
+        ));
+    }
+
+    const browserLaunch = configurations.find(config =>
+        (config.type === 'chrome' || config.type === 'msedge') && config.request === 'launch');
+    if (!browserLaunch
+        || typeof browserLaunch.url !== 'string'
+        || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/.test(browserLaunch.url)
+        || typeof browserLaunch.webRoot !== 'string'
+        || !browserLaunch.webRoot.includes('${workspaceFolder}')) {
+        issues.push(issue(
+            'sandboxBrowserHostLaunchMissing',
+            '$.launch',
+            'Sandbox frontend debugging must launch a forwarded localhost URL using the host workspace webRoot.',
+        ));
+    }
+}
+
+function taskCommandText(task: Record<string, unknown>): string {
+    const command = typeof task.command === 'string' ? task.command : '';
+    const args = Array.isArray(task.args)
+        ? task.args.filter((arg): arg is string => typeof arg === 'string')
+        : [];
+    return [command, ...args].join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 function validateConfigConformance(

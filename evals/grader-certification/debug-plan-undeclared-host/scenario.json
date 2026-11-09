@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "id": "grader-debug-plan-undeclared-host",
+  "prompt": "Create a React and TypeScript application with a TypeScript Azure Functions API and PostgreSQL persistence, but do not declare a Node runtime.",
+  "baselinePrompt": "Create a React and TypeScript application with a TypeScript Azure Functions programming model v4 API and PostgreSQL persistence, but omit all explicit Node runtime declarations and the CoR project marker.",
+  "tags": {
+    "archetype": "crud",
+    "frontend": "react",
+    "backend": "node",
+    "database": "postgres",
+    "auth": "none",
+    "complexity": "medium"
+  },
+  "requirementsAnswers": {
+    "dataStores": [
+      "PostgreSQL"
+    ],
+    "auth": "No auth"
+  },
+  "validation": {
+    "profile": "advanced",
+    "build": true,
+    "test": true,
+    "lint": "required",
+    "timeoutMinutes": 5,
+    "maxAgentRetries": 0
+  }
+}
