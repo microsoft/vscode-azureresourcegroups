@@ -1,6 +1,12 @@
 # Change Log
 
-## Unreleased
+
+## 0.13.3 - 2026-11-09
+
+### Added
+* [[1968]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1968) Add Python support to **Create New Project with Copilot**, including scaffolding, backend integration, virtual environment setup, and local Azure Functions debugging. Project plans also support custom backend frameworks.
+* [[1992]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1992) Add **Container Apps Sandboxes** resource type support, including a dedicated icon and integration with the Azure Container Apps extension.
+* [[1931]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1931) Add a feedback button to the **Create New Project with Copilot** views so users can submit feedback from within VS Code.
 
 ## 0.13.2 - 2026-09-27
 
