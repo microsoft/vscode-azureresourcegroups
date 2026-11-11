@@ -20,6 +20,8 @@ model: gpt-5.4
 network: defaults
 inlined-imports: true
 tools:
+  bash: false
+  cli-proxy: false
   github:
     toolsets: [issues, repos]
     min-integrity: none
