@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ProjectPlanFilesWatcher, isCopilotOnRailsProjectFolder } from '../../tree/project/projectPlanFiles';
-import { corId, getCorProjectId } from '../../utils/copilotOnRails/telemetryUtils';
+import { corId, reportCorBackgroundEvent } from '../../utils/copilotOnRails/telemetryUtils';
 
 /**
  * Bookkeeping for a single in-flight debug session that belongs to a Copilot on
@@ -55,7 +54,7 @@ export function registerDebugSessionWatcher(context: vscode.ExtensionContext, pl
     context.subscriptions.push(
         planFilesWatcher.onDidChange(() => void refreshCorProjectFolders()),
         vscode.debug.onDidStartDebugSession((session) => void onDidStartDebugSession(session)),
-        vscode.debug.onDidTerminateDebugSession((session) => onDidTerminateDebugSession(session)),
+        vscode.debug.onDidTerminateDebugSession((session) => void onDidTerminateDebugSession(session)),
         vscode.debug.registerDebugAdapterTrackerFactory('*', {
             createDebugAdapterTracker: (session) => createTracker(session),
         }),
@@ -122,23 +121,31 @@ async function onDidStartDebugSession(session: vscode.DebugSession): Promise<voi
         return;
     }
 
-    reportDebugSessionEvent(corId('debugSessionStart'), {
-        sessionType: tracked.sessionType,
+    await reportDebugSessionEvent(corId('debugSessionStart'), {
+        sessionType: normalizeDebugType(tracked.sessionType),
         isChildSession: String(tracked.isChildSession),
+        debugLifecycleState: 'started',
     });
 }
 
-function onDidTerminateDebugSession(session: vscode.DebugSession): void {
+async function onDidTerminateDebugSession(session: vscode.DebugSession): Promise<void> {
     const tracked = trackedSessions.get(session.id);
     if (!tracked) {
         return;
     }
     trackedSessions.delete(session.id);
 
-    reportDebugSessionEvent(corId('debugSessionEnd'), {
-        sessionType: tracked.sessionType,
+    const outcome = computeOutcome(tracked);
+    const lifecycleState = outcome === 'cancelledOrUnknown' ? 'canceled' : outcome;
+    await reportDebugSessionEvent(corId('debugSessionEnd'), {
+        sessionType: normalizeDebugType(tracked.sessionType),
         isChildSession: String(tracked.isChildSession),
-        outcome: computeOutcome(tracked),
+        outcome,
+        lifecycleState,
+        debugLifecycleState: lifecycleState,
+        ...(outcome === 'failed' ? { failureCategory: 'unknown' } : {}),
+        ...(outcome === 'cancelledOrUnknown' ? { debugCancelReason: 'stoppedOrUnavailable' } : {}),
+        ...(outcome === 'cancelledOrUnknown' ? { cancelReason: 'stoppedOrUnavailable' } : {}),
         exitCode: tracked.exitCode !== undefined ? String(tracked.exitCode) : 'none',
     }, {
         durationInSeconds: (Date.now() - tracked.startedAt) / 1000,
@@ -188,13 +195,29 @@ function computeOutcome(tracked: TrackedDebugSession): 'succeeded' | 'failed' | 
     return 'cancelledOrUnknown';
 }
 
-function reportDebugSessionEvent(eventName: string, properties: Record<string, string>, measurements?: Record<string, number>): void {
-    void callWithTelemetryAndErrorHandling(eventName, async (context: IActionContext) => {
-        context.telemetry.properties.isCopilotEvent = 'true';
-        context.telemetry.properties.corProjectId = getCorProjectId();
-        Object.assign(context.telemetry.properties, properties);
-        if (measurements) {
-            Object.assign(context.telemetry.measurements, measurements);
-        }
-    });
+async function reportDebugSessionEvent(eventName: string, properties: Record<string, string>, measurements?: Record<string, number>): Promise<void> {
+    await reportCorBackgroundEvent(eventName, properties, measurements);
+}
+
+function normalizeDebugType(sessionType: string): string {
+    const type = sessionType.toLowerCase();
+    if (['node', 'pwa-node', 'node-terminal'].includes(type)) {
+        return 'node';
+    }
+    if (['chrome', 'pwa-chrome'].includes(type)) {
+        return 'chrome';
+    }
+    if (['msedge', 'pwa-msedge'].includes(type)) {
+        return 'edge';
+    }
+    if (['python', 'debugpy'].includes(type)) {
+        return 'python';
+    }
+    if (['coreclr', 'clr'].includes(type)) {
+        return 'dotnet';
+    }
+    if (type === 'java' || type === 'go') {
+        return type;
+    }
+    return 'other';
 }

@@ -7,7 +7,8 @@ import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } 
 import * as vscode from "vscode";
 import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, corId } from "../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
+import { completeCorPhase } from "../../../utils/copilotOnRails/workflowContext";
 import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown, type LocalPlanData } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUtils";
@@ -145,23 +146,23 @@ async function recordImplemented(content: string): Promise<void> {
         return;
     }
 
-    let planData: LocalPlanData;
+    let planData: LocalPlanData | undefined;
     try {
         planData = parseLocalDebugPlanMarkdown(content);
     } catch {
-        // If the final plan can't be parsed there is nothing to inspect, but the run is still done -
-        // stop watching so we don't spin on further edits.
-        disposeWatcher();
-        return;
+        // The Implemented status is authoritative even if the optional telemetry shape is malformed.
     }
 
     implementedRecorded = true;
 
     await callWithTelemetryAndErrorHandling(corId('recordDebugPlanImplemented'), async (actionContext: IActionContext) => {
         actionContext.errorHandling.suppressDisplay = true;
-        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'recordDebugPlanImplemented' }, (corContext: CopilotOnRailsContext) => {
-            recordLocalDebugPlanTelemetry(corContext, planData);
-            return Promise.resolve();
+        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'recordDebugPlanImplemented', entryPoint: 'background' }, async (corContext: CopilotOnRailsContext) => {
+            await completeCorPhase('debug', 'succeeded');
+            setCorProp(corContext, 'debugPlanParsedOk', planData !== undefined);
+            if (planData) {
+                recordLocalDebugPlanTelemetry(corContext, planData);
+            }
         });
     });
 

@@ -19,6 +19,7 @@ suite('deployResultTelemetryUtils', () => {
             durationSeconds: 152353,
             endpointCount: 3,
             healingAttemptCount: 4,
+            reusedResourceTypeCountsAvailable: false,
         };
 
         assert.deepStrictEqual(telemetry, expected);
@@ -40,6 +41,8 @@ suite('deployResultTelemetryUtils', () => {
             unverifiedResourceCount: 0,
             inventoryUnverified: false,
             healingAttemptCount: 4,
+            createdResourceTypeCounts: 'microsoft.alertsmanagement/smartdetectoralertrules=1,microsoft.dbforpostgresql/flexibleservers=1,microsoft.insights/components=1,microsoft.managedidentity/userassignedidentities=1,microsoft.operationalinsights/workspaces=1,microsoft.storage/storageaccounts=1,microsoft.web/serverfarms=1,microsoft.web/sites=1,microsoft.web/staticsites=1',
+            reusedResourceTypeCountsAvailable: false,
         };
 
         assert.deepStrictEqual(telemetry, expected);
@@ -74,15 +77,36 @@ suite('deployResultTelemetryUtils', () => {
             unverifiedResourceCount: 1,
             inventoryUnverified: true,
             healingAttemptCount: 1,
+            reusedResourceTypeCountsAvailable: false,
         };
 
         assert.deepStrictEqual(telemetry, expected);
     });
 
+    test('merges failed ARM type evidence and marks reuse unavailable', () => {
+        const telemetry = getDeployArtifactTelemetry('deploy-result.json', JSON.stringify({
+            status: 'failed',
+            createdResources: [
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Web/sites/private-a', type: 'Microsoft.Web/sites', classification: 'failed' },
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Web/sites/private-b', type: 'Microsoft.Web/sites', classification: 'expected' },
+                { id: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Storage/storageAccounts/private', classification: 'orphaned' },
+            ],
+            resourceResults: [
+                { resourceId: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Web/sites/private-a', status: 'failed' },
+                { resourceId: '/subscriptions/private/resourceGroups/private/providers/Microsoft.Sql/servers/private/databases/private-db', status: 'failed' },
+            ],
+        }));
+
+        assert.strictEqual(telemetry.createdResourceTypeCounts, 'microsoft.storage/storageaccounts=1,microsoft.web/sites=2');
+        assert.strictEqual(telemetry.failedResourceTypeCounts, 'microsoft.sql/servers/databases=1,microsoft.web/sites=1');
+        assert.strictEqual(telemetry.reusedResourceTypeCountsAvailable, false);
+        assert.doesNotMatch(JSON.stringify(telemetry), /subscriptions|resourceGroups|private-a|private-b/i);
+    });
+
     test('empty result omits unavailable metrics', () => {
-        assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', '{}'), { parsedOk: true });
+        assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', '{}'), { parsedOk: true, reusedResourceTypeCountsAvailable: false });
         assert.deepStrictEqual(getDeployArtifactTelemetry('deploy-result.json', '{"endpoints":[],"partial":false}'), {
-            parsedOk: true, endpointCount: 0, healthyEndpointCount: 0, partial: false,
+            parsedOk: true, endpointCount: 0, healthyEndpointCount: 0, partial: false, reusedResourceTypeCountsAvailable: false,
         });
     });
 
@@ -125,6 +149,7 @@ suite('deployResultTelemetryUtils', () => {
             healthStatus: 'unknown',
             endpointCount: 1,
             healthyEndpointCount: 0,
+            reusedResourceTypeCountsAvailable: false,
         });
     });
 });

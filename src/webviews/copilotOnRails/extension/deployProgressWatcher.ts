@@ -15,6 +15,7 @@ import {
     findProjectFiles,
 } from "../../../tree/project/projectPlanFiles";
 import { resolveSubscription } from "../../../utils/copilotOnRails/deploymentInventoryCapture";
+import { bindCorPhaseArtifactId } from "../../../utils/copilotOnRails/workflowContext";
 import { type LoadingStep, type LoadingViewConfiguration } from "../views/utils/viewConfigTypes";
 import { closeLoadingView, openLoadingView, updateLoadingView } from "./openLoadingView";
 import {
@@ -93,7 +94,7 @@ export function isTrackedDeployResult(content: string): boolean {
     return activeSessionId !== undefined && deployResultSessionId(content) === activeSessionId;
 }
 
-function deployResultSessionId(content: string): string | undefined {
+export function deployResultSessionId(content: string): string | undefined {
     try {
         const parsed = JSON.parse(content) as { sessionId?: unknown };
         return typeof parsed?.sessionId === 'string' ? parsed.sessionId : undefined;
@@ -111,6 +112,9 @@ export async function startDeployProgressView(sourceFileUri?: vscode.Uri): Promi
     trackingStartedAtMs = Date.now();
     trackingActive = true;
     activeSessionId = sessionIdFromUri(sourceFileUri) ?? await readActiveSessionId();
+    if (activeSessionId) {
+        await bindCorPhaseArtifactId('deploy', activeSessionId);
+    }
 
     // Closing the tab is the user's way out of a deployment that was cancelled at the Chat gate:
     // end the whole tracking session rather than leaving a "Show Copilot progress" spinner behind
