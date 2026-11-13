@@ -1,9 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T16:38:55.728Z",
+  "generatedAt": "2026-11-12T17:31:35.947Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
+    "debug-plan-node24-sandbox",
+    "debug-plan-undeclared-host",
     "sample-agent-output",
     "reference-node-fullstack",
     "reference-node-multiservice",
@@ -38,6 +40,210 @@
       "validator": "integration-plan",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-stage-local-dev-debug-plan-sandbox",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-stage-local-dev-debug-plan-sandbox-node24",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox-node24",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-stage-local-dev-project-node24-engines",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "project-node24-engines",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-does-not-require-dev-containers",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "sandboxRequiresDevContainers",
+      "actual": [
+        "sandboxRequiresDevContainers"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-development-environment-mode-invalid",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "invalidDevelopmentEnvironmentMode",
+      "actual": [
+        "invalidDevelopmentEnvironmentMode"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-microsoft-image-pinned",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "unpinnedSandboxImage",
+      "actual": [
+        "unpinnedSandboxImage"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-image-matches-runtime",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "sandboxImageRuntimeMismatch",
+      "actual": [
+        "sandboxImageRuntimeMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-rejects-unresolved-runtime-row",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "sandboxImageRuntimeMismatch",
+      "actual": [
+        "sandboxImageRuntimeMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-base-tools-recorded",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "missingBaseProvidedTool",
+      "actual": [
+        "missingBaseProvidedTool"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-functions-model-v4-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "sandboxFunctionsModelUnsupported",
+      "actual": [
+        "sandboxFunctionsModelUnsupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-cor-tools-recorded",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "missingCorAddedTool",
+      "actual": [
+        "missingCorAddedTool"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-development-environment-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "missingDevelopmentEnvironmentSection",
+      "actual": [
+        "missingDevelopmentEnvironmentSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "stage-local-dev-web-node-engine-required",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "project-node24-engines",
+      "expected": "missingNodeEngineDeclaration",
+      "actual": [
+        "missingNodeEngineDeclaration"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-plan-node24-sandbox-debug-plan-sandbox",
+      "tier": "offline",
+      "fixture": "debug-plan-node24-sandbox",
+      "validator": "debug-plan-sandbox",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-plan-node24-sandbox-debug-plan-sandbox-node24",
+      "tier": "offline",
+      "fixture": "debug-plan-node24-sandbox",
+      "validator": "debug-plan-sandbox-node24",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-node24-sandbox-image-pinned",
+      "tier": "offline",
+      "fixture": "debug-plan-node24-sandbox",
+      "validator": "debug-plan-sandbox",
+      "expected": "unpinnedSandboxImage",
+      "actual": [
+        "unpinnedSandboxImage"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-plan-undeclared-host-debug-plan-host-unknown-runtime",
+      "tier": "offline",
+      "fixture": "debug-plan-undeclared-host",
+      "validator": "debug-plan-host-unknown-runtime",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-undeclared-host-must-not-invent-node24",
+      "tier": "offline",
+      "fixture": "debug-plan-undeclared-host",
+      "validator": "debug-plan-host-unknown-runtime",
+      "expected": "unexpectedResolvedNodeVersion",
+      "actual": [
+        "unexpectedResolvedNodeVersion"
+      ],
       "passed": true,
       "durationMs": 0
     },
@@ -131,6 +337,30 @@
       "expected": "schemaVersion",
       "actual": [
         "schemaVersion"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-development-environment",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "missingDevelopmentEnvironment",
+      "actual": [
+        "missingDevelopmentEnvironment"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-autopilot-requires-eligible-sandbox",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "invalidSandboxAutopilot",
+      "actual": [
+        "invalidSandboxAutopilot"
       ],
       "passed": true,
       "durationMs": 0
@@ -667,6 +897,16 @@
       "durationMs": 0
     },
     {
+      "id": "golden-reference-node-fullstack-debug-plan-host-current",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan-host-current",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "golden-reference-node-fullstack-debug-config",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
@@ -733,6 +973,50 @@
       "validator": "runtime-crud",
       "expected": "passed",
       "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-explicit-host-remains-compatible",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-current-host-note-required",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan-host-current",
+      "expected": "missingHostDevelopmentEnvironmentNote",
+      "actual": [
+        "missingHostDevelopmentEnvironmentNote"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-legacy-host-note-remains-optional",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-current-host-reason-required",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan-host-current",
+      "expected": "missingHostDevelopmentEnvironmentNote",
+      "actual": [
+        "missingHostDevelopmentEnvironmentNote"
+      ],
       "passed": true,
       "durationMs": 0
     },

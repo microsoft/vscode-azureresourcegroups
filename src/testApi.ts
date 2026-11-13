@@ -102,6 +102,12 @@ export interface TestApi {
         resourceGroupExists(context: IActionContext, node: SubscriptionItem, rgName: string): Promise<boolean>;
 
         /**
+         * Runs the fresh-project initialization through the activated extension
+         * instance so tests observe its real workspace state and marker writes.
+         */
+        prepareNewCorProject(prompt: string): Promise<void>;
+
+        /**
          * Bridge to the temporary migration firewall exception, for tests.
          *
          * Needed because the tests run against the bundled extension while importing from `src/`

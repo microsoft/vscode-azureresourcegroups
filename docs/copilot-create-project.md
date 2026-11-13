@@ -186,6 +186,16 @@ per service (backend, frontend, worker) plus shared data-stores and **API Login*
 infer are pre‑selected; the rest are pre‑filled with a recommended choice. Review each one and click
 **Submit**.
 
+The view also asks whether to run the project in a **Sandbox**. It checks Azure access without sending
+account, tenant, or subscription identifiers to the webview or workspace artifact. If you are signed out,
+use **Sign in to Azure** in the Requirements view. Sandbox is available only when at least one Azure
+subscription is accessible. If sign-in is cancelled, fails, or no subscription exists, submission uses the
+regular guided path instead.
+
+Sandbox defaults on after Azure access is confirmed. TypeScript- and Python-only projects also preselect
+**Autopilot** on the project-plan page; other runtimes remain guided while using the Sandbox. You can turn
+Sandbox off in Requirements or turn Autopilot off before approving the project plan.
+
 <p align="center">
   <img src="images/copilot-create-project/04-requirements-view.png" alt="Requirements view" />
 </p>
@@ -309,6 +319,60 @@ section shows deterministic **Install** links resolved by the extension from its
 plan markdown. The view renders plan text as React elements instead of inserting raw HTML, recognizes only
 attribute-free `<details>`, `<summary>`, and `<br>` presentation tags, and creates links only for `http`,
 `https`, or `mailto` URLs. Mermaid diagrams use strict security mode.
+
+When **Sandbox** is selected in Requirements, the plan includes a detailed **Development Environment** section.
+The optimized Node 22/24 + Azure Functions sandbox is used when all generated application services resolve to the
+same supported Node major, at least one service is an Azure Functions programming model v4 project, the
+remaining Node services and emulators are supported, and no existing Compose topology would need destructive
+replacement. CoR selects the exact pinned Node 22 or Node 24 image from project runtime declarations rather
+than the Node version installed on the host. New CoR JavaScript/TypeScript projects record `Node Version:
+24.x` in the approved plan, declare `"engines": { "node": "24.x" }` in the root workspace and every
+generated Node application manifest, and update the lockfile. For an older CoR-generated project with no
+explicit runtime, a valid `.azure/created-by-cor.json` marker, Functions programming model v4, and compatible
+dependency constraints select the newest supported major, currently Node 24. Unmarked unknown-runtime, conflicting, mixed-major, incompatible-dependency, and older Functions
+programming-model projects cannot use that optimized image. Sandbox-selected projects instead use a pinned
+Python 3.12 Microsoft development image when applicable, or a pinned generic Microsoft Bookworm development
+base with the exact declared runtime installed from pinned vendor sources. End-of-support runtime/framework
+combinations and host-only hardware or GUI workflows still use Host mode. Images are built locally from
+pinned multi-platform Microsoft development bases and run under a non-root user. The optimized Node base
+provides Node.js, npm, pnpm, Yarn, Git, certificates, build tools, and common developer utilities. The thin
+CoR layer adds pinned Azure CLI and Functions Core Tools plus the DNS, netcat, and PostgreSQL clients used
+by the workflow. TypeScript and related runners remain project-owned locked dependencies rather than global
+image tools. Project images are not published.
+
+Sandbox plans keep three inventories separate:
+
+- **Host Prerequisites** — the selected container runtime/Compose provider, browser, and matching
+  runtime debug extensions.
+- **Base-Provided Tools** — tools inherited from the pinned Microsoft development image.
+- **CoR-Added Tools** — only the extra tools installed by the generated Dockerfile.
+- **Supporting Emulators** — separate Compose services such as Azurite and PostgreSQL.
+
+The generated sandbox's host-workspace F5 task invokes the clean bootstrap primitive
+`docker compose up --build --wait dev`. The long-running `dev` service installs locked dependencies inside its
+container before reporting healthy, using a container-only `node_modules` volume. A one-shot initialization
+service assigns a newly created dependency volume to the non-root runtime user before `dev` starts, so clean
+startup does not depend on platform-specific named-volume ownership. This means later
+`docker compose exec dev ...` tasks cannot race a stopped service, and the workspace bind mount cannot hide
+an uninitialized or unwritable dependency directory. F5 then invokes application commands inside `dev`
+through the selected Compose command, attaches Node debugging through the published inspector port with
+host/container source mapping, and opens the frontend through its forwarded host URL. The project stays open
+in normal host VS Code; Dev Containers are not required.
+Sandbox Functions startup explicitly binds Core Tools to `0.0.0.0`; recent Core Tools releases bind
+to loopback by default, which is not reachable through a published container port.
+
+**Host** remains an explicit plan alternative and preserves the pre-sandbox plan shape: there is no Development
+Environment section, and generation interprets its absence as Host. The plan header always shows the derived
+**Development environment: Host** or **Development environment: Sandbox** decision. Newly generated Host plans
+also show a concise callout at the start of Prerequisites, including the concrete reason the Sandbox did not
+match; older Host plans without that callout remain compatible. In Guided mode, users can
+choose Host before approval. In Autopilot, selection is deterministic: honor the submitted Requirements
+choice, use a certified runtime image when available, otherwise install the exact runtime into the generic
+Sandbox image, and fall back to Host only for a concrete incompatibility. Host mode
+inventories Node.js, Azure CLI, Functions Core Tools, and other runtime dependencies on the host as before.
+The host-installed Node version and `@types/node` package are not treated as project runtime declarations.
+The Stage 6 screenshot `docs/images/08-debug-plan-view.png` must be recaptured when documentation screenshots
+are next regenerated because the plan header now includes the development-environment decision.
 
 Python Functions debugging uses a native **`func` task**, **`$func-python-watch`**, and **`debugpy` attach**,
 normally on debugger port **9091** (separate from HTTP port **7071**). The required native-task settings select
@@ -464,7 +528,9 @@ on to its next surface.
 
 ## Autopilot mode
 
-Autopilot runs the whole pipeline **unattended** — no approval gates, no Next Steps prompts. It activates when
+Autopilot runs the post-plan pipeline **unattended** — no later approval gates or Next Steps prompts. The
+Requirements view preselects it for Sandbox projects whose application services are all TypeScript or Python;
+the project-plan page remains the explicit approval gate and lets you turn it off. It also activates when
 the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** when `.azure/project-plan.md`
 includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand off directly (e.g. scaffold →
 `start_project_integrate` → `start_local_development`) and skip the Frontend preview and Next Steps views.
@@ -478,7 +544,7 @@ new subfolder or an empty folder so unattended generation cannot write over exis
 | Surface | Command to open | Opened by (MCP tool) | Purpose |
 | --- | --- | --- | --- |
 | **Create with Copilot** prompt | `copilotOnRails.createProjectWithCopilot` | — (view controller) | Enter the project description + model, press **Plan**. |
-| **Requirements** view | `copilotOnRails.openRequirementsView` | `open_requirements_view` | Answer per‑service + shared questions; **Submit**. |
+| **Requirements** view | `copilotOnRails.openRequirementsView` | `open_requirements_view` | Answer per‑service + shared questions, choose Sandbox, verify Azure access, and **Submit**. |
 | **Plan preview** view | `copilotOnRails.openScaffoldPlanView` | `open_plan_view` | Review the plan + UI preview cards; **Approve**. |
 | **Frontend preview** (Approve UI) | `copilotOnRails.openFrontendPreviewView` | `open_frontend_preview_view` | See the running app (mock data); **Approve UI**. |
 | **Scaffold Next Steps** view | `copilotOnRails.openScaffoldNextStepsView` | `open_scaffold_next_steps_view` | Post‑integration "What's next?" (local dev / deploy). |
@@ -557,6 +623,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | Path | Written by | Contents |
 | --- | --- | --- |
 | `.azure/.pending-create` | extension | Short-lived project-folder handoff marker. It activates the extension after the target folder opens, is consumed immediately, and expires after ten minutes. |
+| `.azure/created-by-cor.json` | extension | Schema-versioned breadcrumb identifying a project created through this flow. It contains the pseudonymous telemetry correlation ID used to recognize eligible generated projects; it is not copied into Azure resource names, tags, logs, or diagnostics. |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
 | `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
@@ -681,6 +748,8 @@ before submitting.
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
 | A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
 | F5 / *Start Emulators* fails with a connection or "cannot connect to the container runtime" error. | The container engine the plan selected isn't running. | For **Docker**, start Docker Desktop / the Docker service. For **Podman** on Windows/macOS, ensure a **Podman machine** exists and is started (`podman machine init` once, then `podman machine start`). Generation's preflight asks before starting a stopped machine but won't create one for you. |
+| `docker compose exec dev ...` reports that service `dev` is not running. | The sandbox's clean-start command was skipped, or Compose startup failed before `dev` became healthy. A common cause is another stack already owning a forwarded host port. | Run `docker compose up --build --wait dev` first. If it does not complete, inspect `docker compose ps -a`, `docker compose logs dev azurite postgres`, and the containers' recorded networking errors. Stop the conflicting stack or set the sandbox's `FRONTEND_PORT`, `FUNCTIONS_PORT`, `NODE_INSPECTOR_PORT`, `AZURITE_*_PORT`, and `POSTGRES_PORT` overrides before retrying. Do not use `exec` as the first-run bootstrap. |
+| Sandbox F5 reports `tsc: not found` or another missing project CLI. | The container-only `node_modules` volume exists but locked dependencies were not installed into it. | Re-run `docker compose up --build --wait dev`. The `dev` entrypoint runs the lockfile-specific frozen install before health succeeds; do not replace it with an empty volume or rely on host `node_modules`. |
 | Python F5 uses system Python, reports `ModuleNotFoundError`, or never attaches. | Native Functions settings do not select Python/the correct service venv, or Python debugger extensions are missing. | Confirm `azureFunctions.projectLanguage: "Python"`, `azureFunctions.pythonVenv` relative to the task's actual Functions service cwd, and compatible Core Tools. Install both `ms-python.python` and `ms-python.debugpy`; select the matching venv in **Python: Select Interpreter** if VS Code cached another one. Remove ad hoc worker/debugger argument overrides and retry the real VS Code task, not only a terminal command. Use `projectSubpath` only if extension project discovery needs it. |
 | Python functions compile but no endpoints register, or routes become `/api/api/...`. | Circular registration imports, an unregistered Blueprint, or a duplicated HTTP prefix. | Register every handler Blueprint explicitly from service-root `function_app.py`; handlers must not import its `app`. Read the actual host HTTP prefix and include it once when constructing route URLs. |
 | Functions host fails with an unhelpful disposed-`IServiceProvider` error. | Credentialed wildcard CORS can invalidate startup configuration. | Replace `Host.CORS: "*"` with the actual frontend origin(s) when `CORSCredentials` is `true`; keep the frontend dev port and debug URL aligned. Inspect host logs for other causes rather than assuming every such error is CORS. |

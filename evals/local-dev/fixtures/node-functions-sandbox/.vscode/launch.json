@@ -1,0 +1,43 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Sandbox API (debug)",
+            "type": "node",
+            "request": "attach",
+            "address": "localhost",
+            "port": 9229,
+            "restart": true,
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}/services/api",
+            "remoteRoot": "/workspaces/copilot-on-rails-sandbox/services/api",
+            "outFiles": [
+                "${workspaceFolder}/services/api/dist/**/*.js"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "sandbox: api",
+            "postDebugTask": "sandbox: down"
+        },
+        {
+            "name": "Sandbox Web (debug)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/services/web",
+            "preLaunchTask": "sandbox: web",
+            "postDebugTask": "sandbox: down"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Sandbox: F5",
+            "configurations": [
+                "Sandbox API (debug)",
+                "Sandbox Web (debug)"
+            ],
+            "stopAll": true
+        }
+    ]
+}

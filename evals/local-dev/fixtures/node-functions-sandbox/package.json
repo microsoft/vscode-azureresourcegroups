@@ -1,0 +1,22 @@
+{
+    "name": "cor-node-functions-sandbox",
+    "version": "1.0.0",
+    "private": true,
+    "engines": {
+        "node": ">=22 <23"
+    },
+    "workspaces": [
+        "services/api",
+        "services/web"
+    ],
+    "scripts": {
+        "build": "npm run build --workspaces --if-present",
+        "check": "npm run check --workspaces --if-present",
+        "dev:api": "npm --workspace @cor-sandbox/api run dev",
+        "dev:web": "npm --workspace @cor-sandbox/web run dev",
+        "sandbox:down": "docker compose down",
+        "sandbox:reset": "docker compose down --volumes",
+        "sandbox:up": "docker compose up --build --wait dev",
+        "sandbox:validate": "bash scripts/validate-sandbox.sh"
+    }
+}

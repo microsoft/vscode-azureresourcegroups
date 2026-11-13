@@ -12,18 +12,31 @@
 
 ---
 
+## Development Environment
+
+| Field | Value |
+|-------|-------|
+| Mode | Sandbox |
+| Image | Local Dockerfile based on `mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:1bc82e3350b0da52ca1a1b1b2e7527300bc6fdfd778287e0eed564203d66a68c` |
+| Match Rationale | The root workspace, Functions API, and React/Vite frontend explicitly declare Node.js 24.x; the backend uses Azure Functions programming model v4; Azurite and PostgreSQL are supported. |
+| Host Prerequisites | Docker, Docker Compose, Chrome, Azure Functions extension |
+| Base-Provided Tools | Node.js 24.22.1, npm 11.19.1, pnpm 12.16.1, Yarn 1.22.22, Git, certificates, build tools, and common developer utilities |
+| CoR-Added Tools | Azure CLI 2.91.0, Azure Functions Core Tools 4.16.0, DNS diagnostics, netcat, and PostgreSQL client |
+| Supporting Emulators | Azurite and PostgreSQL as separate Compose services |
+| Forwarded Ports | 5173 frontend, 7071 Functions HTTP, 9229 Node inspector, 10000-10002 Azurite, 5432 PostgreSQL |
+| Workspace Topology | VS Code remains on the host; Compose tasks bind-mount the workspace, run application commands with `docker compose exec dev`, and map host sources to `/workspaces/task-tracker`; root `node_modules` uses a container-only named volume; emulators run as sibling services. |
+
+---
+
 ## Prerequisites
 
 All required tools and VS Code extensions with install status — list both the Run and Debug tool sets.
 
 | Tool / Extension | Category | Service(s) | Installed | Version |
 |------------------|----------|------------|-----------|---------|
-| Node.js | Runtime | * | ✅ | 22.23.2 |
-| npm | Package Manager | * | ✅ | — |
-| Azure Functions Core Tools | Runtime | functions | ✅ | 4.14.0 |
-| TypeScript | Build Tool | * | ✅ | — |
 | Docker | Container Runtime | * | ❓ | — |
 | Docker Compose | Orchestration | * | ❓ | — |
+| Chrome | Browser | web | ❓ | — |
 | ms-azuretools.vscode-azurefunctions | VS Code Extension | functions | ❓ | — |
 | dbaeumer.vscode-eslint | VS Code Extension | * | ❓ | — |
 
@@ -37,8 +50,8 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 | Generate | Debug Config Name | Service Label | Service Root | Project Type | Runtime | Version | Azure Dependencies |
 |----------|-------------------|---------------|--------------|--------------|---------|---------|-------------------|
-| [x] | Task Tracker API (debug) | functions | services/functions | functions | node-ts | 22.x | Azure Storage, PostgreSQL |
-| [x] | Task Tracker Frontend (debug) | web | services/web | frontend-spa | node-ts | 22.x | — |
+| [x] | Task Tracker API (debug) | functions | services/functions | functions | node-ts | 24.x | Azure Storage, PostgreSQL |
+| [x] | Task Tracker Frontend (debug) | web | services/web | frontend-spa | node-ts | 24.x | — |
 | [x] | Debug All Services | — | — | *Compound Config* | — | — | — |
 
 <details>

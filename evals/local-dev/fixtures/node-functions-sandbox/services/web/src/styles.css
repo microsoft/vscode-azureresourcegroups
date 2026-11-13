@@ -1,0 +1,37 @@
+:root {
+    font-family: Inter, system-ui, sans-serif;
+    color: #172554;
+    background: #eff6ff;
+}
+
+body {
+    margin: 0;
+}
+
+main {
+    max-width: 720px;
+    margin: 10vh auto;
+    padding: 2rem;
+}
+
+.eyebrow {
+    color: #2563eb;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    color: #166534;
+    background: #dcfce7;
+}
+
+section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 1rem;
+    background: white;
+}

@@ -287,6 +287,31 @@ const OFFLINE_VALIDATORS: Record<
             expectNoEmulators: true,
             requireChecklist: true,
         }),
+    'debug-plan-sandbox': async workspace =>
+        validateLocalDebugPlanArtifact(await readArtifact(workspace, '.azure/vscode-debug-plan.md'), {
+            expectedDevelopmentEnvironment: 'sandbox',
+        }),
+    'debug-plan-sandbox-node24': async workspace =>
+        validateLocalDebugPlanArtifact(await readArtifact(workspace, '.azure/vscode-debug-plan.md'), {
+            expectedDevelopmentEnvironment: 'sandbox',
+            expectedSandboxNodeMajor: 24,
+        }),
+    'debug-plan-host-current': async workspace =>
+        validateLocalDebugPlanArtifact(await readArtifact(workspace, '.azure/vscode-debug-plan.md'), {
+            expectedDevelopmentEnvironment: 'host',
+            requireHostEnvironmentNote: true,
+        }),
+    'debug-plan-host-unknown-runtime': async workspace =>
+        validateLocalDebugPlanArtifact(await readArtifact(workspace, '.azure/vscode-debug-plan.md'), {
+            expectedDevelopmentEnvironment: 'host',
+            requireHostEnvironmentNote: true,
+            requireUnknownNodeVersions: true,
+        }),
+    'project-node24-engines': async workspace =>
+        validateProjectPackages(workspace, {
+            requireFrontend: true,
+            requiredNodeEngineMajor: 24,
+        }),
     'debug-config': async workspace => validateDebugLaunchConfiguration(
         await readArtifact(workspace, '.vscode/launch.json'),
         await readArtifact(workspace, '.vscode/tasks.json'),

@@ -1,0 +1,77 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "sandbox: up",
+            "command": "docker compose up --build --wait dev",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "sandbox: api",
+            "command": "docker compose exec -T -e languageWorkers__node__arguments=--inspect=0.0.0.0:9229 dev npm run dev:api",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": [
+                "sandbox: up"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "azure-functions",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Azure Functions Core Tools",
+                    "endsPattern": "Functions:"
+                }
+            },
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            }
+        },
+        {
+            "type": "shell",
+            "label": "sandbox: web",
+            "command": "docker compose exec -T dev npm run dev:web",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": [
+                "sandbox: api"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE",
+                    "endsPattern": "Local:"
+                }
+            },
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            }
+        },
+        {
+            "type": "shell",
+            "label": "sandbox: down",
+            "command": "docker compose down --remove-orphans",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

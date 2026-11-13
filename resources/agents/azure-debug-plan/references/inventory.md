@@ -16,9 +16,25 @@ In interactive (non-autopilot) mode, derive from workspace scan; user reviews an
 
 Identify and inventory required tools via [prerequisites.md](../../shared-references/prerequisites.md).
 
-Derive tools from current workspace scan. Check only those relevant to detected project types, runtimes, and Azure bindings. Include both prerequisites.md sets: **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and **Debug** tools (Docker, Docker Compose, VS Code extensions, ...), because debugging uses full local stack.
+First select the development environment using [development-environments.md](development-environments.md).
+Inspect `.azure/created-by-cor.json` before treating an undeclared runtime as eligible for the deterministic
+Node 24 default. Host-installed Node and `@types/node` are inventory observations only and never runtime
+selection evidence.
 
-For every detected project type, add its VS Code debug-integration extension from Debug Tools as a separate Debug row (e.g. Azure Functions always includes `ms-azuretools.vscode-azurefunctions`). These required extensions differ from Run-group CLI/runtime tools; never omit them.
+For **Host** mode, derive tools from the current workspace scan. Check only those relevant to detected
+project types, runtimes, and Azure bindings. Include both prerequisites.md sets: **Run** tools (Node.js,
+.NET SDK, Python, Functions Core Tools, ...) and **Debug** tools (Docker, Docker Compose, VS Code
+extensions, ...), because debugging uses the full local stack.
+
+For **Sandbox** mode, the Prerequisites table contains host requirements only: the selected container
+runtime plus Compose provider, a supported browser for frontend debugging, and matching runtime debug
+extensions. Record the inherited Microsoft image toolchain under **Base-Provided Tools** and the
+tools installed by the generated Dockerfile under **CoR-Added Tools**. Never mark either set missing
+on the host or require host installation.
+
+For every detected project type, add its VS Code debug-integration extension from Debug Tools as a
+separate Debug row (e.g. Azure Functions always includes `ms-azuretools.vscode-azurefunctions`).
+Never add `ms-vscode-remote.remote-containers` for Sandbox mode.
 
 Apply prerequisites.md's runtime compatibility and extension requirements, including in autopilot. Add missing prerequisite rows and recheck stale installation results against the actual service rather than carrying forward an incompatible tool as `✅`.
 

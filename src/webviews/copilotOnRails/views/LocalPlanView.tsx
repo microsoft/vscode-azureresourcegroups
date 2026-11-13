@@ -49,6 +49,7 @@ import {
 } from "./utils/emulatorSupport";
 import {
     findColumnIndex,
+    getLocalPlanDevelopmentEnvironment,
     isChecked,
     type LocalPlanContent,
     type LocalPlanData,
@@ -73,6 +74,7 @@ let mermaidIdCounter = 0;
 
 // Sections expected in the new vscode-debug-plan format. Anything else is hidden.
 const ALLOWED_SECTIONS = new Set([
+    "development environment",
     "prerequisites",
     "debug configurations",
     "orchestrator",
@@ -85,6 +87,7 @@ const ALLOWED_SECTIONS = new Set([
 
 // Section order shown in the UI.
 const SECTION_ORDER: string[] = [
+    "development environment",
     "prerequisites",
     "debug configurations",
     "orchestrator",
@@ -98,8 +101,12 @@ const SECTION_ORDER: string[] = [
 // Sections that are always rendered open; the rest get a clickable header
 // that toggles open/closed. (Architecture Diagram opens by default but stays
 // collapsible since the mermaid diagram is large.)
-const ALWAYS_EXPANDED_SECTIONS = new Set(["prerequisites"]);
+const ALWAYS_EXPANDED_SECTIONS = new Set([
+    "development environment",
+    "prerequisites",
+]);
 const DEFAULT_OPEN_SECTIONS = new Set([
+    "development environment",
     "prerequisites",
     "debug configurations",
     "architecture diagram",
@@ -203,6 +210,10 @@ export const LocalPlanView = (): JSX.Element => {
         const unapprovedStatuses = new Set(['planning', 'unknown', 'draft', 'awaiting approval', 'new']);
         return !unapprovedStatuses.has(s);
     }, [plan?.status]);
+    const developmentEnvironment = useMemo(
+        () => plan ? getLocalPlanDevelopmentEnvironment(plan) : undefined,
+        [plan],
+    );
 
     useEffect(() => {
         const handler = (event: MessageEvent) => {
@@ -372,7 +383,20 @@ export const LocalPlanView = (): JSX.Element => {
                                     {plan.status && plan.status !== "Unknown" && (
                                         <span className="badge">{plan.status}</span>
                                     )}
+                                    {developmentEnvironment && (
+                                        <span className="badge environmentBadge">
+                                            Development environment: {developmentEnvironment.mode}
+                                        </span>
+                                    )}
                                 </div>
+                                {developmentEnvironment && (
+                                    <p className="headerNote">
+                                        {developmentEnvironment.detail}
+                                        {developmentEnvironment.warning && (
+                                            <> <strong>{developmentEnvironment.warning}</strong></>
+                                        )}
+                                    </p>
+                                )}
                             </div>
                             <div className="headerActions">
                                 <Tooltip

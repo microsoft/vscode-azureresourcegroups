@@ -7,6 +7,7 @@ import type { RequirementsAnswer } from '../../../src/webviews/copilotOnRails/vi
 import {
     isAnswerEmpty,
     parseRequirementsJson,
+    supportsSandboxAutopilot,
 } from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
 import { createValidationResult } from './validationTypes.ts';
@@ -106,6 +107,30 @@ export function validateRequirementsArtifact(
     if (!requirements.questions.some(question => question.id === 'auth' && !question.serviceId)) {
         issues.push(issue('missingAuth', '$.questions', 'Shared auth question is required.'));
     }
+    if (options.requireConfirmed) {
+        if (requirements.developmentEnvironment !== 'sandbox' && requirements.developmentEnvironment !== 'regular') {
+            issues.push(issue(
+                'missingDevelopmentEnvironment',
+                '$.developmentEnvironment',
+                'Confirmed requirements must record developmentEnvironment as sandbox or regular.',
+            ));
+        }
+        if (requirements.executionMode !== 'auto' && requirements.executionMode !== 'guided') {
+            issues.push(issue(
+                'missingExecutionMode',
+                '$.executionMode',
+                'Confirmed requirements must record executionMode as auto or guided.',
+            ));
+        }
+        if (requirements.executionMode === 'auto'
+            && (requirements.developmentEnvironment !== 'sandbox' || !supportsSandboxAutopilot(requirements))) {
+            issues.push(issue(
+                'invalidSandboxAutopilot',
+                '$.executionMode',
+                'Autopilot requires Sandbox and TypeScript/Python-only application services.',
+            ));
+        }
+    }
 
     return createValidationResult(issues);
 }
@@ -137,6 +162,7 @@ export function confirmRequirementsArtifact(
         };
     });
     raw.executionMode = 'guided';
+    raw.developmentEnvironment = 'regular';
     const confirmed = JSON.stringify(raw, null, 2) + '\n';
     const validation = validateRequirementsArtifact(confirmed, { requireConfirmed: true });
     if (!validation.valid) {

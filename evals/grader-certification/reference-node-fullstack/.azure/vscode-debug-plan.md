@@ -7,6 +7,9 @@
 
 ## Prerequisites
 
+> **Development Environment:** Host — application runtimes and CLIs will run directly on this machine.
+> Sandbox was not selected because this project is a standalone Node server rather than Azure Functions programming model v4.
+
 | Tool | Required Version | Installed | Action Required |
 |---|---|---|---|
 | Node.js | 22.x | ✅ | None |

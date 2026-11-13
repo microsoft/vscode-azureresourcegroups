@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "1",
+    "id": "grader-debug-plan-node24-sandbox",
+    "prompt": "Create a React and TypeScript application with a Node 24 TypeScript Azure Functions API and PostgreSQL persistence.",
+    "baselinePrompt": "Create a React and TypeScript application with a Node 24 TypeScript Azure Functions programming model v4 API and PostgreSQL persistence.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "node",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "required",
+        "timeoutMinutes": 5,
+        "maxAgentRetries": 0
+    }
+}
