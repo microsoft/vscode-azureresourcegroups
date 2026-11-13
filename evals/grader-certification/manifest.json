@@ -728,6 +728,18 @@
       "expectedCode": "sandboxImageRuntimeMismatch"
     },
     {
+      "comment": "Every generated application row must resolve to the optimized Sandbox image major; a partially unresolved plan is not valid Node Sandbox evidence.",
+      "id": "debug-plan-sandbox-rejects-unresolved-runtime-row",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "file": ".azure/vscode-debug-plan.md",
+      "operation": "replace",
+      "search": "| [x] | Task Tracker Frontend (debug) | web | services/web | frontend-spa | node-ts | 24.x | — |",
+      "replacement": "| [x] | Task Tracker Frontend (debug) | web | services/web | frontend-spa | node-ts | Unknown | — |",
+      "expectedCode": "sandboxImageRuntimeMismatch"
+    },
+    {
       "comment": "Node 24 sandbox plans require the certified immutable Microsoft Node 24/bookworm multi-platform digest, not a floating MCR tag.",
       "id": "debug-plan-node24-sandbox-image-pinned",
       "tier": "offline",

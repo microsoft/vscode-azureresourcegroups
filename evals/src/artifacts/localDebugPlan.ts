@@ -320,14 +320,10 @@ function validateDevelopmentEnvironment(
             }
             const applicationRows = readDebugConfigRows(data)
                 .filter(row => row.generate && !row.isCompound);
-            const runtimeMajors = new Set(
-                applicationRows
-                    .map(row => readNodeMajor(row.version))
-                    .filter((major): major is number => major !== undefined),
-            );
             const allRowsUseNode = applicationRows.length > 0
                 && applicationRows.every(row => row.runtime.toLowerCase().includes('node'));
-            if (!allRowsUseNode || runtimeMajors.size !== 1 || !runtimeMajors.has(imageMajor)) {
+            const allRowsMatchImage = applicationRows.every(row => readNodeMajor(row.version) === imageMajor);
+            if (!allRowsUseNode || !allRowsMatchImage) {
                 issues.push(issue(
                     'sandboxImageRuntimeMismatch',
                     '$.developmentEnvironment.Image',

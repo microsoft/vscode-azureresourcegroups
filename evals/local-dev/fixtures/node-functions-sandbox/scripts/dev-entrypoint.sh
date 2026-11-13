@@ -8,6 +8,7 @@ if [[ ! -f package-lock.json ]]; then
     exit 1
 fi
 
+rm -f /tmp/cor-sandbox-ready
 npm ci
 touch /tmp/cor-sandbox-ready
 

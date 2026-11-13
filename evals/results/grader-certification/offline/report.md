@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `stage-local-dev`, `debug-plan-node24-sandbox`, `debug-plan-undeclared-host`, `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `debug-probe-verdict`, `unapproved-plan-refusal`, `api-only-no-datastore`, `reference-iac-bicep`, `reference-iac-deployed`, `safety-boundaries-clean`, `reference-frontend-integrated`, `safety-boundaries-empty`
 - Outcome: **PASSED**
-- Cases: 188/188 passed
+- Cases: 189/189 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -16,6 +16,7 @@
 | `debug-plan-development-environment-mode-invalid` | `stage-local-dev` | `debug-plan-sandbox` | `invalidDevelopmentEnvironmentMode` | `invalidDevelopmentEnvironmentMode` | PASS |
 | `debug-plan-sandbox-microsoft-image-pinned` | `stage-local-dev` | `debug-plan-sandbox` | `unpinnedSandboxImage` | `unpinnedSandboxImage` | PASS |
 | `debug-plan-sandbox-image-matches-runtime` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxImageRuntimeMismatch` | `sandboxImageRuntimeMismatch` | PASS |
+| `debug-plan-sandbox-rejects-unresolved-runtime-row` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxImageRuntimeMismatch` | `sandboxImageRuntimeMismatch` | PASS |
 | `debug-plan-sandbox-base-tools-recorded` | `stage-local-dev` | `debug-plan-sandbox` | `missingBaseProvidedTool` | `missingBaseProvidedTool` | PASS |
 | `debug-plan-sandbox-functions-model-v4-required` | `stage-local-dev` | `debug-plan-sandbox` | `sandboxFunctionsModelUnsupported` | `sandboxFunctionsModelUnsupported` | PASS |
 | `debug-plan-sandbox-cor-tools-recorded` | `stage-local-dev` | `debug-plan-sandbox` | `missingCorAddedTool` | `missingCorAddedTool` | PASS |

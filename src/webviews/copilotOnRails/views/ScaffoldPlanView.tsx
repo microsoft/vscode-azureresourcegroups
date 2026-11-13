@@ -16,6 +16,7 @@ import { getServiceStackKind, isAzureFunctionsFramework, normalizeScaffoldPlanCo
 import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
 import { hasMissingBackendFramework, isBackendFrameworkField, isLimitedSupportBackendLanguage, isServiceStackSection, languageDependentFields, matchServiceStackOption, optionsForField } from './utils/serviceStackOptions';
+import { resolveAutopilotSelection } from './utils/autopilotSelection';
 
 // Options that are officially supported. Anything else is offered as a
 // convenience but flagged with a soft "not officially supported" warning.
@@ -118,6 +119,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     const [previewStatus, setPreviewStatus] = useState<PreviewStatus | undefined>(undefined);
     const [autopilot, setAutopilot] = useState(false);
+    const autopilotEdited = useRef(false);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
     // target like `palette:Primary`.
@@ -170,7 +172,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
             if (message?.command === 'setPlanData') {
                 const nextPlan = message.data as ScaffoldPlanData;
                 setPlan(nextPlan);
-                setAutopilot(nextPlan.executionMode.trim().toLowerCase() === 'auto');
+                setAutopilot(current => resolveAutopilotSelection(
+                    current,
+                    autopilotEdited.current,
+                    nextPlan.executionMode,
+                ));
                 // New plan data from the controller — either the initial load or a
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);
@@ -489,7 +495,10 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                     <Switch
                                         className='autopilotSwitch'
                                         checked={autopilot}
-                                        onChange={(_, switchData) => setAutopilot(switchData.checked)}
+                                        onChange={(_, switchData) => {
+                                            autopilotEdited.current = true;
+                                            setAutopilot(switchData.checked);
+                                        }}
                                         disabled={isAwaitingRevision || isAlreadyApproved}
                                         label={
                                             <span className='autopilotLabel'>

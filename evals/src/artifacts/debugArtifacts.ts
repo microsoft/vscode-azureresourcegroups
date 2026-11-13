@@ -207,6 +207,7 @@ async function validateSandboxHostWorkspaceArtifacts(
         : [];
     const composeCommand = (plan.composeCommand || 'docker compose').toLowerCase();
     const taskCommands = tasks.map(taskCommandText);
+    const applicationRows = plan.debugConfigs.filter(row => row.generate && !row.isCompound);
 
     if (!taskCommands.some(command => command.includes(`${composeCommand} up`)
         && command.includes('--build')
@@ -233,35 +234,41 @@ async function validateSandboxHostWorkspaceArtifacts(
         ));
     }
 
-    const nodeAttach = configurations.find(config =>
-        config.type === 'node' && config.request === 'attach');
-    if (!nodeAttach
-        || nodeAttach.sourceMaps !== true
-        || typeof nodeAttach.localRoot !== 'string'
-        || !nodeAttach.localRoot.includes('${workspaceFolder}')
-        || typeof nodeAttach.remoteRoot !== 'string'
-        || !nodeAttach.remoteRoot.startsWith('/')
-        || !Array.isArray(nodeAttach.outFiles)
-        || nodeAttach.outFiles.length === 0) {
-        issues.push(issue(
-            'sandboxNodePathMappingMissing',
-            '$.launch',
-            'Sandbox Node attach must enable source maps and map host localRoot/outFiles to an absolute container remoteRoot.',
-        ));
+    if (applicationRows.some(row =>
+        row.runtime.toLowerCase().includes('node')
+        && row.projectType.toLowerCase() !== 'frontend-spa')) {
+        const nodeAttach = configurations.find(config =>
+            config.type === 'node' && config.request === 'attach');
+        if (!nodeAttach
+            || nodeAttach.sourceMaps !== true
+            || typeof nodeAttach.localRoot !== 'string'
+            || !nodeAttach.localRoot.includes('${workspaceFolder}')
+            || typeof nodeAttach.remoteRoot !== 'string'
+            || !nodeAttach.remoteRoot.startsWith('/')
+            || !Array.isArray(nodeAttach.outFiles)
+            || nodeAttach.outFiles.length === 0) {
+            issues.push(issue(
+                'sandboxNodePathMappingMissing',
+                '$.launch',
+                'Sandbox Node attach must enable source maps and map host localRoot/outFiles to an absolute container remoteRoot.',
+            ));
+        }
     }
 
-    const browserLaunch = configurations.find(config =>
-        (config.type === 'chrome' || config.type === 'msedge') && config.request === 'launch');
-    if (!browserLaunch
-        || typeof browserLaunch.url !== 'string'
-        || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/.test(browserLaunch.url)
-        || typeof browserLaunch.webRoot !== 'string'
-        || !browserLaunch.webRoot.includes('${workspaceFolder}')) {
-        issues.push(issue(
-            'sandboxBrowserHostLaunchMissing',
-            '$.launch',
-            'Sandbox frontend debugging must launch a forwarded localhost URL using the host workspace webRoot.',
-        ));
+    if (applicationRows.some(row => row.projectType.toLowerCase() === 'frontend-spa')) {
+        const browserLaunch = configurations.find(config =>
+            (config.type === 'chrome' || config.type === 'msedge') && config.request === 'launch');
+        if (!browserLaunch
+            || typeof browserLaunch.url !== 'string'
+            || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/.test(browserLaunch.url)
+            || typeof browserLaunch.webRoot !== 'string'
+            || !browserLaunch.webRoot.includes('${workspaceFolder}')) {
+            issues.push(issue(
+                'sandboxBrowserHostLaunchMissing',
+                '$.launch',
+                'Sandbox frontend debugging must launch a forwarded localhost URL using the host workspace webRoot.',
+            ));
+        }
     }
 }
 

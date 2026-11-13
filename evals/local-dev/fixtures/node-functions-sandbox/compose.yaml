@@ -35,7 +35,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
       - "${FUNCTIONS_PORT:-7071}:7071"
-      - "${NODE_INSPECTOR_PORT:-9229}:9229"
+      - "127.0.0.1:${NODE_INSPECTOR_PORT:-9229}:9229"
     healthcheck:
       test: ["CMD-SHELL", "test -f /tmp/cor-sandbox-ready"]
       interval: 2s

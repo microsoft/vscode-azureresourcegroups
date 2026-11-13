@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-09T18:11:12.188Z",
+  "generatedAt": "2026-11-12T17:31:35.947Z",
   "mode": "offline",
   "fixtures": [
     "stage-local-dev",
@@ -111,6 +111,18 @@
     },
     {
       "id": "debug-plan-sandbox-image-matches-runtime",
+      "tier": "offline",
+      "fixture": "stage-local-dev",
+      "validator": "debug-plan-sandbox",
+      "expected": "sandboxImageRuntimeMismatch",
+      "actual": [
+        "sandboxImageRuntimeMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-sandbox-rejects-unresolved-runtime-row",
       "tier": "offline",
       "fixture": "stage-local-dev",
       "validator": "debug-plan-sandbox",
