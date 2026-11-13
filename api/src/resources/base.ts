@@ -6,6 +6,14 @@
 import * as vscode from 'vscode';
 
 /**
+ * Options for an explicit resource operation rather than normal tree browsing.
+ */
+export interface ResourceTreeOperationContext {
+    /** Throw loading errors and cancellation instead of returning empty results or error placeholders. */
+    propagateErrors?: boolean;
+}
+
+/**
  * Represents the base type for all Azure and workspace resources.
  */
 export interface ResourceBase {
@@ -50,7 +58,7 @@ export interface ResourceProvider<TResourceSource, TResource extends ResourceBas
      *
      * @returns The resources to be displayed in the resource view.
      */
-    getResources(source: TResourceSource): vscode.ProviderResult<TResource[]>;
+    getResources(source: TResourceSource, context?: ResourceTreeOperationContext): vscode.ProviderResult<TResource[]>;
 }
 
 /**
@@ -64,7 +72,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      *
      * @returns Children of `element`.
      */
-    getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
+    getChildren(element: TModel, context?: ResourceTreeOperationContext): vscode.ProviderResult<TModel[]>;
 
     /**
      * Called to get the provider's model element for a specific resource.
@@ -74,5 +82,5 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      *
      * @returns The provider's model element for `resource`.
      */
-    getResourceItem(element: TResource): TModel | Thenable<TModel>;
+    getResourceItem(element: TResource, context?: ResourceTreeOperationContext): TModel | Thenable<TModel>;
 }

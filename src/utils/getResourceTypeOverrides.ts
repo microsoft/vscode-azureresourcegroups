@@ -140,3 +140,11 @@ export function getResourceTypeOverride(resourceType: AzExtResourceType | string
     }
     return cache.get(resourceType);
 }
+
+/** @internal Test-only override for the running extension's cached contribution metadata. */
+export function overrideResourceTypeForTesting(resourceType: AzExtResourceType, override: ResourceTypeOverride): vscode.Disposable {
+    const previous = cache;
+    cache = new Map(cache ?? buildOverrideMapFromExtensions(vscode.extensions.all));
+    cache.set(resourceType, override);
+    return new vscode.Disposable(() => { cache = previous; });
+}

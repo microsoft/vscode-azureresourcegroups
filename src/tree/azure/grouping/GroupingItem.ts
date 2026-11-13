@@ -5,10 +5,11 @@
 
 import { createContextValue, ISubscriptionContext, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../../api/src/index';
+import { AzExtResourceType, AzureResource, AzureSubscription } from '../../../../api/src/index';
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from '../../../utils/localize';
+import { getMostSpecificResources, TreeTraversalContext } from '../../../utils/treeOperations';
 import { createPortalUrl } from '../../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../../BranchDataItemWrapper';
 import { GenericItem } from '../../GenericItem';
@@ -31,7 +32,7 @@ export class GroupingItem implements ResourceGroupsItem {
     public readonly parent?: ResourceGroupsItem;
 
     private readonly resourceItemFactory: ResourceItemFactory<AzureResource>;
-    private readonly branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>;
+    private readonly branchDataProviderFactory: BranchDataProviderFactory;
     private readonly onDidChangeBranchDataProviders: vscode.Event<AzExtResourceType>;
 
     protected readonly contextValues: string[] = ['groupingItem'];
@@ -77,9 +78,11 @@ export class GroupingItem implements ResourceGroupsItem {
         return resources;
     }
 
-    async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
+    async getChildren(context?: TreeTraversalContext): Promise<ResourceGroupsItem[] | undefined> {
 
-        const sortedResources = this.getResourcesToDisplay(this.resources).sort((a, b) => {
+        const displayedResources = this.getResourcesToDisplay(this.resources);
+        const sortedResources = (context?.targetId
+            ? getMostSpecificResources(displayedResources, context.targetId) : displayedResources).sort((a, b) => {
 
             if (a.subscription !== b.subscription) {
                 return a.subscription.name.localeCompare(b.subscription.name);
@@ -111,10 +114,10 @@ export class GroupingItem implements ResourceGroupsItem {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
-                await Promise.allSettled((subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
+                const loads = (subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
                     try {
-                        const branchDataProvider = this.branchDataProviderFactory(resource);
-                        const resourceItem = await branchDataProvider.getResourceItem(resource);
+                        const branchDataProvider = await this.branchDataProviderFactory(resource, context);
+                        const resourceItem = await branchDataProvider.getResourceItem(resource, context);
                         const options: BranchDataItemOptions = {
                             contextValues: ['azureResource'],
                             defaultId: resource.id,
@@ -132,12 +135,20 @@ export class GroupingItem implements ResourceGroupsItem {
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));
                     } catch (e) {
+                        if (context?.propagateErrors) {
+                            throw e;
+                        }
                         const parsedError = parseError(e);
                         ext.outputChannel.appendLog(localize('errorResolving', 'Error resolving resource item for {0}: {1}', resource.id, parsedError.message));
                         items.push(new InvalidAzureResourceItem(resource, e));
                         throw parsedError;
                     }
-                }));
+                });
+                if (context?.propagateErrors) {
+                    await Promise.all(loads);
+                } else {
+                    await Promise.allSettled(loads);
+                }
 
                 return items.sort((a, b) => (a.id.split('/').pop() ?? '').localeCompare((b.id.split('/').pop() ?? '')));
             }));

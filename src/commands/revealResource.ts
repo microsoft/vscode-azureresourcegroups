@@ -5,10 +5,41 @@
 
 import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, IActionContext, ResourceGroupsItem, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
-import { VSCodeRevealOptions } from '../../api/src/index';
+import { AzureResourceRevealOptions, AzureResourceRevealResult, ResourceModelBase, VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
+import { AzureResourceTreeDataProvider } from '../tree/azure/AzureResourceTreeDataProvider';
 import { TreeDataItem } from '../tree/ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
+import { localize } from '../utils/localize';
+import { TreeTraversalContext } from '../utils/treeOperations';
+import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
+
+export async function revealResourceWithResult(context: IActionContext, resourceId: string, options?: AzureResourceRevealOptions): Promise<AzureResourceRevealResult> {
+    context.valuesToMask.push(resourceId);
+    const parsedId = parsePartialAzureResourceId(resourceId);
+    if (!parsedId.subscriptionId) {
+        throw new Error(localize('invalidRevealResourceId', 'An Azure resource ID beginning with /subscriptions/{subscriptionId} is required.'));
+    }
+    context.valuesToMask.push(parsedId.subscriptionId);
+    for (const value of [parsedId.resourceGroup, parsedId.resourceName, ...parsedId.subResourcePath?.split('/') ?? []]) {
+        if (value) {
+            context.valuesToMask.push(value);
+        }
+    }
+    const provider = ext.v2.api.resources.azureResourceTreeDataProvider as AzureResourceTreeDataProvider;
+    const subscriptionId = await provider.resolveSubscriptionForReveal(
+        context, parsedId.subscriptionId, options?.tenantId, options?.includeFilteredSubscription);
+    const qualifiedId = subscriptionId + resourceId.replace(/^\/subscriptions\/[^/]+/i, '');
+    context.valuesToMask.push(qualifiedId);
+    const operation: TreeTraversalContext = { propagateErrors: true, targetId: qualifiedId };
+    const item = await provider.findItemById(qualifiedId, operation);
+    if (!item?.id) {
+        throw new Error(localize('revealResourceNotFound', 'The requested Azure resource could not be found in the resource tree.'));
+    }
+    const resource = item instanceof BranchDataItemWrapper ? item.unwrap<ResourceModelBase>() : undefined;
+    await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, options?.revealOptions ?? { expand: false, focus: true, select: true });
+    return { id: item.id, resource };
+}
 
 export async function revealResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
     setTelemetryPropertiesForId(context, resourceId);
