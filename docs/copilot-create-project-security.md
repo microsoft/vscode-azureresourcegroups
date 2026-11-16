@@ -36,6 +36,38 @@ preserve valid fields and ignore or default invalid fields according to the arti
 invalid array entry must not discard its valid siblings. Never silently coerce an object to a string, which
 can turn unsupported input into text such as `[object Object]`.
 
+### Project correlation marker
+
+`.azure/created-by-cor.json` is an authoritative project-level correlation breadcrumb, but it remains
+untrusted workspace input. The extension creates or restores this exact payload when project planning begins
+in either a same-folder or folder-handoff flow:
+
+```json
+{
+  "schemaVersion": 1,
+  "source": "copilot-on-rails",
+  "corProjectId": "<existing random CoR UUID>"
+}
+```
+
+Unlike partially rendered plan artifacts, a reader must validate this identity marker as one complete,
+closed schema. Require a plain object with exactly the three documented own properties: reject missing or
+extra fields, arrays, and `null`. Require `schemaVersion` to be the number `1`, `source` to equal
+`"copilot-on-rails"` exactly, and `corProjectId` to be a valid UUID string. Do not trim, coerce, infer,
+merge, or accept a partially valid marker. Malformed JSON, partial writes, and any invalid field make the
+whole marker unusable for correlation.
+
+The marker makes a random CoR project identity portable for a future Azure Attach consumer; it does not
+itself prove an Azure deployment relationship. The UUID is pseudonymous correlation data that contains no
+user or Azure identity. Never copy it into ARM tags, resource names, logs, or diagnostics; a downstream
+reader may use it only as the approved telemetry join key.
+
+The canonical Azure App Onboard consumer and telemetry owner lives in `microsoft/azure-skills` under
+`skills/azure-app-onboard/`, outside this repository. That consumer must apply the same strict validation
+before end-to-end correlation can be claimed; this Resources extension change alone does not complete the
+downstream join. Do not confuse the marker with the non-unique ARM tag `created-by-cor: true`, which
+classifies CoR-created infrastructure but does not identify a project.
+
 ## Paths and package metadata
 
 Validate every artifact-supplied path part before passing it to `Uri.joinPath`, `path.join`, or another file

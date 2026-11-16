@@ -48,7 +48,7 @@ Read [self-review-checklist.md](self-review-checklist.md).
   - Reliability: zone redundancy (prod SKUs), health probes, GRS storage, min replicas ≥1
   - Security: managed identity, on-compute app-internal secrets (no Key Vault), HTTPS+TLS 1.2, no public blob, no `administratorLogin`
   - Cost: SKU matches budget, scale-to-zero for dev/test CA, free grants applied
-  - Ops: App Insights, 5 AppOnboard tags, all values parameterized
+  - Ops: App Insights, shared AppOnboard/CoR tags including `created-by-cor`, all values parameterized
   - Performance: autoscale (prod), CDN for SPA, connection pooling, cache tier
 
 ### Step 3 — Compile findings + return

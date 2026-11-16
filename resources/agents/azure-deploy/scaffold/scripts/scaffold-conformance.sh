@@ -39,6 +39,9 @@ iac_has() { printf '%s' "$iac" | grep -qE "$1"; }
 if printf '%s' "$main_bicep" | grep -qE 'appOnboard(Skill|SessionId)|createdAt:|deployedBy:'; then
   add_fail "TAGS-NO-CAMEL" "camelCase tag keys found — use hyphenated ('app-onboard-skill' ...)" "infra/main.bicep"
 fi
+if ! printf '%s' "$main_bicep" | grep -qE "'created-by-cor'[[:space:]]*:[[:space:]]*'true'"; then
+  add_fail "COR-TAG-MISSING" "main.bicep must merge the stable 'created-by-cor': 'true' tag into the shared tags object" "infra/main.bicep"
+fi
 
 # 12. DIAG-GATED — we don't scaffold diagnostic-settings; if present it must be gated behind enableDiagnostics (default false) or removed. Unconditional wiring blocks the first deploy.
 #     Match an actual diagnostic module/resource declaration, not a prose comment mentioning 'diagnostic'.

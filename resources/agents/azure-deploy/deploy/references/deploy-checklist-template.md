@@ -29,9 +29,9 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 
 ## After IaC deployment (Step 6)
 - ⛔ Call `capture_deployment_inventory` (`phase: "capture"`) after the deployment command returns — records created resources via a before/after `resources.list()` diff and flags orphans
-- Verify 5 tags: `az group show -n {rgName} --query tags`
+- Verify all shared tags: `az group show -n {rgName} --query tags`
 - ⛔ Do NOT set startup command or app settings via CLI — they are already in Bicep from scaffold. If `az webapp show` doesn't reflect them yet, wait 30s and re-check (ARM propagation delay). Do NOT run `az webapp config` imperatively.
-  Required: app-onboard-skill, app-onboard-session-id, created-at, environment, deployed-by
+  Required: app-onboard-skill, created-by-cor, app-onboard-session-id, created-at, environment, deployed-by
 - Verify portal link is still correct if healing changed the deployment name
 
 ## Code deploy — Functions (Flex Consumption) (delete if not using Flex Functions)

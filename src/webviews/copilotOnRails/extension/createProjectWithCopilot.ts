@@ -9,7 +9,8 @@ import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/regis
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { getDefaultOpusModelOption, getSupportedModelOptions } from "../../../utils/copilotOnRails/modelSelection";
-import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
+import { corId, reportCorBackgroundEvent, setCorProp, withCorUserWait } from "../../../utils/copilotOnRails/telemetryUtils";
+import { type CorWorkflowEntryPoint, markCorWorkflowWaiting } from "../../../utils/copilotOnRails/workflowContext";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
 import { consumeReloadResumePrompt } from "./reloadResumePrompt";
@@ -21,18 +22,19 @@ export const OPEN_PROJECT_FOLDER_OPTIONS = { forceNewWindow: true } as const;
 export const PROJECT_FOLDER_SELECTION_TELEMETRY_KEY = 'projectFolderSelection';
 export type ProjectFolderSelection = 'newSubfolder' | 'selectedEmptyFolder';
 
-export async function createProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
+export async function createProjectWithCopilot(context: CopilotOnRailsContext, requestedEntryPoint?: unknown): Promise<void> {
+    const phaseEntryPoint: CorWorkflowEntryPoint = requestedEntryPoint === 'folderHandoff' ? 'folderHandoff' : 'createProject';
     if (!(await ensureFreshWorkspace(context))) {
         return;
     }
 
     // Local Development => Deploy
     if (await hasCompletedPhase(DEBUG_PLAN_FILE_GLOB, 'implemented')) {
-        const choice = await vscode.window.showInformationMessage(
+        const choice = await withCorUserWait(context, () => vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
             { modal: true },
             deploy,
-        );
+        ));
 
         if (choice === deploy) {
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.startDeployment);
@@ -42,12 +44,12 @@ export async function createProjectWithCopilot(context: CopilotOnRailsContext): 
 
     // Create => Debug | Deploy
     if (await hasCompletedPhase(PROJECT_PLAN_FILE_GLOB, 'scaffolded')) {
-        const choice = await vscode.window.showInformationMessage(
+        const choice = await withCorUserWait(context, () => vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
             { modal: true },
             localDev,
             deploy,
-        );
+        ));
 
         if (choice === localDev) {
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.startLocalDevelopment);
@@ -58,18 +60,23 @@ export async function createProjectWithCopilot(context: CopilotOnRailsContext): 
     }
 
     // Nothing detected => start from scratch.
-    await openCreateProjectView();
+    await openCreateProjectView(undefined, undefined, phaseEntryPoint);
 }
 
 /** Re-opens the create view pre-filled after a reload-to-discover-agents; no-ops when nothing was stashed. */
 export async function resumeCreateProjectViewAfterReload(): Promise<void> {
     const resume = await consumeReloadResumePrompt();
     if (resume) {
-        await openCreateProjectView(resume.prompt, resume.model);
+        await reportCorBackgroundEvent(corId('reloadResume'), { reloadReason: 'agentDiscovery' });
+        await openCreateProjectView(resume.prompt, resume.model, 'reloadResume');
     }
 }
 
-async function openCreateProjectView(initialPrompt?: string, initialModel?: string): Promise<void> {
+async function openCreateProjectView(
+    initialPrompt?: string,
+    initialModel?: string,
+    phaseEntryPoint: CorWorkflowEntryPoint = 'createProject',
+): Promise<void> {
     const availableModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
     const modelOptions = getSupportedModelOptions(availableModels);
     const selectedModel = initialModel && modelOptions.includes(initialModel)
@@ -87,8 +94,9 @@ async function openCreateProjectView(initialPrompt?: string, initialModel?: stri
         recentPrompts: getRecentPrompts(),
         initialPrompt,
         initialModel: selectedModel,
-    });
+    }, phaseEntryPoint);
     controller.revealToForeground();
+    await markCorWorkflowWaiting();
 }
 
 /**
@@ -112,7 +120,7 @@ async function ensureFreshWorkspace(context: CopilotOnRailsContext): Promise<boo
     const createSubfolder: vscode.MessageItem = { title: vscode.l10n.t('Create in New Subfolder...') };
     const chooseEmptyFolder: vscode.MessageItem = { title: vscode.l10n.t('Choose Empty Folder...') };
     const actions = currentFolder ? [createSubfolder, chooseEmptyFolder] : [chooseEmptyFolder];
-    const choice = await context.ui.showWarningMessage(
+    const choice = await withCorUserWait(context, () => context.ui.showWarningMessage(
         vscode.l10n.t('Choose where to create your project.'),
         {
             modal: true,
@@ -121,7 +129,7 @@ async function ensureFreshWorkspace(context: CopilotOnRailsContext): Promise<boo
                 : vscode.l10n.t('Choose an empty folder. The project opens in a new window.'),
         },
         ...actions,
-    );
+    ));
 
     let target: vscode.Uri;
     let selection: ProjectFolderSelection;
@@ -170,7 +178,7 @@ async function pickEmptyProjectFolder(context: CopilotOnRailsContext, currentFol
 }
 
 async function createProjectSubfolder(context: CopilotOnRailsContext, parent: vscode.Uri): Promise<vscode.Uri> {
-    const input = await context.ui.showInputBox({
+    const input = await withCorUserWait(context, () => context.ui.showInputBox({
         title: vscode.l10n.t('Create a Project Subfolder'),
         prompt: vscode.l10n.t('Enter a name for the new project folder inside "{0}".', folderName(parent)),
         placeHolder: vscode.l10n.t('my-project'),
@@ -185,7 +193,7 @@ async function createProjectSubfolder(context: CopilotOnRailsContext, parent: vs
                 ? vscode.l10n.t('A file or folder with this name already exists.')
                 : undefined;
         },
-    });
+    }));
 
     const validationMessage = validateProjectSubfolderName(input);
     if (validationMessage) {
