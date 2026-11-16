@@ -8,6 +8,9 @@
 * [[1992]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1992) Add **Container Apps Sandboxes** resource type support, including a dedicated icon and integration with the Azure Container Apps extension.
 * [[1931]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1931) Add a feedback button to the **Create New Project with Copilot** views so users can submit feedback from within VS Code.
 
+### Fixed
+* [[1894]](https://github.com/microsoft/vscode-azureresourcegroups/issues/1894) Select the active session's deployment plan and prevent inactive sessions from replacing it or stealing focus.
+
 ## 0.13.2 - 2026-09-27
 
 ### Added

@@ -111,6 +111,11 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> imp
         return this.controller !== undefined;
     }
 
+    /** Close the panel when its contents no longer belong to the selected session. */
+    close(): void {
+        this.controller?.panel.dispose();
+    }
+
     /** Create the controller if needed (or update the existing one), then bring it to the foreground. */
     show(data: TData, sourceFileUri: vscode.Uri | undefined): void {
         if (this.controller) {
