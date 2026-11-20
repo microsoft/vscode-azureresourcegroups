@@ -28,7 +28,7 @@ Requires approved plan. Before starting, verify:
 **Active when** invoking chat query starts with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or `**Execution Mode**: auto` row). Run unattended:
 - **Skip the plan preview & approval** — already approved upstream; scaffold directly (do NOT open plan view or re-request approval).
 - **Skip the frontend preview approval gate** — do NOT call the `open_frontend_preview_view` tool; the UI is auto-approved in autopilot.
-- **Replace the Step 11 "Next Step" question with integrate hand-off** — do NOT call `vscode_askQuestions`. Write `.azure/integration-plan.md`, then hand off unattended via `start_project_integrate`, prefixing `prompt` with `[AUTOPILOT MODE] `.
+- **Replace the Step 11 "Next Step" question with integrate hand-off** - do NOT call `vscode_askQuestions`. Write `.azure/integration-plan.md`, then call `start_project_integrate` without arguments (`{}`). The extension carries the active Autopilot mode and query marker into the new chat; do not pass a `prompt`.
 - All quality work (frontend preview verification, build gates, `.azure/.preview-temp/` cleanup) still applies — autopilot suppresses **only gates and questions**.
 
 ## Rules

@@ -11,7 +11,11 @@ export type CreateProjectViewControllerType = {
     hint: string;
     planButtonLabel: string;
     modelLabel: string;
+    modelPickerEnabled: boolean;
     modelOptions: string[];
+    defaultModelLabel: string;
+    modelUnavailableMessage: string;
+    modelUnavailableTooltip: string;
     /** Recently submitted project-creation prompts, newest-first, for input-history navigation. */
     recentPrompts: string[];
     /** Pre-fills the prompt input, e.g. when re-opening the view after a reload-for-agent-discovery. */
