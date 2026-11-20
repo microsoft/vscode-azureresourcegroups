@@ -5,17 +5,18 @@
 
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
-import { IActionContext, callWithTelemetryAndErrorHandling, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzureResource, AzureSubscription, getAzExtResourceType } from '../../api/src/index';
+import { AzureResource, AzureSubscription, getAzExtResourceType, ResourceTreeOperationContext } from '../../api/src/index';
 import { AzureResourceProvider } from '../hostapi.v2.internal';
 import { getAzureResourcesService } from '../services/AzureResourcesService';
+import { callWithTreeErrorHandling } from '../utils/treeOperations';
 
 export class DefaultAzureResourceProvider implements AzureResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
-    getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
-        return callWithTelemetryAndErrorHandling(
+    getResources(subscription: AzureSubscription, options?: ResourceTreeOperationContext): Promise<AzureResource[] | undefined> {
+        return callWithTreeErrorHandling(
             'defaultAzureResourceProvider.getResources',
             async (context: IActionContext) => {
                 const [azureResources, resourceGroups] = await Promise.all([
@@ -23,7 +24,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
                     this.listResourceGroups(context, subscription),
                 ]);
                 return [...azureResources, ...resourceGroups];
-            });
+            }, options);
     }
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;

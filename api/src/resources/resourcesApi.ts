@@ -6,12 +6,28 @@
 import * as vscode from "vscode";
 import { AzExtResourceType } from "../AzExtResourceType";
 import { AzureResourceBranchDataProvider, AzureResourceModel } from "./azure";
+import { ResourceModelBase } from "./base";
 import { WorkspaceResourceBranchDataProvider, WorkspaceResourceModel, WorkspaceResourceProvider, WorkspaceResourceType } from "./workspace";
 
 // scope down vscode.TreeDataProvider to exactly what's allowed to be used
 export type ResourceGroupsTreeDataProvider = Pick<vscode.TreeDataProvider<unknown>, 'getChildren' | 'getTreeItem'>;
 
 export type VSCodeRevealOptions = Parameters<vscode.TreeView<unknown>['reveal']>['1'];
+
+export interface AzureResourceRevealOptions {
+    /** Restrict subscription resolution to this tenant, including delegated subscriptions. */
+    tenantId?: string;
+    /** Keep the target subscription visible for this window's session without changing saved filters. */
+    includeFilteredSubscription?: boolean;
+    revealOptions?: VSCodeRevealOptions;
+}
+
+export interface AzureResourceRevealResult {
+    /** Fully qualified tree ID, including the selected account and tenant. */
+    id: string;
+    /** The exact provider model that was resolved, when the target belongs to a branch provider. */
+    resource?: ResourceModelBase;
+}
 
 export interface ResourcesApi {
     /**
@@ -60,6 +76,17 @@ export interface ResourcesApi {
      * @param options - Options for revealing the resource. See {@link vscode.TreeView.reveal}
      */
     revealAzureResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
+
+    /**
+     * Resolve an Azure resource, then request its reveal in VS Code.
+     * Returns its fully qualified tree node ID and the exact provider model, when available.
+     * Prompts for sign-in if no Azure account is signed in. Returns undefined on cancellation.
+     * Rejects if explicit resource loading or the VS Code reveal request fails.
+     * Independent background tree rendering does not affect the result.
+     * Multiple matching accounts/tenants are offered in a picker.
+     * Requires a host exposing this method; older hosts only support {@link revealAzureResource}.
+     */
+    revealAzureResourceWithResult(id: string, options?: AzureResourceRevealOptions): Promise<AzureResourceRevealResult | undefined>;
 
     /**
      * Reveal a resource in the Workspace tree view.

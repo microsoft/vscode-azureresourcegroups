@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { inCloudShell } from '../utils/inCloudShell';
+import { normalizeTreeId, TreeTraversalContext } from '../utils/treeOperations';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
@@ -98,18 +99,17 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     async getTreeItem(element: TreeDataItem): Promise<vscode.TreeItem> {
         try {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
+            return (await callWithTelemetryAndErrorHandling('getTreeItem', async context => {
                 context.errorHandling.rethrow = true;
                 return await element.getTreeItem();
             }))!;
-        } catch (e) {
-            const invalidItem = new InvalidItem(parseError(e));
-            return invalidItem.getTreeItem();
+        } catch (error) {
+            return new InvalidItem(parseError(error)).getTreeItem();
         }
     }
 
-    async getChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined> {
-        const children = await this.onGetChildren(element);
+    async getChildren(element?: TreeDataItem | undefined, options?: TreeTraversalContext): Promise<TreeDataItem[] | null | undefined> {
+        const children = await this.onGetChildren(element, options);
         return children?.map(child => {
             if (this.state) {
                 // don't wrap items that belong to branch data providers
@@ -126,21 +126,23 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return element.getParent?.();
     }
 
-    async findItemById(id: string): Promise<TreeDataItem | undefined> {
+    async findItemById(id: string, options?: TreeTraversalContext): Promise<TreeDataItem | undefined> {
         let element: TreeDataItem | undefined = undefined;
         outerLoop: while (true) {
-            const children: TreeDataItem[] | null | undefined = await this.getChildren(element);
+            const children: TreeDataItem[] | null | undefined = await this.getChildren(element, options);
 
             if (!children) {
                 return;
             }
 
             for (const child of children) {
-                if (child.id?.toLowerCase() === id.toLowerCase()) {
+                const normalize = (value: string) => this.normalizeItemId(value, child, options);
+                const requestedId = normalize(id);
+                if (child.id && normalize(child.id) === requestedId) {
                     return child;
-                } else if (removePrefix(child.id?.toLowerCase()) === id.toLowerCase()) {
+                } else if (child.id && normalize(removePrefix(child.id)) === requestedId) {
                     return child;
-                } else if (this.isAncestorOf(child, id)) {
+                } else if (this.isAncestorOf(child, id, options)) {
                     element = child;
                     continue outerLoop;
                 }
@@ -150,15 +152,22 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    protected isAncestorOf(element: TreeDataItem, id: string): boolean {
+    protected isAncestorOf(element: TreeDataItem, id: string, options?: TreeTraversalContext): boolean {
         // remove accounts / <accountId>/tenant/<tenantId> from the beginning of the id
-        const elementId = removePrefix(element.id) + '/';
-        return id.toLowerCase().startsWith(elementId.toLowerCase());
+        const elementId = (/^\/accounts\//i.test(id) ? element.id : removePrefix(element.id)) + '/';
+        const normalize = (value: string) => this.normalizeItemId(value, element, options);
+        return normalize(id).startsWith(normalize(elementId));
     }
 
-    protected abstract onGetChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined>;
+    private normalizeItemId(id: string, element: TreeDataItem, options?: TreeTraversalContext): string {
+        return options?.propagateErrors
+            ? normalizeTreeId(id, element instanceof BranchDataItemWrapper ? element.armResourceId : undefined)
+            : id.toLowerCase();
+    }
+
+    protected abstract onGetChildren(element?: TreeDataItem | undefined, options?: TreeTraversalContext): Promise<TreeDataItem[] | null | undefined>;
 }
 
 function removePrefix(id?: string): string {
-    return id?.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/') || '';
+    return id?.replace(/^\/accounts\/[^/]+\/tenants\/[^/]+\//i, '/') || '';
 }

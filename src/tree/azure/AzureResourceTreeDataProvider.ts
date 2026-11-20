@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, parseError, registerEvent, TreeElementBase, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -12,6 +12,9 @@ import { getDuplicateSubscriptionModeSetting, getDuplicateSubscriptions, getDupl
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
+import { callWithTreeErrorHandling, TreeTraversalContext } from '../../utils/treeOperations';
+import { getSubscriptionsForReveal, SubscriptionDiscoveryResult } from '../../utils/subscriptionsForReveal';
+import { getAccountAndTenantPrefix } from './idPrefix';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
@@ -25,6 +28,82 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
     private readonly groupingChangeSubscription: vscode.Disposable;
     private hasShownDuplicateWarning: boolean = false;
     private hasLoadedSubscriptions: boolean = false;
+    private readonly revealedSubscriptions = new Set<string>();
+
+    async resolveSubscriptionForReveal(context: IActionContext, subscriptionId: string, tenantId?: string, includeFilteredSubscription = false): Promise<string> {
+        const provider = await this.getAzureSubscriptionProvider();
+        let discovery: SubscriptionDiscoveryResult;
+        try {
+            discovery = await getSubscriptionsForReveal(provider, tenantId);
+        } catch (error) {
+            if (!isNotSignedInError(error)) {
+                throw error;
+            }
+            if (!await provider.signIn()) {
+                throw new UserCancelledError();
+            }
+            discovery = await getSubscriptionsForReveal(provider, tenantId, true);
+        }
+        const matches = (subscription: AzureSubscription) =>
+            subscription.subscriptionId.toLowerCase() === subscriptionId.toLowerCase()
+            && (!tenantId || subscription.tenantId.toLowerCase() === tenantId.toLowerCase());
+        let matching = discovery.subscriptions.filter(matches);
+        for (const failure of discovery.failures) {
+            this.logSubscriptionDiscoveryFailure(failure.tenant.account.id, failure.tenant.tenantId, failure.error);
+        }
+        if (matching.length === 0) {
+            const authenticationRequired = discovery.failures.filter(failure => isNotSignedInError(failure.error));
+            if (authenticationRequired.length > 0) {
+                const tenant = authenticationRequired.length === 1 ? authenticationRequired[0].tenant
+                    : (await context.ui.showQuickPick(authenticationRequired.map(failure => ({
+                        label: failure.tenant.account.label,
+                        description: failure.tenant.tenantId,
+                        data: failure.tenant
+                    })), { placeHolder: localize('selectRevealSignInAccount', 'Select the account to sign in to the requested tenant') })).data;
+                if (!await provider.signIn(tenant)) {
+                    throw new UserCancelledError();
+                }
+                discovery = await getSubscriptionsForReveal(provider, tenant.tenantId, true, tenant.account.id);
+                matching = discovery.subscriptions.filter(matches);
+                // Do not switch identities or repeat the sign-in prompt if the selected account still cannot load.
+                if (discovery.failures.length > 0) {
+                    throw discovery.failures[0].error;
+                }
+            } else if (discovery.failures.length > 0) {
+                throw discovery.failures[0].error;
+            }
+        }
+        if (matching.length === 0) {
+            throw new Error(localize('revealSubscriptionUnavailable', 'The requested subscription is not available in the requested tenant. Sign in to the appropriate account and try again.'));
+        }
+
+        const subscription = matching.length === 1 ? matching[0] : (await context.ui.showQuickPick(
+            matching.map(subscription => ({
+                label: subscription.name,
+                description: subscription.account.label,
+                detail: subscription.tenantId,
+                data: subscription
+            })),
+            { placeHolder: localize('selectRevealSubscription', 'Select the account and tenant to open this resource') }
+        )).data;
+        const id = this.getSubscriptionTreeId(subscription);
+
+        if (includeFilteredSubscription) {
+            this.revealedSubscriptions.add(id.toLowerCase());
+            this.notifyTreeDataChanged();
+        }
+
+        return id;
+    }
+
+    private getSubscriptionTreeId(subscription: AzureSubscription): string {
+        return `${getAccountAndTenantPrefix(subscription)}/subscriptions/${subscription.subscriptionId}`;
+    }
+
+    private logSubscriptionDiscoveryFailure(accountId: string, tenantId: string, error: unknown): void {
+        ext.outputChannel.appendLog(localize('revealSubscriptionDiscoveryFailed',
+            'Unable to discover subscriptions for account {0}, tenant {1}: {2}', accountId, tenantId, parseError(error).message));
+    }
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -64,11 +143,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
     }
 
-    async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+    async onGetChildren(element?: ResourceGroupsItem | undefined, options?: TreeTraversalContext): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element?.getChildren) {
-            return await element.getChildren();
+            return await element.getChildren(options);
         } else {
-            return await this.getRootChildren();
+            return await this.getRootChildren(options);
         }
     }
 
@@ -76,8 +155,8 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
      * Gets the root children (subscriptions) for the Azure Resources tree.
      * Wrapped in telemetry to measure initial load performance.
      */
-    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
+    private async getRootChildren(options?: TreeTraversalContext): Promise<ResourceGroupsItem[] | null | undefined> {
+        return await callWithTreeErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
             const isFirstLoad = !this.hasLoadedSubscriptions;
@@ -96,7 +175,44 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache });
+                const subscriptions = getTenantFilteredSubscriptions(
+                    await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache }));
+                if (this.revealedSubscriptions.size > 0) {
+                    // Resolve against current authentication state, never retain credentials across sign-out.
+                    const identities = [...new Set([...this.revealedSubscriptions]
+                        .map(id => id.split('/').slice(0, 5).join('/')))];
+                    const lookups = await Promise.allSettled(identities.map(identity => {
+                        const [, , accountId, , tenantId] = identity.split('/');
+                        return getSubscriptionsForReveal(subscriptionProvider, tenantId, shouldClearCache, accountId);
+                    }));
+                    const available: AzureSubscription[] = [];
+                    for (let i = 0; i < lookups.length; i++) {
+                        const identity = identities[i];
+                        const [, , accountId, , tenantId] = identity.split('/');
+                        const lookup = lookups[i];
+                        const failures: unknown[] = lookup.status === 'rejected' ? [lookup.reason]
+                            : lookup.value.failures.map(failure => failure.error);
+                        const targetIdentity = options?.propagateErrors
+                            && options.targetId?.toLowerCase().startsWith(`${identity}/subscriptions/`);
+                        for (const error of failures) {
+                            if (targetIdentity) {
+                                throw error;
+                            }
+                            this.logSubscriptionDiscoveryFailure(accountId, tenantId, error);
+                        }
+                        if (lookup.status === 'fulfilled') {
+                            available.push(...lookup.value.subscriptions);
+                        }
+                    }
+                    const visibleIds = new Set(subscriptions.map(subscription => this.getSubscriptionTreeId(subscription).toLowerCase()));
+                    for (const subscription of available) {
+                        const id = this.getSubscriptionTreeId(subscription).toLowerCase();
+                        if (this.revealedSubscriptions.has(id) && !visibleIds.has(id)) {
+                            subscriptions.push(subscription);
+                            visibleIds.add(id);
+                        }
+                    }
+                }
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 context.telemetry.measurements.subscriptionCount = subscriptions.length;
@@ -160,9 +276,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         }
                     }
 
-                    const tenantFilteredSubcriptions = getTenantFilteredSubscriptions(subscriptions);
-                    if (tenantFilteredSubcriptions) {
-                        return tenantFilteredSubcriptions.map(
+                    return subscriptions.map(
                             subscription => {
                                 // for telemetry purposes, do not wait
                                 void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFiltedSubcription', async (context: IActionContext) => {
@@ -201,38 +315,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     this.resourceProviderManager,
                                     subscription);
                             });
-                    } else {
-                        return subscriptions.map(
-                            subscription => {
-                                // for telemetry purposes, do not wait
-                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscription', async (context: IActionContext) => {
-                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
-                                });
-                                if (duplicates.includes(subscription)) {
-                                    return new SubscriptionItem(
-                                        {
-                                            subscription: subscription,
-                                            subscriptionContext: createSubscriptionContext(subscription),
-                                            refresh: item => this.notifyTreeDataChanged(item),
-                                        },
-                                        this.resourceGroupingManager,
-                                        this.resourceProviderManager,
-                                        subscription,
-                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
-                                }
-                                return new SubscriptionItem(
-                                    {
-                                        subscription: subscription,
-                                        subscriptionContext: createSubscriptionContext(subscription),
-                                        refresh: item => this.notifyTreeDataChanged(item),
-                                    },
-                                    this.resourceGroupingManager,
-                                    this.resourceProviderManager,
-                                    subscription);
-                            });
-                    }
                 }
             } catch (error) {
+                if (options?.propagateErrors) {
+                    throw error;
+                }
                 if (isNotSignedInError(error)) {
                     context.telemetry.properties.outcome = 'notSignedIn';
                     return getSignInTreeItems(true);
@@ -244,7 +331,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 context.telemetry.properties.unhandledError = String(error);
                 return [];
             }
-        });
+        }, options);
     }
 
     private hasSentSubscriptionTelemetry = false;
