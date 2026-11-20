@@ -122,7 +122,7 @@ promptSteps:
       # query under snapshotWorkspace: false — this grader reads the same
       # artifact and fails when it is missing.
       - comment: vscode-debug-plan.md satisfies the debug plan contract
-        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-debug-plan.ts --assert-environment=sandbox --assert-sandbox-node=24
 
       # vally: program stops-at-approval-gate
       # The gate itself: the plan is present and reviewable (status defaults to

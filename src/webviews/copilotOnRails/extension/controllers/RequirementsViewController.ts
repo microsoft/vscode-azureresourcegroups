@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { NotSignedInError } from "@microsoft/vscode-azext-azureauth";
 import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -11,7 +12,7 @@ import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorErrorProp, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
-import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
+import { type RequirementsData, resolveRequirementsWorkflowSelection, type SandboxAzureStatus } from "../../views/utils/parseRequirements";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -29,7 +30,11 @@ interface ReadyMessage {
     command: 'ready';
 }
 
-type IncomingMessage = SubmitMessage | ReadyMessage;
+interface SignInToAzureMessage {
+    command: 'signInToAzure';
+}
+
+type IncomingMessage = SubmitMessage | ReadyMessage | SignInToAzureMessage;
 
 export class RequirementsViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -44,10 +49,14 @@ export class RequirementsViewController extends CopilotOnRailsWebviewController<
         this.panel.webview.onDidReceiveMessage((message: IncomingMessage) => {
             switch (message.command) {
                 case 'ready':
-                    void this.panel.webview.postMessage({ command: 'setRequirementsData', data: initialData });
+                    void this.panel.webview.postMessage({ command: 'setRequirementsData', data: this.requirementsData });
+                    void this.sendSandboxAzureStatus();
                     break;
                 case 'submitRequirements':
                     void this.handleSubmit(message.data);
+                    break;
+                case 'signInToAzure':
+                    void this.handleSignInToAzure();
                     break;
             }
         });
@@ -77,11 +86,15 @@ export class RequirementsViewController extends CopilotOnRailsWebviewController<
                     return;
                 }
 
-                // Autopilot is chosen on the plan page so requirements start in guided until then.
-                const executionMode: RequirementsExecutionMode = 'guided';
+                const sandboxAzureStatus = await this.getSandboxAzureStatus();
+                const workflowSelection = resolveRequirementsWorkflowSelection(data, sandboxAzureStatus);
 
                 try {
-                    const serialized = JSON.stringify({ ...data, executionMode, parseError: undefined }, null, 2) + '\n';
+                    const serialized = JSON.stringify({
+                        ...data,
+                        ...workflowSelection,
+                        parseError: undefined,
+                    }, null, 2) + '\n';
                     markRequirementsSubmitted(this.sourceFileUri, serialized);
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
                 } catch (err) {
@@ -109,6 +122,41 @@ export class RequirementsViewController extends CopilotOnRailsWebviewController<
                     openLoadingView(loading);
                 }
             });
+        });
+    }
+
+    private async getSandboxAzureStatus(): Promise<SandboxAzureStatus> {
+        try {
+            const provider = await ext.subscriptionProviderFactory();
+            const subscriptions = await provider.getAvailableSubscriptions({ filter: false });
+            return subscriptions.length > 0 ? 'available' : 'noSubscriptions';
+        } catch (error) {
+            return error instanceof NotSignedInError ? 'signedOut' : 'error';
+        }
+    }
+
+    private async sendSandboxAzureStatus(status?: SandboxAzureStatus): Promise<void> {
+        await this.panel.webview.postMessage({
+            command: 'setSandboxAzureStatus',
+            status: status ?? await this.getSandboxAzureStatus(),
+        });
+    }
+
+    private async handleSignInToAzure(): Promise<void> {
+        await callWithTelemetryAndErrorHandling(corId('requirementsSignInToAzure'), async () => {
+            await this.sendSandboxAzureStatus('checking');
+
+            try {
+                const provider = await ext.subscriptionProviderFactory();
+                if (!await provider.signIn()) {
+                    await this.sendSandboxAzureStatus('signedOut');
+                    return;
+                }
+
+                await this.sendSandboxAzureStatus();
+            } catch {
+                await this.sendSandboxAzureStatus('error');
+            }
         });
     }
 

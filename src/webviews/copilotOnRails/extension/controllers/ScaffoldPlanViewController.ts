@@ -172,9 +172,7 @@ export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<
             }
         }
 
-        if (confirmedAutopilot) {
-            await this.recordAutopilotMode();
-        }
+        await this.recordExecutionMode(confirmedAutopilot ? 'auto' : 'guided');
         if (confirmedAutopilot) {
             await enableAutopilot(ext.context);
         } else {
@@ -256,22 +254,23 @@ export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<
     }
 
     /**
-     * Records autopilot mode in the plan file for downstream agents to reference.
+     * Records the user-confirmed execution mode in the plan file for downstream agents to reference.
      * Returns the previous content when the file changed so a failed launch can
-     * restore it. No-ops if the source file is unknown or autopilot is already recorded.
+     * restore it. No-ops if the source file is unknown or the mode is already recorded.
      */
-    private async recordAutopilotMode(): Promise<string | undefined> {
+    private async recordExecutionMode(mode: 'auto' | 'guided'): Promise<string | undefined> {
         if (!this.sourceFileUri) {
             return;
         }
         try {
             const raw = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
-            if (/execution\s*mode\s*[:=]\s*auto/i.test(raw)) {
+            const existingModePattern = new RegExp(`execution\\s*mode\\s*[:=]\\s*${mode}`, 'i');
+            if (existingModePattern.test(raw)) {
                 return;
             }
             const lines = raw.split('\n');
-            const row = '**Execution Mode**: auto';
-            // If an row already exists (e.g. with a `guided` value),
+            const row = `**Execution Mode**: ${mode}`;
+            // If a row already exists with the other mode,
             // update it in place rather than inserting a duplicate/conflicting row.
             const existingAt = lines.findIndex(l => /^\*\*Execution\s*Mode\*\*\s*[:=]/i.test(l.trim()));
             if (existingAt >= 0) {

@@ -51,13 +51,14 @@ Scan dependencies, detect config, generate plan directly. User reviews and edits
 | # | Action | Reference |
 |---|--------|-----------|
 | 1 | **Detect prerequisites** — Check required tools and VS Code extensions | [inventory.md](references/inventory.md) § Step 1 |
-| 2 | **Scan Azure dependencies** — Per service, scan bindings (Functions) or SDK packages (other types) to identify Azure service dependencies | [inventory.md](references/inventory.md) § Step 2 |
-| 3 | **Map dependencies to emulators** — Map every detected Azure dependency to its local emulator; deduplicate across services. | [inventory.md](references/inventory.md) § Step 2 |
-| 4 | **Detect container runtime & Compose provider** — Scan for existing `docker-compose.yml`/`compose.yaml`; detect available runtime per [prerequisites.md § Container runtime detection](../../shared-references/prerequisites.md). Record chosen runtime (**Docker**, **Podman**, or **Podman (Docker-compatible)**) and Compose command in plan Orchestrator table. **Prefer the Podman engine when it's ready** — native `podman compose`, or `docker compose` backed by Podman; fall back to Docker. Default to Docker Compose only when neither is confirmed. | [prerequisites.md](../../shared-references/prerequisites.md) |
-| 5 | **Detect migrations** — Scan migration files, dependencies, and scripts | [migrations.md](references/migrations.md) |
-| 6 | **Inventory API test opportunities** — List each service's HTTP endpoints and triggers | [inventory.md](references/inventory.md) § Step 3 |
-| 7 | **Write plan** — Generate `.azure/vscode-debug-plan.md` from scans; complete every section. | [plan-template.md](references/plan-template.md) |
-| 8 | **Present plan** — Show user and request approval; highlight ❓ prerequisites to double-check. User may edit directly before approval. On approval, set status `Approved`. | `.azure/vscode-debug-plan.md` |
+| 2 | **Select development environment** — Honor the submitted Requirements/project-plan choice. For Sandbox, prefer the certified Node 22/24 or Python 3.12 image; otherwise use the pinned generic Microsoft development base and install the exact declared runtime. For compatible CoR-generated JavaScript/TypeScript projects with no explicit runtime, deterministically select the newest supported major (currently Node 24); never use host Node or `@types/node` as evidence. Emit the detailed Development Environment section only for Sandbox. For Host, preserve the section-less legacy shape but add the required visible Host blockquote with the concrete reason. | [development-environments.md](references/development-environments.md) |
+| 3 | **Scan Azure dependencies** — Per service, scan bindings (Functions) or SDK packages (other types) to identify Azure service dependencies | [inventory.md](references/inventory.md) § Step 2 |
+| 4 | **Map dependencies to emulators** — Map every detected Azure dependency to its local emulator; deduplicate across services. | [inventory.md](references/inventory.md) § Step 2 |
+| 5 | **Detect container runtime & Compose provider** — Scan for existing `docker-compose.yml`/`compose.yaml`; detect available runtime per [prerequisites.md § Container runtime detection](../../shared-references/prerequisites.md). Record chosen runtime (**Docker**, **Podman**, or **Podman (Docker-compatible)**) and Compose command in plan Orchestrator table. **Prefer the Podman engine when it's ready** — native `podman compose`, or `docker compose` backed by Podman; fall back to Docker. Default to Docker Compose only when neither is confirmed. | [prerequisites.md](../../shared-references/prerequisites.md) |
+| 6 | **Detect migrations** — Scan migration files, dependencies, and scripts | [migrations.md](references/migrations.md) |
+| 7 | **Inventory API test opportunities** — List each service's HTTP endpoints and triggers | [inventory.md](references/inventory.md) § Step 3 |
+| 8 | **Write plan** — Generate `.azure/vscode-debug-plan.md` from scans; complete every applicable section. | [plan-template.md](references/plan-template.md) |
+| 9 | **Present plan** — Show user and request approval; highlight ❓ prerequisites to double-check. User may edit directly before approval. On approval, set status `Approved`. | `.azure/vscode-debug-plan.md` |
 
 ---
 

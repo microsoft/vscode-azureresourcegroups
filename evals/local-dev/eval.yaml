@@ -46,7 +46,7 @@ stimuli:
         name: debug-plan-contract-valid
         config:
           program: node
-          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-environment=sandbox, --assert-sandbox-node=24]
       - type: program
         name: stops-at-approval-gate
         config:
@@ -82,11 +82,15 @@ stimuli:
         name: launch-json-exists
         config:
           path: .vscode/launch.json
+      - type: file-not-exists
+        name: no-required-dev-container
+        config:
+          path: .devcontainer/devcontainer.json
       - type: program
         name: debug-plan-implemented
         config:
           program: node
-          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-status=Implemented, --assert-checklist]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-status=Implemented, --assert-checklist, --assert-environment=sandbox, --assert-sandbox-node=24]
       - type: program
         name: debug-config-structurally-sound
         config:
@@ -128,6 +132,37 @@ stimuli:
         config:
           program: node
           args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-runtime=podman]
+      - type: program
+        name: stops-at-approval-gate
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-gate.ts]
+      - type: tool-calls
+        name: opens-local-plan-view
+        config:
+          required: [workflow-tools-open_local_plan_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 2.4 Host mode remains an explicit supported alternative ─────────────
+  - name: debug-plan-host-mode
+    turns:
+      - |
+        The project plan has been approved. Execute the approved
+        `.azure/project-plan.md` and scaffold the project.
+      - |
+        Set up local debugging, but keep the application runtimes on my host.
+        Do not use a development container.
+    graders:
+      - type: file-exists
+        name: debug-plan-exists
+        config:
+          path: .azure/vscode-debug-plan.md
+      - type: program
+        name: debug-plan-uses-legacy-host-shape
+        config:
+          program: node
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=../..}/evals/graders/validate-debug-plan.ts, --assert-environment=host, --assert-host-note]
       - type: program
         name: stops-at-approval-gate
         config:

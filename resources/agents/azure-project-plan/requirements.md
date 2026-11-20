@@ -261,6 +261,17 @@ Write `.azure/requirements.json` (filename has no leading dot; extension file wa
 }
 ```
 
+Do not author `developmentEnvironment` or `executionMode` while generating the initial file. The
+requirements webview owns those two fields because it checks live Azure sign-in/subscription availability
+at submission time:
+
+- `developmentEnvironment: "sandbox"` only when the user selected Sandbox and an Azure subscription was
+  available; otherwise `"regular"`.
+- `executionMode: "auto"` when Sandbox is selected and every application service language is TypeScript
+  or Python; otherwise `"guided"`.
+
+Never write account, tenant, or subscription identifiers into `.azure/requirements.json`.
+
 **JSON rules** (example above is contract; these highlight non-obvious constraints):
 
 - **Services & IDs:** one `services` entry per detected/planned service. Per-service question `id`s follow `{serviceId}:{questionType}` (e.g. `functions-api:language`); `serviceId` matches service.
@@ -293,6 +304,8 @@ When re-invoked about submitted requirements (e.g. *"Requirements submitted at .
 
 1. Read `.azure/requirements.json`.
 2. Treat `answer` fields as authoritative — do not re-ask, do not re-emit the file.
-3. Switch to [`plan.md`](plan.md) and go directly to Step 3 (Generate Plan).
+3. Preserve the submitted `developmentEnvironment` and `executionMode` in the project plan exactly as
+   specified by [`plan.md`](plan.md).
+4. Switch to [`plan.md`](plan.md) and go directly to Step 3 (Generate Plan).
 
 > **✅ Checkpoint**: Requirements gathered (via inference + webview submission). Ready to generate plan — continue in [`plan.md`](plan.md).

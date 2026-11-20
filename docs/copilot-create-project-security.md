@@ -16,6 +16,19 @@ file operation, HTML node, or SVG node.
 working. Readers may preserve fields that are already valid, but they must not infer that the rest of the
 document is trustworthy.
 
+`.azure/created-by-cor.json` is an extension-written breadcrumb with schema version `1`, source
+`copilot-on-rails`, and the pseudonymous `corProjectId` already used for telemetry correlation. Treat the
+file as untrusted when reading it because workspace tools can modify it. Use the ID only to correlate CoR
+workflow stages and recognize the generated-project contract; never copy it into Azure resource names,
+resource tags, application logs, diagnostic exports, or user-visible output.
+
+The Requirements controller may query Azure authentication and subscription availability to enable the
+Sandbox choice. Only a coarse availability state crosses into the webview. `.azure/requirements.json` may
+record `developmentEnvironment: sandbox|regular` and `executionMode: auto|guided`, but must never contain
+account names, account IDs, tenant IDs, subscription IDs, access tokens, or credential material. Treat both
+fields as untrusted when reading the artifact and narrow them to their known enum values before they affect
+workflow control.
+
 **Residual risk.** Runtime shape checks do not make a string safe for every later use. Validate again for the
 specific sink. A future deserializer, renderer, or URL handler can introduce a new execution path even when
 the current JSON parsing step is data-only.

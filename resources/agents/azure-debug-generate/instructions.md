@@ -35,7 +35,7 @@ Verify plan and environment before file generation.
 | # | Action | Reference |
 |---|--------|-----------|
 | 1 | **Verify plan** — Require `.azure/vscode-debug-plan.md` with status `Approved`. Set `Executing`; update **Last Updated**. | `.azure/vscode-debug-plan.md` |
-| 2 | **Load references** — For each checked Services-table service, load matching project-type and runtime references. If absent, emit limited-support warning. | [limited-support.md](references/limited-support.md) |
+| 2 | **Load references** — If the plan contains Sandbox Development Environment details, use the Node 22/24 contract when its pinned image matches the checked application services; otherwise use the generic runtime contract and install the exact runtime/version recorded by the plan. If the section is absent (or an older plan explicitly says Host), use legacy host generation. Then load each checked Services-table project-type and runtime reference; if one is absent, emit a limited-support warning. | [development-environments/](references/development-environments/), [limited-support.md](references/limited-support.md) |
 | 3 | **Run pre-flight checks** — Stale data directories and port conflicts. | [preflight.md](references/preflight.md) |
 
 ---
@@ -72,6 +72,8 @@ Follow the generation steps in [generate.md](references/generate.md) in order.
 | Artifact | Location |
 |----------|----------|
 | **Plan** (updated) | `.azure/vscode-debug-plan.md` |
+| Development image | `Dockerfile` — Sandbox mode only |
+| Sandbox bootstrap | Lifecycle entrypoint script plus Compose `dev` service — Sandbox mode only |
 | Docker Compose | `docker-compose.yml` |
 | VS Code Debug Config | `.vscode/launch.json` — see [project-types/](references/project-types/) and [runtimes/](references/runtimes/) |
 | VS Code Build Config | `.vscode/tasks.json` — see [project-types/](references/project-types/) and [runtimes/](references/runtimes/) |

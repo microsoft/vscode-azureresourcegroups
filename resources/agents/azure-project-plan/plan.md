@@ -42,6 +42,8 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 **Status**: Planning
 **Created**: {date}
 **Mode**: {NEW | AUGMENT}
+**Execution Mode**: {Auto | Guided — copied from requirements `executionMode`}
+**Development Environment**: {Sandbox | Regular — copied from requirements `developmentEnvironment`}
 
 ---
 
@@ -67,6 +69,7 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 |-----------|-----------|
 | **Language** | {TypeScript / Python / C#} |
 | **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
+| **Node Version** | {24.x for Node services; omit for non-Node services} |
 | **Framework** | {Azure Functions or this service's confirmed custom framework answer} |
 | **Package Manager** | {npm / pnpm / pip / poetry / uv / dotnet (NuGet)} |
 | **Test Runner** | {vitest / jest / pytest / unittest / xUnit} |
@@ -78,7 +81,10 @@ Write `.azure/project-plan.md` from template in a **single pass** (all sections 
 
 > Tooling alternatives in the template are examples, not an allowlist. Preserve the user's confirmed package manager and test runner, and derive a matching test command rather than replacing their selection with a default.
 
-> **Runtime names only:** write just the runtime name in the Runtime row; keep host/programming-model details and explicit version constraints outside this row; detected tool versions belong in Prerequisites.
+> **Runtime and version:** keep the editable Runtime row as the runtime name only. For every NEW
+> JavaScript/TypeScript service using Node, add `Node Version = 24.x`; use the same major for frontend,
+> API, and worker services. This is the approved application runtime contract, not the Node version
+> installed on the planning host. Detected host tool versions still belong in Prerequisites.
 
 > **API framework selection:** copy the service's framework answer into the Framework row and section title. Azure Functions is the only suggested API framework for every language; the plan view also provides a custom field. Preserve explicit custom frameworks, including during language edits, and keep their best-effort warning separate from language support. Do not emit a limited-support warning for Python on Azure Functions.
 
@@ -209,7 +215,8 @@ For each page above, list 3–6 representative records using that page's primary
 > **Order matters: open plan view BEFORE rendering per-page previews.** Loading lets user interact with plan while previews generate. Opening only after all pages delays plan and breaks flow.
 
 0. **Self-check structure BEFORE opening view.** Re-read `.azure/project-plan.md`; confirm all below. On failure, **rewrite file** to match skeleton before continuing; do **not** open malformed plan, which shows parse-error banner:
-   - Top has bold key-value rows `**Status**:`, `**Created**:`, `**Mode**:`, not YAML front-matter/table.
+   - Top has bold key-value rows `**Status**:`, `**Created**:`, `**Mode**:`, `**Execution Mode**:`, and
+     `**Development Environment**:`, not YAML front-matter/table.
    - `## 1. Project Overview` has exactly one auth-related value: `**API Login**: Yes` or `No`.
    - Every `##` heading matches numbered `## <N>. <Title>`. No unnumbered `##` headings like `## Overview`, `## Architecture`, `## Services`, or `## Data Stores`.
    - No `mermaid` block or improvised section outside fixed skeleton.

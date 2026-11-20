@@ -1,0 +1,9 @@
+{
+    "azureFunctions.projectSubpath": "services/api",
+    "azureFunctions.showProjectWarning": false,
+    "azureFunctions.validateEmulators": false,
+    "debug.onTaskErrors": "showErrors",
+    "files.exclude": {
+        "**/node_modules": true
+    }
+}

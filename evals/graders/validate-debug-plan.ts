@@ -18,9 +18,17 @@
  *        --assert-runtime=<docker|podman>
  *        --assert-docker-compat        (require Podman Docker-compatibility mode)
  *        --assert-no-docker-compat     (require NOT Docker-compatibility mode)
+ *        --assert-environment=<sandbox|host>
+ *        --assert-host-note           (require the visible Host fallback note)
+ *        --assert-sandbox-node=<22|24>
+ *        --assert-unknown-node-versions
  */
 
-import type { ContainerRuntime, LocalDebugPlanExpectations } from '../src/artifacts/localDebugPlan.ts';
+import type {
+    ContainerRuntime,
+    DevelopmentEnvironmentMode,
+    LocalDebugPlanExpectations,
+} from '../src/artifacts/localDebugPlan.ts';
 import { validateLocalDebugPlanArtifact } from '../src/artifacts/localDebugPlan.ts';
 import { failWithIssues, readArtifact, runGrader } from './graderHarness.ts';
 
@@ -36,6 +44,10 @@ runGrader('vscode-debug-plan.md satisfies the debug plan contract', () => {
         requireChecklist: args.includes('--assert-checklist'),
         expectedRuntime: runtimeOf(args, '--assert-runtime'),
         expectedDockerCompatible: dockerCompatOf(args),
+        expectedDevelopmentEnvironment: developmentEnvironmentOf(args),
+        requireHostEnvironmentNote: args.includes('--assert-host-note'),
+        expectedSandboxNodeMajor: sandboxNodeMajorOf(args),
+        requireUnknownNodeVersions: args.includes('--assert-unknown-node-versions'),
     };
 
     const result = validateLocalDebugPlanArtifact(content, expectations);
@@ -43,6 +55,28 @@ runGrader('vscode-debug-plan.md satisfies the debug plan contract', () => {
         failWithIssues('debug plan validation errors:', result.issues);
     }
 });
+
+function sandboxNodeMajorOf(args: string[]): 22 | 24 | undefined {
+    const raw = valueOf(args, '--assert-sandbox-node');
+    if (raw === undefined) {
+        return undefined;
+    }
+    if (raw !== '22' && raw !== '24') {
+        throw new Error(`Invalid --assert-sandbox-node=${raw}: expected "22" or "24"`);
+    }
+    return Number(raw) as 22 | 24;
+}
+
+function developmentEnvironmentOf(args: string[]): DevelopmentEnvironmentMode | undefined {
+    const raw = valueOf(args, '--assert-environment')?.toLowerCase();
+    if (raw === undefined) {
+        return undefined;
+    }
+    if (raw !== 'sandbox' && raw !== 'host') {
+        throw new Error(`Invalid --assert-environment=${raw}: expected "sandbox" or "host"`);
+    }
+    return raw;
+}
 
 function valueOf(args: string[], flag: string): string | undefined {
     const match = args.find(arg => arg.startsWith(`${flag}=`));

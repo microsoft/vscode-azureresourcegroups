@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, Input, Switch, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckboxUncheckedRegular, CheckmarkRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
 import { isLimitedSupportDataStore, limitedSupportWarningMessage } from './utils/emulatorSupport';
-import { inferInputType, isAnswerEmpty, toggleRequirementsOption, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
+import { inferInputType, isAnswerEmpty, parseSandboxAzureStatus, supportsSandboxAutopilot, toggleRequirementsOption, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole, type SandboxAzureStatus } from './utils/parseRequirements';
 import { isLimitedSupportBackendLanguage } from './utils/serviceStackOptions';
 
 interface DraftMap {
@@ -118,6 +118,9 @@ export const RequirementsView = (): JSX.Element => {
     const [drafts, setDrafts] = useState<DraftMap>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [sandboxAzureStatus, setSandboxAzureStatus] = useState<SandboxAzureStatus>('checking');
+    const [sandboxSelected, setSandboxSelected] = useState(false);
+    const sandboxSelectionTouched = useRef(false);
     const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
@@ -135,6 +138,11 @@ export const RequirementsView = (): JSX.Element => {
                     nextDrafts[q.id] = defaultDraftFor(q);
                 }
                 setDrafts(nextDrafts);
+                setSandboxSelected(incoming.developmentEnvironment === 'sandbox');
+                sandboxSelectionTouched.current = incoming.developmentEnvironment !== undefined;
+            } else if (message?.command === 'setSandboxAzureStatus') {
+                const status = parseSandboxAzureStatus(message.status);
+                setSandboxAzureStatus(status);
             } else if (message?.command === 'submitError') {
                 setSaveError(typeof message.error === 'string' ? message.error : 'Failed to save requirements.');
                 setIsSaving(false);
@@ -147,6 +155,12 @@ export const RequirementsView = (): JSX.Element => {
         vscodeApi.postMessage({ command: 'ready' });
         return () => window.removeEventListener('message', handler);
     }, [vscodeApi]);
+
+    useEffect(() => {
+        if (data && sandboxAzureStatus === 'available' && !sandboxSelectionTouched.current) {
+            setSandboxSelected(true);
+        }
+    }, [data, sandboxAzureStatus]);
 
     const updateDraft = useCallback((id: string, value: RequirementsAnswer) => {
         setDrafts(prev => ({ ...prev, [id]: value }));
@@ -207,6 +221,23 @@ export const RequirementsView = (): JSX.Element => {
 
     const canSubmit = data !== null && missingRequired.length === 0 && !isSaving;
 
+    const requirementsWithDrafts = useMemo<RequirementsData | null>(() => {
+        if (!data) {
+            return null;
+        }
+        return {
+            ...data,
+            questions: data.questions.map(question => ({
+                ...question,
+                answer: drafts[question.id] === undefined ? question.answer : drafts[question.id],
+            })),
+        };
+    }, [data, drafts]);
+
+    const sandboxAutopilotSupported = requirementsWithDrafts !== null && supportsSandboxAutopilot(requirementsWithDrafts);
+    const sandboxAvailable = sandboxAzureStatus === 'available';
+    const useSandbox = sandboxSelected && sandboxAvailable;
+
     const showPreviewBackendNote = useMemo(() => {
         if (!data) {
             return false;
@@ -243,18 +274,28 @@ export const RequirementsView = (): JSX.Element => {
 
         setIsSaving(true);
         setSaveError(null);
-        // Autopilot is chosen later on the plan page; requirements submission is
-        // always guided.
-        const executionMode: RequirementsExecutionMode = 'guided';
+        const executionMode: RequirementsExecutionMode =
+            useSandbox && sandboxAutopilotSupported ? 'auto' : 'guided';
         vscodeApi.postMessage({
             command: 'submitRequirements',
             data: {
                 ...data,
                 executionMode,
+                developmentEnvironment: useSandbox ? 'sandbox' : 'regular',
                 questions: updatedQuestions,
             },
         });
-    }, [data, canSubmit, drafts, vscodeApi]);
+    }, [data, canSubmit, drafts, sandboxAutopilotSupported, useSandbox, vscodeApi]);
+
+    const handleSandboxToggle = useCallback((checked: boolean) => {
+        sandboxSelectionTouched.current = true;
+        setSandboxSelected(checked);
+    }, []);
+
+    const handleAzureSignIn = useCallback(() => {
+        setSandboxAzureStatus('checking');
+        vscodeApi.postMessage({ command: 'signInToAzure' });
+    }, [vscodeApi]);
 
     if (!data) {
         return (
@@ -336,6 +377,53 @@ export const RequirementsView = (): JSX.Element => {
                     </div>
                 </div>
             )}
+
+            <section className='sandboxCard' aria-label='Development environment'>
+                <div className='sandboxCard__summary'>
+                    <RocketRegular />
+                    <div>
+                        <strong>Run this project in a sandbox</strong>
+                        <p>
+                            Use an isolated development environment for project runtimes and tools. Requires an Azure account with an available subscription.
+                        </p>
+                    </div>
+                </div>
+                <div className='sandboxCard__action'>
+                    <Switch
+                        checked={sandboxSelected && sandboxAvailable}
+                        disabled={!sandboxAvailable}
+                        onChange={(_, switchData) => handleSandboxToggle(switchData.checked)}
+                        label='Sandbox'
+                    />
+                    <div className='sandboxCard__details'>
+                        {sandboxAzureStatus === 'checking' && <span className='sandboxStatus'>Checking Azure access…</span>}
+                        {sandboxAzureStatus === 'available' && (
+                            <span className='sandboxStatus'>
+                                {sandboxSelected
+                                    ? (sandboxAutopilotSupported
+                                        ? 'Autopilot will be preselected because all application services use TypeScript or Python.'
+                                        : 'This runtime will use the guided sandbox workflow.')
+                                    : 'The regular guided workflow will be used.'}
+                            </span>
+                        )}
+                        {sandboxAzureStatus === 'signedOut' && (
+                            <>
+                                <span className='sandboxStatus'>Sign in to Azure to use a sandbox.</span>
+                                <Button size='small' onClick={handleAzureSignIn}>Sign in to Azure</Button>
+                            </>
+                        )}
+                        {sandboxAzureStatus === 'noSubscriptions' && (
+                            <span className='sandboxStatus'>No Azure subscription is available. The regular guided workflow will be used.</span>
+                        )}
+                        {sandboxAzureStatus === 'error' && (
+                            <>
+                                <span className='sandboxStatus'>Azure access could not be verified. The regular guided workflow will be used.</span>
+                                <Button size='small' onClick={handleAzureSignIn}>Try again</Button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </section>
 
             {serviceGroups.length > 0 && (
                 <div className='servicesSection'>

@@ -1,0 +1,25 @@
+{
+    "name": "@cor-sandbox/api",
+    "version": "1.0.0",
+    "private": true,
+    "main": "dist/src/functions/*.js",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc --noEmit -p tsconfig.json",
+        "clean": "rimraf dist",
+        "dev": "npm run build && sh -c 'npm run watch & watch_pid=$!; trap \"kill $watch_pid 2>/dev/null || true\" EXIT INT TERM; npm run start'",
+        "start": "func start --address 0.0.0.0 --port 7071",
+        "watch": "tsc --watch -p tsconfig.json"
+    },
+    "dependencies": {
+        "@azure/functions": "4.8.0",
+        "@azure/storage-blob": "12.34.0",
+        "pg": "8.16.3"
+    },
+    "devDependencies": {
+        "@types/node": "22.20.5",
+        "@types/pg": "8.15.6",
+        "rimraf": "6.0.1",
+        "typescript": "5.9.3"
+    }
+}

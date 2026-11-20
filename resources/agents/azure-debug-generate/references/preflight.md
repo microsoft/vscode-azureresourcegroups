@@ -2,6 +2,21 @@
 
 Before file generation, verify plan exists and environment ready.
 
+## Development Environment Readiness
+
+Read the plan's Development Environment mode before checking application runtimes. If the section is
+absent, treat the plan as Host. This preserves compatibility with plans created before Sandbox support.
+
+- **Sandbox** — verify only the selected container engine/Compose provider, the browser when a checked
+  frontend row requires it, and matching runtime debug extensions on the host. Do not block on host Node.js, Azure CLI, Functions Core
+  Tools, npm, pnpm, or Yarn; the image provides them. Verify those tools after the `dev` container
+  is healthy. For the optimized Node contract, confirm the image tag and digest exactly match the
+  Node major recorded by every generated application service. A mismatch, unresolved version, or
+  mixed/ambiguous runtime is a plan error; do not silently select a different image. For Python and
+  generic-runtime plans, validate the selected pinned image and the exact runtime installation strategy
+  recorded by the approved plan instead. Do not require Dev Containers or reopening the workspace.
+- **Host** — run the existing host prerequisite checks for every application runtime and CLI.
+
 ## Container Runtime Readiness Check
 
 Read the container runtime from the plan's Orchestrator table (**Docker**, **Podman**, or **Podman (Docker-compatible)**) and confirm the engine is actually running before you generate or validate anything. A CLI on PATH is not the same as a running engine.

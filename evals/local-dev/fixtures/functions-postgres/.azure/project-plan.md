@@ -61,8 +61,8 @@
 
 | Tool | Service(s) | Installed | Version |
 |------|-----------|-----------|---------|
-| Node.js | * | ✅ | v24.19.0 |
-| npm | * | ✅ | 11.17.0 |
+| Node.js | * | ✅ | v22.19.0 |
+| npm | * | ✅ | — |
 | Azure Functions Core Tools | tasks-api | ✅ | 4.14.0 |
 
 ### Debug

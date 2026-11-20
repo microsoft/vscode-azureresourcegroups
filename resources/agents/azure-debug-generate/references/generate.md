@@ -10,6 +10,7 @@ Plan tables drive generation:
 
 | Plan Section | What It Drives |
 |-------------|----------------|
+| **Development Environment** table, when present | Sandbox topology, image/Compose generation, host requirements, forwarded ports, and workspace mounts. Absence means Host. |
 | **Services** table | Services receiving launch.json/tasks.json entries. |
 | **Emulators** table | Emulator compose services to generate. |
 | **Orchestrator** table | Container runtime (Docker/Podman) and **Compose Command** (`docker compose` / `podman compose`) for every emulator/migration task. |
@@ -18,6 +19,18 @@ Plan tables drive generation:
 | **Convenience Scripts** table | Convenience scripts to generate. |
 
 > **Container runtime is a plan value — never hard-code `docker compose`.** Read the **Compose Command** cell from the plan's Orchestrator table and use it verbatim for every generated Compose invocation (Start Emulators task, migration task, convenience scripts, validation, teardown). It is `docker compose` by default and `podman compose` when the plan selected Podman. The generated `docker-compose.yml` itself is **identical for either engine** — only the command that drives it changes. In the examples throughout these references, `docker compose` stands in for the plan's Compose Command; substitute `podman compose` when the plan says Podman.
+
+Read the Development Environment **Mode** before generating any task:
+
+- `Sandbox` — follow
+  [development-environments/node-functions-sandbox.md](development-environments/node-functions-sandbox.md)
+  when the plan selected its certified Node image; otherwise follow
+  [development-environments/generic-runtime-sandbox.md](development-environments/generic-runtime-sandbox.md).
+  Generate the local image, Compose `dev` service, container-only dependency/cache volumes, and
+  host-workspace F5 tasks that invoke tools through the plan's Compose command. Application runtimes and
+  container-installed CLIs are not host prerequisites.
+- Section absent, or an older explicit `Host` table — preserve the existing host-process generation
+  described by the project-type and runtime references.
 
 ### Targeted Resolution
 
@@ -38,13 +51,14 @@ For each checked Generate service in plan Services table, generate in order. Pla
 
 | # | Action | Reference |
 |---|--------|-----------|
-| 1 | **Generate docker-compose** — For each planned emulator, load reference and assemble service block. If migrations checked, add healthcheck + migration service. | [emulators/](emulators/), [migrations.md](migrations.md) |
-| 2 | **Generate VS Code debug config** — Assemble `launch.json`/`tasks.json` from project-type + runtime references. Add compound for multi-service. | generate.md § Source Ownership, [project-types/](project-types/), [runtimes/](runtimes/), [multi-service.md](multi-service.md) |
-| 3 | **Generate VS Code workspace config** — Assemble `.vscode/extensions.json`/`.vscode/settings.json` from project-type + runtime references. Add emulator data exclusions. | generate.md § VS Code Extension Recommendations, generate.md § VS Code Workspace Settings |
-| 4 | **Configure connection strings** — Update `local.settings.json`, `.env`, or app config with emulator strings; preserve existing values. | `project-types/{type}.md` § Connection Strings, `emulators/{name}.md` § Required App Environment Variables |
-| 5 | **Generate convenience scripts** — Add each checked Convenience Scripts row to native script runner. | `runtimes/{rt}.md` § Convenience Scripts |
-| 6 | **Generate migrations** — For checked Migrations rows, resolve details then generate docker-compose migration service. | [migrations.md](migrations.md) |
-| 7 | **Generate API test collections** — For checked API Test Collections rows, resolve endpoints/triggers then generate test scripts. | [api-test-collections.md](api-test-collections.md) |
+| 1 | **Generate development environment** — For Sandbox mode, generate the pinned local image, lifecycle entrypoint, `dev` service, and dependency volume. Host mode generates none of these. | [development-environments/](development-environments/) |
+| 2 | **Generate docker-compose** — For each planned emulator, load reference and assemble service block. If migrations checked, add healthcheck + migration service. In Sandbox mode, merge these services with `dev`. | [emulators/](emulators/), [migrations.md](migrations.md) |
+| 3 | **Generate VS Code debug config** — Assemble `launch.json`/`tasks.json` from project-type + runtime references. Add compound for multi-service. Sandbox tasks run from the host workspace: first start healthy Compose services, then invoke build/watch/start commands through the plan's Compose command and `exec`. Attach Node debugging through the published inspector port and map host sources to container paths. | generate.md § Source Ownership, [project-types/](project-types/), [runtimes/](runtimes/), [multi-service.md](multi-service.md) |
+| 4 | **Generate VS Code workspace config** — Assemble `.vscode/extensions.json`/`.vscode/settings.json` from project-type + runtime references. Add emulator data exclusions. | generate.md § VS Code Extension Recommendations, generate.md § VS Code Workspace Settings |
+| 5 | **Configure connection strings** — Update `local.settings.json`, `.env`, or app config with emulator strings; preserve existing values. Sandbox connections use Compose service hostnames from inside `dev`. | `project-types/{type}.md` § Connection Strings, `emulators/{name}.md` § Required App Environment Variables |
+| 6 | **Generate convenience scripts** — Add each checked Convenience Scripts row to native script runner. | `runtimes/{rt}.md` § Convenience Scripts |
+| 7 | **Generate migrations** — For checked Migrations rows, resolve details then generate docker-compose migration service. | [migrations.md](migrations.md) |
+| 8 | **Generate API test collections** — For checked API Test Collections rows, resolve endpoints/triggers then generate test scripts. | [api-test-collections.md](api-test-collections.md) |
 
 > **Podman emulator certification.** When the plan's container runtime is **Podman**, each emulator's reference file declares its Podman status under `## Container Runtime Support`. Azurite and PostgreSQL are certified. For any emulator not marked Podman-certified, emit a `⚠️ LIMITED SUPPORT: Emulator "{name}" is not yet certified for Podman` warning (per [limited-support.md](limited-support.md)) and generate a best-effort compose service anyway — do **not** silently swap the runtime back to Docker.
 

@@ -93,6 +93,9 @@ npm install
   "name": "functions",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "main": "dist/functions/src/functions/*.js",
   "scripts": {
     "build": "tsc",
@@ -119,6 +122,11 @@ npm install
 ```
 
 > Set `scripts.test` for user's test runner.
+
+> **Runtime declaration:** Every generated Node application `package.json` (frontend, API, worker)
+> must include the same exact major from the approved plan, currently `"engines": { "node": "24.x" }`
+> for new projects. Add it to the root workspace manifest too when one exists, then update the lockfile.
+> `@types/node` is compile-time typing and never substitutes for `engines.node`.
 
 > ⚠️ **Deployment contract: ship prebuilt artifact; do NOT rebuild server-side.**
 > Deploy **compiled `dist/`**, not TypeScript source. `azd` builds locally (`npm install` + `npm run build`) and packages output; Kudu/Oryx runs production-only `npm install --omit=dev`. If deployed `package.json` triggers `npm run build`, Oryx lacks `typescript` (a `devDependency`) and fails `tsc: not found`. Scaffold standalone artifacts:

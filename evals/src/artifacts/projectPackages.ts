@@ -33,6 +33,7 @@ export interface ProjectPackage {
     directory: string;
     relative: string;
     scripts: Record<string, string>;
+    nodeEngine?: string;
     /** True when this package delegates to npm workspaces, so its children run themselves. */
     delegatesToWorkspaces: boolean;
 }
@@ -58,7 +59,11 @@ export function discoverPackages(workspaceRoot: string): PackageDiscovery {
     const walk = (directory: string, depth: number): void => {
         const manifest = path.join(directory, 'package.json');
         if (existsSync(manifest)) {
-            let parsed: { scripts?: Record<string, string>; workspaces?: unknown } | undefined;
+            let parsed: {
+                scripts?: Record<string, string>;
+                workspaces?: unknown;
+                engines?: { node?: unknown };
+            } | undefined;
             try {
                 parsed = JSON.parse(readFileSync(manifest, 'utf8')) as typeof parsed;
             } catch {
@@ -69,6 +74,7 @@ export function discoverPackages(workspaceRoot: string): PackageDiscovery {
                     directory,
                     relative: path.relative(workspaceRoot, directory) || '.',
                     scripts: parsed.scripts ?? {},
+                    nodeEngine: typeof parsed.engines?.node === 'string' ? parsed.engines.node : undefined,
                     delegatesToWorkspaces: parsed.workspaces !== undefined,
                 });
             }
@@ -98,6 +104,8 @@ function readdirSafe(directory: string): Dirent[] {
 export interface ProjectPackagesOptions {
     /** The plan promised a frontend, so one must be present and findable. */
     requireFrontend?: boolean;
+    /** Every generated Node application package must declare this exact engine major. */
+    requiredNodeEngineMajor?: 22 | 24;
 }
 
 /**
@@ -138,6 +146,24 @@ export async function validateProjectPackages(
             path: '.',
             message: 'The plan promised a frontend, but no frontend package was scaffolded.',
         });
+    }
+
+    if (options.requiredNodeEngineMajor) {
+        const expected = `${options.requiredNodeEngineMajor}.x`;
+        const applicationPackages = packages.filter(pkg =>
+            pkg.delegatesToWorkspaces
+            || typeof pkg.scripts.start === 'string'
+            || typeof pkg.scripts.dev === 'string',
+        );
+        for (const pkg of applicationPackages) {
+            if (pkg.nodeEngine !== expected) {
+                issues.push({
+                    code: 'missingNodeEngineDeclaration',
+                    path: path.posix.join(pkg.relative === '.' ? '' : pkg.relative, 'package.json'),
+                    message: `Generated Node application packages must declare engines.node as "${expected}", found "${pkg.nodeEngine ?? 'missing'}".`,
+                });
+            }
+        }
     }
 
     return createValidationResult(issues);

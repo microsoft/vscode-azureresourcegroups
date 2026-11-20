@@ -62,6 +62,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { clearLeasesForTesting, closeMigrationAccess, openMigrationAccess, readLeases, reconcileMigrationFirewallLeases } from './utils/copilotOnRails/migrationFirewallAccess';
+import { prepareNewCorProject } from './utils/copilotOnRails/prepareNewCorProject';
 import { reportAzureYamlTelemetry } from './utils/reportAzureYamlTelemetry';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
@@ -354,6 +355,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                             return false;
                         }
                     },
+                    prepareNewCorProject: (prompt) => prepareNewCorProject(prompt),
                     migrationFirewall: {
                         setOverrideOperations: (operations) => {
                             ext.testing.overrideMigrationFirewallOperations = operations;
