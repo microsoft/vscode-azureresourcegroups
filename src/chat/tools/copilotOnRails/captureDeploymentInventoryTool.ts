@@ -10,6 +10,7 @@ import type { AzureSubscription } from "../../../../api/src/resources/azure";
 import * as vscode from "vscode";
 import { z } from "zod/mini";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { aggregateArmResourceTypes } from "../../../utils/copilotOnRails/deploymentInventory";
 import { captureInventory, resolveSubscription, snapshotResourceIds } from "../../../utils/copilotOnRails/deploymentInventoryCapture";
 import { callWithDiagnosticsAndTelemetryHandling, setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 
@@ -93,6 +94,10 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
 
     setCorProp(context, 'captureCreatedCount', result.createdResources.length);
     setCorProp(context, 'captureTargetsUnavailable', result.targetsUnavailable === true);
+    const createdResourceTypeCounts = aggregateArmResourceTypes(result.createdResources);
+    if (createdResourceTypeCounts) {
+        setCorProp(context, 'captureCreatedResourceTypeCounts', createdResourceTypeCounts);
+    }
 
     // The deployment operations were unreadable, so nothing can be attributed. Returning an
     // "orphaned" list here would be a guess the agent would faithfully write into
@@ -116,6 +121,10 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
     const orphaned = result.createdResources.filter((r) => r.classification === 'orphaned').length;
     setCorProp(context, 'captureFailedCount', failed);
     setCorProp(context, 'captureOrphanCount', orphaned);
+    const failedResourceTypeCounts = aggregateArmResourceTypes(result.createdResources.filter((resource) => resource.classification === 'failed'));
+    if (failedResourceTypeCounts) {
+        setCorProp(context, 'captureFailedResourceTypeCounts', failedResourceTypeCounts);
+    }
 
     const summary = vscode.l10n.t(
         'Captured {0} new resource(s): {1} expected, {2} failed, {3} unattributed. Write createdResources[] and orphanedResourceGroups[] into deploy-result.json. Only the "failed" entries are confirmed to belong to this deployment; the "orphaned" ones merely appeared during the deploy window, so describe them as needing review rather than as safe to delete.',
@@ -133,4 +142,3 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
         hasCleanupConcerns: result.hasCleanupConcerns,
     };
 }
-

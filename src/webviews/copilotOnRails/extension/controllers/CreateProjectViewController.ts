@@ -13,6 +13,7 @@ import { projectSubmissionState } from "../../../../tree/project/projectSubmissi
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { prepareNewCorProject } from "../../../../utils/copilotOnRails/prepareNewCorProject";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { type CorWorkflowEntryPoint } from "../../../../utils/copilotOnRails/workflowContext";
 import { type CreateProjectViewControllerType, type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -23,7 +24,7 @@ import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewControll
 export type { CreateProjectViewControllerType };
 
 export class CreateProjectViewController extends CopilotOnRailsWebviewController<CreateProjectViewControllerType> {
-    constructor(viewConfig: CreateProjectViewControllerType) {
+    constructor(viewConfig: CreateProjectViewControllerType, private readonly phaseEntryPoint: CorWorkflowEntryPoint = 'createProject') {
         super(ext.context, viewConfig.title, 'createProjectView', viewConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.panel.webview.onDidReceiveMessage(
@@ -67,7 +68,7 @@ export class CreateProjectViewController extends CopilotOnRailsWebviewController
                     showNeedHelp: true,
                 };
 
-                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose(), phaseEntryPoint: this.phaseEntryPoint })) {
                     setCorProp(context, submissionOutcomeKey, 'submitted');
                     projectSubmissionState.setPending();
                     openLoadingView(loading);

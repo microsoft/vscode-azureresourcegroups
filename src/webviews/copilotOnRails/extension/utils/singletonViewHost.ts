@@ -130,6 +130,13 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> imp
         });
     }
 
+    /** Update the current controller without revealing or recreating the panel. */
+    update(data: TData, sourceFileUri: vscode.Uri | undefined): void {
+        if (this.controller) {
+            this.options.updateController(this.controller, data, sourceFileUri);
+        }
+    }
+
     /** Replace the file watcher tied to the current controller. */
     setWatcher(watcher: vscode.Disposable): void {
         this.watcher?.dispose();

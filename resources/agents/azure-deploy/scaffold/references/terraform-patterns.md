@@ -100,12 +100,13 @@ Cross-reference naming with [prepare/references/naming-patterns.md](../../prepar
 
 ## Resource Tags — Mandatory
 
-Apply all 5 AppOnboard tags via `local.tags` — see [iac-generation-rules.md § Session Tags](iac-generation-rules.md) for tag names and values.
+Apply all shared AppOnboard/CoR tags via `local.tags` — see [iac-generation-rules.md § Session Tags](iac-generation-rules.md) for tag names and values.
 
 ```hcl
 locals {
   tags = {
     "app-onboard-skill"       = "true"
+    "created-by-cor"          = "true"
     "app-onboard-session-id"  = var.session_id
     "created-at"      = timestamp()
     "environment"     = var.environment_name

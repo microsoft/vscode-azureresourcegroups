@@ -118,7 +118,7 @@ Per-pillar spot check against [Azure Well-Architected Framework](https://learn.m
 | Reliability | Health probes configured. ⛔ Verify probe path matches `prereq-output.json.healthEndpoint` — non-existent or mismatched path = `FLAGGED`. ⛔ ACA probes do NOT follow HTTP redirects — if app has trailing-slash normalization (Express `redirect`), use path WITHOUT trailing `/` (e.g., `/app` not `/app/`). |
 | Security | No public blob access, TLS 1.2+, managed identity |
 | Cost | SKU matches budget tier from `prepare-plan.json` |
-| Ops | App Insights present + connected for APM, 5 AppOnboard tags on resources, all values parameterized. Present = `VERIFIED`. App Insights absent = `PLAUSIBLE`. ⛔ `diagnostic-settings` is not part of the plan — if the generator added one it MUST be gated (`if (enableDiagnostics)`, default `false`) or absent; wired UNCONDITIONALLY in `main.bicep` = `FLAGGED` (blocks first deploy). |
+| Ops | App Insights present + connected for APM, shared AppOnboard/CoR tags (including `created-by-cor`) on taggable resources, all values parameterized. Present = `VERIFIED`. App Insights absent = `PLAUSIBLE`. ⛔ `diagnostic-settings` is not part of the plan — if the generator added one it MUST be gated (`if (enableDiagnostics)`, default `false`) or absent; wired UNCONDITIONALLY in `main.bicep` = `FLAGGED` (blocks first deploy). |
 | Performance | Autoscale rules present for production SKUs |
 | Reliability | ⛔ Env var values compatible with app config validation (Pydantic `Settings`, Django `settings.py`). Typed fields reject wrong formats → `FLAGGED` |
 
